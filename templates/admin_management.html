@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Management Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --border: #e2e8f0;
+            --success: #059669;
+            --danger: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        .header {
+            background-color: var(--bg-card);
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .logout-btn {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-family: inherit;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .badge {
+            background-color: #f1f5f9;
+            color: #475569;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-right: 0.25rem;
+            display: inline-block;
+            margin-bottom: 0.25rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .badge.admin {
+            background-color: #f0fdf4;
+            color: var(--success);
+            border-color: #bbf7d0;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>Admin Control Panel - Roles & Users</h1>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+
+        <!-- Top Left: Create Role Card -->
+        <div class="card">
+            <div class="card-header">Create New Role</div>
+            <div id="roleAlert" class="alert"></div>
+
+            <form id="roleForm">
+                <div class="form-group">
+                    <label>Role Name</label>
+                    <input type="text" id="roleName" class="form-control" placeholder="e.g. Sales Manager" required>
+                </div>
+                <div class="form-group">
+                    <label>Permissions (Select Multiple)</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="perm_admin" value="is_admin">
+                            Full System Access (Super Admin)
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="perm_leads" value="can_view_leads">
+                            Lead Analysis Access
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="perm_calls" value="can_view_calls">
+                            Call Analysis Access
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn">Create Role</button>
+            </form>
+        </div>
+
+        <!-- Top Right: Create User Card -->
+        <div class="card">
+            <div class="card-header">Add New User</div>
+            <div id="userAlert" class="alert"></div>
+
+            <form id="userForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="userName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="userEmail" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="userPassword" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Assign Role</label>
+                    <select id="userRole" class="form-control">
+                        <option value="">-- No Role --</option>
+                        <!-- Loaded via JS -->
+                    </select>
+                </div>
+                <button type="submit" class="btn">Create User</button>
+            </form>
+        </div>
+
+        <!-- Bottom Left: List Roles Card -->
+        <div class="card">
+            <div class="card-header">Existing Roles</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Permissions</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="rolesTableBody">
+                    <!-- Loaded via JS -->
+                </tbody>
+            </table>
+        </div>
+        <!-- Bottom Right: System Users Card -->
+        <div class="card">
+            <div class="card-header">System Users</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Permissions (Override)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <!-- Loaded via JS -->
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script>
+        const API_BASE = '/api/accounts';
+        const token = localStorage.getItem('access_token');
+        const isAdmin = localStorage.getItem('is_admin');
+
+        // Route Guard: Must be logged in AND must be an admin
+        if (!token) {
+            window.location.replace('/accounts/login/');
+        } else if (isAdmin !== 'true') {
+            alert('Access Denied: You do not have administrator privileges.');
+            window.location.replace('/navya-analytics/lead-analysis/');
+        }
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+
+        function showAlert(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.innerText = message;
+            el.className = `alert ${type}`;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+
+        async function fetchRoles() {
+            try {
+                const res = await fetch(`${API_BASE}/roles/`, { headers });
+                if (res.status === 401 || res.status === 403) {
+                    alert("Unauthorized. Only Admins can view this page.");
+                    return;
+                }
+                window.allRoles = await res.json();
+                const roles = window.allRoles;
+
+                // Update Table
+                const tbody = document.getElementById('rolesTableBody');
+                tbody.innerHTML = '';
+
+                // Update Select Dropdown
+                const roleSelect = document.getElementById('userRole');
+                roleSelect.innerHTML = '<option value="">-- No Role --</option>';
+
+                roles.forEach(role => {
+                    // Populate table
+                    let permsHtml = '';
+                    if (role.permissions.is_admin) permsHtml += `<span class="badge admin">Admin</span>`;
+                    if (role.permissions.can_view_leads) permsHtml += `<span class="badge">Leads</span>`;
+                    if (role.permissions.can_view_calls) permsHtml += `<span class="badge">Calls</span>`;
+
+                    if (!permsHtml) permsHtml = '<span class="badge">None</span>';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>#${role.id}</td>
+                            <td><strong>${role.name}</strong></td>
+                            <td>${permsHtml}</td>
+                            <td>
+                                <button class="logout-btn" style="color:#3b82f6; border-color:#3b82f6; padding:0.2rem 0.5rem; font-size:0.75rem; margin-right:4px;" onclick='editRole(${JSON.stringify(role).replace(/'/g, "\\'")})'>Edit</button>
+                                <button class="logout-btn" style="padding:0.2rem 0.5rem; font-size:0.75rem;" onclick="deleteRole(${role.id}, '${role.name}')">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+
+                    // Populate select
+                    roleSelect.innerHTML += `<option value="${role.id}">${role.name}</option>`;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function fetchUsers() {
+            try {
+                const res = await fetch(`${API_BASE}/users/`, { headers });
+                const users = await res.json();
+
+                const tbody = document.getElementById('usersTableBody');
+                tbody.innerHTML = '';
+
+                users.forEach(user => {
+                    let roleId = user.profile && user.profile.role ? user.profile.role.id : '';
+
+                    let roleOptions = '<option value="">No Role</option>';
+                    if (window.allRoles) {
+                        window.allRoles.forEach(r => {
+                            roleOptions += `<option value="${r.id}" ${r.id === roleId ? 'selected' : ''}>${r.name}</option>`;
+                        });
+                    }
+
+                    // Determine current custom permission override
+                    let cp = user.profile && user.profile.custom_permissions ? user.profile.custom_permissions : null;
+                    let permVal = "inherit";
+                    if (cp && Object.keys(cp).length > 0) {
+                        if (cp.is_admin) permVal = "admin";
+                        else if (cp.can_view_leads && cp.can_view_calls) permVal = "both";
+                        else if (cp.can_view_leads) permVal = "lead";
+                        else if (cp.can_view_calls) permVal = "call";
+                    }
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>
+                                <strong>${user.username}</strong><br>
+                                <span style="color:var(--text-muted);font-size:0.8rem">${user.email}</span>
+                            </td>
+                            <td>
+                                <select class="form-control" style="padding:0.4rem 1.5rem 0.4rem 0.4rem; font-size:0.85rem; text-overflow:ellipsis;" onchange="updateUserRole(${user.id}, this.value)">
+                                    ${roleOptions}
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-control" style="padding:0.4rem 1.5rem 0.4rem 0.4rem; font-size:0.85rem; text-overflow:ellipsis;" onchange="updateUserPermissions(${user.id}, this.value)">
+                                    <option value="inherit" ${permVal === 'inherit' ? 'selected' : ''}>Inherit from Role</option>
+                                    <option value="lead" ${permVal === 'lead' ? 'selected' : ''}>Lead Analysis Only</option>
+                                    <option value="call" ${permVal === 'call' ? 'selected' : ''}>Call Analysis Only</option>
+                                    <option value="both" ${permVal === 'both' ? 'selected' : ''}>Both Lead & Call</option>
+                                    <option value="admin" ${permVal === 'admin' ? 'selected' : ''}>Full System Access</option>
+                                </select>
+                            </td>
+                            <td>
+                                <button class="logout-btn" style="padding:0.3rem 0.6rem; font-size:0.8rem;" onclick="deleteUser(${user.id}, '${user.username}')">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Handle Role Edit Populating
+        function editRole(role) {
+            document.getElementById('roleName').value = role.name;
+            document.getElementById('perm_admin').checked = !!role.permissions.is_admin;
+            document.getElementById('perm_leads').checked = !!role.permissions.can_view_leads;
+            document.getElementById('perm_calls').checked = !!role.permissions.can_view_calls;
+
+            // Add a hidden data attribute to the form to track that we are editing
+            const form = document.getElementById('roleForm');
+            form.setAttribute('data-edit-id', role.id);
+
+            // Change button text
+            form.querySelector('button[type="submit"]').innerText = "Update Role";
+
+            // Scroll to form
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Handle Role Delete
+        async function deleteRole(roleId, roleName) {
+            if (!confirm(`Are you sure you want to completely delete the role "${roleName}"? Users with this role will lose their permissions.`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/roles/${roleId}/`, {
+                    method: 'DELETE',
+                    headers
+                });
+                if (res.ok) {
+                    showAlert('roleAlert', `Role "${roleName}" deleted successfully.`, 'success');
+                    fetchRoles();
+                    fetchUsers(); // Refresh users in case they were assigned to this role
+                } else {
+                    showAlert('roleAlert', 'Failed to delete role.', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Handle Role Creation / Update
+        document.getElementById('roleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const editId = form.getAttribute('data-edit-id');
+            const name = document.getElementById('roleName').value;
+            const is_admin = document.getElementById('perm_admin').checked;
+            const can_view_leads = document.getElementById('perm_leads').checked;
+            const can_view_calls = document.getElementById('perm_calls').checked;
+
+            const payload = {
+                name: name,
+                permissions: {
+                    is_admin,
+                    can_view_leads,
+                    can_view_calls
+                }
+            };
+
+            const method = editId ? 'PUT' : 'POST';
+            const url = editId ? `${API_BASE}/roles/${editId}/` : `${API_BASE}/roles/`;
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers,
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showAlert('roleAlert', editId ? 'Role updated successfully!' : 'Role created successfully!', 'success');
+
+                    // Reset form back to create mode
+                    form.reset();
+                    form.removeAttribute('data-edit-id');
+                    form.querySelector('button[type="submit"]').innerText = "Create Role";
+
+                    fetchRoles(); // Refresh lists
+                    fetchUsers(); // Refresh users to show updated dropdowns
+                } else {
+                    const err = await res.json();
+                    showAlert('roleAlert', 'Error: ' + JSON.stringify(err), 'error');
+                }
+            } catch (error) {
+                showAlert('roleAlert', 'Network Error.', 'error');
+            }
+        });
+
+        // Handle User Creation
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('userName').value;
+            const email = document.getElementById('userEmail').value;
+            const password = document.getElementById('userPassword').value;
+            const role_id = document.getElementById('userRole').value;
+
+            const payload = { username, email, password };
+            if (role_id) payload.role_id = parseInt(role_id);
+
+            try {
+                // Notice this hits the public register endpoint which accepts role_id 
+                // Alternatively, an admin could hit POST /api/accounts/users/ 
+                // but our RegisterSerializer is specifically built to handle password hashing easily.
+                const res = await fetch(`${API_BASE}/register/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }, // Register doesn't strictly need auth, but fine
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.status === 201 || res.status === 200) {
+                    showAlert('userAlert', 'User created successfully!', 'success');
+                    document.getElementById('userForm').reset();
+                    fetchUsers(); // Refresh lists
+                } else {
+                    const err = await res.json();
+                    showAlert('userAlert', 'Error: ' + JSON.stringify(err), 'error');
+                }
+            } catch (error) {
+                showAlert('userAlert', 'Network Error.', 'error');
+            }
+        });
+
+        async function updateUserRole(userId, roleId) {
+            try {
+                const payload = { role_id: roleId ? parseInt(roleId) : null };
+                const res = await fetch(`${API_BASE}/users/${userId}/`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    showAlert('userAlert', 'User role updated successfully.', 'success');
+                } else {
+                    showAlert('userAlert', 'Failed to update user role.', 'error');
+                    fetchUsers(); // revert changes if failed
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function updateUserPermissions(userId, permMode) {
+            try {
+                let custom_permissions = {};
+                if (permMode === 'admin') custom_permissions = { is_admin: true };
+                else if (permMode === 'both') custom_permissions = { can_view_leads: true, can_view_calls: true };
+                else if (permMode === 'lead') custom_permissions = { can_view_leads: true };
+                else if (permMode === 'call') custom_permissions = { can_view_calls: true };
+                // if inherit, custom_permissions remains empty {}
+
+                const res = await fetch(`${API_BASE}/users/${userId}/`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({ custom_permissions })
+                });
+                if (res.ok) {
+                    showAlert('userAlert', 'User permissions overridden successfully.', 'success');
+                } else {
+                    showAlert('userAlert', 'Failed to update custom permissions.', 'error');
+                    fetchUsers();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function deleteUser(userId, username) {
+            if (!confirm(`Are you sure you want to permanently delete user "${username}"?`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/users/${userId}/`, {
+                    method: 'DELETE',
+                    headers
+                });
+                if (res.ok) {
+                    showAlert('userAlert', `User ${username} deleted successfully.`, 'success');
+                    fetchUsers();
+                } else {
+                    showAlert('userAlert', 'Failed to delete user.', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.replace('/accounts/login/');
+        }
+
+        // Initial Load - Sequential to ensure roles are loaded before users
+        async function init() {
+            await fetchRoles();
+            await fetchUsers();
+        }
+        init();
+    </script>
+</body>
+
+</html>

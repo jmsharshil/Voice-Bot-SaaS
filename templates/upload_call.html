@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Call File — Call Bot</title>
+    <meta name="description" content="Upload customer Excel files to trigger automated AI voice calls via Call Bot.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===== RESET & BASE ===== */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #e8eaf0;
+            color: #111b21;
+            min-height: 100vh;
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        /* ===== KEYFRAMES ===== */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulseGlow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 8px rgba(59, 130, 246, .3);
+            }
+
+            50% {
+                box-shadow: 0 0 18px rgba(59, 130, 246, .55);
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes toastSlideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        /* ===== HEADER / NAVBAR ===== */
+        .header {
+            padding: 16px 24px;
+            background: #1e3a5f;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        .header::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #3b82f6;
+            box-shadow: 0 0 8px rgba(59, 130, 246, .5);
+            animation: pulseGlow 2.5s ease-in-out infinite;
+        }
+
+        .header .nav-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header .nav-btn {
+            padding: 8px 18px;
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 12.5px;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* Profile Dropdown */
+        .profile-wrap {
+            position: relative;
+            display: flex;
+            align-items: center
+        }
+
+        .profile-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            transition: box-shadow .2s
+        }
+
+        .profile-avatar:hover {
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.15)
+        }
+
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 180px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+            z-index: 999;
+            overflow: hidden
+        }
+
+        .profile-dropdown.open {
+            display: block;
+            animation: toastSlideIn .2s ease-out
+        }
+
+        .pd-header {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid #f1f5f9
+        }
+
+        .pd-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .pd-label {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px
+        }
+
+        .pd-logout {
+            width: 100%;
+            padding: 11px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .15s;
+            font-family: 'Inter', sans-serif
+        }
+
+        .pd-logout:hover {
+            background: #fef2f2
+        }
+
+        /* ===== LOADING OVERLAY ===== */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 52px;
+            height: 52px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-text {
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .loading-progress {
+            color: rgba(255, 255, 255, 0.85);
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            display: none;
+        }
+
+        .loading-progress.show {
+            display: block;
+        }
+
+        .progress-bar-wrapper {
+            width: 260px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar-wrapper.show {
+            display: block;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #3b82f6, #1e3a5f);
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+
+        /* ===== TOAST ALERT ===== */
+        .toast-alert {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 22px;
+            background: #ffffff;
+            border-left: 4px solid #f59e0b;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #111b21;
+            animation: toastSlideIn 0.4s ease-out forwards;
+            pointer-events: auto;
+        }
+
+        .toast-alert.hide {
+            animation: toastSlideOut 0.35s ease-in forwards;
+        }
+
+        .toast-alert .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .toast-alert .toast-close {
+            margin-left: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #8696a0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: background 0.2s, color 0.2s;
+            text-transform: none;
+            letter-spacing: 0;
+            font-weight: 400;
+        }
+
+        .toast-alert .toast-close:hover {
+            background: #f0f2f5;
+            color: #111b21;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ===== PAGE LAYOUT ===== */
+        .page-content {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 54px);
+            overflow: hidden;
+        }
+
+        /* ===== WORKFLOW BAR (horizontal) ===== */
+        .workflow-bar {
+            background: #ffffff;
+            border-bottom: 1px solid #e0e5eb;
+            padding: 16px 24px;
+            animation: fadeInUp 0.4s ease-out both;
+        }
+
+        .workflow-bar .bar-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8696a0;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .workflow-bar .bar-title span {
+            font-size: 14px;
+        }
+
+        .workflow-steps {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f9fa;
+            border: 1px solid #e0e5eb;
+            border-radius: 10px;
+            padding: 10px 14px;
+            flex: 1;
+            min-width: 0;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+        }
+
+        .step-item:hover {
+            border-color: #bfdbfe;
+            box-shadow: 0 3px 12px rgba(59, 130, 246, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .step-number {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+            color: #fff;
+        }
+
+        .step-number.orange {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
+        }
+
+        .step-number.blue {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .step-number.indigo {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+        }
+
+        .step-number.sky {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        }
+
+        .step-number.gray {
+            background: linear-gradient(135deg, #8696a0, #54656f);
+        }
+
+        .step-label {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #111b21;
+            line-height: 1.3;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .step-connector {
+            width: 24px;
+            height: 2px;
+            background: linear-gradient(90deg, #c4ccd5, #3b82f6);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        /* ===== BOTTOM ROW (upload + excel) ===== */
+        .bottom-row {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            padding: 20px 24px;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .upload-card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+            padding: 36px 36px;
+            flex: 1;
+            min-width: 0;
+            animation: fadeInUp 0.5s ease-out both;
+            text-align: center;
+            border: 1px solid #e0e5eb;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .upload-icon {
+            font-size: 42px;
+            margin-bottom: 4px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .upload-card h1 {
+            font-size: 19px;
+            font-weight: 700;
+            color: #111b21;
+            margin-bottom: 4px;
+            letter-spacing: -0.3px;
+        }
+
+        .upload-card p {
+            font-size: 12.5px;
+            color: #8696a0;
+            margin-bottom: 22px;
+            line-height: 1.5;
+            font-weight: 400;
+        }
+
+        /* Drop zone */
+        .drop-zone {
+            border: 2px dashed #c4ccd5;
+            border-radius: 12px;
+            padding: 24px 20px;
+            cursor: pointer;
+            transition: border-color 0.3s ease, background 0.3s ease;
+            margin-bottom: 18px;
+            position: relative;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .drop-zone-icon {
+            font-size: 28px;
+            color: #8696a0;
+            margin-bottom: 8px;
+            transition: color 0.3s ease;
+        }
+
+        .drop-zone:hover .drop-zone-icon {
+            color: #3b82f6;
+        }
+
+        .drop-zone-text {
+            font-size: 13px;
+            font-weight: 500;
+            color: #54656f;
+        }
+
+        .drop-zone-text span {
+            color: #3b82f6;
+            font-weight: 600;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .drop-zone-hint {
+            font-size: 11px;
+            color: #8696a0;
+            margin-top: 6px;
+            font-weight: 400;
+        }
+
+        .file-input-hidden {
+            display: none;
+        }
+
+        /* File selected state */
+        .file-info {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 18px;
+            animation: fadeInUp 0.3s ease-out both;
+        }
+
+        .file-info.show {
+            display: flex;
+        }
+
+        .file-info-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .file-info-details {
+            flex: 1;
+            text-align: left;
+        }
+
+        .file-info-name {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #111b21;
+            word-break: break-all;
+        }
+
+        .file-info-size {
+            font-size: 11px;
+            color: #8696a0;
+            margin-top: 2px;
+        }
+
+        .file-info-remove {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: #8696a0;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .file-info-remove:hover {
+            background: #fde8e8;
+            color: #e53e3e;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Upload button */
+        .upload-btn {
+            width: 100%;
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+            box-shadow: 0 3px 12px rgba(59, 130, 246, .25);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .upload-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, .35);
+        }
+
+        .upload-btn:active {
+            transform: scale(0.97);
+        }
+
+        .upload-btn.uploading {
+            background: #6b7a80;
+            cursor: not-allowed;
+            pointer-events: none;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .upload-btn.uploading .btn-spinner {
+            display: inline-block;
+        }
+
+        .btn-spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2.5px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        /* Back link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 14px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #8696a0;
+            text-decoration: none;
+            width: 100%;
+            text-align: center;
+            transition: color 0.2s ease;
+        }
+
+        .back-link:hover {
+            color: #3b82f6;
+        }
+
+        /* ===== EXCEL FORMAT SECTION ===== */
+        .excel-section {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+            padding: 28px 30px;
+            flex: 1;
+            min-width: 0;
+            border: 1px solid #e0e5eb;
+            animation: fadeInUp 0.5s ease-out 0.15s both;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .excel-section .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #111b21;
+            margin-bottom: 4px;
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .excel-section .section-title .title-icon {
+            font-size: 18px;
+        }
+
+        .excel-section .section-subtitle {
+            font-size: 12px;
+            color: #8696a0;
+            margin-bottom: 18px;
+            line-height: 1.4;
+        }
+
+        .excel-table-wrapper {
+            border-radius: 10px;
+            overflow-x: auto;
+            border: 1px solid #e0e5e8;
+        }
+
+        .excel-table-wrapper::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .excel-table-wrapper::-webkit-scrollbar-track {
+            background: #f0f2f5;
+            border-radius: 2px;
+        }
+
+        .excel-table-wrapper::-webkit-scrollbar-thumb {
+            background: #c4ccd5;
+            border-radius: 2px;
+        }
+
+        .excel-table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #8696a0;
+        }
+
+        .excel-table {
+            min-width: 420px;
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .excel-table thead th {
+            background: #1e3a5f;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 10px 14px;
+            text-align: left;
+            border: none;
+        }
+
+        .excel-table tbody td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #f0f2f5;
+            color: #54656f;
+            font-weight: 500;
+            font-size: 12.5px;
+        }
+
+        .excel-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .excel-table tbody tr {
+            transition: background 0.2s ease;
+        }
+
+        .excel-table tbody tr:hover {
+            background: #eff6ff;
+        }
+
+        .excel-table tbody tr:nth-child(even) {
+            background: #fafbfc;
+        }
+
+        .excel-table tbody tr:nth-child(even):hover {
+            background: #eff6ff;
+        }
+
+        .format-note {
+            margin-top: 12px;
+            font-size: 11.5px;
+            color: #8696a0;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            line-height: 1.4;
+        }
+
+        .format-note .note-icon {
+            flex-shrink: 0;
+            font-size: 13px;
+        }
+
+        /* ===== RESULT BADGE ===== */
+        #result {
+            min-height: 0;
+            margin-top: 0;
+            text-align: center;
+            font-size: 0;
+            font-weight: 500;
+            border-radius: 10px;
+            padding: 0;
+            transition: all 0.35s ease;
+            color: #8696a0;
+        }
+
+        #result.loading {
+            font-size: 12.5px;
+            color: #f59e0b;
+            padding: 10px 16px;
+            margin-top: 14px;
+            background: #fffbeb;
+            border: 1px solid #fef3c7;
+        }
+
+        #result.success {
+            font-size: 12.5px;
+            color: #16a34a;
+            padding: 10px 16px;
+            margin-top: 14px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+        }
+
+        #result.error {
+            font-size: 12.5px;
+            color: #dc2626;
+            padding: 10px 16px;
+            margin-top: 14px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 960px) {
+            .page-content {
+                height: auto;
+                overflow-y: auto;
+            }
+
+            .workflow-steps {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .step-connector {
+                display: none;
+            }
+
+            .step-item {
+                flex: 0 0 calc(50% - 4px);
+            }
+
+            .bottom-row {
+                flex-direction: column;
+                overflow-y: visible;
+            }
+
+            .upload-card {
+                padding: 28px 22px;
+            }
+
+            .excel-section {
+                padding: 24px 20px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                padding: 14px 14px;
+                font-size: 17px;
+            }
+
+            .workflow-bar {
+                padding: 12px 14px;
+            }
+
+            .step-item {
+                flex: 0 0 100%;
+            }
+
+            .bottom-row {
+                padding: 14px;
+            }
+
+            .excel-table-wrapper {
+                overflow-x: auto;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- LOADING OVERLAY -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Triggering calls…</div>
+        <div class="loading-progress" id="loadingProgress">Processing numbers…</div>
+        <div class="progress-bar-wrapper" id="progressBarWrapper">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+    </div>
+
+    <!-- HEADER / NAVBAR -->
+    <div class="header">
+        <span>Upload Call File</span>
+        <div class="nav-right">
+            <a href="/navya-analytics/lead-analysis/" class="nav-btn">📊 Lead Analysis</a>
+            <div class="profile-wrap">
+                <div class="profile-avatar" id="profileAvatar" onclick="toggleProfile(event)">?</div>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="pd-header">
+                        <div class="pd-name" id="pdName">User</div>
+                        <div class="pd-label">Logged in</div>
+                    </div>
+                    <button class="pd-logout" onclick="logoutUser()">🚪 Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const u = localStorage.getItem('username') || 'User';
+            document.getElementById('profileAvatar').textContent = u.charAt(0).toUpperCase();
+            document.getElementById('pdName').textContent = u;
+        })();
+        function toggleProfile(e) {
+            e.stopPropagation();
+            document.getElementById('profileDropdown').classList.toggle('open');
+        }
+        document.addEventListener('click', function () {
+            document.getElementById('profileDropdown').classList.remove('open');
+        });
+        function logoutUser() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('username');
+            window.location.replace('/accounts/login/');
+        }
+    </script>
+
+    <div class="page-content">
+
+        <!-- WORKFLOW BAR -->
+        <div class="workflow-bar">
+            <div class="bar-title"><span>📞</span> How It Works</div>
+            <div class="workflow-steps">
+                <div class="step-item">
+                    <div class="step-number orange">1</div>
+                    <div class="step-label">Upload Customer Excel</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item">
+                    <div class="step-number blue">2</div>
+                    <div class="step-label">System Reads Phone Numbers</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item">
+                    <div class="step-number indigo">3</div>
+                    <div class="step-label">AI Voice Bot Dials Calls</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item">
+                    <div class="step-number sky">4</div>
+                    <div class="step-label">Bot Handles Conversations</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item">
+                    <div class="step-number gray">5</div>
+                    <div class="step-label">CRM Logs Call Results</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM ROW: Upload + Excel Format -->
+        <div class="bottom-row">
+
+            <!-- UPLOAD CARD -->
+            <div class="upload-card">
+                <div class="upload-icon">📞</div>
+                <h1>Upload Call File</h1>
+                <p>Upload your Excel file containing phone numbers to trigger AI voice call campaigns automatically.</p>
+
+                <form id="callForm">
+                    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                        <div class="drop-zone-icon">☁️</div>
+                        <div class="drop-zone-text">Drag & drop your file here or <span>browse</span></div>
+                        <div class="drop-zone-hint">Supports .xlsx, .xls files</div>
+                    </div>
+
+                    <input type="file" name="file" id="fileInput" class="file-input-hidden" accept=".xlsx,.xls"
+                        required>
+
+                    <div class="file-info" id="fileInfo">
+                        <span class="file-info-icon">📄</span>
+                        <div class="file-info-details">
+                            <div class="file-info-name" id="fileName">—</div>
+                            <div class="file-info-size" id="fileSize">—</div>
+                        </div>
+                        <button type="button" class="file-info-remove" onclick="removeFile()"
+                            title="Remove file">✕</button>
+                    </div>
+
+                    <button type="submit" class="upload-btn" id="uploadBtn">
+                        <span class="btn-spinner"></span>
+                        <span class="btn-icon">📞</span>
+                        <span class="btn-text">Upload & Trigger Calls</span>
+                    </button>
+                </form>
+
+                <p id="result"></p>
+
+                <a href="/navya-analytics/lead-analysis/" class="back-link">← Back to Lead Analysis</a>
+            </div>
+
+            <!-- EXCEL FORMAT -->
+            <div class="excel-section">
+                <div class="section-title">
+                    <span class="title-icon">📋</span> Required Excel Format
+                </div>
+                <div class="section-subtitle">Your Excel file must contain a <strong>phone</strong> column with customer
+                    numbers</div>
+
+                <div class="excel-table-wrapper">
+                    <table class="excel-table">
+                        <thead>
+                            <tr>
+                                <th>name</th>
+                                <th>phone</th>
+                                <th>policy_number</th>
+                                <th>policy_expiry</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>John</td>
+                                <td>9198765XXXXX</td>
+                                <td>POL1001</td>
+                                <td>28-03-2026</td>
+                            </tr>
+                            <tr>
+                                <td>Sara</td>
+                                <td>9191234XXXXX</td>
+                                <td>POL1003</td>
+                                <td>26-03-2026</td>
+                            </tr>
+                            <tr>
+                                <td>Tony</td>
+                                <td>9187654XXXXX</td>
+                                <td>POL1005</td>
+                                <td>27-03-2026</td>
+                            </tr>
+                            <tr>
+                                <td>Elley</td>
+                                <td>9187654XXXXX</td>
+                                <td>POL1006</td>
+                                <td>27-03-2026</td>
+                            </tr>
+                            <tr>
+                                <td>Hulk</td>
+                                <td>9187654XXXXX</td>
+                                <td>POL1007</td>
+                                <td>27-03-2026</td>
+                            </tr>
+                            <tr>
+                                <td>Locky</td>
+                                <td>9187654XXXXX</td>
+                                <td>POL1008</td>
+                                <td>27-03-2026</td>
+                            </tr>
+                            <tr>
+                                <td>Lussy</td>
+                                <td>9187654XXXXX</td>
+                                <td>POL1009</td>
+                                <td>27-03-2026</td>
+                            </tr>
+                            <tr>
+                                <td>Elisa</td>
+                                <td>9187654XXXXX</td>
+                                <td>POL1010</td>
+                                <td>27-03-2026</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="format-note">
+                    <span class="note-icon">💡</span>
+                    <span>Phone numbers must include country code (e.g. 91 for India). The <strong>phone</strong> column
+                        is required — all other columns are optional but recommended for CRM tracking.</span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        /* FILE INPUT CHANGE */
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const fileInfo = document.getElementById('fileInfo');
+
+        fileInput.addEventListener('change', function () {
+            if (this.files.length > 0) {
+                showFileInfo(this.files[0]);
+            }
+        });
+
+        /* DRAG & DROP */
+        dropZone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', function () {
+            this.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                showFileInfo(files[0]);
+            }
+        });
+
+        /* SHOW FILE INFO */
+        function showFileInfo(file) {
+            document.getElementById('fileName').textContent = file.name;
+            const sizeKB = (file.size / 1024).toFixed(1);
+            document.getElementById('fileSize').textContent = sizeKB > 1024
+                ? (sizeKB / 1024).toFixed(2) + ' MB'
+                : sizeKB + ' KB';
+            fileInfo.classList.add('show');
+            dropZone.style.display = 'none';
+        }
+
+        /* REMOVE FILE */
+        function removeFile() {
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            dropZone.style.display = '';
+        }
+
+        /* TOAST ALERT HELPER */
+        function showToast(message, type) {
+            const existing = document.querySelector('.toast-alert');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-alert';
+
+            const icon = type === 'success' ? '✅' : '⚠️';
+            if (type === 'success') {
+                toast.style.borderLeftColor = '#3b82f6';
+            }
+
+            toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <span>${message}</span>
+        <button class="toast-close" onclick="dismissToast(this)">✕</button>
+    `;
+
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.classList.add('hide');
+                    setTimeout(() => toast.remove(), 350);
+                }
+            }, 4000);
+        }
+
+        function dismissToast(btn) {
+            const toast = btn.closest('.toast-alert');
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 350);
+        }
+
+        /* ===== ORIGINAL FORM SUBMIT LOGIC (preserved) ===== */
+        document.getElementById("callForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const file = fileInput.files[0];
+            if (!file) {
+                showToast('Please select an Excel file before uploading.', 'warning');
+                return;
+            }
+
+            const formData = new FormData(this);
+            const resultEl = document.getElementById("result");
+            const btn = document.getElementById("uploadBtn");
+            const overlay = document.getElementById("loadingOverlay");
+
+            // Show loading states
+            resultEl.className = 'loading';
+            resultEl.innerText = "⏳ Uploading and processing…";
+            btn.classList.add('uploading');
+            btn.querySelector('.btn-icon').style.display = 'none';
+            btn.querySelector('.btn-text').textContent = 'Triggering Calls…';
+            overlay.classList.add('active');
+
+            try {
+                const res = await fetch("/bot/upload-call/", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                resultEl.className = 'success';
+                resultEl.innerText = "✅ Calls triggered: " + data.total + ". Redirecting to Lead Analysis…";
+                showToast('Calls triggered! Redirecting…', 'success');
+
+                // Reset file & redirect to Lead Analysis after 2s
+                removeFile();
+                setTimeout(() => {
+                    window.location.href = '/navya-analytics/lead-analysis/';
+                }, 2000);
+
+            } catch (err) {
+                resultEl.className = 'error';
+                resultEl.innerText = "❌ Error! Something went wrong.";
+                showToast('Failed to trigger calls. Please try again.', 'warning');
+            } finally {
+                overlay.classList.remove('active');
+                btn.classList.remove('uploading');
+                btn.querySelector('.btn-icon').style.display = '';
+                btn.querySelector('.btn-text').textContent = 'Upload & Trigger Calls';
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>

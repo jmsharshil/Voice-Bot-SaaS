@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navya Analytics — Voice Bot Dashboard</title>
+    <meta name="description"
+        content="Real-time voice bot call analytics dashboard with conversation history and caller insights.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+            min-height: 100vh;
+            overflow-x: hidden
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-10px);
+                opacity: 0
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.2)
+            }
+
+            50% {
+                box-shadow: 0 0 0 8px rgba(79, 70, 229, 0)
+            }
+        }
+
+        /* HEADER */
+        .header {
+            padding: 16px 32px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05)
+        }
+
+        .header-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1)
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em
+        }
+
+        .header-sub {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+            background: #f8fafc;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid #f1f5f9;
+            margin-left: 8px
+        }
+
+        .header-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: #f0fdfa;
+            border: 1px solid #ccfbf1;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #0d9488
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #0d9488;
+            box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.3);
+            animation: pulse 2s infinite
+        }
+
+        .header-link {
+            font-size: 13px;
+            color: #4f46e5;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 8px 16px;
+            background: #f5f3ff;
+            border-radius: 8px;
+            transition: all .2s;
+            border: 1px solid rgba(79, 70, 229, 0.1)
+        }
+
+        .header-link:hover {
+            background: #ede9fe;
+            transform: translateY(-1px)
+        }
+
+        /* Profile Dropdown */
+        .profile-wrap {
+            position: relative;
+            display: flex;
+            align-items: center
+        }
+
+        .profile-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            border: 2px solid rgba(79, 70, 229, 0.2);
+            transition: box-shadow .2s
+        }
+
+        .profile-avatar:hover {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12)
+        }
+
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 180px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+            z-index: 999;
+            overflow: hidden;
+            animation: fadeIn .2s ease-out
+        }
+
+        .profile-dropdown.open {
+            display: block
+        }
+
+        .pd-header {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid #f1f5f9
+        }
+
+        .pd-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .pd-label {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px
+        }
+
+        .pd-logout {
+            width: 100%;
+            padding: 11px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .15s;
+            font-family: 'Inter', sans-serif
+        }
+
+        .pd-logout:hover {
+            background: #fef2f2
+        }
+
+        /* STAT CARDS */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 24px 32px
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
+            transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            animation: fadeIn 0.5s ease-out both;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03)
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+            border-color: #4f46e5
+        }
+
+        .card-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 8px
+        }
+
+        .card-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.03em
+        }
+
+        .card:nth-child(1) .card-value {
+            color: #4f46e5
+        }
+
+        .card:nth-child(2) .card-value {
+            color: #0d9488
+        }
+
+        .card:nth-child(3) .card-value {
+            color: #f59e0b
+        }
+
+        .card-sub {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+            font-weight: 500
+        }
+
+        /* MAIN CONTENT */
+        .main {
+            display: flex;
+            height: calc(100vh - 240px);
+            margin: 0 32px 32px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05)
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 400px;
+            min-width: 400px;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc
+        }
+
+        .search-box {
+            padding: 20px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            color: #1e293b;
+            font-size: 14px;
+            outline: none;
+            transition: all .2s
+        }
+
+        .search-input:focus {
+            background: #ffffff;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1)
+        }
+
+        .sidebar-header {
+            padding: 16px 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+            background: #ffffff;
+            display: flex;
+            justify-content: space-between
+        }
+
+        .number-list {
+            flex: 1;
+            overflow-y: auto
+        }
+
+        .number-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: all .2s
+        }
+
+        .number-item:hover {
+            background: #f1f5f9
+        }
+
+        .number-item.active {
+            background: #ffffff;
+            box-shadow: inset 4px 0 0 #4f46e5
+        }
+
+        .number-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: #f5f3ff;
+            color: #4f46e5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            border: 1px solid rgba(79, 70, 229, 0.1)
+        }
+
+        .number-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .number-phone {
+            font-size: 15px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 2px
+        }
+
+        .number-meta {
+            font-size: 11px;
+            color: #94a3b8
+        }
+
+        .number-count {
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px
+        }
+
+        /* Session list */
+        .session-list {
+            display: none;
+            background: #fcfdff
+        }
+
+        .session-list.open {
+            display: block
+        }
+
+        .session-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px 12px 60px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: all .15s;
+            font-size: 13px;
+            color: #64748b
+        }
+
+        .session-item:hover {
+            background: #f1f5f9;
+            color: #0f172a
+        }
+
+        .session-item.active {
+            background: #f5f3ff;
+            color: #4f46e5;
+            font-weight: 600
+        }
+
+        .session-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0
+        }
+
+        .session-dot.ended {
+            background: #cbd5e1
+        }
+
+        .session-dot.live {
+            background: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1)
+        }
+
+        /* CHAT PANEL */
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            position: relative
+        }
+
+        .chat-header {
+            display: none;
+            align-items: center;
+            gap: 16px;
+            padding: 24px 32px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #ffffff
+        }
+
+        .chat-header.show {
+            display: flex;
+            animation: fadeIn 0.4s ease-out
+        }
+
+        .chat-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #fff;
+            font-weight: 700
+        }
+
+        .chat-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .chat-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a
+        }
+
+        .chat-detail {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px
+        }
+
+        .chat-badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em
+        }
+
+        .badge-active {
+            background: #f0fdfa;
+            color: #0d9488;
+            border: 1px solid #ccfbf1
+        }
+
+        .badge-ended {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0
+        }
+
+        .badge-duration {
+            background: #fffbeb;
+            color: #d97706;
+            border: 1px solid #fef3c7
+        }
+
+        .chat-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            text-align: center
+        }
+
+        .chat-empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5
+        }
+
+        .messages {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            background: #ffffff
+        }
+
+        .messages.show {
+            display: flex
+        }
+
+        .msg {
+            padding: 16px 20px;
+            border-radius: 16px;
+            max-width: 75%;
+            font-size: 14.5px;
+            line-height: 1.6;
+            position: relative;
+            animation: slideIn 0.3s ease-out both;
+            word-wrap: break-word;
+            white-space: pre-wrap
+        }
+
+        .user-msg {
+            background: #f1f5f9;
+            color: #1e293b;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px
+        }
+
+        .bot-msg {
+            background: #4f46e5;
+            color: #ffffff;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2)
+        }
+
+        .msg-label {
+            font-size: 10px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.05em
+        }
+
+        .user-msg .msg-label {
+            color: #64748b
+        }
+
+        .bot-msg .msg-label {
+            color: rgba(255, 255, 255, 0.8)
+        }
+
+        .msg-time {
+            font-size: 10px;
+            margin-top: 8px;
+            opacity: 0.6;
+            text-align: right
+        }
+
+        .date-sep {
+            text-align: center;
+            padding: 24px 0;
+            font-size: 12px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.05em
+        }
+
+        .date-sep span {
+            background: #f8fafc;
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1px solid #f1f5f9
+        }
+
+        .loading {
+            padding: 40px;
+            text-align: center;
+            color: #64748b
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f1f5f9;
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+            display: inline-block;
+            margin-right: 10px
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════
+   PER-BOT ANALYTICS SECTION 
+   ═══════════════════════════════════════════════════════ */
+        .perbot-section {
+            padding: 0 32px 24px
+        }
+
+        .perbot-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px
+        }
+
+        .perbot-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em
+        }
+
+        .perbot-count {
+            font-size: 12px;
+            color: #94a3b8;
+            font-weight: 600
+        }
+
+        .perbot-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px
+        }
+
+        .bot-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03)
+        }
+
+        .bot-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+            border-color: #4f46e5
+        }
+
+        .bot-card.expanded {
+            border-color: #4f46e5
+        }
+
+        .bot-card-head {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px
+        }
+
+        .bot-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff
+        }
+
+        .bot-card:nth-child(4n+1) .bot-icon {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed)
+        }
+
+        .bot-card:nth-child(4n+2) .bot-icon {
+            background: linear-gradient(135deg, #0d9488, #14b8a6)
+        }
+
+        .bot-card:nth-child(4n+3) .bot-icon {
+            background: linear-gradient(135deg, #d97706, #f59e0b)
+        }
+
+        .bot-card:nth-child(4n+4) .bot-icon {
+            background: linear-gradient(135deg, #b91c1c, #ef4444)
+        }
+
+        .bot-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .bot-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a
+        }
+
+        .bot-industry {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px
+        }
+
+        .bot-quick-stats {
+            display: flex;
+            gap: 16px;
+            align-items: center
+        }
+
+        .bot-quick-stat-val {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a
+        }
+
+        .bot-quick-stat-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-top: 2px
+        }
+
+        .bot-expand-icon {
+            font-size: 14px;
+            color: #cbd5e1;
+            transition: transform .3s
+        }
+
+        .bot-card.expanded .bot-expand-icon {
+            transform: rotate(180deg);
+            color: #4f46e5
+        }
+
+        .bot-detail {
+            display: none;
+            padding: 0 20px 20px;
+            border-top: 1px solid #f1f5f9;
+            background: #fcfdff
+        }
+
+        .bot-card.expanded .bot-detail {
+            display: block
+        }
+
+        .bot-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 16px
+        }
+
+        .bot-detail-item {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02)
+        }
+
+        .bot-detail-item-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 4px
+        }
+
+        .bot-detail-item-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b
+        }
+
+        .bot-detail-item-sub {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 2px
+        }
+
+        .bot-activity-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px
+        }
+
+        .bot-activity-tag {
+            font-size: 10px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700
+        }
+
+        .bot-activity-tag.first {
+            background: #f5f3ff;
+            color: #4f46e5;
+            border: 1px solid #ddd6fe
+        }
+
+        .bot-activity-tag.last {
+            background: #f0fdfa;
+            color: #0d9488;
+            border: 1px solid #ccfbf1
+        }
+
+        .bot-activity-tag.live {
+            background: #f0fdfa;
+            color: #0d9488;
+            border: 1px solid #0d9488;
+            animation: pulse 2s infinite
+        }
+
+        @media(max-width:1100px) {
+            .sidebar {
+                width: 320px;
+                min-width: 320px
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-dot"></div>
+        <span class="header-title">Navya Analytics</span>
+        <span class="header-sub">Voice Bot Conversations</span>
+        <div class="header-right">
+            <a href="/navya-analytics/lead-analysis/" id="leadAnalysisBtn" class="header-link" style="display:none;">🎯
+                Lead Analysis</a>
+            <div class="live-badge">
+                <div class="live-dot"></div>Live
+            </div>
+            <div class="profile-wrap">
+                <div class="profile-avatar" id="profileAvatar" onclick="toggleProfile(event)">?</div>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="pd-header">
+                        <div class="pd-name" id="pdName">User</div>
+                        <div class="pd-label">Logged in</div>
+                    </div>
+                    <button class="pd-logout" onclick="logoutUser()">🚪 Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth & Permission Guard
+        if (!localStorage.getItem('access_token')) {
+            window.location.replace('/accounts/login/');
+        } else {
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) { }
+
+            if (!isAdmin && !perms.can_view_calls) {
+                alert('Access Denied: You do not have permission to view Call Analytics.');
+                window.location.replace('/accounts/login/');
+            }
+
+            // Conditionally show Lead Analysis button
+            if (isAdmin || perms.can_view_leads) {
+                const btn = document.getElementById('leadAnalysisBtn');
+                if (btn) btn.style.display = 'inline-flex';
+            }
+        }
+
+        (function () {
+            const u = localStorage.getItem('username') || 'User';
+            document.getElementById('profileAvatar').textContent = u.charAt(0).toUpperCase();
+            document.getElementById('pdName').textContent = u;
+        })();
+        function toggleProfile(e) {
+            e.stopPropagation();
+            document.getElementById('profileDropdown').classList.toggle('open');
+        }
+        document.addEventListener('click', function () {
+            document.getElementById('profileDropdown').classList.remove('open');
+        });
+        function logoutUser() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('username');
+            window.location.replace('/accounts/login/');
+        }
+    </script>
+
+    <!-- STAT CARDS -->
+    <div class="cards">
+        <div class="card">
+            <div class="card-label">Total Sessions</div>
+            <div class="card-value" id="statSessions">—</div>
+            <div class="card-sub">All time calls</div>
+        </div>
+
+        <div class="card">
+            <div class="card-label">Avg Duration</div>
+            <div class="card-value" id="statAvgDur">—</div>
+            <div class="card-sub">Per session</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Messages</div>
+            <div class="card-value" id="statMessages">—</div>
+            <div class="card-sub">User + Bot</div>
+        </div>
+    </div>
+
+    <!-- PER-BOT ANALYTICS (new section — existing content below unchanged) -->
+    <div class="perbot-section">
+        <div class="perbot-header">
+            <span class="perbot-title">🤖 Per-Bot Analysis</span>
+            <span class="perbot-count" id="perbotCount"></span>
+        </div>
+        <div class="perbot-grid" id="perbotGrid">
+            <div class="loading">
+                <div class="spinner"></div> Loading bot analytics…
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <div class="search-box">
+                <input class="search-input" type="text" placeholder="🔍 Search phone numbers…"
+                    oninput="filterNumbers(this.value)" id="searchInput">
+            </div>
+            <div class="sidebar-header">
+                <span>Phone Numbers</span>
+                <span id="numberCount">0 numbers</span>
+            </div>
+            <div class="number-list" id="numberList">
+                <div class="loading">
+                    <div class="spinner"></div> Loading…
+                </div>
+            </div>
+        </div>
+
+        <!-- CHAT PANEL -->
+        <div class="chat-panel">
+            <div class="chat-header" id="chatHeader">
+                <div class="chat-avatar" id="chatAvatar">📞</div>
+                <div class="chat-info">
+                    <div class="chat-name" id="chatName">—</div>
+                    <div class="chat-detail" id="chatDetail"></div>
+                </div>
+                <div class="chat-badges" id="chatBadges"></div>
+            </div>
+
+            <div class="chat-empty" id="chatEmpty">
+                <div class="chat-empty-icon">📊</div>
+                <div class="chat-empty-title">Select a session to view conversation</div>
+                <div class="chat-empty-sub">Pick a phone number from the sidebar, then choose a session</div>
+            </div>
+
+            <div class="messages" id="messagesBox"></div>
+        </div>
+
+    </div>
+
+    <script>
+        let allNumbers = [];
+        let activeNumber = null;
+        let activeSessionId = null;
+
+        /* ── Helpers ────────────────────────────── */
+        function fmtDur(sec) {
+            if (!sec || sec <= 0) return "—";
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return m > 0 ? `${m}m ${s}s` : `${s}s`;
+        }
+
+        function fmtTime(iso) {
+            if (!iso) return "";
+            const d = new Date(iso);
+            return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+        }
+
+        function fmtDate(iso) {
+            if (!iso) return "";
+            const d = new Date(iso);
+            return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+        }
+
+        function fmtDateTime(iso) {
+            if (!iso) return "—";
+            return fmtDate(iso) + " " + fmtTime(iso);
+        }
+
+        function timeAgo(iso) {
+            if (!iso) return "";
+            const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+            if (diff < 60) return "Just now";
+            if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+            if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+            return Math.floor(diff / 86400) + "d ago";
+        }
+
+        function escHtml(t) {
+            return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+        }
+
+        /* ── Load Dashboard ─────────────────────── */
+        async function loadDashboard() {
+            try {
+                const res = await fetch("/api/call-analytics/data/");
+                const data = await res.json();
+
+                document.getElementById("statSessions").textContent = data.total_sessions;
+
+                document.getElementById("statAvgDur").textContent = fmtDur(data.avg_duration_seconds);
+                document.getElementById("statMessages").textContent = data.total_messages;
+
+                allNumbers = data.numbers || [];
+                renderNumbers(allNumbers);
+            } catch (e) {
+                console.error("Dashboard load error:", e);
+            }
+        }
+
+        /* ── Render Number List ─────────────────── */
+        function renderNumbers(numbers) {
+            const list = document.getElementById("numberList");
+            document.getElementById("numberCount").textContent = numbers.length + " numbers";
+
+            if (!numbers.length) {
+                list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:#475569;font-size:13px;">No calls recorded yet.<br>Calls will appear here in real-time.</div>';
+                return;
+            }
+
+            list.innerHTML = "";
+            numbers.forEach(n => {
+                const wrapper = document.createElement("div");
+
+                // Number item
+                const item = document.createElement("div");
+                item.className = "number-item" + (activeNumber === n.user_number ? " active" : "");
+                item.setAttribute("data-number", n.user_number);
+                item.innerHTML = `
+            <div class="number-icon">📞</div>
+            <div class="number-info">
+                <div class="number-phone">${n.user_number}</div>
+                <div class="number-meta">Last call ${timeAgo(n.last_call)}</div>
+            </div>
+            <div class="number-count">${n.session_count}</div>
+        `;
+                item.onclick = () => toggleNumber(n.user_number, wrapper);
+
+                // Session sub-list
+                const sessList = document.createElement("div");
+                sessList.className = "session-list" + (activeNumber === n.user_number ? " open" : "");
+
+                n.sessions.forEach(s => {
+                    const si = document.createElement("div");
+                    si.className = "session-item" + (activeSessionId === s.session_id ? " active" : "");
+                    const isLive = !s.ended_at;
+                    si.innerHTML = `
+                <div class="session-dot ${isLive ? 'live' : 'ended'}"></div>
+                <div class="session-info">
+                    <div class="session-time">${fmtDateTime(s.started_at)}</div>
+                    <div class="session-dur">${isLive ? '🟢 In Progress' : fmtDur(s.duration_seconds)}</div>
+                </div>
+                <div class="session-msgs">${s.message_count} msgs</div>
+            `;
+                    si.onclick = (e) => { e.stopPropagation(); openSession(s, n.user_number); };
+                    sessList.appendChild(si);
+                });
+
+                wrapper.appendChild(item);
+                wrapper.appendChild(sessList);
+                list.appendChild(wrapper);
+            });
+        }
+
+        /* ── Toggle Number Expand ───────────────── */
+        function toggleNumber(number, wrapper) {
+            if (activeNumber === number) {
+                activeNumber = null;
+            } else {
+                activeNumber = number;
+            }
+            renderNumbers(allNumbers.filter(n => {
+                const q = document.getElementById("searchInput").value.toLowerCase();
+                return !q || n.user_number.toLowerCase().includes(q);
+            }));
+        }
+
+        /* ── Open Session ───────────────────────── */
+        async function openSession(session, userNumber) {
+            activeSessionId = session.session_id;
+
+            // Update sidebar selection
+            document.querySelectorAll(".session-item").forEach(el => el.classList.remove("active"));
+
+            // Update chat header
+            const isLive = !session.ended_at;
+            document.getElementById("chatName").textContent = userNumber;
+            document.getElementById("chatDetail").textContent = fmtDateTime(session.started_at) + (session.ended_at ? " → " + fmtTime(session.ended_at) : "");
+            document.getElementById("chatBadges").innerHTML = `
+        <span class="badge ${isLive ? 'badge-active' : 'badge-ended'}">${isLive ? '🟢 In Call' : '⏹ Ended'}</span>
+        ${session.duration_seconds ? `<span class="badge badge-duration">⏱ ${fmtDur(session.duration_seconds)}</span>` : ''}
+    `;
+            document.getElementById("chatHeader").classList.add("show");
+
+            // Show messages
+            document.getElementById("chatEmpty").style.display = "none";
+            const box = document.getElementById("messagesBox");
+            box.classList.add("show");
+            box.innerHTML = '<div class="loading"><div class="spinner"></div> Loading messages…</div>';
+
+            try {
+                const res = await fetch(`/api/call-analytics/session/${session.session_id}/`);
+                const data = await res.json();
+                renderMessages(data.messages);
+            } catch (e) {
+                box.innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;font-size:13px;">Failed to load messages</div>';
+            }
+
+            // Re-render to update active states
+            renderNumbers(allNumbers.filter(n => {
+                const q = document.getElementById("searchInput").value.toLowerCase();
+                return !q || n.user_number.toLowerCase().includes(q);
+            }));
+        }
+
+        /* ── Render Messages ────────────────────── */
+        function renderMessages(messages) {
+            const box = document.getElementById("messagesBox");
+            box.innerHTML = "";
+
+            if (!messages.length) {
+                box.innerHTML = '<div style="padding:30px;text-align:center;color:#475569;font-size:13px;">No messages in this session.</div>';
+                return;
+            }
+
+            let lastDate = "";
+            messages.forEach(m => {
+                const d = fmtDate(m.created_at);
+                if (d !== lastDate) {
+                    lastDate = d;
+                    const sep = document.createElement("div");
+                    sep.className = "date-sep";
+                    sep.innerHTML = `<span>${d}</span>`;
+                    box.appendChild(sep);
+                }
+
+                const div = document.createElement("div");
+                div.className = "msg " + (m.role === "user" ? "user-msg" : "bot-msg");
+                div.innerHTML = `<span class="msg-label">${m.role === "user" ? "👤 User" : "🤖 Bot"}</span>${escHtml(m.text)}<div class="msg-time">${fmtTime(m.created_at)}</div>`;
+                box.appendChild(div);
+            });
+
+            box.scrollTop = box.scrollHeight;
+        }
+
+        /* ── Search Filter ──────────────────────── */
+        function filterNumbers(query) {
+            const q = query.toLowerCase();
+            const filtered = allNumbers.filter(n => n.user_number.toLowerCase().includes(q));
+            renderNumbers(filtered);
+        }
+
+        /* ── Auto Refresh ───────────────────────── */
+        setInterval(async () => {
+            try {
+                const res = await fetch("/api/call-analytics/data/");
+                const data = await res.json();
+
+                document.getElementById("statSessions").textContent = data.total_sessions;
+
+                document.getElementById("statAvgDur").textContent = fmtDur(data.avg_duration_seconds);
+                document.getElementById("statMessages").textContent = data.total_messages;
+
+                allNumbers = data.numbers || [];
+                const q = document.getElementById("searchInput").value.toLowerCase();
+                const filtered = q ? allNumbers.filter(n => n.user_number.toLowerCase().includes(q)) : allNumbers;
+                renderNumbers(filtered);
+
+                // Refresh active session messages
+                if (activeSessionId) {
+                    const r2 = await fetch(`/api/call-analytics/session/${activeSessionId}/`);
+                    const d2 = await r2.json();
+                    const box = document.getElementById("messagesBox");
+                    const curCount = box.querySelectorAll(".msg").length;
+                    if (curCount !== d2.messages.length) {
+                        renderMessages(d2.messages);
+                        // Update header too
+                        const isLive = !d2.ended_at;
+                        document.getElementById("chatDetail").textContent = fmtDateTime(d2.started_at) + (d2.ended_at ? " → " + fmtTime(d2.ended_at) : "");
+                        document.getElementById("chatBadges").innerHTML = `
+                    <span class="badge ${isLive ? 'badge-active' : 'badge-ended'}">${isLive ? '🟢 In Call' : '⏹ Ended'}</span>
+                    ${d2.duration_seconds ? `<span class="badge badge-duration">⏱ ${fmtDur(d2.duration_seconds)}</span>` : ''}
+                `;
+                    }
+                }
+
+                // Also refresh per-bot analytics
+                loadPerBotAnalytics();
+            } catch (e) { }
+        }, 3000);
+
+        /* ═══════════════════════════════════════════════════════
+           PER-BOT ANALYTICS (new — existing JS functions untouched)
+           ═══════════════════════════════════════════════════════ */
+
+        const BOT_EMOJIS = ["🤖", "🧠", "💬", "📞", "🎯"];
+
+        async function loadPerBotAnalytics() {
+            try {
+                const res = await fetch("/api/call-analytics/per-bot/");
+                const data = await res.json();
+                renderBotCards(data.bots || []);
+            } catch (e) {
+                console.error("Per-bot load error:", e);
+            }
+        }
+
+        function fmtDurLong(sec) {
+            if (!sec || sec <= 0) return "—";
+            if (sec < 60) return sec + "s";
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            if (m < 60) return `${m}m ${s}s`;
+            const h = Math.floor(m / 60);
+            const rm = m % 60;
+            return `${h}h ${rm}m`;
+        }
+
+        function renderBotCards(bots) {
+            const grid = document.getElementById("perbotGrid");
+            document.getElementById("perbotCount").textContent = bots.length + " bots";
+
+            if (!bots.length) {
+                grid.innerHTML = '<div style="padding:20px;text-align:center;color:#475569;font-size:13px;">No bot data available yet.</div>';
+                return;
+            }
+
+            // Preserve expanded state
+            const expandedIds = new Set();
+            grid.querySelectorAll(".bot-card.expanded").forEach(el => {
+                const id = el.getAttribute("data-bot-id");
+                if (id) expandedIds.add(id);
+            });
+
+            grid.innerHTML = "";
+
+            bots.forEach((b, idx) => {
+                const card = document.createElement("div");
+                card.className = "bot-card" + (expandedIds.has(b.bot_id) ? " expanded" : "");
+                card.setAttribute("data-bot-id", b.bot_id);
+
+                const emoji = BOT_EMOJIS[idx % BOT_EMOJIS.length];
+                const initial = b.bot_name ? b.bot_name.charAt(0).toUpperCase() : "?";
+
+                card.innerHTML = `
+            <div class="bot-card-head" onclick="toggleBotCard(this)">
+                <div class="bot-icon">${initial}</div>
+                <div class="bot-info">
+                    <div class="bot-name">${escHtml(b.bot_name)}</div>
+                    <div class="bot-industry">${escHtml(b.industry)} · ${escHtml(b.company)}</div>
+                </div>
+                <div class="bot-quick-stats">
+                    <div class="bot-quick-stat">
+                        <div class="bot-quick-stat-val">${b.total_sessions}</div>
+                        <div class="bot-quick-stat-label">Sessions</div>
+                    </div>
+                    <div class="bot-quick-stat">
+                        <div class="bot-quick-stat-val">${fmtDur(b.avg_duration_seconds)}</div>
+                        <div class="bot-quick-stat-label">Avg Time</div>
+                    </div>
+                </div>
+                <div class="bot-expand-icon">▼</div>
+            </div>
+            <div class="bot-detail">
+                <div class="bot-detail-grid">
+                    <div class="bot-detail-item">
+                        <div class="bot-detail-item-label">Total Sessions</div>
+                        <div class="bot-detail-item-value">${b.total_sessions}</div>
+                        <div class="bot-detail-item-sub">All time</div>
+                    </div>
+                    <div class="bot-detail-item">
+                        <div class="bot-detail-item-label">Avg Duration</div>
+                        <div class="bot-detail-item-value">${fmtDurLong(b.avg_duration_seconds)}</div>
+                        <div class="bot-detail-item-sub">Per session</div>
+                    </div>
+                    <div class="bot-detail-item">
+                        <div class="bot-detail-item-label">Total Call Time</div>
+                        <div class="bot-detail-item-value">${fmtDurLong(b.total_duration_seconds)}</div>
+                        <div class="bot-detail-item-sub">Cumulative</div>
+                    </div>
+                    <div class="bot-detail-item">
+                        <div class="bot-detail-item-label">Shortest Call</div>
+                        <div class="bot-detail-item-value">${fmtDurLong(b.min_duration_seconds)}</div>
+                        <div class="bot-detail-item-sub">Minimum</div>
+                    </div>
+                    <div class="bot-detail-item">
+                        <div class="bot-detail-item-label">Longest Call</div>
+                        <div class="bot-detail-item-value">${fmtDurLong(b.max_duration_seconds)}</div>
+                        <div class="bot-detail-item-sub">Maximum</div>
+                    </div>
+                    <div class="bot-detail-item">
+                        <div class="bot-detail-item-label">Avg Msgs/Session</div>
+                        <div class="bot-detail-item-value">${b.avg_messages_per_session}</div>
+                        <div class="bot-detail-item-sub">Engagement</div>
+                    </div>
+                    <div class="bot-detail-item">
+                        <div class="bot-detail-item-label">Total Messages</div>
+                        <div class="bot-detail-item-value">${b.total_messages}</div>
+                        <div class="bot-detail-item-sub">User + Bot</div>
+                    </div>
+                </div>
+                <div class="bot-activity-row">
+
+                    ${b.first_call ? `<span class="bot-activity-tag first">📅 First: ${fmtDate(b.first_call)}</span>` : ''}
+                    ${b.last_call ? `<span class="bot-activity-tag last">🕐 Last: ${fmtDateTime(b.last_call)}</span>` : ''}
+                </div>
+            </div>
+        `;
+                grid.appendChild(card);
+            });
+        }
+
+        function toggleBotCard(headEl) {
+            const card = headEl.closest(".bot-card");
+            card.classList.toggle("expanded");
+        }
+
+        /* ── Init ────────────────────────────────── */
+        window.onload = () => {
+            loadDashboard();
+            loadPerBotAnalytics();
+        };
+    </script>
+</body>
+
+</html>

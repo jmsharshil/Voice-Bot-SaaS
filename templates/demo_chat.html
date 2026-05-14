@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Voice Bot Consultant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="AI Voice Bot Consultant - Discover how AI voice bots can transform your business across any industry">
+
+<style>
+/* ================= BASE ================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #f0f6ff;
+  background-image:
+    radial-gradient(ellipse 70% 50% at 15% 10%, rgba(59,130,246,0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 85% 90%, rgba(99,102,241,0.06) 0%, transparent 60%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #1e293b;
+}
+
+/* Decorative floating shapes */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+body::before {
+  width: 320px;
+  height: 320px;
+  top: -80px;
+  right: -60px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(147,197,253,0.08));
+  animation: floatShape 8s ease-in-out infinite;
+}
+body::after {
+  width: 220px;
+  height: 220px;
+  bottom: -40px;
+  left: -40px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(196,181,253,0.06));
+  animation: floatShape 10s ease-in-out infinite reverse;
+}
+
+@keyframes floatShape {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 520px;
+  padding: 24px 16px;
+}
+
+/* ================= HERO ================= */
+.hero {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.hero-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+  animation: orbPulse 3s ease-in-out infinite;
+}
+
+@keyframes orbPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.hero-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0;
+  color: #1e40af;
+  letter-spacing: -0.5px;
+}
+
+.hero-sub {
+  font-size: 13.5px;
+  color: #64748b;
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+}
+
+/* ================= START BUTTON ================= */
+#startWrapper {
+  text-align: center;
+  margin-top: 32px;
+}
+
+#startBtn {
+  padding: 16px 48px;
+  font-size: 17px;
+  font-weight: 700;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow:
+    0 6px 24px rgba(37,99,235,0.3),
+    0 2px 8px rgba(37,99,235,0.15);
+  transition: all 0.3s ease;
+  letter-spacing: 0.3px;
+  position: relative;
+  overflow: hidden;
+}
+
+#startBtn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  border-radius: inherit;
+}
+
+#startBtn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 8px 30px rgba(37,99,235,0.35),
+    0 4px 12px rgba(37,99,235,0.2);
+}
+
+#startBtn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 6px 24px rgba(37,99,235,0.3), 0 2px 8px rgba(37,99,235,0.15); }
+  50% { box-shadow: 0 6px 32px rgba(37,99,235,0.45), 0 2px 12px rgba(37,99,235,0.25); }
+}
+
+#startBtn {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+#startBtn:hover {
+  animation: none;
+}
+
+/* ================= CHAT CARD ================= */
+.card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow:
+    0 4px 20px rgba(59,130,246,0.07),
+    0 1px 3px rgba(0,0,0,0.04);
+}
+
+.chat {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar */
+.chat::-webkit-scrollbar { width: 5px; }
+.chat::-webkit-scrollbar-track { background: transparent; }
+.chat::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+.chat::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ================= MESSAGES ================= */
+.bot {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-left: 4px solid #3b82f6;
+  padding: 14px 16px;
+  border-radius: 4px 16px 16px 16px;
+  margin-bottom: 14px;
+  max-width: 82%;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #1e293b;
+  box-shadow: 0 2px 8px rgba(59,130,246,0.06);
+  animation: fadeInUp 0.3s ease;
+  white-space: pre-line;
+}
+
+.user {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  padding: 14px 16px;
+  border-radius: 16px 4px 16px 16px;
+  margin-bottom: 14px;
+  margin-left: auto;
+  max-width: 82%;
+  text-align: right;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #ffffff;
+  box-shadow: 0 3px 12px rgba(37,99,235,0.2);
+  animation: fadeInUp 0.3s ease;
+  white-space: pre-line;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ================= FOOTER / STATUS ================= */
+.footer {
+  margin-top: 12px;
+}
+
+.footer input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1.5px solid #dbeafe;
+  background: #f8faff;
+  color: #64748b;
+  text-align: center;
+  font-weight: 600;
+  font-size: 13.5px;
+  font-family: 'Inter', system-ui, sans-serif;
+  outline: none;
+}
+
+/* ================= LOADING OVERLAY ================= */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(240,246,255,0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-box {
+  text-align: center;
+}
+
+.spinner {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 5px solid #dbeafe;
+  border-top-color: #3b82f6;
+  animation: spin 0.85s linear infinite;
+  margin: auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+/* ================= NEW CONVERSATION BUTTON ================= */
+#newConvoBtn {
+  padding: 11px 26px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1.5px solid #dbeafe;
+  background: #ffffff;
+  color: #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(59,130,246,0.08);
+  transition: all 0.25s ease;
+}
+
+#newConvoBtn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(59,130,246,0.12);
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 600px) {
+  .container { padding: 16px 12px; }
+  .hero-title { font-size: 24px; }
+  .chat { max-height: 350px; }
+  .bot, .user { max-width: 90%; font-size: 13px; }
+  #startBtn { padding: 14px 36px; font-size: 15px; }
+}
+
+@media (max-width: 380px) {
+  .hero-title { font-size: 21px; }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="hero">
+        <div class="hero-icon">🤖</div>
+        <h1 class="hero-title">AI Voice Bot Consultant</h1>
+        <div class="hero-sub">Discover what AI voice bots can do for your business</div>
+    </div>
+
+  <!-- START BUTTON (shown on page load) -->
+  <div id="startWrapper">
+      <button id="startBtn" onclick="handleStart()">🎙️ Start Conversation</button>
+  </div>
+
+  <!-- Chat Card (hidden until started) -->
+  <div class="card" id="chatCard" style="display:none;">
+    <div class="chat" id="chat"></div>
+    <div class="footer">
+      <input id="status" placeholder="" disabled />
+    </div>
+  </div>
+
+  <!-- New Conversation Button -->
+  <div id="newConvoWrapper" style="display:none; text-align:center; margin-top:16px;">
+      <button id="newConvoBtn" onclick="restartChat()">🔄 New Conversation</button>
+  </div>
+
+</div>
+
+<!-- Loading Overlay (hidden by default) -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div class="loading-text">Starting AI Voice Bot Consultant…</div>
+
+  </div>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const CHAT_API = "/api/demo/chat/";
+
+/* ================= STATE ================= */
+let sessionId = null;
+
+let recognition = null;
+let micActive = false;
+let botSpeaking = false;
+
+let silenceTimer = null;
+let speechBuffer = "";
+
+const USER_LONG_SILENCE_LIMIT = 800;
+
+const chat = document.getElementById("chat");
+const statusInput = document.getElementById("status");
+const loadingOverlay = document.getElementById("loadingOverlay");
+
+/* ================= SAFARI AUDIO FIX ================= */
+let audioContext = null;
+const iosAudio = new Audio();
+iosAudio.playsInline = true;
+iosAudio.preload = "auto";
+
+async function unlockSafariAudio() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioContext.state === "suspended") {
+    await audioContext.resume();
+  }
+  const buffer = audioContext.createBuffer(1, 1, 22050);
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioContext.destination);
+  source.start();
+}
+
+/* ================= LOADING ================= */
+function showLoading() {
+  loadingOverlay.style.display = "flex";
+}
+
+function hideLoading() {
+  loadingOverlay.style.display = "none";
+}
+
+/* ================= UI ================= */
+function addBot(text) {
+  if (!text) return;
+  chat.innerHTML += `<div class="bot">${text}</div>`;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addUser(text) {
+  if (!text) return;
+  let last = chat.querySelector(".user:last-child");
+  if (last) last.innerText = text;
+  else chat.innerHTML += `<div class="user">${text}</div>`;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+/* ================= MIC ================= */
+function initMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return alert("Speech recognition not supported");
+
+  recognition = new SR();
+  recognition.lang = "en-IN";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    micActive = true;
+    statusInput.value = "🎤 Listening…";
+  };
+
+  recognition.onresult = e => {
+    const text = e.results[0][0].transcript.trim();
+    if (!text) return;
+
+    speechBuffer = text;
+    addUser(speechBuffer);
+
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(finalizeUserSpeech, USER_LONG_SILENCE_LIMIT);
+  };
+
+  recognition.onend = () => {
+    micActive = false;
+  };
+}
+
+function startMic() {
+  if (botSpeaking) return;
+  if (!recognition) initMic();
+  micActive = true;
+  speechBuffer = "";
+  try { recognition.start(); } catch {}
+}
+
+function stopMic() {
+  micActive = false;
+  if (recognition) {
+    try { recognition.stop(); } catch {}
+  }
+}
+
+/* ================= BOT AUDIO ================= */
+function playAudio(base64) {
+  stopMic();
+  botSpeaking = true;
+  statusInput.value = "🗣️ Speaking…";
+
+  if (!base64) {
+    botSpeaking = false;
+    startMic();
+    return;
+  }
+
+  iosAudio.src = "data:audio/wav;base64," + base64;
+  iosAudio.load();
+
+  iosAudio.onended = () => {
+    botSpeaking = false;
+    statusInput.value = "🎤 Listening…";
+    startMic();
+  };
+
+  iosAudio.onerror = () => {
+    botSpeaking = false;
+    startMic();
+  };
+
+  iosAudio.play().catch(() => {
+    botSpeaking = false;
+    startMic();
+  });
+}
+
+/* ================= FINALIZE USER ================= */
+function finalizeUserSpeech() {
+  stopMic();
+  const text = speechBuffer.trim();
+  speechBuffer = "";
+  if (!text) return;
+  sendUserMessage(text);
+}
+
+/* ================= SEND USER ================= */
+async function sendUserMessage(text) {
+  statusInput.value = "🤔 Thinking…";
+
+  const r = await fetch(CHAT_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: text,
+      session_id: sessionId
+    })
+  });
+
+  const d = await r.json();
+  sessionId = d.session_id;
+
+  addBot(d.reply);
+  playAudio(d.audio);
+}
+
+/* ================= HANDLE START BUTTON CLICK ================= */
+async function handleStart() {
+  // Unlock audio context via user gesture (fixes browser autoplay)
+  await unlockSafariAudio();
+
+  // Hide start button, show chat card
+  document.getElementById("startWrapper").style.display = "none";
+  document.getElementById("chatCard").style.display = "block";
+
+  // Start the chat
+  startChat();
+}
+
+/* ================= START CHAT ================= */
+async function startChat() {
+  chat.innerHTML = "";
+  sessionId = null;
+
+  stopMic();
+  botSpeaking = true;
+
+  showLoading();
+
+  try {
+    const r = await fetch(CHAT_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: "",
+        session_id: null
+      })
+    });
+
+    const d = await r.json();
+
+    if (d.error) {
+      hideLoading();
+      addBot("⚠️ " + d.error);
+      statusInput.value = "❌ Bot not available";
+      botSpeaking = false;
+      return;
+    }
+
+    sessionId = d.session_id;
+
+    hideLoading();
+    document.getElementById("newConvoWrapper").style.display = "block";
+
+    addBot(d.reply);
+    playAudio(d.audio);
+
+  } catch (e) {
+    hideLoading();
+    addBot("⚠️ Could not connect to the server. Please make sure the server is running.");
+    statusInput.value = "❌ Failed to start";
+    botSpeaking = false;
+  }
+}
+
+function restartChat() {
+  window.location.reload();
+}
+</script>
+
+</body>
+</html>

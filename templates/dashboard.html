@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Renewal Bot</title>
+<meta name="description" content="Renewal Bot Dashboard — manage customers, conversations, and messages in one place.">
+ 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+ 
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #eae6df;
+    color: #111b21;
+    min-height: 100vh;
+}
+ 
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+ 
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 8px rgba(0,168,132,.3); }
+    50%       { box-shadow: 0 0 18px rgba(0,168,132,.55); }
+}
+ 
+/* ===== HEADER ===== */
+.header {
+    padding: 16px 24px;
+    background: #075e54;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+.header::before {
+    content: '';
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #25d366;
+    box-shadow: 0 0 8px rgba(37,211,102,.5);
+    animation: pulseGlow 2.5s ease-in-out infinite;
+}
+.header .nav-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.header .nav-btn {
+    padding: 8px 18px;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, transform .15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.header .nav-btn:hover {
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.4);
+    transform: translateY(-1px);
+}
+ 
+/* ===== STAT CARDS ===== */
+.cards {
+    display: flex;
+    gap: 16px;
+    padding: 20px 24px 12px;
+    animation: fadeInUp .5s ease-out both;
+}
+.card {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #e9edef;
+    padding: 22px 24px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.03);
+    transition: transform .25s, box-shadow .25s, border-color .25s;
+    position: relative;
+    overflow: hidden;
+}
+.card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 12px 12px 0 0;
+    opacity: 0;
+    transition: opacity .3s;
+}
+.card:nth-child(1)::after { background: linear-gradient(90deg,#25d366,#128c7e); }
+.card:nth-child(2)::after { background: linear-gradient(90deg,#00a884,#075e54); }
+.card:nth-child(3)::after { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+.card:nth-child(4)::after { background: linear-gradient(90deg,#3b82f6,#6366f1); }
+.card:nth-child(5)::after { background: linear-gradient(90deg,#ec4899,#f97316); }
+.card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(0,0,0,.1); border-color: #d1d7db; }
+.card:hover::after { opacity: 1; }
+ 
+.card:nth-child(1) { animation: fadeInUp .5s ease-out .1s both; }
+.card:nth-child(2) { animation: fadeInUp .5s ease-out .2s both; }
+.card:nth-child(3) { animation: fadeInUp .5s ease-out .3s both; }
+.card:nth-child(4) { animation: fadeInUp .5s ease-out .4s both; }
+.card:nth-child(5) { animation: fadeInUp .5s ease-out .5s both; }
+ 
+.card > div:first-child {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #8696a0;
+    margin-bottom: 6px;
+}
+.card h2 {
+    margin: 8px 0 0;
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #111b21;
+}
+.card:nth-child(1) h2 { color: #075e54; }
+.card:nth-child(2) h2 { color: #00a884; }
+.card:nth-child(3) h2 { color: #e67e00; }
+.card:nth-child(4) h2 { color: #3b82f6; }
+.card:nth-child(5) h2 { color: #ec4899; }
+ 
+/* ===== MAIN LAYOUT ===== */
+.main {
+    display: flex;
+    height: 68vh;
+    margin: 12px 24px 24px;
+    background: #fff;
+    border: 1px solid #e0e5e8;
+    border-radius: 12px;
+    overflow: hidden;
+    animation: fadeInUp .5s ease-out .35s both;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08);
+}
+ 
+/* ===== SIDEBAR ===== */
+.sidebar {
+    width: 38%;
+    border-right: 1px solid #e9edef;
+    overflow-y: auto;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+}
+ 
+/* ===== SIDEBAR TABS ===== */
+.sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid #e9edef;
+    background: #f0f2f5;
+    flex-shrink: 0;
+}
+.tab-btn {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #8696a0;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color .2s, border-color .2s, background .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+.tab-btn:hover {
+    background: rgba(255,255,255,0.5);
+    color: #111b21;
+    transform: none;
+    box-shadow: none;
+}
+.tab-btn.active {
+    color: #075e54;
+    border-bottom: 2px solid #25d366;
+    background: #fff;
+}
+.tab-badge {
+    background: #00a884;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+}
+.tab-badge.orange { background: #f59e0b; }
+ 
+/* ===== TAB CONTENT ===== */
+.tab-content { display: none; flex: 1; overflow-y: auto; flex-direction: column; }
+.tab-content.active { display: flex; flex-direction: column; }
+ 
+/* ===== BATCH LIST ===== */
+.batch-list-header {
+    padding: 14px 16px;
+    background: #f0f2f5;
+    border-bottom: 1px solid #e9edef;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8696a0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.batch-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f2f5;
+    cursor: pointer;
+    transition: background .2s;
+    flex-shrink: 0;
+}
+.batch-item:hover { background: #f0f7f4; }
+.batch-item.selected { background: #e7f8f0; }
+.batch-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg,#25d366,#128c7e);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+.batch-info { flex: 1; min-width: 0; }
+.batch-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #111b21;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.batch-meta { font-size: 11px; color: #8696a0; margin-top: 2px; display: flex; gap: 10px; }
+.batch-count {
+    background: #00a884;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    align-self: center;
+}
+ 
+/* Back button */
+.sidebar-back {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #075e54;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 12.5px;
+    transition: background .2s;
+    width: 100%;
+    text-align: left;
+    border-bottom: 1px solid #e9edef;
+    flex-shrink: 0;
+}
+.sidebar-back:hover { background: #064e46; transform: none; box-shadow: none; }
+ 
+/* ===== INBOUND CUSTOMER LIST ===== */
+.inbound-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f2f5;
+    cursor: pointer;
+    transition: background .2s;
+    flex-shrink: 0;
+}
+.inbound-item:hover { background: #f0f7f4; }
+.inbound-item.selected { background: #e7f8f0; }
+.inbound-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+    font-weight: 700;
+    color: #fff;
+}
+.inbound-avatar.new-ins   { background: linear-gradient(135deg,#3b82f6,#6366f1); }
+.inbound-avatar.renewal   { background: linear-gradient(135deg,#f59e0b,#ef4444); }
+.inbound-avatar.unknown   { background: linear-gradient(135deg,#8696a0,#54656f); }
+ 
+.inbound-info { flex: 1; min-width: 0; }
+.inbound-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #111b21;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.inbound-phone { font-size: 11px; color: #8696a0; margin-top: 2px; }
+.inbound-last-msg {
+    font-size: 11.5px;
+    color: #8696a0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+    margin-top: 2px;
+}
+.state-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.state-badge.active   { background: #dcfce7; color: #166534; }
+.state-badge.done     { background: #dbeafe; color: #1d4ed8; }
+.state-badge.inactive { background: #f1f5f9; color: #64748b; }
+.state-badge.issued   { background: #fef3c7; color: #92400e; }
+ 
+/* ===== TABLE ===== */
+.hidden { display: none !important; }
+ 
+table { width: 100%; border-collapse: collapse; }
+thead { position: sticky; top: 0; z-index: 10; }
+th {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e9edef;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8696a0;
+    background: #f0f2f5;
+}
+td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f2f5;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: #54656f;
+    transition: color .2s, background .2s;
+}
+tbody tr { transition: background .2s; }
+tbody tr:hover { background: #f0f7f4; }
+tbody tr:hover td { color: #111b21; }
+td.phone {
+    color: #027eb5;
+    cursor: pointer;
+    font-weight: 600;
+    transition: color .2s;
+}
+td.phone:hover { color: #00a884; }
+td.phone::before { content: '📞'; margin-right: 6px; font-size: 12px; }
+tr.selected-row { background: #e7f8f0 !important; }
+tr.selected-row td { color: #075e54 !important; }
+tr.selected-row td.phone { color: #00a884 !important; }
+ 
+/* ===== CHAT PANEL ===== */
+.chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #efeae2;
+    position: relative;
+}
+.chat::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: .35;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8b89a' fill-opacity='0.25'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+}
+ 
+.chat-header {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: #075e54;
+    color: #fff;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    flex-wrap: wrap;
+}
+.chat-header.show { display: flex; }
+.chat-header-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.chat-header-info { flex: 1; min-width: 0; }
+.chat-header-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-header-phone { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 1px; }
+.chat-header-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+}
+.chat-meta-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+.chat-meta-badge.inbound  { background: rgba(59,130,246,0.25); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+.chat-meta-badge.outbound { background: rgba(37,211,102,0.2);  color: #86efac; border: 1px solid rgba(37,211,102,0.3); }
+.chat-meta-badge.vehicle  { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.2); }
+
+/* Call button */
+.call-btn {
+    padding: 7px 14px;
+    background: #25d366;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 12.5px;
+    transition: background .2s, transform .15s;
+    flex-shrink: 0;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.call-btn:hover { background: #1fb855; transform: translateY(-1px); }
+.call-btn:active { transform: scale(.96); }
+
+/* Mobile back button in chat */
+.chat-back-btn {
+    display: none;
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: background .2s;
+}
+.chat-back-btn:hover { background: rgba(255,255,255,0.25); }
+ 
+.messages {
+    flex: 1;
+    padding: 20px 60px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    z-index: 1;
+}
+ 
+.msg {
+    margin: 2px 0;
+    padding: 8px 14px 10px;
+    border-radius: 8px;
+    max-width: 62%;
+    font-size: 13.5px;
+    line-height: 1.5;
+    animation: fadeInUp .25s ease-out both;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+.user-msg {
+    background: #d9fdd3;
+    color: #111b21;
+    margin-left: auto;
+    border-top-right-radius: 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+.bot-msg {
+    background: #fff;
+    color: #111b21;
+    border-top-left-radius: 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+.msg-time {
+    font-size: 10px;
+    color: rgba(0,0,0,0.35);
+    text-align: right;
+    margin-top: 4px;
+}
+ 
+/* Empty state */
+.chat-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: #8696a0;
+    position: relative;
+    z-index: 1;
+}
+.chat-empty-icon { font-size: 48px; opacity: 0.4; }
+.chat-empty-text { font-size: 14px; font-weight: 500; }
+.chat-empty-sub  { font-size: 12px; opacity: 0.7; }
+ 
+/* ===== INPUT AREA ===== */
+.input-area {
+    display: flex;
+    border-top: 1px solid #e9edef;
+    background: #f0f2f5;
+    position: relative;
+    z-index: 2;
+}
+.msg-input {
+    flex: 1;
+    padding: 14px 18px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #111b21;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+}
+.msg-input::placeholder { color: #8696a0; }
+.send-btn {
+    padding: 14px 24px;
+    background: #00a884;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: background .2s, transform .15s, box-shadow .2s;
+}
+.send-btn:hover { background: #008f72; transform: scale(1.02); box-shadow: 0 4px 14px rgba(0,168,132,.25); }
+.send-btn:active { transform: scale(.97); }
+ 
+/* ===== SEARCH ===== */
+.search-box {
+    padding: 10px 14px;
+    border-bottom: 1px solid #e9edef;
+    background: #f0f2f5;
+    flex-shrink: 0;
+}
+.search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e9edef;
+    border-radius: 8px;
+    background: #fff;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: #111b21;
+    transition: border-color .2s;
+}
+.search-input::placeholder { color: #8696a0; }
+.search-input:focus { border-color: #00a884; }
+ 
+/* ===== RESPONSIVE ===== */
+
+/* --- Large Tablet / Small Desktop (≤1100px) --- */
+@media (max-width: 1100px) {
+    .messages { padding: 20px 30px; }
+    .msg { max-width: 72%; }
+}
+
+/* --- Tablet (≤900px) --- */
+@media (max-width: 900px) {
+    .cards { flex-wrap: wrap; padding: 16px 12px 8px; gap: 10px; }
+    .card  { flex: 1 1 calc(50% - 6px); min-width: 140px; padding: 16px 18px; }
+    .card h2 { font-size: 28px; }
+    .main  { flex-direction: column; height: auto; min-height: 70vh; margin: 10px 12px 20px; }
+    .sidebar { width: 100%; max-height: 45vh; border-right: none; border-bottom: 1px solid #e9edef; }
+    .chat { min-height: 50vh; }
+    .messages { padding: 16px 20px; }
+    .msg { max-width: 78%; }
+    .header .nav-btn span:last-child { display: none; }
+    .call-btn { padding: 6px 12px; font-size: 12px; }
+}
+
+/* --- Small Tablet / Large Phone (≤768px) --- */
+@media (max-width: 768px) {
+    .header { padding: 14px 16px; font-size: 17px; gap: 10px; }
+    .header .nav-btn { padding: 7px 12px; font-size: 11.5px; }
+    .cards { padding: 14px 10px 6px; gap: 8px; }
+    .card { padding: 14px 14px; }
+    .card > div:first-child { font-size: 10px; letter-spacing: 0.8px; }
+    .card h2 { font-size: 24px; }
+    .main { margin: 8px 10px 16px; border-radius: 10px; }
+    .sidebar { max-height: 40vh; }
+    .sidebar-tabs { gap: 0; }
+    .tab-btn { padding: 10px 6px; font-size: 11px; letter-spacing: 0.5px; }
+    .batch-item { padding: 12px 14px; gap: 10px; }
+    .batch-name { font-size: 13px; }
+    .inbound-item { padding: 10px 14px; gap: 10px; }
+    .inbound-name { font-size: 13px; }
+    .chat-header { padding: 10px 14px; gap: 8px; }
+    .chat-header-name { font-size: 13px; }
+    .chat-meta-badge { font-size: 9px; padding: 2px 6px; }
+    .messages { padding: 14px 14px; gap: 3px; }
+    .msg { font-size: 13px; max-width: 82%; padding: 7px 12px 9px; }
+    .msg-input { padding: 12px 14px; font-size: 13px; }
+    .send-btn { padding: 12px 18px; font-size: 12px; }
+    .call-btn { padding: 6px 10px; font-size: 11.5px; }
+
+    table th, table td { padding: 10px 12px; font-size: 12px; }
+}
+
+/* --- Phone (≤600px) --- */
+@media (max-width: 600px) {
+    .header { padding: 12px 12px; font-size: 15px; gap: 8px; }
+    .header .nav-right { gap: 8px; }
+    .header .nav-btn { padding: 6px 10px; font-size: 11px; border-radius: 6px; }
+    .cards { flex-wrap: wrap; padding: 10px 8px 4px; gap: 6px; }
+    .card { flex: 1 1 calc(50% - 4px); min-width: 120px; padding: 12px 12px; border-radius: 10px; }
+    .card > div:first-child { font-size: 9px; letter-spacing: 0.6px; margin-bottom: 4px; }
+    .card h2 { font-size: 22px; margin-top: 4px; }
+    .main { margin: 6px 8px 12px; border-radius: 10px; flex-direction: column; height: auto; min-height: auto; }
+    .sidebar { width: 100%; max-height: 38vh; border-right: none; border-bottom: 1px solid #e9edef; }
+    .chat { min-height: 50vh; }
+    .sidebar-tabs { flex-shrink: 0; }
+    .tab-btn { padding: 9px 4px; font-size: 10.5px; gap: 4px; }
+    .tab-badge { font-size: 9px; padding: 1px 5px; }
+    .batch-list-header { padding: 10px 12px; font-size: 10px; }
+    .batch-item { padding: 10px 12px; gap: 10px; }
+    .batch-icon { width: 34px; height: 34px; font-size: 15px; border-radius: 8px; }
+    .batch-name { font-size: 12.5px; }
+    .batch-meta { font-size: 10px; }
+    .batch-count { font-size: 9px; padding: 2px 6px; }
+    .sidebar-back { padding: 10px 12px; font-size: 11.5px; }
+    .search-input { padding: 7px 10px; font-size: 12px; }
+    .inbound-item { padding: 10px 12px; gap: 10px; }
+    .inbound-avatar { width: 36px; height: 36px; font-size: 15px; }
+    .inbound-name { font-size: 12.5px; }
+    .inbound-phone { font-size: 10px; }
+    .inbound-last-msg { font-size: 10.5px; max-width: 90px; }
+    .state-badge { font-size: 9px; padding: 2px 5px; }
+
+    /* Chat header: wrap badges + call button below */
+    .chat-header { padding: 10px 12px; gap: 8px; flex-wrap: wrap; }
+    .chat-header-avatar { width: 32px; height: 32px; font-size: 14px; }
+    .chat-header-name { font-size: 12.5px; }
+    .chat-header-phone { font-size: 10px; }
+    .chat-meta-badge { font-size: 8.5px; padding: 2px 5px; }
+    .call-btn { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+    .chat-back-btn { display: block; }
+
+    .messages { padding: 12px 10px; }
+    .msg { max-width: 88%; font-size: 12.5px; padding: 7px 10px 8px; border-radius: 7px; }
+    .msg-time { font-size: 9px; }
+    .chat-empty-icon { font-size: 36px; }
+    .chat-empty-text { font-size: 13px; }
+    .chat-empty-sub { font-size: 11px; }
+    .msg-input { padding: 11px 12px; font-size: 13px; }
+    .send-btn { padding: 11px 14px; font-size: 11px; letter-spacing: 0.3px; }
+
+    table th { padding: 10px 10px; font-size: 10px; }
+    table td { padding: 10px 10px; font-size: 12px; }
+
+    /* Mobile: when chat is open, hide sidebar and make chat full */
+    .main.chat-open .sidebar { display: none; }
+    .main.chat-open .chat { min-height: 60vh; }
+}
+
+/* --- Small Phone (≤420px) --- */
+@media (max-width: 420px) {
+    .header { padding: 10px 10px; font-size: 14px; }
+    .header .nav-btn { padding: 5px 8px; font-size: 10px; gap: 4px; }
+    .cards { gap: 5px; padding: 8px 6px 4px; }
+    .card { padding: 10px 10px; border-radius: 8px; }
+    .card > div:first-child { font-size: 8.5px; }
+    .card h2 { font-size: 20px; letter-spacing: -0.5px; }
+    .main { margin: 4px 6px 10px; border-radius: 8px; }
+    .sidebar { max-height: 35vh; }
+    .tab-btn { font-size: 10px; padding: 8px 2px; }
+    .batch-icon { width: 30px; height: 30px; font-size: 13px; }
+    .batch-name { font-size: 12px; }
+    .inbound-avatar { width: 32px; height: 32px; font-size: 13px; }
+    .inbound-name { font-size: 12px; }
+    .inbound-last-msg { max-width: 70px; }
+    .chat-header-avatar { width: 28px; height: 28px; font-size: 12px; }
+    .chat-header-name { font-size: 12px; }
+    .chat-meta-badge { font-size: 8px; padding: 1px 4px; }
+    .call-btn { padding: 5px 8px; font-size: 10px; gap: 3px; }
+    .messages { padding: 10px 8px; }
+    .msg { max-width: 90%; font-size: 12px; }
+    .msg-input { padding: 10px 10px; font-size: 12px; }
+    .send-btn { padding: 10px 12px; font-size: 10px; }
+}
+
+/* --- Very Small Phone (≤360px) --- */
+@media (max-width: 360px) {
+    .header { font-size: 13px; }
+    .cards { flex-direction: column; }
+    .card { flex: 1 1 100%; }
+    .card h2 { font-size: 22px; }
+    .tab-btn { font-size: 9.5px; }
+    .msg { max-width: 92%; }
+    .call-btn { padding: 4px 7px; font-size: 9.5px; }
+    .chat-header { gap: 6px; padding: 8px 10px; }
+}
+</style>
+</head>
+ 
+<body>
+ 
+<!-- HEADER -->
+<div class="header">
+    <span>Insurance Bot Dashboard</span>
+    <div class="nav-right">
+        <a href="/bot/upload-page/" class="nav-btn">
+            <span>📁</span>
+            <span>Upload File</span>
+        </a>
+        <a href="/bot/upload-call-page/" class="nav-btn">
+            <span>📞</span>
+            <span>Upload Calls</span>
+        </a>
+    </div>
+</div>
+ 
+<!-- STAT CARDS -->
+<div class="cards">
+    <div class="card">
+        <div>Total Customers</div>
+        <h2 id="totalCustomers">—</h2>
+    </div>
+    <div class="card">
+        <div>Total Conversations</div>
+        <h2 id="totalConversations">—</h2>
+    </div>
+    <div class="card">
+        <div>Total Messages</div>
+        <h2 id="totalMessages">—</h2>
+    </div>
+    <div class="card">
+        <div>Outbound</div>
+        <h2 id="totalRenewal">—</h2>
+    </div>
+    <div class="card">
+        <div>Inbound (Walk-in)</div>
+        <h2 id="totalInbound">—</h2>
+    </div>
+</div>
+ 
+<!-- MAIN PANEL -->
+<div class="main">
+ 
+    <!-- LEFT SIDEBAR -->
+    <div class="sidebar">
+ 
+        <!-- TABS -->
+        <div class="sidebar-tabs">
+            <button class="tab-btn active" onclick="switchTab('outbound')" id="tab-outbound">
+                📤 Outbound
+                <span class="tab-badge" id="badge-outbound">0</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('inbound')" id="tab-inbound">
+                📥 Inbound
+                <span class="tab-badge orange" id="badge-inbound">0</span>
+            </button>
+        </div>
+ 
+        <!-- OUTBOUND TAB -->
+        <div class="tab-content active" id="tab-content-outbound">
+ 
+            <!-- Batch List View -->
+            <div id="batchListView">
+                <div class="batch-list-header">📁 Upload Batches</div>
+                <div id="batchList"></div>
+            </div>
+ 
+            <!-- Customer Table View -->
+            <div id="customerTableView" class="hidden" style="display:flex;flex-direction:column;flex:1;">
+                <button class="sidebar-back" onclick="showBatches()">← Back to Batches</button>
+                <div style="overflow-y:auto;flex:1;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Phone</th>
+                                <th>Name</th>
+                                <th>Vehicle</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerTable"></tbody>
+                    </table>
+                </div>
+            </div>
+ 
+        </div>
+ 
+        <!-- INBOUND TAB -->
+        <div class="tab-content" id="tab-content-inbound">
+            <div class="search-box">
+                <input class="search-input" type="text" placeholder="🔍 Search by name or phone…" oninput="filterInbound(this.value)" id="inboundSearch">
+            </div>
+            <div class="batch-list-header">👤 Walk-in Customers</div>
+            <div id="inboundList"></div>
+        </div>
+ 
+    </div>
+ 
+    <!-- RIGHT CHAT PANEL -->
+    <div class="chat">
+        <div class="chat-header" id="chatHeader">
+            <button class="chat-back-btn" onclick="closeMobileChat()" title="Back">←</button>
+            <div class="chat-header-avatar" id="chatAvatar">👤</div>
+            <div class="chat-header-info">
+                <div class="chat-header-name" id="chatHeaderName">—</div>
+                <div class="chat-header-phone" id="chatHeaderPhone"></div>
+            </div>
+            <div class="chat-header-meta" id="chatHeaderMeta" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+            <button class="call-btn" onclick="callCurrentUser()" title="Call customer">
+                📞 <span class="call-btn-label">Call</span>
+            </button>
+        </div>
+ 
+        <div id="chatEmpty" class="chat-empty">
+            <div class="chat-empty-icon">💬</div>
+            <div class="chat-empty-text">Select a customer to view messages</div>
+            <div class="chat-empty-sub">Outbound batches on the left · Inbound walk-ins on the right</div>
+        </div>
+ 
+        <div class="messages" id="messages" style="display:none;"></div>
+ 
+        <div class="input-area">
+            <input class="msg-input" id="msgInput" type="text"
+                placeholder="Type a message…"
+                onkeydown="if(event.key==='Enter') sendMessage()">
+            <button class="send-btn" onclick="sendMessage()">Send ➤</button>
+        </div>
+    </div>
+ 
+</div>
+ 
+<script>
+let selectedUser   = null;
+let currentPhone   = null;
+let currentBatchId = null;
+let allInbound     = [];   // cache for search
+ 
+/* ── helpers ─────────────────────────────────────── */
+function fmt(dateStr) {
+    if (!dateStr) return "—";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" });
+}
+ 
+function stateBadge(state) {
+    const map = {
+        inactive:        ["inactive", "Inactive"],
+        ask_service_type:["active",   "Active"],
+        ask_vehicle_category:["active","Active"],
+        ask_vehicle_other:["active",  "Active"],
+        ask_vehicle_details:["active","Active"],
+        ask_vehicle_model:["active",  "Active"],
+        ask_coverage:    ["active",   "Active"],
+        ask_addons:      ["active",   "Active"],
+        show_quote:      ["active",   "Quote"],
+        payment_sent:    ["active",   "Payment"],
+        policy_issued:   ["issued",   "Issued ✅"],
+        initial:         ["inactive", "Outbound"],
+        done:            ["done",     "Done"],
+        closed:          ["inactive", "Closed"],
+    };
+    const [cls, label] = map[state] || ["inactive", state];
+    return `<span class="state-badge ${cls}">${label}</span>`;
+}
+ 
+function avatarInitial(name, ctype) {
+    const letter = (name && name !== "User") ? name[0].toUpperCase() : "👤";
+    const cls    = ctype === "new" ? "new-ins" : (ctype === "renewal" ? "renewal" : "unknown");
+    return `<div class="inbound-avatar ${cls}">${letter}</div>`;
+}
+ 
+/* ── TAB SWITCHING ────────────────────────────────── */
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    document.getElementById(`tab-content-${tab}`).classList.add('active');
+    clearChat();
+}
+ 
+/* ── LOAD DASHBOARD ───────────────────────────────── */
+async function loadDashboard() {
+    const res  = await fetch("/bot/dashboard/data/");
+    const data = await res.json();
+ 
+    document.getElementById("totalCustomers").innerText    = data.total_customers;
+    document.getElementById("totalMessages").innerText     = data.total_messages;
+    document.getElementById("totalConversations").innerText= data.total_conversations;
+    document.getElementById("totalRenewal").innerText      = data.total_outbound  || 0;
+ 
+    await loadBatches();
+    await loadInbound();
+}
+ 
+/* ── OUTBOUND: BATCHES ────────────────────────────── */
+async function loadBatches() {
+    const res  = await fetch("/bot/dashboard/batches/");
+    const data = await res.json();
+ 
+    document.getElementById("badge-outbound").innerText = data.batches.length;
+ 
+    const list = document.getElementById("batchList");
+    list.innerHTML = "";
+ 
+    if (!data.batches.length) {
+        list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:#8696a0;font-size:13px;">No batches yet. Upload a file to get started.</div>';
+        return;
+    }
+ 
+    data.batches.forEach(b => {
+        const div = document.createElement('div');
+        div.className = 'batch-item';
+        div.setAttribute('data-batch-id', b.id);
+        div.onclick = () => openBatch(b.id, b.name);
+        div.innerHTML = `
+            <div class="batch-icon">📄</div>
+            <div class="batch-info">
+                <div class="batch-name">${b.name}</div>
+                <div class="batch-meta"><span>${fmt(b.uploaded_at)}</span></div>
+            </div>
+            <div class="batch-count">${b.customer_count}</div>
+        `;
+        list.appendChild(div);
+    });
+}
+ 
+async function openBatch(batchId) {
+    currentBatchId = batchId;
+ 
+    document.querySelectorAll('.batch-item').forEach(el => el.classList.remove('selected'));
+    const el = document.querySelector(`.batch-item[data-batch-id="${batchId}"]`);
+    if (el) el.classList.add('selected');
+ 
+    const res  = await fetch(`/bot/dashboard/batches/${batchId}/customers/`);
+    const data = await res.json();
+ 
+    const table = document.getElementById("customerTable");
+    table.innerHTML = "";
+ 
+    data.customers.forEach(c => {
+        const row = document.createElement('tr');
+        row.setAttribute('data-user-id', c.id);
+        row.setAttribute('data-phone', `+${c.phone}`);
+        row.setAttribute('data-name', c.name || '—');
+        row.setAttribute('data-type', 'outbound');
+        row.setAttribute('data-vtype', c.vehicle_type || '');
+        row.setAttribute('data-vnum', c.vehicle_number || '');
+        row.innerHTML = `
+            <td class="phone" onclick="openChat(${c.id}, this)">+${c.phone}</td>
+            <td>${c.name || '—'}</td>
+            <td>${c.vehicle_type || '—'}</td>
+        `;
+        table.appendChild(row);
+    });
+ 
+    document.getElementById('batchListView').classList.add('hidden');
+    const cv = document.getElementById('customerTableView');
+    cv.classList.remove('hidden');
+    cv.style.display = 'flex';
+    clearChat();
+}
+ 
+function showBatches() {
+    document.getElementById('customerTableView').classList.add('hidden');
+    document.getElementById('batchListView').classList.remove('hidden');
+    currentBatchId = null;
+    clearChat();
+}
+ 
+/* ── INBOUND: WALK-IN CUSTOMERS ───────────────────── */
+async function loadInbound() {
+    const res  = await fetch("/bot/dashboard/conversations/");
+    const data = await res.json();
+ 
+    // API already returns only inbound (source='inbound') customers
+    allInbound = data.conversations;
+ 
+    document.getElementById("badge-inbound").innerText = allInbound.length;
+    document.getElementById("totalInbound").innerText  = allInbound.length;
+ 
+    renderInbound(allInbound);
+}
+ 
+function renderInbound(customers) {
+    const list = document.getElementById("inboundList");
+    list.innerHTML = "";
+ 
+    if (!customers.length) {
+        list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:#8696a0;font-size:13px;">No inbound customers yet.<br>Customers who message first will appear here.</div>';
+        return;
+    }
+ 
+    customers.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'inbound-item';
+        div.setAttribute('data-id', c.id);
+        div.onclick = () => openInboundChat(c);
+ 
+        const vinfo = [c.vehicle_type, c.vehicle_number].filter(Boolean).join(' · ') || '—';
+ 
+        div.innerHTML = `
+            ${avatarInitial(c.name, c.customer_type)}
+            <div class="inbound-info">
+                <div class="inbound-name">${c.name !== 'User' ? c.name : c.phone}</div>
+                <div class="inbound-phone">+${c.phone} · ${vinfo}</div>
+                <div class="inbound-last-msg">${c.last_message || 'No messages yet'}</div>
+            </div>
+            ${stateBadge(c.conversation_state || 'inactive')}
+        `;
+        list.appendChild(div);
+    });
+}
+ 
+function filterInbound(query) {
+    const q = query.toLowerCase();
+    const filtered = allInbound.filter(c =>
+        (c.name  || '').toLowerCase().includes(q) ||
+        (c.phone || '').toLowerCase().includes(q)
+    );
+    renderInbound(filtered);
+}
+ 
+async function openInboundChat(customer) {
+    // Deselect all
+    document.querySelectorAll('.inbound-item').forEach(el => el.classList.remove('selected'));
+    const el = document.querySelector(`.inbound-item[data-id="${customer.id}"]`);
+    if (el) el.classList.add('selected');
+ 
+    selectedUser = customer.id;
+ 
+    // Chat header
+    const vinfo = [customer.vehicle_type, customer.vehicle_number, customer.vehicle_model]
+                    .filter(Boolean).join(' · ');
+ 
+    document.getElementById('chatHeaderName').textContent  = customer.name !== 'User' ? customer.name : `+${customer.phone}`;
+    document.getElementById('chatHeaderPhone').textContent = `+${customer.phone}`;
+    currentPhone = customer.phone;
+    document.getElementById('chatAvatar').textContent      = customer.name && customer.name !== 'User' ? customer.name[0].toUpperCase() : '👤';
+ 
+    const metaEl = document.getElementById('chatHeaderMeta');
+    metaEl.innerHTML = `
+        <span class="chat-meta-badge inbound">📥 Inbound</span>
+        ${vinfo ? `<span class="chat-meta-badge vehicle">🚗 ${vinfo}</span>` : ''}
+    `;
+ 
+    document.getElementById('chatHeader').classList.add('show');
+    // Mobile: show chat panel, hide sidebar
+    document.querySelector('.main').classList.add('chat-open');
+    showMessages();
+    await fetchMessages(customer.id);
+}
+ 
+/* ── OUTBOUND CHAT OPEN ───────────────────────────── */
+async function openChat(userId, tdEl) {
+    if (!userId) return;
+    selectedUser = userId;
+ 
+    document.querySelectorAll('#customerTable tr.selected-row').forEach(r => r.classList.remove('selected-row'));
+    if (tdEl) {
+        const row = tdEl.closest('tr');
+        row.classList.add('selected-row');
+ 
+        const phone = row.getAttribute('data-phone');
+        currentPhone = phone.replace("+", "");
+        const name  = row.getAttribute('data-name');
+        const vtype = row.getAttribute('data-vtype');
+        const vnum  = row.getAttribute('data-vnum');
+ 
+        document.getElementById('chatHeaderName').textContent  = name || phone;
+        document.getElementById('chatHeaderPhone').textContent = phone;
+        document.getElementById('chatAvatar').textContent      = name && name !== '—' ? name[0].toUpperCase() : '📞';
+ 
+        const metaEl = document.getElementById('chatHeaderMeta');
+        metaEl.innerHTML = `
+            <span class="chat-meta-badge outbound">📤 Outbound</span>
+            ${vtype ? `<span class="chat-meta-badge vehicle">🚗 ${vtype}${vnum ? ' · ' + vnum : ''}</span>` : ''}
+        `;
+    }
+ 
+    document.getElementById('chatHeader').classList.add('show');
+    // Mobile: show chat panel, hide sidebar
+    document.querySelector('.main').classList.add('chat-open');
+    showMessages();
+    await fetchMessages(userId);
+}
+ 
+/* ── FETCH & RENDER MESSAGES ──────────────────────── */
+async function fetchMessages(userId, isPolling = false) {
+    const res  = await fetch(`/bot/dashboard/messages/${userId}/`);
+    const data = await res.json();
+ 
+    const box = document.getElementById("messages");
+    
+    if (isPolling) {
+        const currentCount = box.querySelectorAll('.msg').length;
+        if (currentCount === data.messages.length) {
+            return;
+        }
+    }
+
+    box.innerHTML = "";
+ 
+    if (!data.messages.length) {
+        box.innerHTML = '<div style="text-align:center;color:#8696a0;font-size:13px;padding:30px;">No messages yet.</div>';
+        return;
+    }
+ 
+    data.messages.forEach(m => {
+        const div = document.createElement("div");
+        div.className = "msg " + (m.sender === "user" ? "user-msg" : "bot-msg");
+ 
+        const timeStr = m.timestamp ? new Date(m.timestamp).toLocaleTimeString("en-IN", {hour:"2-digit", minute:"2-digit"}) : "";
+        div.innerHTML = `${escapeHtml(m.message)}<div class="msg-time">${timeStr}</div>`;
+        box.appendChild(div);
+    });
+ 
+    box.scrollTop = box.scrollHeight;
+}
+ 
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
+}
+ 
+/* ── SEND MESSAGE ─────────────────────────────────── */
+async function sendMessage() {
+    const input = document.getElementById("msgInput");
+    const text  = input.value.trim();
+    if (!text || !selectedUser) return;
+ 
+    await fetch("/bot/dashboard/send/", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ customer_id: selectedUser, message: text })
+    });
+ 
+    input.value = "";
+    await fetchMessages(selectedUser);
+}
+ 
+/* ── HELPERS ──────────────────────────────────────── */
+function clearChat() {
+    selectedUser = null;
+    document.getElementById('messages').style.display = 'none';
+    document.getElementById('chatEmpty').style.display = 'flex';
+    document.getElementById('chatHeader').classList.remove('show');
+    document.getElementById('messages').innerHTML = '';
+    // Mobile: show sidebar again
+    document.querySelector('.main').classList.remove('chat-open');
+}
+
+function closeMobileChat() {
+    clearChat();
+}
+ 
+function showMessages() {
+    document.getElementById('chatEmpty').style.display  = 'none';
+    document.getElementById('messages').style.display   = 'flex';
+}
+
+
+
+
+/* ✅ ADD HERE */
+function callCurrentUser(){
+    if (!currentPhone){
+        alert("No user selected");
+        return;
+    }
+
+    console.log("📞 Calling:", currentPhone);
+
+    fetch('/bot/trigger-call/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ phone: currentPhone })
+    })
+    .then(res => res.json())
+    .then(data => {
+        console.log(data);
+        alert("Call triggered!");
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Call failed!");
+    });
+}
+/* ── AUTO REFRESH ─────────────────────────────────── */
+setInterval(async () => {
+    // Refresh chat messages if a chat is open without causing flickering
+    if (selectedUser) {
+        await fetchMessages(selectedUser, true);
+    }
+    
+    // Refresh dashboard stats silently
+    try {
+        const res  = await fetch("/bot/dashboard/data/");
+        const data = await res.json();
+        document.getElementById("totalCustomers").innerText    = data.total_customers;
+        document.getElementById("totalMessages").innerText     = data.total_messages;
+        document.getElementById("totalConversations").innerText= data.total_conversations;
+        document.getElementById("totalRenewal").innerText      = data.total_outbound  || 0;
+    } catch (e) {}
+}, 3000);
+
+/* ── INIT ─────────────────────────────────────────── */
+window.onload = loadDashboard;
+</script>
+ 
+</body>
+</html>
