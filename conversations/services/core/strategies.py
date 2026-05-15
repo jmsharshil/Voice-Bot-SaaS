@@ -6724,55 +6724,105 @@ def automobile_qualification_prepare(agent, message, session, detected_language=
     # ─────────────────────────────────────────────────────────────
     # PHASE TRACKING — drive the call flow forward
     # ─────────────────────────────────────────────────────────────
+#     current_phase = state.get("call_phase", "lead_verification")
+
+#     # Detect NOT INTERESTED early — skip phases
+#     not_interested_kw = [
+#         "nahi chahiye", "not interested", "no thanks",
+#         "galat number", "wrong number", "nahi ki thi", "enquiry nahi",
+#         "already bought", "khareed li", "le li",
+#         # Gujarati not-interested keywords
+#         "નથી લેવી", "નથી જોઈતી", "નહીં જોઈએ", "રહેવા દો",
+#         "ખરીદ લીધી",
+#     ]
+#     # Detect BUSY / CALL BACK (Not available now)
+#     busy_kw = [
+#         "busy", "later", "meeting", "driving", "office", "kaam", "baad mein", "baad me",
+#         "not now", "abhi nahi", "pachhi", "kam ma", "call back", "kaal", "parso",
+#         "nahi", "no", "na", "nathi", "નથી", "ના", "postpone",
+#     ]
+
+#     if any(kw in msg for kw in not_interested_kw) and current_phase == "lead_verification":
+#         system_prompt += """
+
+# ⚠️ USER IS NOT INTERESTED OR DENIED ENQUIRY:
+# Politely close the call. Ask for quick feedback reason in ONE line.
+# Then say goodbye with [NOT_INTERESTED] tag at the end.
+# IMPORTANT: Reply in the SAME language the user just spoke."""
+#     elif any(kw in msg for kw in busy_kw) and current_phase == "lead_verification":
+#         state["call_phase"] = "callback_request"
+#         save_session(session, state)
+#         system_prompt += """
+
+# ⚠️ USER IS BUSY OR NOT AVAILABLE:
+# Politely ask when would be a better time to call back. 
+# Example: "Theek hai, toh hum aapko kab call karein?"
+# Keep it to ONE short question.
+# Do NOT close the call yet.
+# IMPORTANT: Reply in the SAME language the user just spoke."""
+#     elif current_phase == "callback_request":
+#         system_prompt += """
+
+# ⚠️ CURRENT PHASE: CALLBACK CONFIRMATION
+# - User provided a time or responded to the callback question.
+# - Politely acknowledge (e.g., "Theek hai, hum us time call karenge" or "Theek hai, baad mein call karenge").
+# - Say goodbye and end the call.
+# - HAMESHA message ke end mein [END_CALL] tag lagao taaki call cut ho jaye.
+# - IMPORTANT: Reply in the SAME language the user just spoke."""
+#     elif current_phase == "lead_verification":
+#         state["call_phase"] = "model_confirmation"
+#         save_session(session, state)
+#         system_prompt += """
+
+
+
+
+
+# ─────────────────────────────────────────────────────────────
+    # PHASE TRACKING — drive the call flow forward
+    # ─────────────────────────────────────────────────────────────
     current_phase = state.get("call_phase", "lead_verification")
 
-    # Detect NOT INTERESTED early — skip phases
+    # ─────────────────────────────────────────────────────────────
+    # GLOBAL DENIAL DETECTION — handles user saying NO at any phase
+    # ─────────────────────────────────────────────────────────────
     not_interested_kw = [
-        "nahi chahiye", "not interested", "no thanks",
+        "nahi chahiye", "not interested", "no thanks", "nahi",
         "galat number", "wrong number", "nahi ki thi", "enquiry nahi",
-        "already bought", "khareed li", "le li",
+        "already bought", "khareed li", "le li", "postpone",
+        # Hindi not-interested keywords
+        "नहीं", "नहीं चाहिए", "ना", "बाद में", "व्यस्त", "काम में हूँ",
+        "बात नहीं करनी", "गलत नंबर", "नही", "जी नहीं", "अभी नहीं", "बादमे",
         # Gujarati not-interested keywords
         "નથી લેવી", "નથી જોઈતી", "નહીં જોઈએ", "રહેવા દો",
-        "ખરીદ લીધી",
+        "નથી", "ના", "ખરીદ લીધી", "પછી વાત કરીએ", "કામમાં છું",
     ]
-    # Detect BUSY / CALL BACK (Not available now)
-    busy_kw = [
-        "busy", "later", "meeting", "driving", "office", "kaam", "baad mein", "baad me",
-        "not now", "abhi nahi", "pachhi", "kam ma", "call back", "kaal", "parso",
-        "nahi", "no", "na", "nathi", "નથી", "ના", "postpone",
-    ]
+    is_denial = any(kw in msg for kw in not_interested_kw)
 
-    if any(kw in msg for kw in not_interested_kw) and current_phase == "lead_verification":
+    if current_phase == "denial_followup":
         system_prompt += """
-
-⚠️ USER IS NOT INTERESTED OR DENIED ENQUIRY:
-Politely close the call. Ask for quick feedback reason in ONE line.
-Then say goodbye with [NOT_INTERESTED] tag at the end.
-IMPORTANT: Reply in the SAME language the user just spoke."""
-    elif any(kw in msg for kw in busy_kw) and current_phase == "lead_verification":
-        state["call_phase"] = "callback_request"
+PHASE: CALLBACK_TIME_RECEIVED.
+The user has just told you when they are available to talk (or said never).
+1. Acknowledge their response politely in ONE short sentence (e.g. "Theek hai, thank you!").
+2. Do NOT ask any more questions.
+3. End your response with the exact tag: [NOT_INTERESTED]
+Reply in the same language as user."""
+    elif is_denial:
+        state["call_phase"] = "denial_followup"
         save_session(session, state)
         system_prompt += """
-
-⚠️ USER IS BUSY OR NOT AVAILABLE:
-Politely ask when would be a better time to call back. 
-Example: "Theek hai, toh hum aapko kab call karein?"
-Keep it to ONE short question.
-Do NOT close the call yet.
-IMPORTANT: Reply in the SAME language the user just spoke."""
-    elif current_phase == "callback_request":
-        system_prompt += """
-
-⚠️ CURRENT PHASE: CALLBACK CONFIRMATION
-- User provided a time or responded to the callback question.
-- Politely acknowledge (e.g., "Theek hai, hum us time call karenge" or "Theek hai, baad mein call karenge").
-- Say goodbye and end the call.
-- HAMESHA message ke end mein [END_CALL] tag lagao taaki call cut ho jaye.
-- IMPORTANT: Reply in the SAME language the user just spoke."""
+PHASE: NOT_INTERESTED.
+The user has indicated they are busy or don't want to talk right now.
+1. Politely ask them when would be a good time to call back.
+2. Do NOT add the [NOT_INTERESTED] tag yet.
+3. Keep it to ONE short question.
+Reply in the same language as user."""
     elif current_phase == "lead_verification":
         state["call_phase"] = "model_confirmation"
         save_session(session, state)
         system_prompt += """
+
+
 
 ⚠️ CURRENT PHASE: MODEL CONFIRMATION
 - User agreed to talk.
