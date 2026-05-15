@@ -6590,7 +6590,7 @@ def automobile_qualification_strategy(agent, message, session, **kwargs):
     if not state.get("intro_shown"):
         reply = (
             f"Hello! Main {agent.name} bol rahi hoon {agent.company_name or agent.name} se. "
-            f"Aapne Kia vehicle ke liye enquiry ki thi — kya aap abhi baat kar sakte hain?"
+            f"Aapne KIYA motors ke liye enquiry ki thi — kya aap abhi baat kar sakte hain?"
         )
         state["intro_shown"] = True
         state["conversation_history"] = [f"Agent: {reply}"]
@@ -6677,7 +6677,7 @@ def automobile_qualification_prepare(agent, message, session, detected_language=
     if not state.get("intro_shown"):
         reply = (
             f"Hello! Main {agent.name} bol rahi hoon {agent.company_name or agent.name} se. "
-            f"Aapne Kia vehicle ke liye enquiry ki thi — kya aap abhi baat kar sakte hain?"
+            f"Aapne KIYA motors ke liye enquiry ki thi — kya aap abhi baat kar sakte hain?"
         )
         state["intro_shown"] = True
         state["conversation_history"] = [f"Agent: {reply}"]
@@ -6799,21 +6799,50 @@ def automobile_qualification_prepare(agent, message, session, detected_language=
     ]
     is_denial = any(kw in msg for kw in not_interested_kw)
 
-    if current_phase == "denial_followup":
+    if current_phase == "denial_followup_2":
         system_prompt += """
-PHASE: CALLBACK_TIME_RECEIVED.
-The user has just told you when they are available to talk (or said never).
-1. Acknowledge their response politely in ONE short sentence (e.g. "Theek hai, thank you!").
-2. Do NOT ask any more questions.
+PHASE: DENIAL_REASON_FINALIZED.
+The user has provided the exact reason for not being interested.
+1. Acknowledge their response politely in ONE short sentence (e.g. "Theek hai, thank you for your Feedback!").
+2. Wish them well and say goodbye.
 3. End your response with the exact tag: [NOT_INTERESTED]
 Reply in the same language as user."""
-    elif is_denial:
-        state["call_phase"] = "denial_followup"
+    elif current_phase == "denial_followup_1":
+        state["call_phase"] = "denial_followup_2"
         save_session(session, state)
         system_prompt += """
+PHASE: DENIAL_FOLLOWUP_QUESTION.
+The user has provided an initial reason for not being interested.
+1. Ask ONE deeper follow-up question based on their previous answer to find out the exact specific reason (e.g., if they bought another car, ask casually which one; if plan changed, ask why; if price is an issue, ask gently).
+2. Keep it natural, conversational, and to ONE short question.
+3. Do NOT add the [NOT_INTERESTED] tag yet.
+Reply in the same language as user."""
+    elif current_phase == "callback_request":
+        system_prompt += """
+PHASE: CALLBACK_TIME_RECEIVED.
+The user has provided a time for callback.
+1. Acknowledge their response politely in ONE short sentence (e.g. "Theek hai, hum us time call karenge!").
+2. Wish them well and say goodbye.
+3. End your response with the exact tag: [END_CALL]
+Reply in the same language as user."""
+    elif is_denial:
+        if current_phase == "lead_verification":
+            state["call_phase"] = "callback_request"
+            save_session(session, state)
+            system_prompt += """
+PHASE: CALLBACK_REQUEST.
+The user has indicated they can't talk right now.
+1. Politely ask them when would be a good time to call back (e.g. "Koi baat nahi! Hum aapko kab call karein?").
+2. Do NOT add any tags yet.
+3. Keep it to ONE short question.
+Reply in the same language as user."""
+        else:
+            state["call_phase"] = "denial_followup_1"
+            save_session(session, state)
+            system_prompt += """
 PHASE: NOT_INTERESTED.
-The user has indicated they are busy or don't want to talk right now.
-1. Politely ask them when would be a good time to call back.
+The user has indicated they are NOT interested or don't want to talk right now.
+1. Politely acknowledge and ask them for the reason (e.g. "Koi baat nahi! Kya main jaan sakti hoon ki plan change hua ya koi aur car finalize ki?").
 2. Do NOT add the [NOT_INTERESTED] tag yet.
 3. Keep it to ONE short question.
 Reply in the same language as user."""

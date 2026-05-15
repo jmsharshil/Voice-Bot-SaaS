@@ -9344,7 +9344,7 @@ def get_agent_summary(agent_id, agent_tts_lang="en"):
         else:
             if summary:
                 return f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary}."
-            return f"Hello, Main {agent.name} bol rahi hoon {company} se. Aapne KIYA vehicle ke liye enquiry ki thi, kya aap abhi baat kar sakte hain?"
+            return f"Hello, Main {agent.name} bol rahi hoon {company} se. Aapne KIYA motors ke liye enquiry ki thi, kya aap abhi baat kar sakte hain?"
 
     except VoiceAgent.DoesNotExist:
         return "Hello, how can I assist you today?"

@@ -58,21 +58,54 @@ class UserSerializer(serializers.ModelSerializer):
         instance.profile.save()
         return super().update(instance, validated_data)
 
+# class RegisterSerializer(serializers.ModelSerializer):
+#     password = serializers.CharField(write_only=True)
+#     role_id = serializers.PrimaryKeyRelatedField(
+#         queryset=Role.objects.all(), write_only=True, required=False, allow_null=True
+#     )
+
+#     class Meta:
+#         model = User
+#         fields = ["username", "email", "password", "role_id"]
+
+#     def create(self, validated_data):
+#         role = validated_data.pop("role_id", None)
+#         user = User.objects.create_user(**validated_data)
+#         if role:
+#             # profile is auto-created by signals, so we just update it
+#             user.profile.role = role
+#             user.profile.save()
+#         return user
+
+
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-    role_id = serializers.PrimaryKeyRelatedField(
-        queryset=Role.objects.all(), write_only=True, required=False, allow_null=True
-    )
+    role_name = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    permissions = serializers.JSONField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = User
-        fields = ["username", "email", "password", "role_id"]
+        fields = ["username", "email", "password", "role_name", "permissions"]
 
     def create(self, validated_data):
-        role = validated_data.pop("role_id", None)
+        role_name = validated_data.pop("role_name", None)
+        permissions = validated_data.pop("permissions", None)
         user = User.objects.create_user(**validated_data)
-        if role:
-            # profile is auto-created by signals, so we just update it
+        
+        # If a role name is provided, get or create it with the specified permissions
+        if role_name:
+            role, created = Role.objects.get_or_create(name=role_name)
+            if created and permissions is not None:
+                role.permissions = permissions
+                role.save()
             user.profile.role = role
-            user.profile.save()
+        
+        # We also assign the permissions as custom_permissions to the user directly, 
+        # just in case the role existed but had different permissions, ensuring this user gets what was checked.
+        if permissions is not None:
+            user.profile.custom_permissions = permissions
+            
+        user.profile.save()
         return user

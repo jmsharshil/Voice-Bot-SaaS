@@ -8,15 +8,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #f8fafc;
+            --bg-dark: #0f172a;
             --bg-card: #ffffff;
-            --text-main: #0f172a;
+            --bg-main: #f8fafc;
+            --text-main: #1e293b;
             --text-muted: #64748b;
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
             --border: #e2e8f0;
-            --success: #059669;
-            --danger: #dc2626;
+            --success: #10b981;
+            --danger: #ef4444;
+            --blur-bg: rgba(15, 23, 42, 0.4);
         }
 
         * {
@@ -26,64 +28,118 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-main);
             color: var(--text-main);
             min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Page Wrapper for Blur Effect */
+        #pageWrapper {
+            transition: filter 0.3s ease;
+        }
+
+        #pageWrapper.blurred {
+            filter: blur(8px);
+            pointer-events: none;
+            user-select: none;
         }
 
         .header {
             background-color: var(--bg-card);
-            padding: 1.5rem 2rem;
+            padding: 1.25rem 2rem;
             border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
         .header h1 {
-            font-size: 1.25rem;
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--bg-dark);
+            letter-spacing: -0.02em;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .add-user-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            cursor: pointer;
             font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
+        }
+
+        .add-user-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(99, 102, 241, 0.4);
         }
 
         .logout-btn {
             background: transparent;
             color: var(--danger);
-            border: 1px solid var(--danger);
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
+            border: 1.5px solid var(--danger);
+            padding: 0.55rem 1.25rem;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
         }
 
         .logout-btn:hover {
             background: var(--danger);
             color: white;
+            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
         }
 
         .container {
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+            max-width: 1400px;
+            margin: 2.5rem auto;
+            padding: 0 1.5rem;
+            display: flex;
+            flex-direction: column;
             gap: 2rem;
         }
 
         .card {
             background-color: var(--bg-card);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
         }
 
         .card-header {
-            font-size: 1.1rem;
-            font-weight: 600;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--bg-dark);
             margin-bottom: 1.5rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 1px solid var(--border);
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f1f5f9;
         }
 
         .form-group {
@@ -94,217 +150,349 @@
             display: block;
             margin-bottom: 0.5rem;
             color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
         }
 
         .form-control {
             width: 100%;
-            padding: 0.75rem;
-            background-color: var(--bg-dark);
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            padding: 0.8rem 1rem;
+            background-color: #f8fafc;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
             color: var(--text-main);
             font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
         }
 
         .form-control:focus {
             outline: none;
             border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
         }
 
         .checkbox-group {
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
-            margin-top: 0.5rem;
+            gap: 0.85rem;
+            margin-top: 0.75rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid var(--border);
         }
 
         .checkbox-label {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
             cursor: pointer;
             font-size: 0.95rem;
+            color: var(--text-main);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 1.1rem;
+            height: 1.1rem;
+            accent-color: var(--primary);
+            cursor: pointer;
         }
 
         .btn {
-            background-color: var(--primary);
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
             color: white;
             border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 6px;
+            padding: 0.85rem 1.5rem;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: 500;
+            font-weight: 600;
             width: 100%;
-            transition: background 0.2s;
+            transition: all 0.2s;
+            font-size: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
         }
 
         .btn:hover {
-            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(99, 102, 241, 0.4);
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1rem;
+            background: white;
         }
 
         th,
         td {
             text-align: left;
-            padding: 0.75rem;
+            padding: 1rem;
             border-bottom: 1px solid var(--border);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
         }
 
         th {
+            background-color: #f8fafc;
             color: var(--text-muted);
-            font-weight: 500;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #f8fafc;
         }
 
         .badge {
             background-color: #f1f5f9;
             color: #475569;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
+            padding: 0.3rem 0.6rem;
+            border-radius: 999px;
             font-size: 0.75rem;
-            margin-right: 0.25rem;
+            font-weight: 600;
+            margin-right: 0.4rem;
             display: inline-block;
-            margin-bottom: 0.25rem;
+            margin-bottom: 0.4rem;
             border: 1px solid #e2e8f0;
         }
 
         .badge.admin {
-            background-color: #f0fdf4;
+            background-color: #ecfdf5;
             color: var(--success);
-            border-color: #bbf7d0;
+            border-color: #a7f3d0;
+        }
+
+        .action-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            margin-right: 0.5rem;
+        }
+
+        .action-btn:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+            background: #eef2ff;
+        }
+
+        .action-btn.delete:hover {
+            color: var(--danger);
+            border-color: var(--danger);
+            background: #fef2f2;
         }
 
         .alert {
             padding: 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
             display: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .alert.success {
-            background: rgba(16, 185, 129, 0.1);
+            background: #ecfdf5;
             color: var(--success);
-            border: 1px solid var(--success);
+            border: 1px solid #a7f3d0;
         }
 
         .alert.error {
-            background: rgba(239, 68, 68, 0.1);
+            background: #fef2f2;
             color: var(--danger);
-            border: 1px solid var(--danger);
+            border: 1px solid #fecaca;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--blur-bg);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--bg-dark);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .close-modal:hover {
+            color: var(--danger);
         }
     </style>
 </head>
 
 <body>
 
-    <div class="header">
-        <h1>Admin Control Panel - Roles & Users</h1>
-        <button class="logout-btn" onclick="logout()">Logout</button>
+    <!-- Wrapper for blur effect -->
+    <div id="pageWrapper">
+        <div class="header">
+            <h1>Admin Control Panel - Roles & Users</h1>
+            <div class="header-actions">
+                <button class="add-user-btn" onclick="openUserModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add User
+                </button>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- System Users Card (Full width) -->
+            <div class="card">
+                <div class="card-header">System Users</div>
+                <div id="tableAlert" class="alert"></div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th>Permissions (Override)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="container">
-
-        <!-- Top Left: Create Role Card -->
-        <div class="card">
-            <div class="card-header">Create New Role</div>
-            <div id="roleAlert" class="alert"></div>
-
-            <form id="roleForm">
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="userModalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New User</h2>
+                <button class="close-modal" onclick="closeUserModal()">&times;</button>
+            </div>
+            <div id="userAlert" class="alert"></div>
+            <form id="userForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="userName" class="form-control" placeholder="Enter username" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="userEmail" class="form-control" placeholder="Enter email address" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="userPassword" class="form-control" placeholder="Create a password"
+                        required>
+                </div>
                 <div class="form-group">
                     <label>Role Name</label>
-                    <input type="text" id="roleName" class="form-control" placeholder="e.g. Sales Manager" required>
+                    <input type="text" id="userRole" class="form-control" placeholder="e.g. Sales Manager" required>
                 </div>
                 <div class="form-group">
                     <label>Permissions (Select Multiple)</label>
                     <div class="checkbox-group">
                         <label class="checkbox-label">
-                            <input type="checkbox" id="perm_admin" value="is_admin">
+                            <input type="checkbox" id="user_perm_admin" value="is_admin">
                             Full System Access (Super Admin)
                         </label>
                         <label class="checkbox-label">
-                            <input type="checkbox" id="perm_leads" value="can_view_leads">
+                            <input type="checkbox" id="user_perm_leads" value="can_view_leads">
                             Lead Analysis Access
                         </label>
                         <label class="checkbox-label">
-                            <input type="checkbox" id="perm_calls" value="can_view_calls">
+                            <input type="checkbox" id="user_perm_calls" value="can_view_calls">
                             Call Analysis Access
                         </label>
                     </div>
                 </div>
-                <button type="submit" class="btn">Create Role</button>
+                <button type="submit" class="btn" style="margin-top: 1rem;">Create User</button>
             </form>
         </div>
-
-        <!-- Top Right: Create User Card -->
-        <div class="card">
-            <div class="card-header">Add New User</div>
-            <div id="userAlert" class="alert"></div>
-
-            <form id="userForm">
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="userName" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="userEmail" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="userPassword" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>Assign Role</label>
-                    <select id="userRole" class="form-control">
-                        <option value="">-- No Role --</option>
-                        <!-- Loaded via JS -->
-                    </select>
-                </div>
-                <button type="submit" class="btn">Create User</button>
-            </form>
-        </div>
-
-        <!-- Bottom Left: List Roles Card -->
-        <div class="card">
-            <div class="card-header">Existing Roles</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Permissions</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="rolesTableBody">
-                    <!-- Loaded via JS -->
-                </tbody>
-            </table>
-        </div>
-        <!-- Bottom Right: System Users Card -->
-        <div class="card">
-            <div class="card-header">System Users</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>User</th>
-                        <th>Role</th>
-                        <th>Permissions (Override)</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="usersTableBody">
-                    <!-- Loaded via JS -->
-                </tbody>
-            </table>
-        </div>
-
     </div>
 
     <script>
@@ -341,40 +529,6 @@
                     return;
                 }
                 window.allRoles = await res.json();
-                const roles = window.allRoles;
-
-                // Update Table
-                const tbody = document.getElementById('rolesTableBody');
-                tbody.innerHTML = '';
-
-                // Update Select Dropdown
-                const roleSelect = document.getElementById('userRole');
-                roleSelect.innerHTML = '<option value="">-- No Role --</option>';
-
-                roles.forEach(role => {
-                    // Populate table
-                    let permsHtml = '';
-                    if (role.permissions.is_admin) permsHtml += `<span class="badge admin">Admin</span>`;
-                    if (role.permissions.can_view_leads) permsHtml += `<span class="badge">Leads</span>`;
-                    if (role.permissions.can_view_calls) permsHtml += `<span class="badge">Calls</span>`;
-
-                    if (!permsHtml) permsHtml = '<span class="badge">None</span>';
-
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>#${role.id}</td>
-                            <td><strong>${role.name}</strong></td>
-                            <td>${permsHtml}</td>
-                            <td>
-                                <button class="logout-btn" style="color:#3b82f6; border-color:#3b82f6; padding:0.2rem 0.5rem; font-size:0.75rem; margin-right:4px;" onclick='editRole(${JSON.stringify(role).replace(/'/g, "\\'")})'>Edit</button>
-                                <button class="logout-btn" style="padding:0.2rem 0.5rem; font-size:0.75rem;" onclick="deleteRole(${role.id}, '${role.name}')">Delete</button>
-                            </td>
-                        </tr>
-                    `;
-
-                    // Populate select
-                    roleSelect.innerHTML += `<option value="${role.id}">${role.name}</option>`;
-                });
             } catch (err) {
                 console.error(err);
             }
@@ -439,91 +593,7 @@
             }
         }
 
-        // Handle Role Edit Populating
-        function editRole(role) {
-            document.getElementById('roleName').value = role.name;
-            document.getElementById('perm_admin').checked = !!role.permissions.is_admin;
-            document.getElementById('perm_leads').checked = !!role.permissions.can_view_leads;
-            document.getElementById('perm_calls').checked = !!role.permissions.can_view_calls;
-
-            // Add a hidden data attribute to the form to track that we are editing
-            const form = document.getElementById('roleForm');
-            form.setAttribute('data-edit-id', role.id);
-
-            // Change button text
-            form.querySelector('button[type="submit"]').innerText = "Update Role";
-
-            // Scroll to form
-            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-
-        // Handle Role Delete
-        async function deleteRole(roleId, roleName) {
-            if (!confirm(`Are you sure you want to completely delete the role "${roleName}"? Users with this role will lose their permissions.`)) return;
-            try {
-                const res = await fetch(`${API_BASE}/roles/${roleId}/`, {
-                    method: 'DELETE',
-                    headers
-                });
-                if (res.ok) {
-                    showAlert('roleAlert', `Role "${roleName}" deleted successfully.`, 'success');
-                    fetchRoles();
-                    fetchUsers(); // Refresh users in case they were assigned to this role
-                } else {
-                    showAlert('roleAlert', 'Failed to delete role.', 'error');
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        // Handle Role Creation / Update
-        document.getElementById('roleForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const form = e.target;
-            const editId = form.getAttribute('data-edit-id');
-            const name = document.getElementById('roleName').value;
-            const is_admin = document.getElementById('perm_admin').checked;
-            const can_view_leads = document.getElementById('perm_leads').checked;
-            const can_view_calls = document.getElementById('perm_calls').checked;
-
-            const payload = {
-                name: name,
-                permissions: {
-                    is_admin,
-                    can_view_leads,
-                    can_view_calls
-                }
-            };
-
-            const method = editId ? 'PUT' : 'POST';
-            const url = editId ? `${API_BASE}/roles/${editId}/` : `${API_BASE}/roles/`;
-
-            try {
-                const res = await fetch(url, {
-                    method: method,
-                    headers,
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    showAlert('roleAlert', editId ? 'Role updated successfully!' : 'Role created successfully!', 'success');
-
-                    // Reset form back to create mode
-                    form.reset();
-                    form.removeAttribute('data-edit-id');
-                    form.querySelector('button[type="submit"]').innerText = "Create Role";
-
-                    fetchRoles(); // Refresh lists
-                    fetchUsers(); // Refresh users to show updated dropdowns
-                } else {
-                    const err = await res.json();
-                    showAlert('roleAlert', 'Error: ' + JSON.stringify(err), 'error');
-                }
-            } catch (error) {
-                showAlert('roleAlert', 'Network Error.', 'error');
-            }
-        });
+        // Handle Role Delete functions removed as UI is removed
 
         // Handle User Creation
         document.getElementById('userForm').addEventListener('submit', async (e) => {
@@ -531,10 +601,23 @@
             const username = document.getElementById('userName').value;
             const email = document.getElementById('userEmail').value;
             const password = document.getElementById('userPassword').value;
-            const role_id = document.getElementById('userRole').value;
+            const role_name = document.getElementById('userRole').value;
 
-            const payload = { username, email, password };
-            if (role_id) payload.role_id = parseInt(role_id);
+            const is_admin = document.getElementById('user_perm_admin').checked;
+            const can_view_leads = document.getElementById('user_perm_leads').checked;
+            const can_view_calls = document.getElementById('user_perm_calls').checked;
+
+            const payload = {
+                username,
+                email,
+                password,
+                role_name: role_name,
+                permissions: {
+                    is_admin,
+                    can_view_leads,
+                    can_view_calls
+                }
+            };
 
             try {
                 // Notice this hits the public register endpoint which accepts role_id 
@@ -542,14 +625,16 @@
                 // but our RegisterSerializer is specifically built to handle password hashing easily.
                 const res = await fetch(`${API_BASE}/register/`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }, // Register doesn't strictly need auth, but fine
+                    headers: headers,
                     body: JSON.stringify(payload)
                 });
 
                 if (res.status === 201 || res.status === 200) {
                     showAlert('userAlert', 'User created successfully!', 'success');
-                    document.getElementById('userForm').reset();
                     fetchUsers(); // Refresh lists
+                    setTimeout(() => {
+                        closeUserModal();
+                    }, 1500);
                 } else {
                     const err = await res.json();
                     showAlert('userAlert', 'Error: ' + JSON.stringify(err), 'error');
@@ -568,9 +653,9 @@
                     body: JSON.stringify(payload)
                 });
                 if (res.ok) {
-                    showAlert('userAlert', 'User role updated successfully.', 'success');
+                    showAlert('tableAlert', 'User role updated successfully.', 'success');
                 } else {
-                    showAlert('userAlert', 'Failed to update user role.', 'error');
+                    showAlert('tableAlert', 'Failed to update user role.', 'error');
                     fetchUsers(); // revert changes if failed
                 }
             } catch (e) {
@@ -593,9 +678,9 @@
                     body: JSON.stringify({ custom_permissions })
                 });
                 if (res.ok) {
-                    showAlert('userAlert', 'User permissions overridden successfully.', 'success');
+                    showAlert('tableAlert', 'User permissions overridden successfully.', 'success');
                 } else {
-                    showAlert('userAlert', 'Failed to update custom permissions.', 'error');
+                    showAlert('tableAlert', 'Failed to update custom permissions.', 'error');
                     fetchUsers();
                 }
             } catch (e) {
@@ -611,10 +696,10 @@
                     headers
                 });
                 if (res.ok) {
-                    showAlert('userAlert', `User ${username} deleted successfully.`, 'success');
+                    showAlert('tableAlert', `User ${username} deleted successfully.`, 'success');
                     fetchUsers();
                 } else {
-                    showAlert('userAlert', 'Failed to delete user.', 'error');
+                    showAlert('tableAlert', 'Failed to delete user.', 'error');
                 }
             } catch (e) {
                 console.error(e);
@@ -631,6 +716,30 @@
             await fetchRoles();
             await fetchUsers();
         }
+
+        // Modal Logic
+        const modalOverlay = document.getElementById('userModalOverlay');
+        const pageWrapper = document.getElementById('pageWrapper');
+
+        function openUserModal() {
+            modalOverlay.classList.add('active');
+            pageWrapper.classList.add('blurred');
+        }
+
+        function closeUserModal() {
+            modalOverlay.classList.remove('active');
+            pageWrapper.classList.remove('blurred');
+            document.getElementById('userForm').reset();
+            document.getElementById('userAlert').style.display = 'none';
+        }
+
+        // Close modal when clicking outside of it
+        modalOverlay.addEventListener('click', function (e) {
+            if (e.target === modalOverlay) {
+                closeUserModal();
+            }
+        });
+
         init();
     </script>
 </body>

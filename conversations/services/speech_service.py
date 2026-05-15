@@ -188,6 +188,8 @@ def create_speech_recognizer(language="en"):
         languages=["en-IN", "hi-IN", "gu-IN"]
     )
 
+    # speech_config.speech_recognition_language = STT_LANGUAGE_MAP.get(language, "hi-IN")
+
     speech_config.set_property_by_name("SPEECH-RecoModelKey", "telephony")
 
     # ⚡ TUNED: Aggressive silence timeouts for low-latency voice bot
@@ -204,12 +206,12 @@ def create_speech_recognizer(language="en"):
         speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "500"
     )
 
-    speech_config.set_property_by_name(
-        "SpeechServiceConnection_LanguageIdMode", "AtStart"
-    )
-    speech_config.set_property_by_name(
-        "SpeechServiceConnection_LanguageIdPriority", "Latency"
-    )
+    # speech_config.set_property_by_name(
+    #     "SpeechServiceConnection_LanguageIdMode", "Continuous"
+    # )
+    # speech_config.set_property_by_name(
+    #     "SpeechServiceConnection_LanguageIdPriority", "Latency"
+    # )
     speech_config.set_property_by_name(
         "SpeechServiceResponse_RequestStreamingResponse", "true"
     )
@@ -316,3 +318,7 @@ def synthesize_to_base64(text: str, language="en", mode="web") -> str:
         raise RuntimeError("Azure TTS failed")
 
     return base64.b64encode(result.audio_data).decode("utf-8")
+
+
+
+    
