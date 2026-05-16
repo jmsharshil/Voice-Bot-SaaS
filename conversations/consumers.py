@@ -9246,6 +9246,9 @@
 
 
 
+
+
+
 from urllib.parse import parse_qs
 import audioop
 from asgiref.sync import sync_to_async
@@ -9344,7 +9347,7 @@ def get_agent_summary(agent_id, agent_tts_lang="en"):
         else:
             if summary:
                 return f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary}."
-            return f"Hello, Main {agent.name} bol rahi hoon {company} se. Aapne KIYA motors ke liye enquiry ki thi, kya aap abhi baat kar sakte hain?"
+            return f"Hello, Main {agent.name} bol rahi hoon {company} se. Aapne thode din pehle KIYA Seltos ke liye enquiry ki thi. kya aap abhi baat kar sakte hain?"
 
     except VoiceAgent.DoesNotExist:
         return "Hello, how can I assist you today?"
@@ -9377,6 +9380,13 @@ def decode_g711(ulaw):
 
 def encode_g711(pcm):
     return audioop.lin2ulaw(pcm, 2)
+
+def _amplify_pcm(pcm: bytes, gain: float = 1.8) -> bytes:
+    """Amplify 16-bit PCM audio by gain factor with clipping protection."""
+    samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float32)
+    samples = samples * gain
+    samples = np.clip(samples, -32768, 32767)
+    return samples.astype(np.int16).tobytes()
 
 
 def strip_wav_header(data: bytes) -> bytes:
@@ -9448,8 +9458,8 @@ def _is_duplicate_utterance(text_a: str, text_b: str) -> bool:
 # ================= SSML BUILDER =================
 
 TTS_VOICE_MAP = {
-    "en": "en-IN-AnanyaNeural",
-    "hi": "hi-IN-AnanyaNeural",
+    "en": "en-IN-AartiNeural",
+    "hi": "hi-IN-AartiNeural",
     "gu": "gu-IN-DhwaniNeural",
 }
 
@@ -9460,9 +9470,9 @@ SSML_STYLE_MAP = {
 }
 
 SSML_PROSODY_MAP = {
-    "en": {"rate": "+5%", "pitch": "+2Hz", "volume": "+10%"},
-    "hi": {"rate": "+5%", "pitch": "+2Hz", "volume": "+10%"},
-    "gu": {"rate": "+20%", "pitch": "-2Hz", "volume": "0%"},
+    "en": {"rate": "0%", "pitch": "0%", "volume": "0%"},
+    "hi": {"rate": "0%", "pitch": "0%", "volume": "0%"},
+    "gu": {"rate": "+10%", "pitch": "0%", "volume": "0%"},
 }   
 
 
@@ -9514,27 +9524,45 @@ def build_ssml(text: str, language: str) -> str:
     lang_tag = {"en": "en-IN", "hi": "hi-IN", "gu": "gu-IN"}.get(language, "en-IN")
 
     if language == "gu":
-        text = _inject_english_lang_tags(text)
+        text = text.replace('&', '&amp;')
     else:
         text = text.replace('&', '&amp;')
+        # Add natural pauses at punctuation
+        # text = re.sub(r'([।])', r'\1<break time="400ms"/>', text)
+        # text = re.sub(r'([?!])\s', r'\1<break time="350ms"/> ', text)
 
     prosody_open = f'<prosody rate="{prosody["rate"]}" pitch="{prosody["pitch"]}" volume="{prosody.get("volume", "0%")}">'
     prosody_close = '</prosody>'
 
+    if language != "gu":
+        # text = re.sub(
+        #     r'^(Hello|Hi|Namaste|Ji|Acha|Haan|Okay|Suniye|Bilkul),',
+        #     r'\1,<break time="300ms"/>',
+        #     text, flags=re.I
+        # )
+        # # Comma pauses — natural breath points
+        # text = re.sub(r',\s*(?!<break)', ', <break time="180ms"/>', text)
+        # # Question — slight pitch lift
+        # if text.rstrip().endswith("?"):
+        #     text = f'<prosody pitch="+2%">{text}</prosody>'
+        pass
+
     if language == "gu":
         inner = f'{prosody_open}{text}{prosody_close}'
-    elif style:
-        inner = (
-            f'<mstts:express-as style="{style}" styledegree="0.8">'
-            f'{prosody_open}{text}{prosody_close}'
-            f'</mstts:express-as>'
-        )
+    # elif style:
+    #     inner = (
+    #         f'<mstts:express-as style="{style}" styledegree="1.2">'
+    #         f'{prosody_open}{text}{prosody_close}'
+    #         f'</mstts:express-as>'
+    #     )
+    # else:
+    #     inner = (
+    #         f'<mstts:express-as style="customerservice" styledegree="1.0">'
+    #         f'{prosody_open}{text}{prosody_close}'
+    #         f'</mstts:express-as>'
+    #     )
     else:
-        inner = (
-            f'<mstts:express-as style="customerservice" styledegree="0.6">'
-            f'{prosody_open}{text}{prosody_close}'
-            f'</mstts:express-as>'
-        )
+        inner = f'{prosody_open}{text}{prosody_close}'
 
     return (
         f'<speak version="1.0" '
@@ -9663,7 +9691,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             elif tts_lang == "interview_en":
                 greeting = f"Hello, I am {agent.name}."
             else:
-                greeting = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. Aapne KIYA vehicle ke liye enquiry ki thi, kya aap abhi baat kar sakte hain?"
+                greeting = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. Aapne thode din pehle, KIYA Seltos ke liye enquiry ki thi,  kya aap abhi baat kar sakte hain?"
             
             # 3. Mark intro shown
             session, _ = ConversationSession.objects.get_or_create(agent=agent, session_id=session_id)
@@ -10435,6 +10463,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         if len(pcm) % 2 != 0:
             pcm = pcm[:-1]
 
+        pcm = _amplify_pcm(pcm, gain=2.0)
+
         return encode_g711(pcm)
 
     async def _stream_ulaw(self, ulaw: bytes):
@@ -10537,7 +10567,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             audio_queue = asyncio.Queue()
 
             async def producer():
-                for sentence in sentences:
+                for i, sentence in enumerate(sentences):
                     if not self.is_bot_speaking:
                         break
                     try:
@@ -10552,6 +10582,10 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                         print(f"❌ TTS TIMEOUT for sentence: {sentence[:40]}")
                         ulaw = b""
                     await audio_queue.put(ulaw)
+                    # Natural inter-sentence pause (skip after last sentence)
+                    if i < len(sentences) - 1 and ulaw:
+                        pause_frames = SILENCE_FRAME * 6  # ~120ms natural gap
+                        await audio_queue.put(pause_frames)
                 await audio_queue.put(None)
 
             async def consumer():
@@ -10641,3 +10675,5 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
             threading.Thread(target=_run_lead_analysis, daemon=True).start()
             print("📊 Lead analysis started in background...")
+
+            

@@ -206,12 +206,12 @@ def create_speech_recognizer(language="en"):
         speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "500"
     )
 
-    # speech_config.set_property_by_name(
-    #     "SpeechServiceConnection_LanguageIdMode", "Continuous"
-    # )
-    # speech_config.set_property_by_name(
-    #     "SpeechServiceConnection_LanguageIdPriority", "Latency"
-    # )
+    speech_config.set_property_by_name(
+        "SpeechServiceConnection_LanguageIdMode", "Continuous"
+    )
+    speech_config.set_property_by_name(
+        "SpeechServiceConnection_LanguageIdPriority", "Latency"
+    )
     speech_config.set_property_by_name(
         "SpeechServiceResponse_RequestStreamingResponse", "true"
     )
@@ -321,4 +321,3 @@ def synthesize_to_base64(text: str, language="en", mode="web") -> str:
 
 
 
-    

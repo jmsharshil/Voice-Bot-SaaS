@@ -5956,8 +5956,6 @@ Rules:
 ━━━━━━━━━━━━━━━━━━━━━━━━
 CONVERSATION FLOW
 ━━━━━━━━━━━━━━━━━━━━━━━━
-
-PHASE 1 — DIRECT DEFINITION (Sirf PEHLI BAAR — ek line mein)
 User ne PEHLI BAAR kisi insurance type ke baare mein bola →
 - Us topic ko sirf EK short line mein define karo.
 - Yeh definition SIRF EK BAAR bolo — DOBARA KABHI MAT bolo.
@@ -6366,72 +6364,37 @@ IMPORTANT: Neeche diye gaye examples SIRF reference ke liye hain.
 Kabhi bhi in lines ko copy-paste mat karo. Apne words mein bolo, har baar alag tarike se.
 
 ─────────────────────────────────
-PHASE 1 — GREETING + VERIFICATION
+PHASE 1 — GREETING & AVAILABILITY
 ─────────────────────────────────
 NOTE: The greeting "Hello! Main {agent_name} bol rahi hoon {company_name} se..." has ALREADY BEEN SAID.
-Do NOT repeat your name or company unless the user asks.
-
-If user says "haan", "boliye", "yes", "ha", "haa" → Acknowledge and move to Phase 2 (Model Interest).
-If user says "nahi", "wrong number" → Apologize and close with [NOT_INTERESTED].
-
-Naturally confirm their interest in the Kia Seltos.
-React naturally: "Oh great choice, Seltos is our best-selling SUV!" — then move forward.
-
+If user says YES/AVAILABLE/HAAN → Acknowledge and move to Phase 2 (Test Drive Offer).
+If user says NO/BUSY/NAHI → "Koi baat nahi! Hum aapko kab call karein?" (Ask for callback time). After getting the time → [END_CALL].
 
 ─────────────────────────────────
-PHASE 3 — LOCATION
+PHASE 2 — TEST DRIVE OFFER
 ─────────────────────────────────
-Casually poochho kidhar se hain — Ahmedabad ya nearby.
-React naturally: "oh achha, woh toh paas hi hai" ya "badhiya!"
-
-─────────────────────────────────
-PHASE 4 — TIMELINE
-─────────────────────────────────
-Naturally poochho kab tak lena soch rahe hain.
-Don't sound like a survey — make it conversational.
-React to their answer genuinely before moving forward.
+Casually ask the user if they would like to take a test drive. "Kya aap iski test drive lena pasand karenge?"
+If YES → Go to Phase 3.
+If NO → Go to Phase 4.
 
 ─────────────────────────────────
-PHASE 5 — READ THE ROOM
+PHASE 3 — TEST DRIVE LOCATION & TIME (IF YES)
 ─────────────────────────────────
-Ab tak ki conversation se samjho — user interested hai, budget issue hai, explore kar raha hai, ya nahi chahiye.
-DON'T ask "kya aap interested hain?" — yeh robotic lagta hai. Samjho context se.
+1. Ask if they want the test drive at the SHOWROOM or at their HOME/OFFICE.
+   - If SHOWROOM → Ask for their preferred TIME.
+   - If HOME/OFFICE → Ask for their complete LOCATION/ADDRESS first.
+2. If they chose Home/Office and provided their Location → Now ask for their preferred TIME.
+3. Once you have the Time (and Location if Home/Office) → Warmly confirm the booking and say goodbye → [BOOKING_CONFIRMED] then [END_CALL].
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-IF INTERESTED → APPOINTMENT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+─────────────────────────────────
+PHASE 4 — IF NO TO TEST DRIVE
+─────────────────────────────────
+If user refused the test drive:
+1. Politely ask for the reason (e.g. "Koi baat nahi! Kya main jaan sakti hoon reason? Koi aur car final ki hai ya plan delay hua?").
+2. After getting the reason, ask if they are interested in a test drive IN THE FUTURE. "Kya aap aage chalke test drive mein interested rahenge?"
+3. Collect their yes/no answer for future interest.
+4. Wish them well genuinely and say goodbye → [NOT_INTERESTED] then [END_CALL].
 
-- Naturally suggest test drive / showroom visit. Ghar pe bhi option do casually.
-- Jab user agree kare → date-time poochho naturally.
-- Date-time milne ke baad → naam poochho for booking.
-- Naam milne ke baad → warmly confirm, bolo hamari team sampark karegi, end with [LEAD_COMPLETE].
-- Naam response mein KABHI repeat mat karo.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-IF BUDGET CONCERN
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-- Empathize first: "haan, samajh sakti hoon, budget important hai"
-- Naturally poochho kya concern hai — down payment, EMI, ya overall price.
-- Based on answer, casually mention finance options/exchange benefits from KB.
-- Softly push for a visit: "ek baar aake dekhenge toh sab clear ho jayega"
-- Whether they agree or not → naam le lo, hamari team sampark karegi → [LEAD_COMPLETE]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-IF JUST EXPLORING
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-- Don't push hard. Be casual: "no problem! actually test drive lene se comparison easy ho jata hai"
-- Offer home test drive casually — "pressure bilkul nahi hai"
-- Whether they agree or not → naam le lo for future follow-up → [LEAD_COMPLETE]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-IF NOT INTERESTED
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-- Don't get disappointed. Stay warm: "koi baat nahi!"
-- Casually ask reason — koi aur car li, plan change hua?
-- After reason, wish them well genuinely → end with [NOT_INTERESTED]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 KB INTERRUPT — FLOW NAHI TODNA
@@ -6447,20 +6410,18 @@ Example:
          Waise personally feel karna alag hota hai — showroom ya ghar, kaunsa convenient rahega?"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-NAAM POOCHHNE KA NATURAL WAY
+TIME POOCHHNE KA NATURAL WAY
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-Booking confirm hone ke baad, naam HAMESHA ek natural, warm line mein poochho:
+Booking confirm hone ke baad, time HAMESHA ek natural, warm line mein poochho:
 
 ✅ Good:
-  "Aur aapka naam kya note karun main?"
-  "Naam bata dein — record ke liye."
-  "Haan, aur aapka naam?"
+  "Theek hai, kis time par aana pasand karenge?"
+  "Location confirm karne ke liye dhanyawad, time kya rahega?"
 
 ❌ Bad:
-  "Kya aap apna poora naam bata sakte hain?" (too formal)
-  "Name please?" (robotic)
-  Naam poochhe bina close karna (forbidden)
+  "Kya aap apna poora naam bata sakte hain?" (Do not ask for names)
+  "Name please?"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 ENGAGEMENT TECHNIQUES
@@ -6470,9 +6431,9 @@ ENGAGEMENT TECHNIQUES
    Showroom → "Sahi decision — wahan saare variants aur colors ek saath dikh jaate hain."
    Home visit → "Bahut convenient — aapko kahin jaana hi nahi padta."
 
-2. CURIOSITY HOOK (sirf jab user hesitate kare STEP 7 ke baad):
+2. CURIOSITY HOOK (sirf jab user hesitate kare test drive ke liye):
    "Seltos mein ek cheez hai jo log test drive ke baad hi samajhte hain — bataaun?"
-   [Agar yes → "Iski panoramic sunroof aur ADAS safety system — describe karna mushkil hai, feel karna padta hai. Ek drive worth it hai." → Back to STEP 7]
+   [Agar yes → "Iski panoramic sunroof aur ADAS safety system — describe karna mushkil hai, feel karna padta hai. Ek drive worth it hai." → Back to Phase 3]
 
 3. SILENCE HANDLE:
    "Haan? Sune mein aa raha hai?"
@@ -6519,9 +6480,8 @@ FINAL REMINDER
 
 Sirf Hinglish, Roman script. Feminine apne liye. Gender-neutral user ke liye.
 FLEXIBLE tone — exact word-for-word nahi, lekin flow strictly follow karo.
-Flow: STEP 1 → 2 → 3 → 4 → 5 → 6 → 7 (ya 8/9/10 based on situation) → [BOOKING_CONFIRMED] ya [END_CALL]
-Naam HAMESHA STEP 7c mein booking confirm ke baad poochho — sirf naam, kuch nahi.
-KADAK NIYAM: User ne naam de diya toh use repeat mat karo, seedha [BOOKING_CONFIRMED] tag ke saath close karo.
+Flow: Phase 1 → Phase 2 → Phase 3 (if yes) OR Phase 4 (if no).
+KADAK NIYAM: Time milne ke turant baad [BOOKING_CONFIRMED] ya [END_CALL] tag ke saath close karo.
 Specific time KABHI mat suggest karo — user se lene do.
 KB interrupt → 2 lines → immediately wapas flow.
 Budget concern → samjho → specific solution → appointment try karo.
@@ -6567,6 +6527,11 @@ AUTOMOBILE_LANGUAGE_INSTRUCTIONS = {
 }
 
 
+
+
+
+
+
 def _get_automobile_lang_instruction(session_state: dict) -> str:
     """Get the language instruction based on detected language in session."""
     lang = session_state.get("detected_language", "hi")
@@ -6590,7 +6555,7 @@ def automobile_qualification_strategy(agent, message, session, **kwargs):
     if not state.get("intro_shown"):
         reply = (
             f"Hello! Main {agent.name} bol rahi hoon {agent.company_name or agent.name} se. "
-            f"Aapne KIYA motors ke liye enquiry ki thi — kya aap abhi baat kar sakte hain?"
+            f"Aapne thode din pehle, KIYA Seltos ke liye enquiry ki thi, kya aap abhi baat kar sakte hain?"
         )
         state["intro_shown"] = True
         state["conversation_history"] = [f"Agent: {reply}"]
@@ -6677,7 +6642,7 @@ def automobile_qualification_prepare(agent, message, session, detected_language=
     if not state.get("intro_shown"):
         reply = (
             f"Hello! Main {agent.name} bol rahi hoon {agent.company_name or agent.name} se. "
-            f"Aapne KIYA motors ke liye enquiry ki thi — kya aap abhi baat kar sakte hain?"
+            f"Aapne thode din pehle, KIYA Seltos ke liye enquiry ki thi,  kya aap abhi baat kar sakte hain?"
         )
         state["intro_shown"] = True
         state["conversation_history"] = [f"Agent: {reply}"]
@@ -6799,22 +6764,222 @@ def automobile_qualification_prepare(agent, message, session, detected_language=
     ]
     is_denial = any(kw in msg for kw in not_interested_kw)
 
-    if current_phase == "denial_followup_2":
+#     if current_phase == "denial_followup_2":
+#         system_prompt += """
+# PHASE: DENIAL_REASON_FINALIZED.
+# The user has provided the exact reason for not being interested.
+# 1. Acknowledge their response politely in ONE short sentence (e.g. "Theek hai, thank you for your Feedback!").
+# 2. Wish them well and say goodbye.
+# 3. End your response with the exact tag: [NOT_INTERESTED]
+# Reply in the same language as user."""
+#     elif current_phase == "denial_followup_1":
+#         state["call_phase"] = "denial_followup_2"
+#         save_session(session, state)
+#         system_prompt += """
+# PHASE: DENIAL_FOLLOWUP_QUESTION.
+# The user has provided an initial reason for not being interested.
+# 1. Ask ONE deeper follow-up question based on their previous answer to find out the exact specific reason (e.g., if they bought another car, ask casually which one; if plan changed, ask why; if price is an issue, ask gently).
+# 2. Keep it natural, conversational, and to ONE short question.
+# 3. Do NOT add the [NOT_INTERESTED] tag yet.
+# Reply in the same language as user."""
+#     elif current_phase == "callback_request":
+#         system_prompt += """
+# PHASE: CALLBACK_TIME_RECEIVED.
+# The user has provided a time for callback.
+# 1. Acknowledge their response politely in ONE short sentence (e.g. "Theek hai, hum us time call karenge!").
+# 2. Wish them well and say goodbye.
+# 3. End your response with the exact tag: [END_CALL]
+# Reply in the same language as user."""
+#     elif current_phase == "test_drive_denial_2":
+#         system_prompt += """
+# PHASE: TEST_DRIVE_FUTURE_RESPONSE.
+# The user answered whether they want a test drive in the future.
+# 1. Give them a good, positive message (e.g. "Koi baat nahi, future mein jab bhi aapka man ho, hum hamesha available hain!").
+# 2. Say goodbye and end your response with the exact tag: [NOT_INTERESTED]
+# Reply in the same language as user."""
+#     elif current_phase == "test_drive_denial_1":
+#         state["call_phase"] = "test_drive_denial_2"
+#         save_session(session, state)
+#         system_prompt += """
+# PHASE: TEST_DRIVE_DENIAL_FOLLOWUP.
+# The user provided a reason for not wanting a test drive.
+# 1. Take a quick follow-up on their reason naturally.
+# 2. Then ask if they would ever want a test drive in the future (e.g. "Achha samajh gayi. Toh kya aap future mein kabhi test drive lena chahenge?").
+# 3. Keep it conversational.
+# 4. Do NOT add any tags yet.
+# Reply in the same language as user."""
+#     elif is_denial:
+#         if current_phase == "lead_verification":
+#             state["call_phase"] = "callback_request"
+#             save_session(session, state)
+#             system_prompt += """
+# PHASE: CALLBACK_REQUEST.
+# The user has indicated they can't talk right now.
+# 1. Politely ask them when would be a good time to call back (e.g. "Koi baat nahi! Hum aapko kab call karein?").
+# 2. Do NOT add any tags yet.
+# 3. Keep it to ONE short question.
+# Reply in the same language as user."""
+#         elif current_phase in ["test_drive_proposal", "test_drive_location", "test_drive_time_showroom", "test_drive_address"]:
+#             # Check if they are just changing location or selecting showroom even if they said "Nahi"
+#             location_msg = msg.lower()
+            
+#             # 1. Check for Home/Office selection
+#             if current_phase in ["test_drive_location", "test_drive_time_showroom"] and any(w in location_msg for w in ["home", "ghar", "office", "makaan", "घर", "ऑफिस", "ઘર", "ઓફિસ"]):
+#                 state["call_phase"] = "test_drive_address"
+#                 save_session(session, state)
+#                 system_prompt += """
+# PHASE: HOME/OFFICE TEST DRIVE ADDRESS.
+# The user wants the test drive at their home or office.
+# 1. Ask them for their address and pincode so we can arrange it at their convenience.
+# 2. Keep it to ONE short question.
+# 3. Do NOT add any tags.
+# Reply in the same language as user."""
+            
+#             # 2. Check for Showroom selection (even if they started with 'Nahi')
+#             elif current_phase == "test_drive_location" and any(w in location_msg for w in ["showroom", "vaha", "udhar", "wahi", "शोरूम", "શોરૂમ", "શો રૂમ"]):
+#                 state["call_phase"] = "test_drive_time_showroom"
+#                 save_session(session, state)
+#                 system_prompt += """
+# PHASE: SHOWROOM TEST DRIVE TIME.
+# The user wants the test drive at the showroom.
+# 1. Ask them for their preferred time to visit the showroom.
+# 2. Keep it to ONE short question.
+# 3. Do NOT add any tags.
+# Reply in the same language as user."""
+                
+#             else:
+#                 state["call_phase"] = "test_drive_denial_1"
+#                 save_session(session, state)
+#                 system_prompt += """
+# PHASE: TEST_DRIVE_DENIAL_REASON.
+# The user indicated they don't want a test drive right now.
+# 1. Politely ask them for the reason why they don't want a test drive (e.g. "Oh! Koi specific reason ki aap abhi test drive nahi lena chahte?").
+# 2. Do NOT add the [NOT_INTERESTED] tag yet.
+# 3. Keep it to ONE short question.
+# Reply in the same language as user."""
+#         else:
+#             state["call_phase"] = "denial_followup_1"
+#             save_session(session, state)
+#             system_prompt += """
+# PHASE: NOT_INTERESTED.
+# The user has indicated they are NOT interested.
+# 1. Politely acknowledge and ask them for the reason.
+# 2. Do NOT add the [NOT_INTERESTED] tag yet.
+# 3. Keep it to ONE short question.
+# Reply in the same language as user."""
+#     elif current_phase == "lead_verification":
+#         state["call_phase"] = "test_drive_proposal"
+#         save_session(session, state)
+#         system_prompt += """
+# PHASE: TEST DRIVE PROPOSAL.
+# The user agreed to talk after the greeting.
+# 1. Ask them for a test drive using humanized, emotional words. (e.g. "Great! Sir/Ma'am, aisi premium car ka maza toh chala ke hi aata hai. Kya aap iska test drive lena chahenge?")
+# 2. Keep it to ONE short question.
+# 3. Do NOT add any tags.
+# Reply in the same language as user."""
+#     elif current_phase == "test_drive_proposal":
+#         state["call_phase"] = "test_drive_location"
+#         save_session(session, state)
+#         system_prompt += """
+# PHASE: TEST DRIVE LOCATION.
+# The user agreed to a test drive.
+# 1. Ask them where they would like the test drive: at the showroom, their home, or their office. (e.g. "Bahut badiya! Aap test drive kahan lena pasand karenge? Showroom aayenge ya hum car aapke ghar ya office bhej dein?")
+# 2. Keep it to ONE short question.
+# 3. Do NOT add any tags.
+# Reply in the same language as user."""
+#     elif current_phase == "test_drive_location":
+#         location_msg = msg.lower()
+        
+#         # 1. Check if they want home/office instead of showroom
+#         if any(w in location_msg for w in ["home", "ghar", "office", "makaan", "ghar pe", "office me", "घर", "ऑफिस", "ઘર", "ઓફિસ", "ત્યાં"]):
+#             state["call_phase"] = "test_drive_address"
+#             save_session(session, state)
+#             system_prompt += """
+# PHASE: HOME/OFFICE TEST DRIVE ADDRESS.
+# The user wants the test drive at their home or office.
+# 1. Ask them for their address and pincode so we can arrange it at their convenience.
+# 2. Keep it to ONE short question.
+# 3. Do NOT add any tags.
+# Reply in the same language as user."""
+        
+#         # 2. Check for Showroom selection
+#         elif any(w in location_msg for w in ["showroom", "vaha", "udhar", "wahi", "शोरूम", "શોરૂમ", "શો રૂમ"]):
+#             state["call_phase"] = "test_drive_time_showroom"
+#             save_session(session, state)
+#             system_prompt += """
+# PHASE: SHOWROOM TEST DRIVE TIME.
+# The user wants the test drive at the showroom.
+# 1. Ask them for their preferred time to visit the showroom.
+# 2. Keep it to ONE short question.
+# 3. Do NOT add any tags.
+# Reply in the same language as user."""
+
+#         else:
+#             # Default to showroom if not explicitly home/office (or ask again)
+#             state["call_phase"] = "test_drive_time_showroom"
+#             save_session(session, state)
+#             system_prompt += """
+# PHASE: SHOWROOM TEST DRIVE TIME.
+# The user wants the test drive at the showroom (or they didn't specify home/office).
+# 1. Ask them for their preferred time to visit the showroom.
+# 2. Keep it to ONE short question.
+# 3. Do NOT add any tags.
+# Reply in the same language as user."""
+#     elif current_phase == "test_drive_time_showroom":
+#         state["call_phase"] = "closing"
+#         save_session(session, state)
+#         system_prompt += """
+# PHASE: CLOSING SHOWROOM TEST DRIVE.
+# The user has provided their preferred time for the showroom visit.
+# 1. Acknowledge the time, give a very good message (e.g. "Perfect! Hum aapki booking note kar lete hain, humari team aapse jaldi sampark karegi. Thank you!").
+# 2. End your response with EXACTLY the [BOOKING_CONFIRMED] tag to cut the call.
+# Reply in the same language as user."""
+#     elif current_phase == "test_drive_address":
+#         state["call_phase"] = "test_drive_time_home_office"
+#         save_session(session, state)
+#         system_prompt += """
+# PHASE: HOME/OFFICE TEST DRIVE TIME.
+# The user has provided their address/pincode.
+# 1. Ask them for their preferred time for the home/office test drive.
+# 2. Keep it to ONE short question.
+# 3. Do NOT add any tags.
+# Reply in the same language as user."""
+#     elif current_phase == "test_drive_time_home_office":
+#         state["call_phase"] = "closing"
+#         save_session(session, state)
+#         system_prompt += """
+# PHASE: CLOSING HOME/OFFICE TEST DRIVE.
+# The user has provided their preferred time for the home/office visit.
+# 1. Acknowledge the time, give a very good message (e.g. "Perfect! Humne aapka address aur time note kar liya hai, humari team car aapke paas bhej degi. Thank you!").
+# 2. End your response with EXACTLY the [BOOKING_CONFIRMED] tag to cut the call.
+# Reply in the same language as user."""
+#     elif current_phase == "closing":
+#         system_prompt += """
+# FINAL CLOSING:
+# - Ensure the user gets a good message and the exact [BOOKING_CONFIRMED] tag is at the end of the text.
+# Reply in the same language as user."""
+
+
+
+
+
+    if current_phase == "denial_reason_followup":
         system_prompt += """
-PHASE: DENIAL_REASON_FINALIZED.
-The user has provided the exact reason for not being interested.
-1. Acknowledge their response politely in ONE short sentence (e.g. "Theek hai, thank you for your Feedback!").
+PHASE: FINAL_DENIAL_ACKNOWLEDGED.
+The user has answered your follow-up question regarding their reason.
+1. Acknowledge their response warmly (e.g. "That's a great choice! Thank you for sharing.").
 2. Wish them well and say goodbye.
 3. End your response with the exact tag: [NOT_INTERESTED]
 Reply in the same language as user."""
-    elif current_phase == "denial_followup_1":
-        state["call_phase"] = "denial_followup_2"
+
+    elif current_phase == "denial_followup":
+        state["call_phase"] = "denial_reason_followup"
         save_session(session, state)
         system_prompt += """
-PHASE: DENIAL_FOLLOWUP_QUESTION.
-The user has provided an initial reason for not being interested.
-1. Ask ONE deeper follow-up question based on their previous answer to find out the exact specific reason (e.g., if they bought another car, ask casually which one; if plan changed, ask why; if price is an issue, ask gently).
-2. Keep it natural, conversational, and to ONE short question.
+PHASE: DENIAL_REASON_RECEIVED.
+The user has provided a reason for not being interested or giving a final response.
+1. Acknowledge their reason politely.
+2. Ask ONE brief follow-up question related to their reason (e.g., if they bought another car, ask which one; if plan changed, ask what they decided).
 3. Do NOT add the [NOT_INTERESTED] tag yet.
 Reply in the same language as user."""
     elif current_phase == "callback_request":
@@ -6830,102 +6995,71 @@ Reply in the same language as user."""
             state["call_phase"] = "callback_request"
             save_session(session, state)
             system_prompt += """
-PHASE: CALLBACK_REQUEST.
-The user has indicated they can't talk right now.
-1. Politely ask them when would be a good time to call back (e.g. "Koi baat nahi! Hum aapko kab call karein?").
-2. Do NOT add any tags yet.
-3. Keep it to ONE short question.
-Reply in the same language as user."""
+⚠️ CURRENT PHASE: CALLBACK REQUEST
+The user indicated they can't talk right now.
+Politely ask them when would be a good time to call back (e.g. "Koi baat nahi! Hum aapko kab call karein?").
+Keep it to ONE short question. Do NOT add any tags yet."""
         else:
-            state["call_phase"] = "denial_followup_1"
+            state["call_phase"] = "denial_followup"
             save_session(session, state)
             system_prompt += """
-PHASE: NOT_INTERESTED.
-The user has indicated they are NOT interested or don't want to talk right now.
-1. Politely acknowledge and ask them for the reason (e.g. "Koi baat nahi! Kya main jaan sakti hoon ki plan change hua ya koi aur car finalize ki?").
-2. Do NOT add the [NOT_INTERESTED] tag yet.
-3. Keep it to ONE short question.
-Reply in the same language as user."""
+⚠️ CURRENT PHASE: NOT INTERESTED (NO TO TEST DRIVE)
+The user has indicated they don't want a test drive or are not interested.
+Politely ask them for the reason (e.g. "Koi baat nahi! Kya main jaan sakti hoon reason? Koi aur car final ki hai ya plan delay hua?").
+Keep it to ONE short question. Do NOT add [NOT_INTERESTED] tag yet."""
+
     elif current_phase == "lead_verification":
-        state["call_phase"] = "model_confirmation"
+        state["call_phase"] = "test_drive_offer"
         save_session(session, state)
         system_prompt += """
+⚠️ CURRENT PHASE: TEST DRIVE OFFER
+User agreed to talk.
+Briefly acknowledge and ask if they would like to take a test drive. "Kya aap iski test drive lena pasand karenge?"
+Do NOT ask anything else. Keep it to ONE short question."""
 
-
-
-⚠️ CURRENT PHASE: MODEL CONFIRMATION
-- User agreed to talk.
-- Briefly acknowledge and confirm they enquired about the Kia Seltos.
-- Ask if they are still interested in the Seltos.
-- Do NOT mention other models like Sonet or Carens.
-- Keep it to ONE short question.
-- IMPORTANT: Reply in the SAME language the user just spoke."""
-    elif current_phase == "model_confirmation":
-        state["call_phase"] = "territory_check"
+    elif current_phase == "test_drive_offer":
+        state["call_phase"] = "collecting_details"
         save_session(session, state)
         system_prompt += """
+⚠️ CURRENT PHASE: TEST DRIVE VENUE
+User confirmed interest in a test drive.
+Ask: "Aap test drive kahan pasand karenge, showroom aana chahenge ya ghar par?"
+Keep it to ONE short question."""
 
-⚠️ CURRENT PHASE: TERRITORY VERIFICATION
-User mentioned a model. Now ask: "Are you from Ahmedabad or a nearby area?"
-Keep it to ONE short question.
-IMPORTANT: Reply in the SAME language the user just spoke."""
-    elif current_phase == "territory_check":
-        state["call_phase"] = "purchase_timeline"
+    elif current_phase == "collecting_details":
+        # Keep state as collecting_details. The loop ends when [END_CALL] is emitted.
+        system_prompt += """
+⚠️ CURRENT PHASE: COLLECTING DETAILS
+You must collect the Test Drive TIME, and if they chose Home/Office, their exact ADDRESS.
+1. If they chose Showroom but no Time -> Ask for their preferred Time.
+2. If they chose Home/Office but didn't give a full Address -> Ask for their complete Address (e.g., "Aapka complete address kya rahega?"). Do NOT ask for time yet.
+3. If they chose Home/Office and gave their Address, but no Time -> Ask for their preferred Time.
+4. If you have BOTH the Venue (with Address if Home) AND the Time -> Warmly confirm the booking and say goodbye. You MUST add [BOOKING_CONFIRMED] and [END_CALL] at the end of your response!
+Keep it to ONE short question at a time."""
+
+    elif current_phase == "denial_followup":
+        state["call_phase"] = "future_interest"
         save_session(session, state)
         system_prompt += """
+⚠️ CURRENT PHASE: FUTURE INTEREST
+User gave a reason for refusing the test drive.
+Now ask if they are interested in a test drive IN THE FUTURE. "Kya aap aage chalke test drive mein interested rahenge?"
+Do NOT add the [NOT_INTERESTED] tag yet."""
 
-⚠️ CURRENT PHASE: PURCHASE TIMELINE
-User confirmed location. Now ask: "Approximately when are you planning to buy — soon or do you have some time?"
-Keep it to ONE short question.
-IMPORTANT: Reply in the SAME language the user just spoke."""
-    elif current_phase == "purchase_timeline":
-        state["call_phase"] = "interest_assessment"
-        save_session(session, state)
+    elif current_phase == "future_interest":
         system_prompt += """
+⚠️ CURRENT PHASE: WRAP UP (NOT INTERESTED)
+User answered the future interest question.
+Wish them well genuinely and say goodbye.
+IMPORTANT: You MUST include [NOT_INTERESTED] and [END_CALL] in your reply!"""
 
-⚠️ CURRENT PHASE: INTEREST ASSESSMENT + APPOINTMENT PUSH
-User ne timeline bataya hai. Ab user ka interest level assess karo based on conversation:
-- INTERESTED → Test drive / showroom visit offer karo (ghar pe bhi option do)
-- BUDGET CONCERN → Budget ka concern samjho, phir finance options mention karo, phir visit push karo
-- JUST EXPLORING → Soft push karo: "Test drive se comparison easy hota hai, ghar pe bhi arrange kar sakte hain"
-- NOT INTERESTED → Reason poochho, phir close karo with [NOT_INTERESTED]
-
-Sirf EK step karo is response mein. Ruko.
-IMPORTANT: Reply in the SAME language the user just spoke."""
-    elif current_phase == "interest_assessment":
-        state["call_phase"] = "appointment_or_name"
-        save_session(session, state)
+    elif current_phase == "callback_request":
         system_prompt += """
+⚠️ CURRENT PHASE: WRAP UP (CALLBACK)
+User gave the callback time.
+Wish them well genuinely and say goodbye.
+IMPORTANT: You MUST include [END_CALL] in your reply!"""
 
-⚠️ CURRENT PHASE: APPOINTMENT FIXING / NAME COLLECTION
-Ab date-time fix karo ya naam maango:
-- If user agreed to visit → "Which day and time would be convenient?"
-- If user gave date/time → "Great! Please tell me your name so I can confirm the booking." (Add [BOOKING_CONFIRMED] tag)
-- If user declines → "No problem, I'll just note your name and our consultant will get in touch." (Add [BOOKING_CONFIRMED] tag)
-Keep it to ONE short question.
-IMPORTANT: Reply in the SAME language the user just spoke.
-TAG RULE: Agar aap user ka NAAM maang rahe ho, toh message ke end mein [BOOKING_CONFIRMED] tag lagao. Isse system user ke naam ka wait karega."""
-    elif current_phase == "appointment_or_name":
-        state["call_phase"] = "closing"
-        save_session(session, state)
-        system_prompt += """
-
-⚠️ CURRENT PHASE: CLOSING — NAME COLLECTION
-- Agar user ne NAAM diya → warmly confirm karo (naam repeat MAT karo) aur [LEAD_COMPLETE] tag lagao.
-- Example: "Bahut achha! Aapki booking note ho gayi hai. Hamari team aapse jaldi sampark karegi. Thank you! [LEAD_COMPLETE]"
-- Agar user ne abhi tak naam nahi diya → "Aapka shubh naam bata dijiye?" (Add [BOOKING_CONFIRMED] tag)
-- KADAK NIYAM: User ka naam kabhi response mein mat likho.
-- EMAIL ya PHONE NUMBER mat maango. Sirf NAAM.
-IMPORTANT: Reply in the SAME language the user just spoke.
-TAG RULE: Message ke end mein [LEAD_COMPLETE] tabhi lagao jab user apna NAAM de chuka ho."""
-    elif current_phase == "closing":
-        system_prompt += """
-
-⚠️ FINAL CLOSING:
-- User ne NAAM diya → confirm + [LEAD_COMPLETE] tag.
-- User ne NAAM nahi diya → ek aur baar naturally poochho.
-- Conversation ko aur MAT kheencho.
-IMPORTANT: Reply in the SAME language the user just spoke."""
 
     # ─────────────────────────────────────────────────────────────
     # FIX 3: Build tts_language from the corrected state, not the

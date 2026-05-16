@@ -148,7 +148,7 @@ class KnowledgeConfig(AppConfig):
                             f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}."
                             if summary_txt else
                             f"Hello, Main {agent.name} bol rahi hoon {company} se. "
-                            f"Aapne KIYA Motors ke liye enquiry ki thi, "
+                            f"Aapne thode din pehle, KIYA Seltos ke liye enquiry ki thi, "
                             f"kya aap abhi baat kar sakte hain?"
                         )
 
