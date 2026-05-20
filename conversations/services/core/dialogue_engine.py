@@ -234,6 +234,11 @@ def finalize_streaming(response, prep_result):
     # [LEAD_COMPLETE]     = insurance lead details fully collected
     for tag in ["[BOOKING_CONFIRMED]", "[NOT_INTERESTED]", "[LEAD_COMPLETE]", "[END_CALL]"]:
         if tag in response:
+            # SAFETY CHECK: If the bot response contains a question mark '?', it is asking a question.
+            # We must NOT auto-disconnect because the user needs to answer the question!
+            if "?" in response:
+                print(f"⚠️ Ignored {tag} because the reply contains a question mark '?' and expects an answer from the user.")
+                continue
             print(f"📴 {tag} found (strategy={strategy_key}) — auto_disconnect")
             prep_result["auto_disconnect"] = True
             # Skip name collection only for explicit non-interest

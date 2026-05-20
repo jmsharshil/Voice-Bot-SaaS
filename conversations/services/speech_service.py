@@ -161,15 +161,15 @@ import base64
 
 # ✅ ADD: Language maps
 TTS_VOICE_MAP = {
-    "en": "en-IN-AnanyaNeural",
-    "hi": "hi-IN-AnanyaNeural",
-    "gu": "gu-IN-DhwaniNeural"
+    "en": "en-IN-AartiNeural",
+    "hi": "hi-IN-AartiNeural",
+    # "gu": "gu-IN-DhwaniNeural"
 }
 
 STT_LANGUAGE_MAP = {
     "en": "en-IN",
     "hi": "hi-IN",
-    "gu": "gu-IN"
+    # "gu": "gu-IN"
 }
 
 AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY")
@@ -185,25 +185,25 @@ def create_speech_recognizer(language="en"):
 
     # ✅ Auto detect between all 3 languages simultaneously
     auto_detect_config = speechsdk.languageconfig.AutoDetectSourceLanguageConfig(
-        languages=["en-IN", "hi-IN", "gu-IN"]
+        languages=["en-IN", "hi-IN"]
     )
 
     # speech_config.speech_recognition_language = STT_LANGUAGE_MAP.get(language, "hi-IN")
 
     speech_config.set_property_by_name("SPEECH-RecoModelKey", "telephony")
 
-    # ⚡ TUNED: Aggressive silence timeouts for low-latency voice bot
-    # EndSilence: 500ms — fires recognition 300ms faster (was 800ms)
-    # Segmentation: 300ms — catches sentence breaks 200ms faster (was 500ms)
+    # ⚡ TUNED: Ultra-aggressive silence timeouts for telecom latency
+    # EndSilence: 300ms — fires recognition almost instantly after user stops
+    # Segmentation: 200ms — catches sentence breaks instantly
     # InitialSilence: 8000ms — generous wait for first speech
     speech_config.set_property(
-        speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "700"
+        speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "300"
     )
     speech_config.set_property(
         speechsdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "8000"
     )
     speech_config.set_property(
-        speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "500"
+        speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "200"
     )
 
     speech_config.set_property_by_name(
@@ -274,8 +274,8 @@ def synthesize_to_base64(text: str, language="en", mode="web") -> str:
 
     # ✅ Correct locale mapping for all 3 languages
     lang_locale_map = {
-        "hi": "hi-IN",
-        "gu": "gu-IN",
+        # "hi": "hi-IN",
+        # "gu": "gu-IN",
         "en": "en-IN"
     }
     xml_lang = lang_locale_map.get(language, "en-IN")
