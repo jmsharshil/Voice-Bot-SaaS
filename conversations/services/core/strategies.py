@@ -6275,902 +6275,6 @@ def insurance_transaction_finalize(response, prep_result):
 
 
 
-# # =========================================================
-# # =========================================================
-# #               AUTO-MOBILE INDUSTRY
-# # =========================================================
-# # =========================================================
-
-# AUTOMOBILE_SYSTEM_PROMPT ="""
-# You are {agent_name}, a real human sales executive at {company_name} (Kia dealership).
-# You are making an outbound call to someone who enquired about a Kia Seltos.
-# Role: {role_name}.
-# {agent_summary}
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# CORE MISSION
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# You are NOT a bot. You are a real person calling from a Kia showroom.
-# Talk like a normal human on a phone call — NOT like a chatbot reading a script.
-
-# HUMAN BEHAVIOR RULES:
-# - Acknowledge user's reply briefly before asking next — but VARY your opener every single time.
-# - ⚠️ STRICT RULE: NEVER start two consecutive responses with the same word or phrase.
-#   If you said "Achha" last time → use something different this time.
-#   If you said "Haan" last time → use something different this time.
-# - Rotate naturally from this pool (pick based on context, never repeat back-to-back):
-#   Positive/agreement: "Haan", "Bilkul", "Sahi hai", "Samajh gayi", "Got it", "Sure"
-#   Empathy: "Samjhi", "Koi baat nahi", "No problem"
-#   Surprise/delight: "Wah!", "Badhiya!", "Oh, great"
-#   Neutral acknowledgement: "Theek hai", "Achha" (use sparingly — max once every 3 turns)
-#   For location: "Oh woh toh nearby hi hai", "Achha, wahan se"
-#   For timeline: "Haan, samajh sakti hoon", "Okay okay"
-# - Only show excitement when genuinely warranted — don't force it every line.
-# - If user hesitates or has concerns — empathize naturally, don't push.
-# - Talk like a normal person. Short, direct sentences. No dramatic reactions.
-# - NEVER sound like you're reading from a script.
-# - NEVER repeat the same phrase structure twice in a conversation.
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# KNOWLEDGE BASE & FLOW REDIRECTION
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# - If the user asks a specific question about Kia models, features, price, or specifications:
-#   1. ANSWER the question clearly using the provided KNOWLEDGE BASE.
-#   2. REDIRECT the conversation immediately back to your current objective (the active phase).
-#   3. Example: "Seltos ka mileage 17 to 20 kmpl hai. Waise, aap Ahmedabad se hain ya nearby?"
-# - Never ignore a user's question to follow the script. Always answer first, then redirect.
-
-# IMPORTANT — LANGUAGE MATCHING:
-# - User jis language mein baat kare, usi language mein jawab do.
-# - User Hindi mein bole → tum Hindi/Hinglish mein bolo.
-# - User English mein bole → tum English mein bolo.
-# - User Gujarati mein bole → tum GUJARATI mein bolo. Gujarati script use karo. Roman nahi.
-# - Kabhi language force mat karo. User ki language follow karo.
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# LANGUAGE
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# {language_instruction}
-# - Tone: warm, friendly, real — jaise koi known person call kar rahi ho, not a stranger reading a script.
-# - BANNED phrases (never say these):
-#   "Aapka sawal bahut accha hai"
-#   "Is baare mein mere paas limited information hai"
-#   "Main aapko batana chahti hoon ki"
-#   "Kya main aapki madad kar sakti hoon"
-#   Any robotic filler that a bot would say.
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# GENDER — STRICT
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# TUM (agent) — HAMESHA feminine:
-#   samjha→samjhi | bola→boli | socha→sochi | aaya→aayi | gaya→gayi
-
-# USER — gender-neutral (masculine-safe):
-#   "aap kar sakte hain" — never "aap kar sakti hain"
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# CALL FLOW — NATURAL CONVERSATION
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Yeh ek outbound call hai. Follow these phases NATURALLY — don't sound scripted.
-# Har phase mein sirf EK cheez poochho, phir RUKO.
-# EK RESPONSE = EK KAAM. Kabhi do cheezein ek mein mat karo.
-
-# IMPORTANT: Neeche diye gaye examples SIRF reference ke liye hain.
-# Kabhi bhi in lines ko copy-paste mat karo. Apne words mein bolo, har baar alag tarike se.
-
-# ─────────────────────────────────
-# PHASE 1 — GREETING & AVAILABILITY
-# ─────────────────────────────────
-# NOTE: The greeting "Hello! Main {agent_name} bol rahi hoon {company_name} se..." has ALREADY BEEN SAID.
-# If user says YES/AVAILABLE/HAAN → Acknowledge and move to Phase 2 (Test Drive Offer).
-# If user says NO/BUSY/NAHI → "Koi baat nahi! Hum aapko kab call karein?" (Ask for callback time). After getting the time → [END_CALL].
-
-# ─────────────────────────────────
-# PHASE 2 — TEST DRIVE OFFER
-# ─────────────────────────────────
-# Casually ask the user if they would like to take a test drive. "Kya aap iski test drive lena pasand karenge?"
-# If YES → Go to Phase 3.
-# If NO → Go to Phase 4.
-
-# ─────────────────────────────────
-# PHASE 3 — TEST DRIVE LOCATION & TIME (IF YES)
-# ─────────────────────────────────
-# 1. Ask if they want the test drive at the SHOWROOM or at their HOME/OFFICE.
-#    - If SHOWROOM → Ask for their preferred TIME.
-#    - If HOME/OFFICE → Ask for their complete LOCATION/ADDRESS first.
-# 2. If they chose Home/Office and provided their Location → Now ask for their preferred TIME.
-# 3. Once you have the Time (and Location if Home/Office) → Warmly confirm the booking and say goodbye → [BOOKING_CONFIRMED] then [END_CALL].
-
-# ─────────────────────────────────
-# PHASE 4 — IF NO TO TEST DRIVE
-# ─────────────────────────────────
-# If user refused the test drive:
-# 1. Politely ask for the reason (e.g. "Koi baat nahi! Kya main jaan sakti hoon reason? Koi aur car final ki hai ya plan delay hua?").
-# 2. After getting the reason, ask if they are interested in a test drive IN THE FUTURE. "Kya aap aage chalke test drive mein interested rahenge?"
-# 3. Collect their yes/no answer for future interest.
-# 4. Wish them well genuinely and say goodbye → [NOT_INTERESTED] then [END_CALL].
-
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# KB INTERRUPT — FLOW NAHI TODNA
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Agar kisi bhi STEP mein user KB question poochhe:
-#   STEP 1 → KB se TURANT 2-line jawab do.
-#   STEP 2 → Immediately us STEP ki booking/flow line ke saath wapas aao.
-
-# Example:
-#   User: "Seltos ka mileage kitna hai?"
-#   You:  "Petrol mein approx 16-17 kmpl milta hai, diesel mein 21 tak — kaafi efficient hai.
-#          Waise personally feel karna alag hota hai — showroom ya ghar, kaunsa convenient rahega?"
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# TIME POOCHHNE KA NATURAL WAY
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Booking confirm hone ke baad, time HAMESHA ek natural, warm line mein poochho:
-
-# ✅ Good:
-#   "Theek hai, kis time par aana pasand karenge?"
-#   "Location confirm karne ke liye dhanyawad, time kya rahega?"
-
-# ❌ Bad:
-#   "Kya aap apna poora naam bata sakte hain?" (Do not ask for names)
-#   "Name please?"
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# ENGAGEMENT TECHNIQUES
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# 1. CHOICE VALIDATE KARO naturally (1 line max):
-#    Showroom → "Sahi decision — wahan saare variants aur colors ek saath dikh jaate hain."
-#    Home visit → "Bahut convenient — aapko kahin jaana hi nahi padta."
-
-# 2. CURIOSITY HOOK (sirf jab user hesitate kare test drive ke liye):
-#    "Seltos mein ek cheez hai jo log test drive ke baad hi samajhte hain — bataaun?"
-#    [Agar yes → "Iski panoramic sunroof aur ADAS safety system — describe karna mushkil hai, feel karna padta hai. Ek drive worth it hai." → Back to Phase 3]
-
-# 3. SILENCE HANDLE:
-#    "Haan? Sune mein aa raha hai?"
-#    [Sirf ek baar. Phir bhi silence → "Lagta hai line thodi weak hai — aap showroom directly bhi aa sakte hain. Take care!" [END_CALL]]
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# KNOWLEDGE BASE
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Source: {knowledge_context}
-
-# Rules:
-# - KB answer DIRECTLY KB se do — koi guess nahi, koi invention nahi.
-# - Jo KB mein nahi → "Yeh detail showroom pe personally explain karenge — wahan zyada clear ho jaata hai."
-# - Koi URL / website KABHI mat do.
-# - Price / EMI / offers → sirf KB se. Kabhi calculate mat karo.
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# RESPONSE RULES
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# - Max 2 lines per response (especially when answering a question + redirecting).
-# - Sirf EK question per response — kabhi do mat poochho.
-# - No markdown, bullets, symbols — pure spoken words.
-# - No URLs or website links.
-# - User ka naam response mein mat repeat karo.
-# - Domain lock: agar topic car se related nahi → politely redirect.
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# CONVERSATION HISTORY
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# {history_text}
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# KNOWLEDGE BASE CONTENT
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# {knowledge_context}
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-# FINAL REMINDER
-# ━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Sirf Hinglish, Roman script. Feminine apne liye. Gender-neutral user ke liye.
-# FLEXIBLE tone — exact word-for-word nahi, lekin flow strictly follow karo.
-# Flow: Phase 1 → Phase 2 → Phase 3 (if yes) OR Phase 4 (if no).
-# KADAK NIYAM: Time milne ke turant baad [BOOKING_CONFIRMED] ya [END_CALL] tag ke saath close karo.
-# Specific time KABHI mat suggest karo — user se lene do.
-# KB interrupt → 2 lines → immediately wapas flow.
-# Budget concern → samjho → specific solution → appointment try karo.
-# [BOOKING_CONFIRMED] / [END_CALL] ke baad KUCH NAHI. Call DONE.
-# """
-
-
-# # =========================================================
-# # 🚗 AUTOMOBILE STRATEGY
-# # =========================================================
-
-# def _automobile_sanitise(message: str) -> str:
-#     return message.strip()[:MAX_MESSAGE_LENGTH]
-
-
-# # Language-specific instructions for the system prompt
-# AUTOMOBILE_LANGUAGE_INSTRUCTIONS = {
-#     "hi": (
-#         "- HAMESHA jawab do HINGLISH mein — Roman script mein (Hindi+English mixed).\n"
-#         "- User Devanagari mein bole toh bhi — tum HINGLISH Roman mein reply karo.\n"
-#         "- Natural fillers use karo context ke hisab se — ROTATE karo: haan, bilkul, samjhi, theek hai, sahi hai, badhiya, wah.\n"
-#         "- ⚠️ 'Achha' SIRF kab-kab use karo — har response 'Achha' se KABHI shuru mat karo.\n"
-#         "- IMPORTANT: User Hindi mein baat kare toh Hindi mein jawab do, English mein baat kare toh English mein."
-#     ),
-#     "en": (
-#         "- ALWAYS reply in ENGLISH — clear, simple spoken English.\n"
-#         "- Keep it conversational, like a real sales person on a phone call.\n"
-#         "- Natural fillers when needed: yes, sure, absolutely, right, okay.\n"
-#         "- If user switches to Hindi mid-conversation, switch to Hinglish."
-#     ),
-#     "gu": (
-#         "- ⚠️ CRITICAL: User Gujarati mein bol raha/rahi hai. Tum SIRF GUJARATI mein jawab do.\n"
-#         "- ALWAYS reply in GUJARATI script (ગુજરાતી). Roman ya Hindi bilkul nahi.\n"
-#         "- Har response pure Gujarati mein hona chahiye — koi Hindi ya English mix nahi.\n"
-#         "- Natural Gujarati fillers use karo: હા, બિલકુલ, સારું, ઠીક છે, સમજ્યો/સમજી.\n"
-#         "- Warm aur friendly tone rakho, jaise ek jaanpahchaana banda call kar raha ho.\n"
-#         "- Example Gujarati phrases:\n"
-#         "  'કયો મોડેલ જોઈ રહ્યા છો?' (Which model are you looking at?)\n"
-#         "  'ક્યારે લેવાનો વિચાર છે?' (When are you planning to buy?)\n"
-#         "  'ટેસ્ટ ડ્રાઇવ કરી જુઓ, ગમશે!' (Take a test drive, you'll like it!)\n"
-#         "  'કોઈ વાંધો નહીં, અમે સંપર્ક કરીશું.' (No problem, we'll be in touch.)"
-#     ),
-# }
-
-
-
-
-
-
-
-# def _get_automobile_lang_instruction(session_state: dict) -> str:
-#     """Get the language instruction based on detected language in session."""
-#     lang = session_state.get("detected_language", "hi")
-#     return AUTOMOBILE_LANGUAGE_INSTRUCTIONS.get(lang, AUTOMOBILE_LANGUAGE_INSTRUCTIONS["hi"])
-
-
-# # ─── NON-STREAMING (text fallback) ───────────────────────
-
-# def automobile_qualification_strategy(agent, message, session, **kwargs):
-#     state: dict = session.state or {}
-#     raw_message = _automobile_sanitise(message)
-#     msg = raw_message.lower()
-#     conversation_history: list = state.get("conversation_history", [])
-
-#     # FAREWELL
-#     if is_farewell(msg):
-#         save_session(session, {})
-#         return "Aapse baat karke achha laga! Jab bhi car related help chahiye — hum yahan hain. Take care!"
-
-#     # INTRO
-#     if not state.get("intro_shown"):
-#         reply = (
-#             f"Hello! Main {agent.name} bol rahi hoon {agent.company_name or agent.name} se. "
-#             f"Aapne thode din pehle, KIYA Seltos ke liye enquiry ki thi, kya aap abhi baat kar sakte hain?"
-#         )
-#         state["intro_shown"] = True
-#         state["conversation_history"] = [f"Agent: {reply}"]
-#         save_session(session, state)
-#         return reply
-
-#     # LLM FLOW
-#     conversation_history.append(f"User: {raw_message}")
-#     if len(conversation_history) > MAX_TURNS:
-#         conversation_history = conversation_history[-MAX_TURNS:]
-
-#     history_text = build_history_text(conversation_history)
-
-#     try:
-#         from knowledge.services.retriever import retrieve_relevant_chunks
-#         knowledge_context = retrieve_relevant_chunks(agent, raw_message) or ""
-#     except Exception:
-#         knowledge_context = ""
-
-#     role_name = agent.role_template.role_name if agent.role_template else "Automobile Advisor"
-#     agent_summary = agent.summary or ""
-
-#     system_prompt = AUTOMOBILE_SYSTEM_PROMPT.format(
-#         agent_name=agent.name,
-#         company_name=agent.company_name or agent.name,
-#         role_name=role_name,
-#         agent_summary=agent_summary,
-#         language_instruction=_get_automobile_lang_instruction(state),
-#         knowledge_context=knowledge_context,
-#         history_text=history_text,
-#     )
-
-#     response = generate_response(system_prompt, raw_message)
-
-#     conversation_history.append(f"Agent: {response}")
-#     state["conversation_history"] = conversation_history
-#     state["last_bot_message"] = response
-#     save_session(session, state)
-
-#     return response
-
-
-# # ─── STREAMING PREPARE / FINALIZE ────────────────────────
-
-# def automobile_qualification_prepare(agent, message, session, detected_language=None, **kwargs):
-#     """
-#     Phase 1 of streaming: pre-LLM work for automobile strategy.
-
-#     FIX: Accept `detected_language` from the consumer (live, real-time value from
-#     Azure STT). This overrides whatever was last persisted to session state in DB,
-#     which can be stale due to async DB writes racing with the next user turn.
-#     """
-#     state = session.state or {}
-#     raw_message = _automobile_sanitise(message)
-#     msg = raw_message.lower()
-#     conversation_history = state.get("conversation_history", [])
-
-#     # ─────────────────────────────────────────────────────────────
-#     # FIX 1: Override state's detected_language with the live value
-#     # passed in from the consumer (self.language), which is always
-#     # up-to-date. Without this, state["detected_language"] can be
-#     # stale ("hi") even when the user is speaking Gujarati, because
-#     # _save_detected_language() is async and may not have completed
-#     # before this function runs on the next turn.
-#     # ─────────────────────────────────────────────────────────────
-#     if detected_language:
-#         state["detected_language"] = detected_language
-
-#     # FAREWELL
-#     if is_farewell(msg):
-#         save_session(session, {})
-#         lang = kwargs.get("detected_language") or state.get("detected_language", "hi")
-#         farewells = {
-#             "hi": "Aapse baat karke achha laga! Jab bhi car related help chahiye — hum yahan hain. Take care!",
-#             "en": "It was great talking to you! Feel free to reach out if you need any help with Kia. Have a nice day!",
-#             "gu": "તમારી સાથે વાત કરીને આનંદ થયો! કિયા વિશે કોઈ પણ મદદની જરૂર હોય તો ચોક્કસ જણાવજો. આવજો!"
-#         }
-#         return {
-#             "static_reply": farewells.get(lang, farewells["hi"]),
-#             "tts_language": lang
-#         }
-
-#     # INTRO — Outbound Kia call opening
-#     if not state.get("intro_shown"):
-#         reply = (
-#             f"Hello! Main {agent.name} bol rahi hoon {agent.company_name or agent.name} se. "
-#             f"Aapne thode din pehle, KIYA Seltos ke liye enquiry ki thi,  kya aap abhi baat kar sakte hain?"
-#         )
-#         state["intro_shown"] = True
-#         state["conversation_history"] = [f"Agent: {reply}"]
-#         save_session(session, state)
-#         return {"static_reply": reply}
-
-#     # EXCHANGE COUNTER
-#     exchange_count = state.get("exchange_count", 0)
-#     exchange_count += 1
-#     state["exchange_count"] = exchange_count
-
-#     # BUILD BASE PROMPT
-#     conversation_history.append(f"User: {raw_message}")
-#     if len(conversation_history) > MAX_TURNS:
-#         conversation_history = conversation_history[-MAX_TURNS:]
-
-#     history_text = build_history_text(conversation_history)
-
-#     try:
-#         from knowledge.services.retriever import retrieve_relevant_chunks
-#         knowledge_context = retrieve_relevant_chunks(agent, raw_message) or ""
-#     except Exception:
-#         knowledge_context = ""
-
-#     role_name = agent.role_template.role_name if agent.role_template else "Automobile Advisor"
-#     agent_summary = agent.summary or ""
-
-#     # ─────────────────────────────────────────────────────────────
-#     # FIX 2: _get_automobile_lang_instruction now reads the corrected
-#     # state (with live detected_language injected above), so the
-#     # system prompt will contain the correct Gujarati instruction
-#     # instead of defaulting to Hindi/Hinglish.
-#     # ─────────────────────────────────────────────────────────────
-#     system_prompt = AUTOMOBILE_SYSTEM_PROMPT.format(
-#         agent_name=agent.name,
-#         company_name=agent.company_name or agent.name,
-#         role_name=role_name,
-#         agent_summary=agent_summary,
-#         language_instruction=_get_automobile_lang_instruction(state),
-#         knowledge_context=knowledge_context,
-#         history_text=history_text,
-#     )
-
-#     # ─────────────────────────────────────────────────────────────
-#     # PHASE TRACKING — drive the call flow forward
-#     # ─────────────────────────────────────────────────────────────
-# #     current_phase = state.get("call_phase", "lead_verification")
-
-# #     # Detect NOT INTERESTED early — skip phases
-# #     not_interested_kw = [
-# #         "nahi chahiye", "not interested", "no thanks",
-# #         "galat number", "wrong number", "nahi ki thi", "enquiry nahi",
-# #         "already bought", "khareed li", "le li",
-# #         # Gujarati not-interested keywords
-# #         "નથી લેવી", "નથી જોઈતી", "નહીં જોઈએ", "રહેવા દો",
-# #         "ખરીદ લીધી",
-# #     ]
-# #     # Detect BUSY / CALL BACK (Not available now)
-# #     busy_kw = [
-# #         "busy", "later", "meeting", "driving", "office", "kaam", "baad mein", "baad me",
-# #         "not now", "abhi nahi", "pachhi", "kam ma", "call back", "kaal", "parso",
-# #         "nahi", "no", "na", "nathi", "નથી", "ના", "postpone",
-# #     ]
-
-# #     if any(kw in msg for kw in not_interested_kw) and current_phase == "lead_verification":
-# #         system_prompt += """
-
-# # ⚠️ USER IS NOT INTERESTED OR DENIED ENQUIRY:
-# # Politely close the call. Ask for quick feedback reason in ONE line.
-# # Then say goodbye with [NOT_INTERESTED] tag at the end.
-# # IMPORTANT: Reply in the SAME language the user just spoke."""
-# #     elif any(kw in msg for kw in busy_kw) and current_phase == "lead_verification":
-# #         state["call_phase"] = "callback_request"
-# #         save_session(session, state)
-# #         system_prompt += """
-
-# # ⚠️ USER IS BUSY OR NOT AVAILABLE:
-# # Politely ask when would be a better time to call back. 
-# # Example: "Theek hai, toh hum aapko kab call karein?"
-# # Keep it to ONE short question.
-# # Do NOT close the call yet.
-# # IMPORTANT: Reply in the SAME language the user just spoke."""
-# #     elif current_phase == "callback_request":
-# #         system_prompt += """
-
-# # ⚠️ CURRENT PHASE: CALLBACK CONFIRMATION
-# # - User provided a time or responded to the callback question.
-# # - Politely acknowledge (e.g., "Theek hai, hum us time call karenge" or "Theek hai, baad mein call karenge").
-# # - Say goodbye and end the call.
-# # - HAMESHA message ke end mein [END_CALL] tag lagao taaki call cut ho jaye.
-# # - IMPORTANT: Reply in the SAME language the user just spoke."""
-# #     elif current_phase == "lead_verification":
-# #         state["call_phase"] = "model_confirmation"
-# #         save_session(session, state)
-# #         system_prompt += """
-
-
-
-
-
-#     # ─────────────────────────────────────────────────────────────
-#     # PHASE TRACKING — drive the call flow forward
-#     # ─────────────────────────────────────────────────────────────
-#     current_phase = state.get("call_phase", "lead_verification")
-    
-#     mp3_phase = kwargs.get("current_phase")
-#     if mp3_phase:
-#         current_phase = "mp3_bypass"
-
-#     # ─────────────────────────────────────────────────────────────
-#     # GLOBAL DENIAL DETECTION — handles user saying NO at any phase
-#     # ─────────────────────────────────────────────────────────────
-#     not_interested_kw = [
-#         "nahi chahiye", "not interested", "no thanks", "nahi",
-#         "galat number", "wrong number", "nahi ki thi", "enquiry nahi",
-#         "already bought", "khareed li", "le li", "postpone",
-#         # Hindi not-interested keywords
-#         "नहीं", "नहीं चाहिए", "ना", "बाद में", "व्यस्त", "काम में हूँ",
-#         "बात नहीं करनी", "गलत नंबर", "नही", "जी नहीं", "अभी नहीं", "बादमे",
-#         # Gujarati not-interested keywords
-#         "નથી લેવી", "નથી જોઈતી", "નહીં જોઈએ", "રહેવા દો",
-#         "નથી", "ના", "ખરીદ લીધી", "પછી વાત કરીએ", "કામમાં છું",
-#     ]
-#     is_denial = any(kw in msg for kw in not_interested_kw) and not mp3_phase
-
-# #     if current_phase == "denial_followup_2":
-# #         system_prompt += """
-# # PHASE: DENIAL_REASON_FINALIZED.
-# # The user has provided the exact reason for not being interested.
-# # 1. Acknowledge their response politely in ONE short sentence (e.g. "Theek hai, thank you for your Feedback!").
-# # 2. Wish them well and say goodbye.
-# # 3. End your response with the exact tag: [NOT_INTERESTED]
-# # Reply in the same language as user."""
-# #     elif current_phase == "denial_followup_1":
-# #         state["call_phase"] = "denial_followup_2"
-# #         save_session(session, state)
-# #         system_prompt += """
-# # PHASE: DENIAL_FOLLOWUP_QUESTION.
-# # The user has provided an initial reason for not being interested.
-# # 1. Ask ONE deeper follow-up question based on their previous answer to find out the exact specific reason (e.g., if they bought another car, ask casually which one; if plan changed, ask why; if price is an issue, ask gently).
-# # 2. Keep it natural, conversational, and to ONE short question.
-# # 3. Do NOT add the [NOT_INTERESTED] tag yet.
-# # Reply in the same language as user."""
-# #     elif current_phase == "callback_request":
-# #         system_prompt += """
-# # PHASE: CALLBACK_TIME_RECEIVED.
-# # The user has provided a time for callback.
-# # 1. Acknowledge their response politely in ONE short sentence (e.g. "Theek hai, hum us time call karenge!").
-# # 2. Wish them well and say goodbye.
-# # 3. End your response with the exact tag: [END_CALL]
-# # Reply in the same language as user."""
-# #     elif current_phase == "test_drive_denial_2":
-# #         system_prompt += """
-# # PHASE: TEST_DRIVE_FUTURE_RESPONSE.
-# # The user answered whether they want a test drive in the future.
-# # 1. Give them a good, positive message (e.g. "Koi baat nahi, future mein jab bhi aapka man ho, hum hamesha available hain!").
-# # 2. Say goodbye and end your response with the exact tag: [NOT_INTERESTED]
-# # Reply in the same language as user."""
-# #     elif current_phase == "test_drive_denial_1":
-# #         state["call_phase"] = "test_drive_denial_2"
-# #         save_session(session, state)
-# #         system_prompt += """
-# # PHASE: TEST_DRIVE_DENIAL_FOLLOWUP.
-# # The user provided a reason for not wanting a test drive.
-# # 1. Take a quick follow-up on their reason naturally.
-# # 2. Then ask if they would ever want a test drive in the future (e.g. "Achha samajh gayi. Toh kya aap future mein kabhi test drive lena chahenge?").
-# # 3. Keep it conversational.
-# # 4. Do NOT add any tags yet.
-# # Reply in the same language as user."""
-# #     elif is_denial:
-# #         if current_phase == "lead_verification":
-# #             state["call_phase"] = "callback_request"
-# #             save_session(session, state)
-# #             system_prompt += """
-# # PHASE: CALLBACK_REQUEST.
-# # The user has indicated they can't talk right now.
-# # 1. Politely ask them when would be a good time to call back (e.g. "Koi baat nahi! Hum aapko kab call karein?").
-# # 2. Do NOT add any tags yet.
-# # 3. Keep it to ONE short question.
-# # Reply in the same language as user."""
-# #         elif current_phase in ["test_drive_proposal", "test_drive_location", "test_drive_time_showroom", "test_drive_address"]:
-# #             # Check if they are just changing location or selecting showroom even if they said "Nahi"
-# #             location_msg = msg.lower()
-            
-# #             # 1. Check for Home/Office selection
-# #             if current_phase in ["test_drive_location", "test_drive_time_showroom"] and any(w in location_msg for w in ["home", "ghar", "office", "makaan", "घर", "ऑफिस", "ઘર", "ઓફિસ"]):
-# #                 state["call_phase"] = "test_drive_address"
-# #                 save_session(session, state)
-# #                 system_prompt += """
-# # PHASE: HOME/OFFICE TEST DRIVE ADDRESS.
-# # The user wants the test drive at their home or office.
-# # 1. Ask them for their address and pincode so we can arrange it at their convenience.
-# # 2. Keep it to ONE short question.
-# # 3. Do NOT add any tags.
-# # Reply in the same language as user."""
-            
-# #             # 2. Check for Showroom selection (even if they started with 'Nahi')
-# #             elif current_phase == "test_drive_location" and any(w in location_msg for w in ["showroom", "vaha", "udhar", "wahi", "शोरूम", "શોરૂમ", "શો રૂમ"]):
-# #                 state["call_phase"] = "test_drive_time_showroom"
-# #                 save_session(session, state)
-# #                 system_prompt += """
-# # PHASE: SHOWROOM TEST DRIVE TIME.
-# # The user wants the test drive at the showroom.
-# # 1. Ask them for their preferred time to visit the showroom.
-# # 2. Keep it to ONE short question.
-# # 3. Do NOT add any tags.
-# # Reply in the same language as user."""
-                
-# #             else:
-# #                 state["call_phase"] = "test_drive_denial_1"
-# #                 save_session(session, state)
-# #                 system_prompt += """
-# # PHASE: TEST_DRIVE_DENIAL_REASON.
-# # The user indicated they don't want a test drive right now.
-# # 1. Politely ask them for the reason why they don't want a test drive (e.g. "Oh! Koi specific reason ki aap abhi test drive nahi lena chahte?").
-# # 2. Do NOT add the [NOT_INTERESTED] tag yet.
-# # 3. Keep it to ONE short question.
-# # Reply in the same language as user."""
-# #         else:
-# #             state["call_phase"] = "denial_followup_1"
-# #             save_session(session, state)
-# #             system_prompt += """
-# # PHASE: NOT_INTERESTED.
-# # The user has indicated they are NOT interested.
-# # 1. Politely acknowledge and ask them for the reason.
-# # 2. Do NOT add the [NOT_INTERESTED] tag yet.
-# # 3. Keep it to ONE short question.
-# # Reply in the same language as user."""
-# #     elif current_phase == "lead_verification":
-# #         state["call_phase"] = "test_drive_proposal"
-# #         save_session(session, state)
-# #         system_prompt += """
-# # PHASE: TEST DRIVE PROPOSAL.
-# # The user agreed to talk after the greeting.
-# # 1. Ask them for a test drive using humanized, emotional words. (e.g. "Great! Sir/Ma'am, aisi premium car ka maza toh chala ke hi aata hai. Kya aap iska test drive lena chahenge?")
-# # 2. Keep it to ONE short question.
-# # 3. Do NOT add any tags.
-# # Reply in the same language as user."""
-# #     elif current_phase == "test_drive_proposal":
-# #         state["call_phase"] = "test_drive_location"
-# #         save_session(session, state)
-# #         system_prompt += """
-# # PHASE: TEST DRIVE LOCATION.
-# # The user agreed to a test drive.
-# # 1. Ask them where they would like the test drive: at the showroom, their home, or their office. (e.g. "Bahut badiya! Aap test drive kahan lena pasand karenge? Showroom aayenge ya hum car aapke ghar ya office bhej dein?")
-# # 2. Keep it to ONE short question.
-# # 3. Do NOT add any tags.
-# # Reply in the same language as user."""
-# #     elif current_phase == "test_drive_location":
-# #         location_msg = msg.lower()
-        
-# #         # 1. Check if they want home/office instead of showroom
-# #         if any(w in location_msg for w in ["home", "ghar", "office", "makaan", "ghar pe", "office me", "घर", "ऑफिस", "ઘર", "ઓફિસ", "ત્યાં"]):
-# #             state["call_phase"] = "test_drive_address"
-# #             save_session(session, state)
-# #             system_prompt += """
-# # PHASE: HOME/OFFICE TEST DRIVE ADDRESS.
-# # The user wants the test drive at their home or office.
-# # 1. Ask them for their address and pincode so we can arrange it at their convenience.
-# # 2. Keep it to ONE short question.
-# # 3. Do NOT add any tags.
-# # Reply in the same language as user."""
-        
-# #         # 2. Check for Showroom selection
-# #         elif any(w in location_msg for w in ["showroom", "vaha", "udhar", "wahi", "शोरूम", "શોરૂમ", "શો રૂમ"]):
-# #             state["call_phase"] = "test_drive_time_showroom"
-# #             save_session(session, state)
-# #             system_prompt += """
-# # PHASE: SHOWROOM TEST DRIVE TIME.
-# # The user wants the test drive at the showroom.
-# # 1. Ask them for their preferred time to visit the showroom.
-# # 2. Keep it to ONE short question.
-# # 3. Do NOT add any tags.
-# # Reply in the same language as user."""
-
-# #         else:
-# #             # Default to showroom if not explicitly home/office (or ask again)
-# #             state["call_phase"] = "test_drive_time_showroom"
-# #             save_session(session, state)
-# #             system_prompt += """
-# # PHASE: SHOWROOM TEST DRIVE TIME.
-# # The user wants the test drive at the showroom (or they didn't specify home/office).
-# # 1. Ask them for their preferred time to visit the showroom.
-# # 2. Keep it to ONE short question.
-# # 3. Do NOT add any tags.
-# # Reply in the same language as user."""
-# #     elif current_phase == "test_drive_time_showroom":
-# #         state["call_phase"] = "closing"
-# #         save_session(session, state)
-# #         system_prompt += """
-# # PHASE: CLOSING SHOWROOM TEST DRIVE.
-# # The user has provided their preferred time for the showroom visit.
-# # 1. Acknowledge the time, give a very good message (e.g. "Perfect! Hum aapki booking note kar lete hain, humari team aapse jaldi sampark karegi. Thank you!").
-# # 2. End your response with EXACTLY the [BOOKING_CONFIRMED] tag to cut the call.
-# # Reply in the same language as user."""
-# #     elif current_phase == "test_drive_address":
-# #         state["call_phase"] = "test_drive_time_home_office"
-# #         save_session(session, state)
-# #         system_prompt += """
-# # PHASE: HOME/OFFICE TEST DRIVE TIME.
-# # The user has provided their address/pincode.
-# # 1. Ask them for their preferred time for the home/office test drive.
-# # 2. Keep it to ONE short question.
-# # 3. Do NOT add any tags.
-# # Reply in the same language as user."""
-# #     elif current_phase == "test_drive_time_home_office":
-# #         state["call_phase"] = "closing"
-# #         save_session(session, state)
-# #         system_prompt += """
-# # PHASE: CLOSING HOME/OFFICE TEST DRIVE.
-# # The user has provided their preferred time for the home/office visit.
-# # 1. Acknowledge the time, give a very good message (e.g. "Perfect! Humne aapka address aur time note kar liya hai, humari team car aapke paas bhej degi. Thank you!").
-# # 2. End your response with EXACTLY the [BOOKING_CONFIRMED] tag to cut the call.
-# # Reply in the same language as user."""
-# #     elif current_phase == "closing":
-# #         system_prompt += """
-# # FINAL CLOSING:
-# # - Ensure the user gets a good message and the exact [BOOKING_CONFIRMED] tag is at the end of the text.
-# # Reply in the same language as user."""
-
-
-
-
-
-#     if current_phase == "denial_reason_followup":
-#         system_prompt += """
-# PHASE: FINAL_DENIAL_ACKNOWLEDGED.
-# The user has answered your follow-up question regarding their reason.
-# 1. Acknowledge their response warmly (e.g. "That's a great choice! Thank you for sharing.").
-# 2. Wish them well and say goodbye.
-# 3. End your response with the exact tag: [NOT_INTERESTED]
-# Reply in the same language as user."""
-
-#     elif current_phase == "denial_followup":
-#         state["call_phase"] = "denial_reason_followup"
-#         save_session(session, state)
-#         system_prompt += """
-# PHASE: DENIAL_REASON_RECEIVED.
-# The user has provided a reason for not being interested or giving a final response.
-# 1. Acknowledge their reason politely.
-# 2. Ask ONE brief follow-up question related to their reason (e.g., if they bought another car, ask which one; if plan changed, ask what they decided).
-# 3. Do NOT add the [NOT_INTERESTED] tag yet.
-# Reply in the same language as user."""
-#     elif current_phase == "callback_request":
-#         system_prompt += """
-# ⚠️ CURRENT PHASE: WRAP UP (CALLBACK RECEIVED)
-# The user gave the callback time.
-# 1. Warmly confirm that you will call them back at that time (e.g., "Theek hai, main aapka call schedule kar leti hoon. Aapse baad mein baat hogi, thank you!").
-# 2. Wish them well and say goodbye.
-# 3. You MUST end your response with EXACTLY the tag: [END_CALL]
-# CRITICAL: Do NOT ask any other question.
-# Reply in the same language as the user."""
-#     elif is_denial:
-#         state["call_phase"] = "callback_request"
-#         save_session(session, state)
-#         system_prompt += """
-# ⚠️ CURRENT PHASE: CALLBACK REQUEST
-# The user indicated they can't talk right now or gave a negative response.
-# Politely ask them when would be a good time to call back (e.g. "Koi baat nahi! Aapko kab call karna convenient rahega?").
-# Keep it to ONE short question. Do NOT add any tags yet.
-# Reply in the same language as the user."""
-
-#     elif current_phase == "lead_verification":
-#         state["call_phase"] = "test_drive_offer"
-#         save_session(session, state)
-#         system_prompt += """
-# ⚠️ CURRENT PHASE: TEST DRIVE OFFER
-# User agreed to talk.
-# Briefly acknowledge and ask if they would like to take a test drive. "Kya aap iski test drive lena pasand karenge?"
-# Do NOT ask anything else. Keep it to ONE short question."""
-
-#     elif current_phase == "test_drive_offer":
-#         state["call_phase"] = "collecting_details"
-#         save_session(session, state)
-#         system_prompt += """
-# ⚠️ CURRENT PHASE: TEST DRIVE VENUE
-# User confirmed interest in a test drive.
-# Ask: "Aap test drive kahan pasand karenge, showroom aana chahenge ya ghar par?"
-# Keep it to ONE short question."""
-
-#     elif current_phase == "collecting_details":
-#         # Keep state as collecting_details. The loop ends when [END_CALL] is emitted.
-#         system_prompt += """
-# ⚠️ CURRENT PHASE: COLLECTING DETAILS
-# You must collect the Test Drive TIME, and if they chose Home/Office, their exact ADDRESS.
-# 1. If they chose Showroom but no Time -> Ask for their preferred Time.
-# 2. If they chose Home/Office but didn't give a full Address -> Ask for their complete Address (e.g., "Aapka complete address kya rahega?"). Do NOT ask for time yet.
-# 3. If they chose Home/Office and gave their Address, but no Time -> Ask for their preferred Time.
-# 4. If you have BOTH the Venue (with Address if Home) AND the Time -> Warmly confirm the booking and say goodbye. You MUST add [BOOKING_CONFIRMED] and [END_CALL] at the end of your response!
-# Keep it to ONE short question at a time."""
-
-#     elif current_phase == "denial_followup":
-#         state["call_phase"] = "future_interest"
-#         save_session(session, state)
-#         system_prompt += """
-# ⚠️ CURRENT PHASE: FUTURE INTEREST
-# User gave a reason for refusing the test drive.
-# Now ask if they are interested in a test drive IN THE FUTURE. "Kya aap aage chalke test drive mein interested rahenge?"
-# Do NOT add the [NOT_INTERESTED] tag yet."""
-
-#     elif current_phase == "future_interest":
-#         system_prompt += """
-# ⚠️ CURRENT PHASE: WRAP UP (NOT INTERESTED)
-# User answered the future interest question.
-# Wish them well genuinely and say goodbye.
-# IMPORTANT: You MUST include [NOT_INTERESTED] and [END_CALL] in your reply!"""
-
-#     elif current_phase == "callback_request":
-#         system_prompt += """
-# ⚠️ CURRENT PHASE: WRAP UP (CALLBACK)
-# User gave the callback time.
-# Wish them well genuinely and say goodbye.
-# IMPORTANT: You MUST include [END_CALL] in your reply!"""
-
-
-#     # ─────────────────────────────────────────────────────────────
-#     # RUBBER BAND LOGIC (Hybrid MP3/LLM Flow)
-#     # ─────────────────────────────────────────────────────────────
-#     mp3_phase = kwargs.get("current_phase")
-#     if mp3_phase:
-#         detected_lang = state.get("detected_language", "hi")
-        
-#         # Multilingual Rubber Band Questions based on user's active language
-#         rubber_band_maps = {
-#             "hi": {
-#                 "TIME_AVAILABILITY": "Kya aap abhi baat kar sakte hain?",
-#                 "DRIVING_PATTERN": "Sahi variant suggest karne ke liye, gaadi zyada city mein chalegi ya highway par?",
-#                 "FAMILY_SIZE": "Aapki family mein kitne members hain?",
-#                 "DRIVER_TYPE": "Gaadi aap khud chalayenge ya driver chalayega?",
-#                 "FUEL": "Aap Petrol dekh rahe hain ya Diesel?",
-#                 "TRANSMISSION": "Aapko Manual, iMT, ya Automatic mein kya pasand hai?",
-#                 "VARIANT": "Aapne koi specific variant final kiya hai?",
-#                 "BUDGET": "Aapka budget kya rahega?",
-#                 "TIMELINE": "Aap gaadi kab lene ka plan kar rahe hain?",
-#                 "EXCHANGE": "Kya aapke paas koi purani gaadi exchange ke liye hai?",
-#                 "VENUE": "Aap test drive kahan lena pasand karenge, showroom aayenge ya hum gaadi aapke ghar bhej dein?",
-#                 "APPOINTMENT_TIME": "Hum test drive kis time par schedule karein?",
-#                 "CONFIRM_DETAILS": "Perfect, aapka naam aur number yehi rahega na?"
-#             },
-#             "en": {
-#                 "TIME_AVAILABILITY": "Is this a good time to speak?",
-#                 "DRIVING_PATTERN": "Will the vehicle be driven mostly in the city or on the highway?",
-#                 "FAMILY_SIZE": "How many members are in your family?",
-#                 "DRIVER_TYPE": "Will it be self-driven or chauffeur-driven?",
-#                 "FUEL": "Are you looking for Petrol or Diesel?",
-#                 "TRANSMISSION": "Do you prefer Manual, iMT, or Automatic?",
-#                 "VARIANT": "Have you finalized any specific variant?",
-#                 "BUDGET": "What is your budget?",
-#                 "TIMELINE": "When are you planning to make the purchase?",
-#                 "EXCHANGE": "Do you have an old vehicle to exchange?",
-#                 "VENUE": "Would you like a test drive at the showroom or at your home?",
-#                 "APPOINTMENT_TIME": "What time should we schedule the appointment?",
-#                 "CONFIRM_DETAILS": "Could you please confirm if this name and number is correct?"
-#             },
-#             "gu": {
-#                 "TIME_AVAILABILITY": "શું તમે અત્યારે વાત કરી શકો છો?",
-#                 "DRIVING_PATTERN": "ગાડી વધારે સિટીમાં ચાલશે કે હાઇવે પર?",
-#                 "FAMILY_SIZE": "તમારા પરિવારમાં કેટલા સભ્યો છે?",
-#                 "DRIVER_TYPE": "ગાડી તમે પોતે ચલાવશો કે ડ્રાઇવર ચલાવશે?",
-#                 "FUEL": "તમે પેટ્રોલ જોઈ રહ્યા છો કે ડીઝલ?",
-#                 "TRANSMISSION": "તમે મેન્યુઅલ, iMT, કે ઓટોમેટિક પસંદ કરશો?",
-#                 "VARIANT": "તમે કોઈ ચોક્કસ વેરિઅન્ટ નક્કી કર્યું છે?",
-#                 "BUDGET": "તમારું બજેટ શું રહેશે?",
-#                 "TIMELINE": "તમે ગાડી ક્યારે લેવાનું પ્લાન કરી રહ્યા છો?",
-#                 "EXCHANGE": "શું તમારી પાસે એક્સચેન્જ માટે કોઈ જૂની ગાડી છે?",
-#                 "VENUE": "તમે ટેસ્ટ ડ્રાઇવ ક્યાં લેવાનું પસંદ કરશો, શોરૂમ પર કે ઘરે?",
-#                 "APPOINTMENT_TIME": "અમે ટેસ્ટ ડ્રાઇવ કયા સમયે શિડ્યુલ કરીએ?",
-#                 "CONFIRM_DETAILS": "બરાબર, તમારું નામ અને નંબર આ જ રહેશે ને?"
-#             }
-#         }
-        
-#         # Resolve map based on language, fallback to Hindi
-#         lang_map = rubber_band_maps.get(detected_lang, rubber_band_maps["hi"])
-#         question_to_ask = lang_map.get(mp3_phase)
-        
-#         if question_to_ask:
-#             system_prompt += f"\n\n⚠️ URGENT RUBBER-BAND RULE: The user has interrupted the flow with a random question or greeting. " \
-#                              f"You MUST answer their question briefly (1 sentence max) in the same language as the user. " \
-#                              f"CRITICAL: Do NOT ask any follow-up question or any other question of your own in your response! Only state the answer factually. " \
-#                              f"Then, you MUST immediately end your response by repeating this exact question to get them back on track: " \
-#                              f"'{question_to_ask}'. " \
-#                              f"There should be exactly ONE question in your entire response, which is '{question_to_ask}'."
-
-
-#     # ─────────────────────────────────────────────────────────────
-#     # FIX 3: Build tts_language from the corrected state, not the
-#     # old stale state. Previously this was reading state BEFORE Fix 1
-#     # applied, so it always returned "hi" for Gujarati users.
-#     # Now state["detected_language"] is already correct by this point.
-#     # ─────────────────────────────────────────────────────────────
-#     detected_lang = state.get("detected_language", "hi")
-#     tts_lang_map = {"hi": "hi", "en": "en", "gu": "gu"}
-#     tts_lang = tts_lang_map.get(detected_lang, "hi")
-
-#     return {
-#         "system_prompt": system_prompt,
-#         "user_message": raw_message,
-#         "state": state,
-#         "conversation_history": conversation_history,
-#         "session": session,
-#         "skip_input_translation": True,
-#         "skip_output_translation": True,
-#         "translate_input_to": "original",
-#         "tts_language": tts_lang,
-#     }
-
-
-# def automobile_qualification_finalize(response, prep_result):
-#     """Phase 2 of streaming: save response to session state."""
-#     state = prep_result["state"]
-#     session = prep_result["session"]
-#     conversation_history = prep_result["conversation_history"]
-
-#     conversation_history.append(f"Agent: {response}")
-#     state["conversation_history"] = conversation_history
-#     state["last_bot_message"] = response
-#     save_session(session, state)
-
-
-
-
-
-
-
-
-
-
-
 # =========================================================
 # =========================================================
 #               AUTO-MOBILE INDUSTRY
@@ -7213,10 +6317,11 @@ KNOWLEDGE BASE & FLOW REDIRECTION
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
 - If the user asks a specific question about Kia models, features, price, or specifications:
-  1. ANSWER the question clearly using the provided KNOWLEDGE BASE.
-  2. REDIRECT the conversation immediately back to your current objective (the active phase).
-  3. Example: "Seltos ka mileage 17 to 20 kmpl hai. Waise, aap Ahmedabad se hain ya nearby?"
-- Never ignore a user's question to follow the script. Always answer first, then redirect.
+  1. ANSWER the question clearly and concisely using the provided KNOWLEDGE BASE.
+  2. ⚠️ STOP after answering. Do NOT add any follow-up question, redirect, or "waise" transition.
+  3. The system will automatically ask the next flow question — you do NOT need to do it.
+  4. Example: User asks "mileage kitna hai?" → You reply: "Seltos ka mileage petrol mein 16-17 kmpl aur diesel mein 21 kmpl tak hai." ← STOP HERE.
+- Never ignore a user's question. Always answer it clearly, then stop.
 
 IMPORTANT — LANGUAGE MATCHING:
 - User jis language mein baat kare, usi language mein jawab do.
@@ -7296,14 +6401,11 @@ If user refused the test drive:
 KB INTERRUPT — FLOW NAHI TODNA
 ━━━━━━━━━━━━━━━━━━━━━━━━
 
-Agar kisi bhi STEP mein user KB question poochhe:
-  STEP 1 → KB se TURANT 2-line jawab do.
-  STEP 2 → Immediately us STEP ki booking/flow line ke saath wapas aao.
-
-Example:
-  User: "Seltos ka mileage kitna hai?"
-  You:  "Petrol mein approx 16-17 kmpl milta hai, diesel mein 21 tak — kaafi efficient hai.
-         Waise personally feel karna alag hota hai — showroom ya ghar, kaunsa convenient rahega?"
+Agar conversation ke dauran user koi question (mileage, specs, features, price) poochhe:
+- KB se TURANT short factual jawab do (max ONE sentence).
+- Answer ke baad STOP kar do. Koi follow-up question mat poochho, aur koi transition line mat bolo.
+- Pure response mein ZERO question marks (?) hone chahiye.
+- System automatically next audio play karega context ke hisaab se.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 TIME POOCHHNE KA NATURAL WAY
@@ -7973,89 +7075,128 @@ IMPORTANT: You MUST include [END_CALL] in your reply!"""
         detected_lang = state.get("detected_language", "hi")
         
         # Multilingual Rubber Band Questions based on user's active language
+        # ── Rubber Band Maps — matched to generate_flow_audio.py phases ──────
         rubber_band_maps = {
             "hi": {
-                "TIME_AVAILABILITY": "Kya aap abhi baat kar sakte hain?",
-                "DRIVING_PATTERN": "Sahi variant suggest karne ke liye, gaadi zyada city mein chalegi ya highway par?",
-                "FAMILY_SIZE": "Aapki family mein kitne members hain?",
-                "DRIVER_TYPE": "Gaadi aap khud chalayenge ya driver chalayega?",
-                "FUEL": "Aap Petrol dekh rahe hain ya Diesel?",
-                "TRANSMISSION": "Aapko Manual, iMT, ya Automatic mein kya pasand hai?",
-                "VARIANT": "Aapne koi specific variant final kiya hai?",
-                "BUDGET": "Aapka budget kya rahega?",
-                "TIMELINE": "Aap gaadi kab lene ka plan kar rahe hain?",
-                "EXCHANGE": "Kya aapke paas koi purani gaadi exchange ke liye hai?",
-                "VENUE": "Aap test drive kahan lena pasand karenge, showroom aayenge ya hum gaadi aapke ghar bhej dein?",
-                "APPOINTMENT_TIME": "Hum test drive kis time par schedule karein?",
-                "CONFIRM_DETAILS": "Perfect, aapka naam aur number yehi rahega na?"
+                "CONFIRM_INTEREST":  "Aapne Kia Seltos mein interest show kiya tha, Ahmedabad se? Kya main sahi samajh rahi hoon?",
+                "ASK_TIMELINE":      "Aap car is mahine lene ka plan kar rahe hain ya agle mahine?",
+                "CONFIRM_CALLBACK":  "Kya main apni sales team se ek callback arrange kar sakti hoon aapke liye?",
+                "ASK_CALLBACK_TIME": "Callback ke liye konsa time best rahega aapke liye?",
+                "CONFIRM_TESTDRIVE": "Kya aap Kia Seltos ka test drive lena pasand karenge?",
             },
             "en": {
-                "TIME_AVAILABILITY": "Is this a good time to speak?",
-                "DRIVING_PATTERN": "Will the vehicle be driven mostly in the city or on the highway?",
-                "FAMILY_SIZE": "How many members are in your family?",
-                "DRIVER_TYPE": "Will it be self-driven or chauffeur-driven?",
-                "FUEL": "Are you looking for Petrol or Diesel?",
-                "TRANSMISSION": "Do you prefer Manual, iMT, or Automatic?",
-                "VARIANT": "Have you finalized any specific variant?",
-                "BUDGET": "What is your budget?",
-                "TIMELINE": "When are you planning to make the purchase?",
-                "EXCHANGE": "Do you have an old vehicle to exchange?",
-                "VENUE": "Would you like a test drive at the showroom or at your home?",
-                "APPOINTMENT_TIME": "What time should we schedule the appointment?",
-                "CONFIRM_DETAILS": "Could you please confirm if this name and number is correct?"
+                "CONFIRM_INTEREST":  "You had shown interest in the Kia Seltos from Ahmedabad. Am I speaking to the right person?",
+                "ASK_TIMELINE":      "Are you planning to purchase the car this month or next month?",
+                "CONFIRM_CALLBACK":  "May I arrange a callback from our sales team for you?",
+                "ASK_CALLBACK_TIME": "What time would be most convenient for the callback?",
+                "CONFIRM_TESTDRIVE": "Would you like to schedule a test drive of the Kia Seltos?",
             },
             "gu": {
-                "TIME_AVAILABILITY": "શું તમે અત્યારે વાત કરી શકો છો?",
-                "DRIVING_PATTERN": "ગાડી વધારે સિટીમાં ચાલશે કે હાઇવે પર?",
-                "FAMILY_SIZE": "તમારા પરિવારમાં કેટલા સભ્યો છે?",
-                "DRIVER_TYPE": "ગાડી તમે પોતે ચલાવશો કે ડ્રાઇવર ચલાવશે?",
-                "FUEL": "તમે પેટ્રોલ જોઈ રહ્યા છો કે ડીઝલ?",
-                "TRANSMISSION": "તમે મેન્યુઅલ, iMT, કે ઓટોમેટિક પસંદ કરશો?",
-                "VARIANT": "તમે કોઈ ચોક્કસ વેરિઅન્ટ નક્કી કર્યું છે?",
-                "BUDGET": "તમારું બજેટ શું રહેશે?",
-                "TIMELINE": "તમે ગાડી ક્યારે લેવાનું પ્લાન કરી રહ્યા છો?",
-                "EXCHANGE": "શું તમારી પાસે એક્સચેન્જ માટે કોઈ જૂની ગાડી છે?",
-                "VENUE": "તમે ટેસ્ટ ડ્રાઇવ ક્યાં લેવાનું પસંદ કરશો, શોરૂમ પર કે ઘરે?",
-                "APPOINTMENT_TIME": "અમે ટેસ્ટ ડ્રાઇવ કયા સમયે શિડ્યુલ કરીએ?",
-                "CONFIRM_DETAILS": "બરાબર, તમારું નામ અને નંબર આ જ રહેશે ને?"
-            }
+                "CONFIRM_INTEREST":  "Tamne Kia Seltos ma interest hatu, Ahmedabad thi? Shu hu sahi vyakti sathe vaat kari rahi chu?",
+                "ASK_TIMELINE":      "Tame car aa mahine leva nu plan karo chho ke agla mahine?",
+                "CONFIRM_CALLBACK":  "Shu hu amari sales team tarafthi callback arrange kari shaku tamara maate?",
+                "ASK_CALLBACK_TIME": "Callback maat tamne kai time convenient raheshe?",
+                "CONFIRM_TESTDRIVE": "Shu tame Kia Seltos nu test drive leva icho chho?",
+            },
         }
-        
+
         # Resolve map based on language, fallback to Hindi
         lang_map = rubber_band_maps.get(detected_lang, rubber_band_maps["hi"])
-        
+
+        # Ordered flow matching automobile_intents.json phases
         FLOW_ORDER = [
-            "TIME_AVAILABILITY", "DRIVING_PATTERN", "FAMILY_SIZE", "DRIVER_TYPE", 
-            "FUEL", "TRANSMISSION", "VARIANT", "BUDGET", "TIMELINE", "EXCHANGE", 
-            "VENUE", "APPOINTMENT_TIME", "CONFIRM_DETAILS"
+            "CONFIRM_INTEREST",
+            "ASK_TIMELINE",
+            "CONFIRM_CALLBACK",
+            "ASK_CALLBACK_TIME",
+            "CONFIRM_TESTDRIVE",
         ]
-        
+
         current_question = lang_map.get(mp3_phase)
         next_question = None
-        
+        next_phase = None
+
         if mp3_phase in FLOW_ORDER:
             idx = FLOW_ORDER.index(mp3_phase)
             if idx + 1 < len(FLOW_ORDER):
                 next_phase = FLOW_ORDER[idx + 1]
                 next_question = lang_map.get(next_phase)
-        
-        if next_question:
-            # Force advance the phase in DB so the router doesn't get stuck
-            state["current_phase"] = next_phase
-            save_session(session, state)
-            
-            system_prompt += f"\n\n⚠️ URGENT FLOW RULE: The user has interrupted the conversation with a question. " \
-                             f"You MUST answer their question briefly (1 sentence max) in the same language as the user. " \
-                             f"CRITICAL: Do NOT ask any follow-up question or any other question of your own in your response! Only state the answer factually. " \
-                             f"Then, you MUST immediately end your response by asking this NEXT question to move the flow forward: " \
-                             f"'{next_question}'. " \
-                             f"There should be exactly ONE question in your entire response, which is '{next_question}'."
-        elif current_question:
-            system_prompt += f"\n\n⚠️ URGENT FLOW RULE: The user has interrupted the flow with a random question. " \
-                             f"You MUST answer their question briefly (1 sentence max) in the same language as the user. " \
-                             f"CRITICAL: Do NOT ask any follow-up question or any other question of your own in your response! Only state the answer factually. " \
-                             f"Then, you MUST immediately end your response by repeating this exact question to get them back on track: " \
-                             f"'{current_question}'."
+
+        if current_question:
+            # Detect negation/rejection
+            not_interested_keywords = [
+                "nahi chahiye", "not interested", "no thanks", "nahi",
+                "galat number", "wrong number", "nahi ki thi", "enquiry nahi",
+                "already bought", "khareed li", "le li", "postpone",
+                # Hindi
+                "नहीं", "नहीं चाहिए", "ना", "बात नहीं करनी", "गलत नंबर", "नही", "जी नहीं", "अभी नहीं", "बादमे",
+                # Gujarati
+                "નથી લેવી", "નથી જોઈતી", "નહીં જોઈએ", "રહેવા દો",
+                "નથી", "ના", "ખરીદ લીધી", "પછી વાત કરીએ", "કામમાં છું",
+            ]
+            busy_keywords = [
+                "busy", "baad mein", "abhi nahi", "vyast", "kaam", "postpone", "meeting", "driving",
+                # Hindi
+                "बाद में", "व्यस्त", "काम में हूँ", "अभी नहीं", "बादમે",
+                # Gujarati
+                "પછી વાત કરીએ", "કામમાં છું", "વ્યસ્ત"
+            ]
+
+            if any(kw in msg for kw in not_interested_keywords):
+                system_prompt += (
+                    f"\n\n"
+                    f"🚨 OVERRIDE — USER IS NOT INTERESTED 🚨\n"
+                    f"The user has indicated they are NOT interested or want to end the call.\n"
+                    f"YOUR TASK:\n"
+                    f"  1. Politely/warmly apologize for the disturbance and say goodbye in ONE short sentence.\n"
+                    f"  2. You MUST append the exact tag '[NOT_INTERESTED]' at the very end of your response!\n"
+                    f"  3. Do NOT ask any follow-up question. Do NOT ask any question at all.\n"
+                    f"  4. Your response must contain ZERO question marks (?).\n"
+                    f"\n"
+                    f"VALID EXAMPLE: 'Koi baat nahi sir, sorry to disturb you. Have a nice day! [NOT_INTERESTED]'\n"
+                )
+            elif any(kw in msg for kw in busy_keywords):
+                system_prompt += (
+                    f"\n\n"
+                    f"🚨 OVERRIDE — USER IS BUSY 🚨\n"
+                    f"The user has indicated they are busy or want to be called back later.\n"
+                    f"YOUR TASK:\n"
+                    f"  1. Politely acknowledge and say you will call them back later (in ONE short sentence).\n"
+                    f"  2. You MUST append the exact tag '[END_CALL]' at the very end of your response!\n"
+                    f"  3. Do NOT ask any follow-up question. Do NOT ask any question at all.\n"
+                    f"  4. Your response must contain ZERO question marks (?).\n"
+                    f"\n"
+                    f"VALID EXAMPLE: 'Koi baat nahi sir, main aapko baad mein call karti hoon. Aapse baad mein baat hogi. Thank you! [END_CALL]'\n"
+                )
+            else:
+                # The user asked a product/factual/specs/price question.
+                # LLM should answer the question, and select the most appropriate audio follow-up file to play next.
+                system_prompt += (
+                    f"\n\n"
+                    f"🚨 OVERRIDE — PRODUCT QUESTION ANSWERING RULE 🚨\n"
+                    f"The user asked a factual/product/price/mileage/specs question mid-call.\n"
+                    f"YOUR TASK:\n"
+                    f"  1. Answer their question in ONE short factual sentence.\n"
+                    f"  2. Append the exact audio tag corresponding to the next logical step to transition the user back to the flow:\n"
+                    f"     - If current phase is CONFIRM_INTEREST: They confirmed interest by asking a question. Transition to purchase timeline. Tag: [PLAY_AUDIO: step3_ask_timeline.raw]\n"
+                    f"     - If current phase is ASK_TIMELINE: Transition to callback request. Tag: [PLAY_AUDIO: step4_ask_callback.raw]\n"
+                    f"     - If current phase is CONFIRM_CALLBACK: Transition to callback request. Tag: [PLAY_AUDIO: step4_ask_callback.raw]\n"
+                    f"     - If current phase is ASK_CALLBACK_TIME: Transition to callback time. Tag: [PLAY_AUDIO: step5_ask_time.raw]\n"
+                    f"     - If current phase is CONFIRM_TESTDRIVE: Transition to test drive. Tag: [PLAY_AUDIO: step7_confirm_testdrive.raw]\n"
+                    f"     - Otherwise: Re-ask the current phase question. Tag: [PLAY_AUDIO: " + {
+                        "CONFIRM_INTEREST": "step2_confirm_interest.raw",
+                        "ASK_TIMELINE": "step3_ask_timeline.raw",
+                        "CONFIRM_CALLBACK": "step4_ask_callback.raw",
+                        "ASK_CALLBACK_TIME": "step5_ask_time.raw",
+                        "CONFIRM_TESTDRIVE": "step7_confirm_testdrive.raw",
+                    }.get(mp3_phase, "step2_confirm_interest.raw") + "]\n"
+                    f"  3. STRICTLY BANNED IN YOUR RESPONSE:\n"
+                    f"     ❌ Do NOT ask the follow-up question in your text response. ONLY append the [PLAY_AUDIO: ...] tag at the very end.\n"
+                    f"     ❌ Your text response must contain ZERO question marks (?).\n"
+                    f"     ❌ Do NOT add any extra transition words like 'waise' or 'by the way'.\n"
+                    f"\n"
+                    f"VALID EXAMPLE: 'Seltos petrol mein 16-17 kmpl aur diesel mein 21 kmpl tak ka mileage deti hai. [PLAY_AUDIO: step3_ask_timeline.raw]'\n"
+                )
 
 
     # ─────────────────────────────────────────────────────────────

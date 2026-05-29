@@ -52,6 +52,8 @@ from .views import (
     auto_campaign_status,
     stop_auto_campaign,
     export_leads_excel,
+    campaign_history_page,
+    campaign_history_data,
 
     # webhook
     whatsapp_webhook,
@@ -114,4 +116,8 @@ urlpatterns = [
     path("auto-campaign/start/", start_auto_campaign),
     path("auto-campaign/status/", auto_campaign_status),
     path("auto-campaign/stop/", stop_auto_campaign),
+
+    # Campaign History (Admin)
+    path("campaigns/", campaign_history_page),
+    path("campaigns/data/", campaign_history_data),
 ]

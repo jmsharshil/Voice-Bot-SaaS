@@ -187,3 +187,25 @@ class CampaignStatus(models.Model):
 
     def __str__(self):
         return f"Campaign Started at {self.started_at} (Active: {self.is_active})"
+
+
+class Campaign(models.Model):
+    """Stores the full history of every auto-dialer campaign run."""
+    name            = models.CharField(max_length=255, blank=True, default="")
+    phone_list      = models.TextField(default="[]")    # JSON array of all dialed phones
+    total_count     = models.IntegerField(default=0)
+    completed_count = models.IntegerField(default=0)
+    answered_count  = models.IntegerField(default=0)
+    missed_calls    = models.TextField(default="[]")    # JSON array of no-answer phones
+    is_active       = models.BooleanField(default=True)
+    started_at      = models.DateTimeField(auto_now_add=True)
+    ended_at        = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-started_at"]
+        verbose_name = "Campaign"
+        verbose_name_plural = "Campaigns"
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Completed"
+        return f"Campaign #{self.id} — {status} ({self.total_count} calls)"

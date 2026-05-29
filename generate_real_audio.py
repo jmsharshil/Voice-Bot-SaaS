@@ -140,10 +140,10 @@ def generate_tts_file(filename, text):
             model_id="eleven_multilingual_v2",  # More natural than turbo
             output_format="pcm_8000",            # Native 8kHz PCM for telephony
             voice_settings=VoiceSettings(
-                stability=0.25,          # Lower = more expressive, less robotic
-                similarity_boost=0.75,   # Stay close to voice character
-                style=0.50,              # Natural rhythm and emphasis
-                use_speaker_boost=True   # Cleaner audio, less glitch
+                stability=0.65,          # Stable pronunciation, no muttering/rushing
+                similarity_boost=0.85,   # High voice profile consistency
+                style=0.00,              # Lower style prevents synthesis artifacts
+                use_speaker_boost=True
             )
         )
 
@@ -159,7 +159,7 @@ def generate_tts_file(filename, text):
         if len(pcm) % 2 != 0:
             pcm = pcm[:-1]
 
-        pcm = _amplify_pcm(pcm, gain=1.5)
+        pcm = _amplify_pcm(pcm, gain=1.1)
         ulaw = audioop.lin2ulaw(pcm, 2)
 
         os.makedirs("mp3_responses", exist_ok=True)

@@ -23,7 +23,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 import io
 
-from bot.models import Customer, ChatMessage, UploadedFile, UploadBatch, CampaignStatus
+from bot.models import Customer, ChatMessage, UploadedFile, UploadBatch, CampaignStatus, Campaign
 from bot.services.whatsapp_service import send_whatsapp_message
 from bot.services.renewal_service import run_renewal, run_new_insurance, run_all
 from bot.services.expiry_service import get_expiring_customers, get_new_insurance_customers
@@ -1163,6 +1163,7 @@ def trigger_call(request):
     try:
         phone = request.data.get("phone")
         phones = request.data.get("phones")
+        language = request.data.get("language", "en")
 
         # ─────────────────────────────────────────────
         # CASE 1: SINGLE CALL
@@ -1172,14 +1173,15 @@ def trigger_call(request):
             if str(phone).startswith("91") and len(str(phone)) == 12:
                 normalized_phone = str(phone)[2:]
 
-            print(f"📞 Single Call → {normalized_phone}")
+            print(f"📞 Single Call → {normalized_phone} (Lang: {language})")
 
             payload = {
                 "to": normalized_phone,
                 "caller_id": "+917969016753",
                 "ref": f"crm-{uuid.uuid4()}",
-                "bot_url": "wss://insurancebot-b3aha4cmfnbghza7.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=3db2a820-2745-47b9-aa8b-f42c99f727e4"
+                "bot_url": "wss://kia-voicebot-f6h2ceg6gyaueadg.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=21bdd3bf-45bd-487c-8283-7b2957e472ba"
             }
+
 
             response = requests.post(
                 "https://voice-bot.on-forge.com/api/dial",
@@ -1207,13 +1209,13 @@ def trigger_call(request):
                 if str(phone).startswith("91") and len(str(phone)) == 12:
                     normalized_phone = str(phone)[2:]
 
-                print(f"📞 Bulk Call → {normalized_phone}")
+                print(f"📞 Bulk Call → {normalized_phone} (Lang: {language})")
 
                 payload = {
                     "to": normalized_phone,
                     "caller_id": "+917969016753",
                     "ref": f"crm-{uuid.uuid4()}",
-                    "bot_url": "wss://insurancebot-b3aha4cmfnbghza7.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=3db2a820-2745-47b9-aa8b-f42c99f727e4"
+                    "bot_url": "wss://kia-voicebot-f6h2ceg6gyaueadg.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=21bdd3bf-45bd-487c-8283-7b2957e472ba"
                 }
 
                 response = requests.post(
@@ -1326,6 +1328,7 @@ _active_calls = set()         # Phone numbers currently being called
 _answered_calls = set()       # Phone numbers that picked up
 _campaign_active = False
 MAX_CONCURRENT_CALLS = 2      # Always keep 2 calls active
+_current_campaign_id = None   # ID of the active Campaign record
 
 _campaign_stats = {
     "total": 0,
@@ -1338,7 +1341,7 @@ _missed_calls = []            # Numbers that timed out (No Answer)
 TELECOM_DIAL_URL = "https://voice-bot.on-forge.com/api/dial"
 TELECOM_API_KEY = "7a3e957ed459dfebc486ee58d6059928d02c4aab20c9f698bd50e2636f8df1be"
 CALLER_ID = "+917969016753"
-BOT_URL = "wss://insurancebot-b3aha4cmfnbghza7.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=3db2a820-2745-47b9-aa8b-f42c99f727e4"
+BOT_URL = "wss://kia-voicebot-f6h2ceg6gyaueadg.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=21bdd3bf-45bd-487c-8283-7b2957e472ba"
 
 
 def _normalize_phone(phone):
@@ -1427,7 +1430,8 @@ def dial_next_from_queue():
                 if not _active_calls:
                     _campaign_active = False
                     _save_campaign_state() # Persist the finished state!
-                    print("✅ AUTO-DIALER: Campaign complete — all calls finished.")
+                    _finalize_campaign()   # Close the Campaign history record
+                    print("AUTO-DIALER: Campaign complete - all calls finished.")
                 break
 
             phone = _call_queue.pop(0)
@@ -1542,7 +1546,7 @@ def start_auto_campaign(request):
     OR upload an Excel file:
         form-data: file=<excel>, field name "file"
     """
-    global _campaign_active, _campaign_stats
+    global _campaign_active, _campaign_stats, _current_campaign_id
 
     if _campaign_active:
         with _call_queue_lock:
@@ -1555,6 +1559,7 @@ def start_auto_campaign(request):
         }, status=409)
 
     phones = []
+    campaign_name = request.data.get("name", "")
 
     # Option 1: JSON list of phones
     if request.data.get("phones"):
@@ -1563,6 +1568,7 @@ def start_auto_campaign(request):
     # Option 2: Excel file upload
     elif request.FILES.get("file"):
         file = request.FILES["file"]
+        campaign_name = campaign_name or file.name
         try:
             df = pd.read_excel(file)
             phones = [str(row.get("phone", "")).strip() for _, row in df.iterrows() if row.get("phone")]
@@ -1593,7 +1599,20 @@ def start_auto_campaign(request):
 
     _missed_calls.clear()
     _save_campaign_state() # Persist new campaign
-    print(f"🚀 AUTO-DIALER: Campaign started with {len(phones)} numbers (max {MAX_CONCURRENT_CALLS} concurrent)")
+
+    # Create a Campaign history record
+    try:
+        campaign_obj = Campaign.objects.create(
+            name=campaign_name or f"Campaign {timezone.now().strftime('%d %b %Y %I:%M %p')}",
+            phone_list=json.dumps(phones),
+            total_count=len(phones),
+            is_active=True,
+        )
+        _current_campaign_id = campaign_obj.id
+        print(f"AUTO-DIALER: Campaign #{campaign_obj.id} started with {len(phones)} numbers (max {MAX_CONCURRENT_CALLS} concurrent)")
+    except Exception as e:
+        _current_campaign_id = None
+        print(f"WARNING: Failed to create Campaign record: {e}")
 
     # Dial the first 2 numbers
     dial_next_from_queue()
@@ -1602,6 +1621,7 @@ def start_auto_campaign(request):
         "status": "campaign_started",
         "total_numbers": len(phones),
         "concurrent_calls": MAX_CONCURRENT_CALLS,
+        "campaign_id": _current_campaign_id,
         "message": f"First {min(MAX_CONCURRENT_CALLS, len(phones))} calls triggered. Remaining calls auto-dial as each call ends.",
     })
 
@@ -1673,8 +1693,9 @@ def stop_auto_campaign(request):
         _active_calls.clear()
 
     _campaign_active = False
+    _finalize_campaign() # Close the Campaign history record
 
-    print(f"🛑 AUTO-DIALER: Campaign stopped. {remaining} numbers were still in queue.")
+    print(f"AUTO-DIALER: Campaign stopped. {remaining} numbers were still in queue.")
 
     return Response({
         "status": "campaign_stopped",
@@ -1780,3 +1801,76 @@ def _ensure_state_loaded():
         _load_campaign_state()
         _state_loaded = True
 
+
+def _finalize_campaign():
+    """Close the active Campaign history record with final stats."""
+    global _current_campaign_id
+    if not _current_campaign_id:
+        return
+    try:
+        campaign = Campaign.objects.get(id=_current_campaign_id)
+        campaign.is_active = False
+        campaign.ended_at = timezone.now()
+        campaign.completed_count = _campaign_stats.get("completed", 0)
+        campaign.answered_count = _campaign_stats.get("completed", 0) - len(_missed_calls)
+        campaign.missed_calls = json.dumps(_missed_calls)
+        campaign.save()
+        print(f"AUTO-DIALER: Campaign #{campaign.id} finalized. Answered: {campaign.answered_count}, Missed: {len(_missed_calls)}")
+    except Exception as e:
+        print(f"WARNING: Failed to finalize Campaign record: {e}")
+    finally:
+        _current_campaign_id = None
+
+
+# =========================================================
+# CAMPAIGN HISTORY PAGE & API (Admin Only)
+# =========================================================
+
+def campaign_history_page(request):
+    return render(request, "campaign_history.html")
+
+
+@api_view(["GET"])
+def campaign_history_data(request):
+    """Returns all past campaigns with stats for the admin dashboard."""
+    campaigns = Campaign.objects.all().order_by("-started_at")
+    
+    data = []
+    for c in campaigns:
+        missed_list = json.loads(c.missed_calls) if c.missed_calls else []
+        phone_list = json.loads(c.phone_list) if c.phone_list else []
+        
+        duration_seconds = None
+        if c.ended_at and c.started_at:
+            duration_seconds = int((c.ended_at - c.started_at).total_seconds())
+        
+        data.append({
+            "id": c.id,
+            "name": c.name,
+            "total_count": c.total_count,
+            "completed_count": c.completed_count,
+            "answered_count": c.answered_count,
+            "missed_count": len(missed_list),
+            "missed_list": missed_list,
+            "phone_list": phone_list,
+            "is_active": c.is_active,
+            "started_at": c.started_at.isoformat() if c.started_at else None,
+            "ended_at": c.ended_at.isoformat() if c.ended_at else None,
+            "duration_seconds": duration_seconds,
+        })
+    
+    # Summary stats
+    total_campaigns = len(data)
+    total_calls = sum(d["total_count"] for d in data)
+    total_answered = sum(d["answered_count"] for d in data)
+    total_missed = sum(d["missed_count"] for d in data)
+    
+    return Response({
+        "stats": {
+            "total_campaigns": total_campaigns,
+            "total_calls": total_calls,
+            "total_answered": total_answered,
+            "total_missed": total_missed,
+        },
+        "campaigns": data,
+    })

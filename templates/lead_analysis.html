@@ -731,6 +731,166 @@
         .pd-logout:hover {
             background: #fef2f2;
         }
+
+        /* Quick Call Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 440px;
+            padding: 24px;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
+            transform: scale(0.95) translateY(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 20px;
+            font-weight: 500;
+            color: #64748b;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.15s;
+        }
+
+        .close-modal:hover {
+            color: #ef4444;
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            color: #0f172a;
+            outline: none;
+            transition: all 0.15s;
+            background: #f8fafc;
+        }
+
+        .form-control:focus {
+            border-color: #4f46e5;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .modal-btn {
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            color: #ffffff;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 10px -1px rgba(79, 70, 229, 0.3);
+        }
+
+        .modal-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .modal-alert {
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            display: none;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        .modal-alert.success {
+            background: #dcfce7;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        .modal-alert.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
     </style>
 </head>
 
@@ -742,11 +902,15 @@
         <span class="header-title">Lead Intelligence</span>
         <span class="header-sub">AI-Powered Call Analysis</span>
         <div class="header-right">
+            <a href="#" onclick="openQuickCallModal(event)" class="header-link"
+                style="background:#fff7ed; color:#ea580c; border-color:rgba(234,88,12,0.2);">📞 Quick Call</a>
             <a href="/bot/upload-call-page/" class="header-link"
                 style="background:#f0fdf4; color:#16a34a; border-color:rgba(22,163,74,0.2);">📞 Upload Calls</a>
             <a href="/bot/export/leads/" class="export-btn" download>📗 Export to Excel</a>
             <a href="/navya-analytics/" id="callAnalyticsBtn" class="header-link" style="display:none;">📊 Call
                 Analytics</a>
+            <a href="/bot/campaigns/" id="campaignHistoryBtn" class="header-link"
+                style="display:none; background:#faf5ff; color:#a855f7; border-color:rgba(168,85,247,0.2);">🕒 Campaign History</a>
             <a href="/accounts/admin-management/" id="adminBtn" class="header-link"
                 style="display:none; background:#eff6ff; color:#3b82f6; border-color:rgba(59,130,246,0.2);">⚙️ Add
                 User</a>
@@ -800,9 +964,11 @@
             document.getElementById('profileAvatar').textContent = initial;
             document.getElementById('pdName').textContent = username;
 
-            // Show Admin Panel button if user is admin
+            // Show Admin Panel button & Campaign History button if user is admin
             if (localStorage.getItem('is_admin') === 'true') {
                 document.getElementById('adminBtn').style.display = 'inline-flex';
+                const campaignBtn = document.getElementById('campaignHistoryBtn');
+                if (campaignBtn) campaignBtn.style.display = 'inline-flex';
             }
         })();
 
@@ -862,6 +1028,23 @@
             <div class="search-box">
                 <input class="search-input" type="text" placeholder="🔍 Search name, email, topic…"
                     oninput="filterSearch(this.value)" id="searchInput">
+            </div>
+            <div class="filter-box" style="padding: 10px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; gap: 8px;">
+                <select id="filterLanguage" onchange="applyAdvancedFilters()" style="flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 11px; font-weight: 600; color: #475569; outline: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <option value="">🌐 Languages</option>
+                    <option value="hi">Hindi (हिन्दी)</option>
+                    <option value="gu">Gujarati (ગુજરાતી)</option>
+                    <option value="en">English / Hinglish</option>
+                </select>
+                <select id="filterAgent" onchange="applyAdvancedFilters()" style="flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 11px; font-weight: 600; color: #475569; outline: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); text-overflow: ellipsis; max-width: 110px;">
+                    <option value="">🤖 All Bots</option>
+                </select>
+                <select id="filterDate" onchange="applyAdvancedFilters()" style="flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; font-size: 11px; font-weight: 600; color: #475569; outline: none; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <option value="">📅 Date Range</option>
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="week">Last 7 Days</option>
+                </select>
             </div>
             <div class="list-header">
                 <span>All Leads</span>
@@ -1007,7 +1190,7 @@
         }
 
         /* ── Load Data ──────────────────────────── */
-        async function loadLeads() {
+         async function loadLeads() {
             try {
                 let url = "/api/lead-analysis/data/";
                 const res = await fetch(url);
@@ -1019,7 +1202,37 @@
                 animateCount("statNot", data.stats.not_interested);
 
                 allLeads = data.leads || [];
+
+                // Dynamically populate bot agent filter
+                const agentSelect = document.getElementById("filterAgent");
+                if (agentSelect) {
+                    const currentVal = agentSelect.value;
+                    const agents = [...new Set(allLeads.map(l => l.agent_name).filter(Boolean))];
+                    agentSelect.innerHTML = '<option value="">🤖 All Bots</option>';
+                    agents.forEach(agent => {
+                        const opt = document.createElement("option");
+                        opt.value = agent;
+                        opt.textContent = agent;
+                        if (agent === currentVal) opt.selected = true;
+                        agentSelect.appendChild(opt);
+                    });
+                }
+
                 renderLeads();
+
+                // Auto-select the newest lead if a call just started (summary === "Call started...")
+                // or if it was created very recently and no lead is selected yet.
+                if (allLeads.length > 0) {
+                    const newestLead = allLeads[0];
+                    const leadAgeSeconds = (Date.now() - new Date(newestLead.analyzed_at).getTime()) / 1000;
+                    if (!activeLeadSession && leadAgeSeconds < 30) {
+                        console.log("Auto-selecting brand new lead:", newestLead.session_id);
+                        openLead(newestLead);
+                    } else if (newestLead.summary === "Call started..." && activeLeadSession !== newestLead.session_id && leadAgeSeconds < 15) {
+                        console.log("Auto-switching to starting call:", newestLead.session_id);
+                        openLead(newestLead);
+                    }
+                }
             } catch (e) {
                 console.error("Lead load error:", e);
             }
@@ -1068,7 +1281,8 @@
                         agent_name: "Auto Dialer",
                         interest_topic: "No Answer / Busy",
                         analyzed_at: new Date().toISOString(),
-                        is_missed_mock: true
+                        is_missed_mock: true,
+                        language: "en"
                     }));
                 } else {
                     filtered = filtered.filter(l => l.lead_level === activeFilter);
@@ -1084,11 +1298,37 @@
                 );
             }
 
+            // Apply advanced filters
+            const selLang = document.getElementById("filterLanguage")?.value || "";
+            const selAgent = document.getElementById("filterAgent")?.value || "";
+            const selDate = document.getElementById("filterDate")?.value || "";
+
+            if (selLang) {
+                filtered = filtered.filter(l => l.language === selLang);
+            }
+            if (selAgent) {
+                filtered = filtered.filter(l => l.agent_name === selAgent);
+            }
+            if (selDate) {
+                const now = new Date();
+                const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
+                const weekStart = todayStart - 7 * 24 * 60 * 60 * 1000;
+
+                filtered = filtered.filter(l => {
+                    const lTime = new Date(l.analyzed_at || l.call_started_at).getTime();
+                    if (selDate === "today") return lTime >= todayStart;
+                    if (selDate === "yesterday") return lTime >= yesterdayStart && lTime < todayStart;
+                    if (selDate === "week") return lTime >= weekStart;
+                    return true;
+                });
+            }
+
             const list = document.getElementById("leadList");
             document.getElementById("leadCount").textContent = filtered.length + " leads";
 
             if (!filtered.length) {
-                list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:#475569;font-size:13px;">No leads found.<br>Leads will appear here after calls end.</div>';
+                list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:#475569;font-size:13px;">No leads found.<br>Try adjusting your search or filters.</div>';
                 return;
             }
 
@@ -1096,14 +1336,14 @@
             filtered.forEach(lead => {
                 const item = document.createElement("div");
                 item.className = "lead-item" + (activeLeadSession === lead.session_id ? " active" : "");
-                const initial = lead.user_name ? lead.user_name.charAt(0).toUpperCase() : "?";
                 const emoji = LEVEL_EMOJI[lead.lead_level] || "❓";
+                const langLabel = { en: "English", hi: "Hindi", gu: "Gujarati" }[lead.language || "en"] || "English";
 
                 item.innerHTML = `
             <div class="lead-badge ${lead.lead_level}">${emoji}</div>
             <div class="lead-info">
                 <div class="lead-name">${escHtml(lead.customer_number || lead.user_number || lead.user_name || "Unknown Caller")}</div>
-                <div class="lead-topic">${escHtml(lead.interest_topic || "General Interest")} · ${escHtml(lead.agent_name)}</div>
+                <div class="lead-topic">${escHtml(lead.interest_topic || "General Interest")} · ${escHtml(lead.agent_name)} · <span style="font-weight:600; opacity:0.8; color:#6366f1;">🌐 ${langLabel}</span></div>
                 <div class="lead-meta">${timeAgo(lead.analyzed_at)} · 👤 ${escHtml(lead.user_name || "No Name")}</div>
             </div>
             <div class="lead-level-tag ${lead.lead_level}">${LEVEL_LABEL[lead.lead_level] || "?"}</div>
@@ -1111,6 +1351,10 @@
                 item.onclick = () => openLead(lead);
                 list.appendChild(item);
             });
+        }
+
+        function applyAdvancedFilters() {
+            renderLeads();
         }
 
         /* ── Open Lead Detail ───────────────────── */
@@ -1295,8 +1539,166 @@
             } catch (e) { }
         }
 
+        async function refreshActiveLeadMessages() {
+            if (!activeLeadSession) return;
+            if (activeLeadSession.startsWith("missed-")) return;
+
+            try {
+                const res = await fetch(`/api/lead-analysis/detail/${activeLeadSession}/`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (activeLeadSession === data.lead.session_id) {
+                    const messages = data.messages || [];
+                    const box = document.getElementById("messagesBox");
+
+                    // Compare count to avoid cursor jump or screen flashing
+                    const currentMsgCount = box.querySelectorAll(".msg").length;
+                    if (messages.length !== currentMsgCount || box.querySelector(".loading")) {
+                        const wasScrolledToBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 50;
+                        renderMessages(messages);
+                        if (wasScrolledToBottom || currentMsgCount === 0) {
+                            box.scrollTop = box.scrollHeight;
+                        }
+                    }
+
+                    // Update summary
+                    const summaryTextEl = document.getElementById("dsSummaryText");
+                    if (summaryTextEl && data.lead.summary && summaryTextEl.textContent !== data.lead.summary) {
+                        summaryTextEl.textContent = data.lead.summary;
+                    }
+
+                    // Update duration card and call status card
+                    const detailCards = document.getElementById("detailCards");
+                    if (detailCards) {
+                        const cards = detailCards.querySelectorAll(".dc");
+                        cards.forEach(card => {
+                            const lbl = card.querySelector(".dc-label");
+                            if (lbl && lbl.textContent === "Duration (Sec)") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = (data.lead.actual_duration || "—") + "s";
+                            }
+                            if (lbl && lbl.textContent === "Call Status") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.disposition || "Waiting CDR...";
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error("Error auto-refreshing messages:", e);
+            }
+        }
+
         setInterval(loadLeads, 5000);
         setInterval(pollCampaign, 3000);
+        setInterval(refreshActiveLeadMessages, 2000);
+
+        /* ── Quick Call Modal Functions ── */
+        function openQuickCallModal(e) {
+            if (e) e.preventDefault();
+            const overlay = document.getElementById('quickCallOverlay');
+            overlay.classList.add('active');
+            document.getElementById('quickCallPhone').focus();
+        }
+
+        function closeQuickCallModal() {
+            const overlay = document.getElementById('quickCallOverlay');
+            overlay.classList.remove('active');
+            document.getElementById('quickCallPhone').value = '';
+            const alertBox = document.getElementById('quickCallAlert');
+            alertBox.style.display = 'none';
+            alertBox.innerText = '';
+        }
+
+        // Close modal when clicking on overlay background
+        document.addEventListener('click', function(e) {
+            const overlay = document.getElementById('quickCallOverlay');
+            if (e.target === overlay) {
+                closeQuickCallModal();
+            }
+        });
+
+        function handleQuickCallKeydown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                triggerQuickCall();
+            }
+        }
+
+        async function triggerQuickCall() {
+            const phoneInput = document.getElementById('quickCallPhone');
+            const submitBtn = document.getElementById('quickCallSubmitBtn');
+            const alertBox = document.getElementById('quickCallAlert');
+            
+            const phone = phoneInput.value.trim();
+            const language = 'hi';
+            
+            if (!phone) {
+                alertBox.className = 'modal-alert error';
+                alertBox.innerText = 'Please enter a valid phone number.';
+                alertBox.style.display = 'block';
+                return;
+            }
+
+            const digitsOnly = phone.replace(/\D/g, '');
+            if (digitsOnly.length < 10) {
+                alertBox.className = 'modal-alert error';
+                alertBox.innerText = 'Error: Phone number must be at least 10 digits.';
+                alertBox.style.display = 'block';
+                alert('Warning: Phone number must be at least 10 digits.');
+                return;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Triggering...';
+            alertBox.style.display = 'none';
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch('/bot/trigger-call/', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ phone: phone, language: language })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alertBox.className = 'modal-alert success';
+                    alertBox.innerText = 'Call successfully triggered!';
+                    alertBox.style.display = 'block';
+                    setTimeout(() => {
+                        closeQuickCallModal();
+                    }, 2000);
+                } else {
+                    alertBox.className = 'modal-alert error';
+                    alertBox.innerText = `Error: ${data.error || 'Failed to trigger call'}`;
+                    alertBox.style.display = 'block';
+                }
+            } catch (err) {
+                console.error(err);
+                alertBox.className = 'modal-alert error';
+                alertBox.innerText = 'Network error occurred while triggering the call.';
+                alertBox.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Trigger Call
+                `;
+            }
+        }
 
         /* ── Init ────────────────────────────────── */
         window.onload = () => {
@@ -1304,6 +1706,39 @@
             pollCampaign();
         };
     </script>
+
+    <!-- Quick Call Modal Overlay -->
+    <div class="modal-overlay" id="quickCallOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    Trigger Quick Call
+                </span>
+                <button class="close-modal" onclick="closeQuickCallModal()">&times;</button>
+            </div>
+            
+            <div class="modal-alert" id="quickCallAlert"></div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="quickCallPhone">Phone Number</label>
+                    <input type="text" id="quickCallPhone" class="form-control" placeholder="e.g. 0123456789" required onkeydown="handleQuickCallKeydown(event)">
+                </div>
+                
+                <button class="modal-btn" id="quickCallSubmitBtn" onclick="triggerQuickCall()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Trigger Call
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

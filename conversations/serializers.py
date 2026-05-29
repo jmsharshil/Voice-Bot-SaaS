@@ -21,12 +21,28 @@ class LeadAnalysisSerializer(serializers.ModelSerializer):
     call_started_at = serializers.DateTimeField(source="conversation.started_at")
     call_ended_at = serializers.DateTimeField(source="conversation.ended_at")
     
-    # Telecom CDR fields
-    customer_number = serializers.CharField(source="conversation.cdr.phone_number", read_only=True, allow_null=True)
-    bot_number = serializers.CharField(source="conversation.cdr.did", read_only=True, allow_null=True)
+    customer_number = serializers.SerializerMethodField()
+    bot_number = serializers.SerializerMethodField()
     actual_duration = serializers.IntegerField(source="conversation.cdr.duration", read_only=True, allow_null=True)
     disposition = serializers.CharField(source="conversation.cdr.disposition", read_only=True, allow_null=True)
     recording_url = serializers.SerializerMethodField()
+    language = serializers.SerializerMethodField()
+
+    def get_customer_number(self, obj):
+        try:
+            if hasattr(obj.conversation, 'cdr') and obj.conversation.cdr and obj.conversation.cdr.phone_number:
+                return obj.conversation.cdr.phone_number
+        except:
+            pass
+        return obj.conversation.user_number
+
+    def get_bot_number(self, obj):
+        try:
+            if hasattr(obj.conversation, 'cdr') and obj.conversation.cdr and obj.conversation.cdr.did:
+                return obj.conversation.cdr.did
+        except:
+            pass
+        return "+917969016753"
 
     def get_recording_url(self, obj):
         try:
@@ -39,10 +55,26 @@ class LeadAnalysisSerializer(serializers.ModelSerializer):
             pass
         return None
 
+    def get_language(self, obj):
+        try:
+            # Check conversation messages to detect language
+            messages = obj.conversation.messages.all()
+            for m in messages:
+                text = m.text or ""
+                # Check for Gujarati characters (range 0A80 to 0AFF)
+                if any(ord(c) >= 0x0A80 and ord(c) <= 0x0AFF for c in text):
+                    return "gu"
+                # Check for Hindi/Devanagari characters (range 0900 to 097F)
+                if any(ord(c) >= 0x0900 and ord(c) <= 0x097F for c in text):
+                    return "hi"
+        except Exception:
+            pass
+        return "en"
+
     class Meta:
         model = LeadAnalysis
         fields = [
-            "id", "session_id", "user_number", "agent_name",
+            "id", "session_id", "user_number", "agent_name", "language",
             "lead_level", "user_name", "user_email", "user_phone",
             "interest_topic", "summary", "raw_analysis",
             "call_started_at", "call_ended_at", "analyzed_at",

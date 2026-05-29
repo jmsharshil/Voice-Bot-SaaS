@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign History — Admin Dashboard</title>
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box }
+        body { font-family:'Inter',system-ui,sans-serif; background:#f1f5f9; color:#1e293b; min-height:100vh }
+        ::-webkit-scrollbar { width:6px }
+        ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+        .header { padding:16px 32px; background:#fff; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; box-shadow:0 1px 3px rgba(0,0,0,.05) }
+        .header-dot { width:10px; height:10px; border-radius:50%; background:#4f46e5; box-shadow:0 0 0 4px rgba(79,70,229,.1) }
+        .header-title { font-size:18px; font-weight:700; color:#0f172a }
+        .header-sub { font-size:12px; color:#64748b; font-weight:500; background:#f8fafc; padding:4px 10px; border-radius:20px; border:1px solid #f1f5f9; margin-left:8px }
+        .header-right { margin-left:auto; display:flex; align-items:center; gap:12px }
+        .header-link { font-size:13px; color:#4f46e5; font-weight:600; text-decoration:none; padding:8px 16px; background:#f5f3ff; border-radius:8px; transition:all .2s; border:1px solid rgba(79,70,229,.1) }
+        .header-link:hover { background:#ede9fe; transform:translateY(-1px) }
+
+        /* PROFILE DROPDOWN */
+        .profile-wrap {
+            position: relative;
+            display: flex;
+            align-items: center
+        }
+
+        .profile-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            border: 2px solid rgba(79, 70, 229, 0.2);
+            transition: box-shadow .2s;
+        }
+
+        .profile-avatar:hover {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+        }
+
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 180px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+            z-index: 999;
+            overflow: hidden;
+            animation: fadeIn .2s ease-out;
+        }
+
+        .profile-dropdown.open {
+            display: block;
+        }
+
+        .pd-header {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .pd-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pd-label {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .pd-logout {
+            width: 100%;
+            padding: 11px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .15s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .pd-logout:hover {
+            background: #fef2f2;
+        }
+
+        .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; padding:24px 32px }
+        .card { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; transition:all .3s; animation:fadeIn .5s ease-out both; box-shadow:0 1px 2px rgba(0,0,0,.03) }
+        .card:hover { transform:translateY(-4px); box-shadow:0 12px 24px -8px rgba(0,0,0,.1); border-color:#4f46e5 }
+        .card-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#64748b; margin-bottom:8px }
+        .card-value { font-size:32px; font-weight:800; letter-spacing:-.03em }
+        .card:nth-child(1) .card-value { color:#4f46e5 }
+        .card:nth-child(2) .card-value { color:#3b82f6 }
+        .card:nth-child(3) .card-value { color:#10b981 }
+        .card:nth-child(4) .card-value { color:#ef4444 }
+
+        .container { padding:0 32px 32px }
+        .section-title { font-size:15px; font-weight:700; color:#0f172a; margin-bottom:16px; display:flex; align-items:center; gap:8px }
+
+        .campaign-list { display:flex; flex-direction:column; gap:16px }
+        .campaign-card { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; animation:fadeIn .5s ease-out both; transition:all .3s }
+        .campaign-card:hover { box-shadow:0 8px 24px -8px rgba(0,0,0,.08); border-color:#cbd5e1 }
+
+        .campaign-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px }
+        .campaign-name { font-size:16px; font-weight:700; color:#0f172a }
+        .campaign-id { font-size:12px; color:#94a3b8; font-weight:500; margin-left:8px }
+        .campaign-badge { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:.05em }
+        .badge-active { background:#dcfce7; color:#16a34a; border:1px solid #bbf7d0 }
+        .badge-completed { background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0 }
+
+        .campaign-stats { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:16px }
+        .stat-item { text-align:center }
+        .stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; margin-bottom:4px }
+        .stat-value { font-size:20px; font-weight:800; color:#0f172a }
+        .stat-value.answered { color:#10b981 }
+        .stat-value.missed { color:#ef4444 }
+
+        .campaign-time { display:flex; gap:24px; padding-top:12px; border-top:1px solid #f1f5f9 }
+        .time-item { font-size:12px; color:#64748b }
+        .time-item strong { color:#334155; font-weight:600 }
+
+        .progress-bar { width:100%; height:6px; background:#f1f5f9; border-radius:3px; margin:12px 0; overflow:hidden }
+        .progress-fill { height:100%; border-radius:3px; transition:width .5s ease }
+        .progress-answered { background:linear-gradient(90deg,#10b981,#34d399) }
+        .progress-missed { background:linear-gradient(90deg,#ef4444,#f87171) }
+
+        .phone-toggle { font-size:12px; color:#4f46e5; font-weight:600; cursor:pointer; border:none; background:none; padding:4px 0; margin-top:8px }
+        .phone-toggle:hover { text-decoration:underline }
+        .phone-list { display:none; margin-top:12px; padding:12px; background:#f8fafc; border-radius:8px; font-size:12px; color:#475569; line-height:1.8; max-height:200px; overflow-y:auto }
+        .phone-list.open { display:block }
+        .phone-chip { display:inline-block; background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:2px 8px; margin:2px; font-size:11px; font-weight:500 }
+        .phone-chip.missed { background:#fef2f2; border-color:#fecaca; color:#dc2626 }
+
+        .empty-state { text-align:center; padding:80px 32px; color:#94a3b8 }
+        .empty-state h2 { font-size:20px; font-weight:700; margin-bottom:8px; color:#64748b }
+        .empty-state p { font-size:14px }
+        .loading { text-align:center; padding:60px; color:#94a3b8; font-size:14px }
+
+        @media(max-width:768px) {
+            .cards { grid-template-columns:repeat(2,1fr); padding:16px }
+            .campaign-stats { grid-template-columns:repeat(3,1fr) }
+            .campaign-time { flex-direction:column; gap:8px }
+            .container { padding:0 16px 16px }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-dot"></div>
+        <span class="header-title">Campaign History</span>
+        <span class="header-sub" id="totalBadge">Loading...</span>
+        <div class="header-right">
+            <a href="/navya-analytics/lead-analysis/" class="header-link">Lead Analysis</a>
+            <a href="/navya-analytics/" class="header-link">Call Analytics</a>
+            <a href="/bot/upload-call-page/" class="header-link">Upload & Call</a>
+
+            <!-- Profile Dropdown -->
+            <div class="profile-wrap" id="profileWrap" style="margin-left: 12px;">
+                <div class="profile-avatar" id="profileAvatar" onclick="toggleProfile(event)">?</div>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="pd-header">
+                        <div class="pd-name" id="pdName">User</div>
+                        <div class="pd-label">Logged in</div>
+                    </div>
+                    <button class="pd-logout" onclick="logout()">🚪 Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTH CHECK -->
+    <script>
+        if (!localStorage.getItem('access_token')) {
+            window.location.replace('/accounts/login/');
+        } else {
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            if (!isAdmin) {
+                alert('Access Denied: Campaign History is only accessible by Admin.');
+                window.location.replace('/navya-analytics/lead-analysis/');
+            }
+        }
+    </script>
+
+    <!-- STAT CARDS -->
+    <div class="cards">
+        <div class="card">
+            <div class="card-label">Total Campaigns</div>
+            <div class="card-value" id="statCampaigns">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Calls</div>
+            <div class="card-value" id="statCalls">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Answered</div>
+            <div class="card-value" id="statAnswered">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Missed</div>
+            <div class="card-value" id="statMissed">—</div>
+        </div>
+    </div>
+
+    <!-- CAMPAIGN LIST -->
+    <div class="container">
+        <div class="section-title">All Campaigns</div>
+        <div class="campaign-list" id="campaignList">
+            <div class="loading">Loading campaigns...</div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('access_token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        async function loadCampaigns() {
+            try {
+                const res = await fetch('/bot/campaigns/data/', { headers });
+                if (res.status === 401) { window.location.replace('/accounts/login/'); return; }
+                const data = await res.json();
+
+                // Update stat cards
+                document.getElementById('statCampaigns').textContent = data.stats.total_campaigns;
+                document.getElementById('statCalls').textContent = data.stats.total_calls;
+                document.getElementById('statAnswered').textContent = data.stats.total_answered;
+                document.getElementById('statMissed').textContent = data.stats.total_missed;
+                document.getElementById('totalBadge').textContent = `${data.stats.total_campaigns} campaigns`;
+
+                const list = document.getElementById('campaignList');
+
+                if (!data.campaigns.length) {
+                    list.innerHTML = `<div class="empty-state"><h2>No Campaigns Yet</h2><p>Start your first campaign from the Upload & Call page.</p></div>`;
+                    return;
+                }
+
+                list.innerHTML = data.campaigns.map((c, i) => {
+                    const startDate = c.started_at ? new Date(c.started_at) : null;
+                    const endDate = c.ended_at ? new Date(c.ended_at) : null;
+                    const fmtDate = d => d ? d.toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) : '—';
+                    const fmtTime = d => d ? d.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+
+                    const duration = c.duration_seconds
+                        ? (c.duration_seconds >= 3600
+                            ? `${Math.floor(c.duration_seconds/3600)}h ${Math.floor((c.duration_seconds%3600)/60)}m`
+                            : `${Math.floor(c.duration_seconds/60)}m ${c.duration_seconds%60}s`)
+                        : (c.is_active ? 'In Progress' : '—');
+
+                    const answeredPct = c.total_count ? Math.round((c.answered_count / c.total_count) * 100) : 0;
+                    const missedPct = c.total_count ? Math.round((c.missed_count / c.total_count) * 100) : 0;
+
+                    const phoneChips = c.phone_list.map(p => {
+                        const isMissed = c.missed_list.includes(p);
+                        return `<span class="phone-chip ${isMissed ? 'missed' : ''}">${p}${isMissed ? ' (Missed)' : ''}</span>`;
+                    }).join('');
+
+                    const missedChips = c.missed_list.map(p => `<span class="phone-chip missed">${p}</span>`).join('');
+
+                    return `
+                    <div class="campaign-card" style="animation-delay:${i*0.05}s">
+                        <div class="campaign-header">
+                            <div>
+                                <span class="campaign-name">${c.name || 'Untitled Campaign'}</span>
+                                <span class="campaign-id">#${c.id}</span>
+                            </div>
+                            <span class="campaign-badge ${c.is_active ? 'badge-active' : 'badge-completed'}">
+                                ${c.is_active ? 'Active' : 'Completed'}
+                            </span>
+                        </div>
+
+                        <div class="campaign-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">Total</div>
+                                <div class="stat-value">${c.total_count}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Completed</div>
+                                <div class="stat-value">${c.completed_count}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Answered</div>
+                                <div class="stat-value answered">${c.answered_count}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Missed</div>
+                                <div class="stat-value missed">${c.missed_count}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Duration</div>
+                                <div class="stat-value" style="font-size:16px;color:#334155">${duration}</div>
+                            </div>
+                        </div>
+
+                        <div class="progress-bar">
+                            <div class="progress-fill progress-answered" style="width:${answeredPct}%"></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px">
+                            <span>Answered ${answeredPct}%</span>
+                            <span>Missed ${missedPct}%</span>
+                        </div>
+
+                        <div class="campaign-time">
+                            <div class="time-item"><strong>Started:</strong> ${fmtDate(startDate)} at ${fmtTime(startDate)}</div>
+                            <div class="time-item"><strong>Ended:</strong> ${endDate ? fmtDate(endDate) + ' at ' + fmtTime(endDate) : (c.is_active ? 'Running...' : '—')}</div>
+                            <div class="time-item"><strong>Total Duration:</strong> ${duration}</div>
+                        </div>
+
+                        ${c.phone_list.length ? `<button class="phone-toggle" onclick="togglePhones(this, 'all')">View All Numbers (${c.phone_list.length})</button><div class="phone-list">${phoneChips}</div>` : ''}
+                        ${c.missed_list.length ? `<button class="phone-toggle" onclick="togglePhones(this, 'missed')" style="color:#ef4444">View Missed Numbers (${c.missed_list.length})</button><div class="phone-list">${missedChips}</div>` : ''}
+                    </div>`;
+                }).join('');
+            } catch (err) {
+                console.error('Failed to load campaigns:', err);
+                document.getElementById('campaignList').innerHTML = `<div class="empty-state"><h2>Error Loading Data</h2><p>${err.message}</p></div>`;
+            }
+        }
+
+        function togglePhones(btn, type) {
+            const list = btn.nextElementSibling;
+            list.classList.toggle('open');
+            if (list.classList.contains('open')) {
+                btn.textContent = btn.textContent.replace('View', 'Hide');
+            } else {
+                btn.textContent = btn.textContent.replace('Hide', 'View');
+            }
+        }
+
+        // Set profile avatar & name from localStorage
+        (function () {
+            const username = localStorage.getItem('username') || 'User';
+            const initial = username.charAt(0).toUpperCase();
+            document.getElementById('profileAvatar').textContent = initial;
+            document.getElementById('pdName').textContent = username;
+        })();
+
+        function toggleProfile(e) {
+            e.stopPropagation();
+            document.getElementById('profileDropdown').classList.toggle('open');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function () {
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown) dropdown.classList.remove('open');
+        });
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('username');
+            localStorage.removeItem('is_admin');
+            window.location.replace('/accounts/login/');
+        }
+
+        loadCampaigns();
+    </script>
+</body>
+</html>

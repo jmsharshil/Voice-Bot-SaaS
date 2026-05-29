@@ -163,55 +163,46 @@ import base64
 TTS_VOICE_MAP = {
     "en": "en-IN-AartiNeural",
     "hi": "hi-IN-AartiNeural",
-    # "gu": "gu-IN-DhwaniNeural"
+    "gu": "gu-IN-DhwaniNeural"
 }
 
 STT_LANGUAGE_MAP = {
     "en": "en-IN",
     "hi": "hi-IN",
-    # "gu": "gu-IN"
+    "gu": "gu-IN"
 }
 
 AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY")
 AZURE_SPEECH_REGION = os.getenv("AZURE_SPEECH_REGION")
 
 
-# ✅ UNCHANGED — telecom recognizer, just added language param
+# ✅ OPTIMIZED: Direct speech recognizer without Language Identification (LID) latency & with natural pacing
 def create_speech_recognizer(language="en"):
     speech_config = speechsdk.SpeechConfig(
         subscription=AZURE_SPEECH_KEY,
         region=AZURE_SPEECH_REGION
     )
 
-    # ✅ Auto detect between all 3 languages simultaneously
-    auto_detect_config = speechsdk.languageconfig.AutoDetectSourceLanguageConfig(
-        languages=["en-IN", "hi-IN"]
-    )
-
-    # speech_config.speech_recognition_language = STT_LANGUAGE_MAP.get(language, "hi-IN")
+    # Set specific language directly to eliminate LID (Language Identification) latency!
+    stt_lang = STT_LANGUAGE_MAP.get(language, "hi-IN")
+    speech_config.speech_recognition_language = stt_lang
 
     speech_config.set_property_by_name("SPEECH-RecoModelKey", "telephony")
 
-    # ⚡ TUNED: Ultra-aggressive silence timeouts for telecom latency
-    # EndSilence: 300ms — fires recognition almost instantly after user stops
-    # Segmentation: 200ms — catches sentence breaks instantly
+    # ⚡ TUNED: Natural pacing timeouts (resolved rushed feedback)
+    # EndSilence: 900ms — allows natural mid-sentence pauses without cutting off
+    # Segmentation: 500ms — catches sentence breaks naturally
     # InitialSilence: 8000ms — generous wait for first speech
     speech_config.set_property(
-        speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "300"
+        speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "900"
     )
     speech_config.set_property(
         speechsdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "8000"
     )
     speech_config.set_property(
-        speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "200"
+        speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "500"
     )
 
-    speech_config.set_property_by_name(
-        "SpeechServiceConnection_LanguageIdMode", "Continuous"
-    )
-    speech_config.set_property_by_name(
-        "SpeechServiceConnection_LanguageIdPriority", "Latency"
-    )
     speech_config.set_property_by_name(
         "SpeechServiceResponse_RequestStreamingResponse", "true"
     )
@@ -233,8 +224,7 @@ def create_speech_recognizer(language="en"):
 
     recognizer = speechsdk.SpeechRecognizer(
         speech_config=speech_config,
-        audio_config=audio_config,
-        auto_detect_source_language_config=auto_detect_config 
+        audio_config=audio_config
     )
 
     return recognizer, push_stream

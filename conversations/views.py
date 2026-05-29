@@ -1107,6 +1107,8 @@ def lead_analysis_data(request):
     """
     leads = LeadAnalysis.objects.select_related(
         "conversation", "agent"
+    ).prefetch_related(
+        "conversation__messages"
     ).order_by("-analyzed_at")
 
     # Filters
