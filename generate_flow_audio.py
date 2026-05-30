@@ -174,9 +174,10 @@ def _amplify_pcm(pcm_data: bytes, gain: float = 1.5) -> bytes:
 
 def generate_tts_file(filename, text, lang="en"):
     file_path = os.path.join("mp3_responses", filename)
-    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-        print(f"⏭️  Skipping (already exists): {filename}")
-        return
+    # Always regenerate to apply updated voice settings
+    # if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+    #     print(f"⏭️  Skipping (already exists): {filename}")
+    #     return
 
     voice_id = ELEVENLABS_VOICE_MAP.get(lang, ELEVENLABS_VOICE_MAP["en"])
 
@@ -188,10 +189,11 @@ def generate_tts_file(filename, text, lang="en"):
             model_id="eleven_multilingual_v2",  # More natural than turbo
             output_format="pcm_8000",            # Native 8kHz PCM for telephony
             voice_settings=VoiceSettings(
-                stability=0.65,          # Stable pronunciation, no muttering/rushing
-                similarity_boost=0.85,   # High voice profile consistency
-                style=0.00,              # Lower style prevents synthesis artifacts
-                use_speaker_boost=True
+                stability=0.55,          # Natural human-like tone variation
+                similarity_boost=0.75,   # Balanced — reduces artifacts & over-enunciation
+                style=0.00,
+                use_speaker_boost=False, # Softer, warmer — removes loud "studio" effect
+                speed=0.90               # 10% slower — prevents rushing on telephony
             )
         )
 
@@ -207,7 +209,7 @@ def generate_tts_file(filename, text, lang="en"):
         if len(pcm) % 2 != 0:
             pcm = pcm[:-1]
 
-        pcm = _amplify_pcm(pcm, gain=1.1)
+        pcm = _amplify_pcm(pcm, gain=0.6)
         ulaw = audioop.lin2ulaw(pcm, 2)
 
         os.makedirs("mp3_responses", exist_ok=True)
@@ -231,10 +233,10 @@ if __name__ == "__main__":
         # ══════════════════════════════════════════════════════════════════════
 
         # Step 1 — Greeting & self-introduction
-        ("hi_step1_greeting.raw", "Hello ! Namaste... main Aaisha bol rahi hoon, Westcoat Kia se. Umeed hai aap bilkul theek honge! kya aap abhi baat kar sakte hain?", "hi"),
+        ("hi_step1_greeting.raw", "Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge! Kya aap abhi baat kar sakte hain?", "hi"),
 
         # Step 2 — Confirm interest in Kia Seltos from Ahmedabad
-        ("hi_step2_confirm_interest.raw", ", aapne Kia Seltos mein interest show kiya tha... Ahmedabad se? Kya main sahi samajh rahi hoon?", "hi"),
+        ("hi_step2_confirm_interest.raw", "Aapne Kia Seltos mein interest show kiya tha... Ahmedabad se? Kya main sahi samajh rahi hoon?", "hi"),
 
         # Step 2 — Negative / end call gracefully
         ("hi_step2_end_call.raw", "Koi baat nahi, aapka bahut bahut shukriya ki aapne call receive ki. Jab bhi koi zaroorat ho, hum hamesha aapki seva mein taiyaar hain. Aapka din bahut achha bita karein. Take care. Namaste!", "hi"),
@@ -255,7 +257,7 @@ if __name__ == "__main__":
         ("hi_step7_confirm_testdrive.raw", "Thank you, maine aapka time note kar liya hai. Ek aur baat — kya aap Kia Seltos ka test drive lena pasand karenge? Believe me, ek baar drive karoge toh aapko aur kuch dekhna hi nahi padega!", "hi"),
 
         # Step 8 — Warm closing
-        ("hi_step8_closing.raw", "Thank you so much! Hamari sales team aapse jaldi hi contact karegi. Aapka time deene ke liye Shukriya", "hi"),
+        ("hi_step8_closing.raw", "Thank you so much! Hamari sales team aapse jaldi hi contact karegi. Aapka time dene ke liye Shukriya.", "hi"),
 
 
         # ══════════════════════════════════════════════════════════════════════
@@ -263,10 +265,10 @@ if __name__ == "__main__":
         # ══════════════════════════════════════════════════════════════════════
 
         # Step 1 — Greeting
-        ("en_step1_greeting.raw", "Hello ! I hope you are doing great. This is Aaisha calling from Westcoat Kia. can you talk now?", "en"),
+        ("en_step1_greeting.raw", "Hello! I hope you are doing great. This is Aaisha calling from West-coast Kia. Can you talk now?", "en"),
 
         # Step 2 — Confirm interest
-        ("en_step2_confirm_interest.raw", " you had recently shown interest in the Kia Seltos from Ahmedabad. Am I speaking with the right person?", "en"),
+        ("en_step2_confirm_interest.raw", "You had recently shown interest in the Kia Seltos from Ahmedabad. Am I speaking with the right person?", "en"),
 
         # Step 2 — End call (negative response)
         ("en_step2_end_call.raw", "No worries at all, Thank you so much for picking up the call. Whenever you need any assistance, we are always here for you. Have a wonderful day ahead. Take care. Goodbye!", "en"),
@@ -295,10 +297,10 @@ if __name__ == "__main__":
         # ══════════════════════════════════════════════════════════════════════
 
         # Step 1 — Greeting
-        ("gu_step1_greeting.raw", "હેલો! કેમ છો? આશા છે બધું સારું હશે. હું આઈશા બોલી રહી છું, Westcoat Kia માંથી. શું તમે અત્યારે વાત કરી શકો છો?", "gu"),
+        ("gu_step1_greeting.raw", "હેલો! કેમ છો? આશા છે બધું સારું હશે. હું આઈશા બોલી રહી છું, West-coast Kia માંથી. શું તમે અત્યારે વાત કરી શકો છો?", "gu"),
 
         # Step 2 — Confirm interest
-        ("gu_step2_confirm_interest.raw", " તમે તાજેતરમાં Kia Seltos માં રસ દર્શાવ્યો હતો, Ahmedabad થી? શું હું સાચી વ્યક્તિ સાથે વાત કરી રહી છું?", "gu"),
+        ("gu_step2_confirm_interest.raw", "તમે તાજેતરમાં Kia Seltos માં રસ દર્શાવ્યો હતો, Ahmedabad થી? શું હું સાચી વ્યક્તિ સાથે વાત કરી રહી છું?", "gu"),
 
         # Step 2 — End call (negative)
         ("gu_step2_end_call.raw", "કોઈ વાત નહીં. કૉલ ઉઠાવ્યા બદલ ખૂબ ખૂબ આભાર. જ્યારે પણ કોઈ જરૂર હોય, અમે હંમેશા તમારી સેવામાં છીએ. તમારો દિવસ ખૂબ સરસ રહે. Namaste!", "gu"),

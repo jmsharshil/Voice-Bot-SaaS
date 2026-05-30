@@ -128,9 +128,10 @@ def _amplify_pcm(pcm_data: bytes, gain: float = 1.5) -> bytes:
 
 def generate_tts_file(filename, text):
     file_path = os.path.join("mp3_responses", filename)
-    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-        print(f"⏭️  Skipping (already exists): {filename}")
-        return
+    # Always regenerate to apply updated voice settings
+    # if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+    #     print(f"⏭️  Skipping (already exists): {filename}")
+    #     return
 
     try:
         # pcm_8000 = native 8kHz 16-bit PCM mono — no MP3 decode, no pydub needed
@@ -140,10 +141,11 @@ def generate_tts_file(filename, text):
             model_id="eleven_multilingual_v2",  # More natural than turbo
             output_format="pcm_8000",            # Native 8kHz PCM for telephony
             voice_settings=VoiceSettings(
-                stability=0.65,          # Stable pronunciation, no muttering/rushing
-                similarity_boost=0.85,   # High voice profile consistency
-                style=0.00,              # Lower style prevents synthesis artifacts
-                use_speaker_boost=True
+                stability=0.55,          # Natural human-like tone variation
+                similarity_boost=0.75,   # Balanced — reduces artifacts & over-enunciation
+                style=0.00,
+                use_speaker_boost=False, # Softer, warmer — removes loud "studio" effect
+                speed=0.90               # 10% slower — prevents rushing on telephony
             )
         )
 
@@ -159,20 +161,22 @@ def generate_tts_file(filename, text):
         if len(pcm) % 2 != 0:
             pcm = pcm[:-1]
 
-        pcm = _amplify_pcm(pcm, gain=1.1)
+        pcm = _amplify_pcm(pcm, gain=0.6)
         ulaw = audioop.lin2ulaw(pcm, 2)
 
         os.makedirs("mp3_responses", exist_ok=True)
         with open(file_path, "wb") as f:
             f.write(ulaw)
 
-        print(f"✅ Voice Generated: {file_path}")
+        print(f"[OK] Voice Generated: {file_path}")
 
     except Exception as e:
-        print(f"❌ Failed to generate {filename}: {e}")
+        print(f"[FAIL] Failed to generate {filename}: {e}")
 
 
 if __name__ == "__main__":
+    import sys
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print("Generating Consumer-Match Voice Assets via ElevenLabs...")
     assets = [
         ("test_drive_offer.raw",        "Great! Kya aap iski test drive lena pasand karenge?"),

@@ -9295,7 +9295,7 @@ ELEVENLABS_VOICE_MAP = {
 
 _AUDIO_TRANSCRIPTIONS: dict = {
     # HINDI
-    "hi_step1_greeting.raw": "Hello! Namaste... main Aaisha bol rahi hoon, Westcoat Kia se. Umeed hai aap bilkul theek honge!",
+    "hi_step1_greeting.raw": "Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge!",
     "hi_step2_confirm_interest.raw": "Aapne Kia Seltos mein interest show kiya tha... Ahmedabad se? Kya main sahi samajh rahi hoon?",
     "hi_step2_end_call.raw": "Koi baat nahi, aapka bahut bahut shukriya ki aapne call receive ki. Jab bhi koi zaroorat ho, hum hamesha aapki seva mein taiyaar hain. Aapka din bahut achha bita karein. Take care. Namaste!",
     "hi_step3_ask_timeline.raw": "Thank you! Waise bhi, Kia Seltos ek bahut hi shandar car hai — aapne sach mein bahut achhi car choose ki hai. Aap car is mahine lene ka plan kar rahe hain?... ya agle mahine?",
@@ -9303,10 +9303,10 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "hi_step4_end_call.raw": "Bilkul samajh gayi. Koi tension nahi. Jab bhi aap ready hon, hum hamesha aapke liye yahan hain. Aapka bahut bahut shukriya. Aapka din mubarak ho. Namaste!",
     "hi_step5_ask_time.raw": "Wonderful! Main abhi ye note kar leti hoon. Callback ke liye konsa time best rahega aapke liye? Aur koi specific din bhi batayein agar aapko convenient ho.",
     "hi_step7_confirm_testdrive.raw": "Thank you, maine aapka time note kar liya hai. Ek aur baat — kya aap Kia Seltos ka test drive lena pasand karenge? Believe me, ek baar drive karoge toh aapko aur kuch dekhna hi nahi padega!",
-    "hi_step8_closing.raw": "Thank you so much! Hamari sales team aapse jaldi hi contact karegi. Aapka time deene ke liye Shukriya",
+    "hi_step8_closing.raw": "Thank you so much! Hamari sales team aapse jaldi hi contact karegi. Aapka time dene ke liye Shukriya.",
 
     # ENGLISH
-    "en_step1_greeting.raw": "Hello! I hope you are doing great. This is Aaisha calling from Westcoat Kia.",
+    "en_step1_greeting.raw": "Hello! I hope you are doing great. This is Aaisha calling from West-coast Kia.",
     "en_step2_confirm_interest.raw": "You had recently shown interest in the Kia Seltos from Ahmedabad. Am I speaking with the right person?",
     "en_step2_end_call.raw": "No worries at all, Thank you so much for picking up the call. Whenever you need any assistance, we are always here for you. Have a wonderful day ahead. Take care. Goodbye!",
     "en_step3_ask_timeline.raw": "That is absolutely wonderful! You have truly made an excellent choice — the Kia Seltos is an incredible car. Are you planning to purchase the car this month or next month?",
@@ -9317,7 +9317,7 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "en_step8_closing.raw": "Thank you so much! Our sales team will get in touch with you very soon. Thank you so much for giving us your precious time.",
 
     # GUJARATI
-    "gu_step1_greeting.raw": "હેલો! કેમ છો? આશા છે બધું સારું હશે. હું આઈશા બોલી રહી છું, Westcoat Kia માંથી.",
+    "gu_step1_greeting.raw": "હેલો! કેમ છો? આશા છે બધું સારું હશે. હું આઈશા બોલી રહી છું, West-coast Kia માંથી.",
     "gu_step2_confirm_interest.raw": "તમે તાજેતરમાં Kia Seltos માં રસ દર્શાવ્યો હતો, Ahmedabad થી? શું હું સાચી વ્યક્તિ સાથે વાત કરી રહી છું?",
     "gu_step2_end_call.raw": "કોઈ વાત નહીં. કૉલ ઉઠાવ્યા બદલ ખૂબ ખૂબ આભાર. જ્યારે પણ કોઈ જરૂર હોય, અમે હંમેશા તમારી સેવામાં છીએ. તમારો દિવસ ખૂબ સરસ રહે. Namaste!",
     "gu_step3_ask_timeline.raw": "Thank you! સાચ્ચે, Kia Seltos ખૂબ જ અદ્ભૂત કાર છે — તમે ખૂબ જ સારી કાર પસંદ કરી છે. તમે આ કાર આ મહિને લેવાનું plan કરો છો... કે આગળ મહિને?",
@@ -10699,10 +10699,11 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 model_id="eleven_multilingual_v2",
                 output_format="pcm_8000",
                 voice_settings=VoiceSettings(
-                    stability=0.65,          # Stable pronunciation, no muttering/rushing
-                    similarity_boost=0.85,   # High voice profile consistency
-                    style=0.00,              # Lower style prevents synthesis artifacts
-                    use_speaker_boost=True
+                    stability=0.55,          # Natural human-like tone variation
+                    similarity_boost=0.75,   # Balanced — reduces artifacts & over-enunciation
+                    style=0.00,
+                    use_speaker_boost=False, # Softer, warmer — removes loud "studio" effect
+                    speed=0.90               # 10% slower — prevents rushing on telephony
                 )
             )
             
@@ -10714,7 +10715,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             if pcm:
                 if len(pcm) % 2 != 0:
                     pcm = pcm[:-1]
-                pcm = _amplify_pcm(pcm, gain=1.1)
+                pcm = _amplify_pcm(pcm, gain=0.6)
                 return encode_g711(pcm)
             else:
                 print(f"❌ ElevenLabs returned empty audio for text: {clean_text[:40]}")
@@ -10738,7 +10739,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             if len(pcm) % 2 != 0:
                 pcm = pcm[:-1]
                 
-            pcm = _amplify_pcm(pcm, gain=1.1)
+            pcm = _amplify_pcm(pcm, gain=0.6)
             return encode_g711(pcm)
         except Exception as azure_err:
             print(f"❌ Azure fallback synthesis also failed: {azure_err}")

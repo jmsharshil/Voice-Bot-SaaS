@@ -172,10 +172,11 @@ class KnowledgeConfig(AppConfig):
                                         model_id="eleven_multilingual_v2",
                                         output_format="pcm_8000",
                                         voice_settings=VoiceSettings(
-                                            stability=0.65,          # Stable pronunciation, no muttering/rushing
-                                            similarity_boost=0.85,   # High voice profile consistency
-                                            style=0.00,              # Lower style prevents synthesis artifacts
-                                            use_speaker_boost=True
+                                            stability=0.55,          # Natural human-like tone variation
+                                            similarity_boost=0.75,   # Balanced — reduces artifacts & over-enunciation
+                                            style=0.00,
+                                            use_speaker_boost=False, # Softer, warmer — removes loud "studio" effect
+                                            speed=0.90               # 10% slower — prevents rushing on telephony
                                         )
                                     )
                                     pcm = b""
@@ -185,7 +186,7 @@ class KnowledgeConfig(AppConfig):
                                     if pcm:
                                         if len(pcm) % 2 != 0:
                                             pcm = pcm[:-1]
-                                        pcm = _amplify_pcm(pcm, gain=1.1)
+                                        pcm = _amplify_pcm(pcm, gain=0.6)
                                         ulaw = encode_g711(pcm)
                                         _GREETING_AUDIO_CACHE[f"{agent.id}_{lang}"] = ulaw
                                         print(
