@@ -193,7 +193,7 @@ def generate_tts_file(filename, text, lang="en"):
                 similarity_boost=0.75,   # Balanced — reduces artifacts & over-enunciation
                 style=0.00,
                 use_speaker_boost=False, # Softer, warmer — removes loud "studio" effect
-                speed=0.90               # 10% slower — prevents rushing on telephony
+                speed=1.00               # Medium speed — natural pace on telephony
             )
         )
 
