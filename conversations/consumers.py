@@ -9325,7 +9325,13 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "gu_step4_end_call.raw": "બિલ્કુલ સમજ ગઈ. કોઈ ચિંતા નહીં. જ્યારે પણ ready હો, અમે હંમેશા અહીં છીએ. ખૂબ ખૂબ આભાર. Namaste!",
     "gu_step5_ask_time.raw": "Wonderful! હું note કરી લઉં. Callback માટે તમને કઈ time convenient રહેશે? અને કોઈ specific day હોય તો તે પણ જણાવો.",
     "gu_step7_confirm_testdrive.raw": "Thank you, મેં તમારો time note કરી લીધો. એક વધુ વાત — શું તમે Kia Seltos નું test drive લેવા ઈચ્છો છો? Believe me, એક વાર drive કરો, ત્યારબાદ બીજી કોઈ car જોવાની જ ઈચ્છા ન થાય!",
-    "gu_step8_closing.raw": "Thank you so much! અમારી sales team ટૂંક સમયમાં તમારો contact કરશે. તમારો આટલો કિંમતી સમય આપવા બદલ ખૂબ ખૂબ આભાર."
+    "gu_step8_closing.raw": "Thank you so much! અમારી sales team ટૂંક સમયમાં તમારો contact કરશે. તમારો આટલો કિંમતી સમય આપવા બદલ ખૂબ ખૂબ આભાર.",
+
+    # HOSPITAL APPOINTMENT SCHEDULER
+    "hosp_step1_greeting.raw": "Hello! I am Sophia calling from City Clinic. We received your booking request for tomorrow. Can we confirm your appointment?",
+    "hosp_step2_ask_slot.raw": "Great! Would you prefer a morning session between 10 to 12, or an afternoon session between 2 to 4?",
+    "hosp_step3_closing.raw": "Perfect! Your slot has been confirmed. We have sent the confirmation details on WhatsApp. Thank you, take care!",
+    "hosp_step_cancellation.raw": "Understood. We have cancelled your request. Have a good day. Goodbye!",
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
@@ -9749,23 +9755,12 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             state = session.state or {}
             state["intro_shown"] = True
             state["detected_language"] = language
+            if strategy_key == "hospital_minimal":
+                state["step"] = "confirm_interest"
             session.state = state
             session.save()
             
-            return tts_lang, greeting
-
-        # self.agent_tts_lang, greeting = await get_initial_call_data(self.agent_id, self.session_id, self.language)
-
-        # if self.agent_tts_lang == "gu":
-        #     asyncio.create_task(self.send_tts(greeting, tts_language="gu"))
-        # elif self.agent_tts_lang == "interview_en":
-        #     asyncio.create_task(self.send_tts(greeting, tts_language="en"))
-        # else:
-        #     asyncio.create_task(self.send_tts(greeting))
-
-        # self.final_consumer_task = asyncio.create_task(self._final_text_consumer())
-        # self.keepalive_task = asyncio.create_task(self._keepalive_loop())
-
+            return tts_lang, greeting, strategy_key
 
         # Kick off DB fetch and TTS cache-check IN PARALLEL
         db_task = asyncio.create_task(get_initial_call_data(self.agent_id, self.session_id, self.language))
@@ -9773,15 +9768,25 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         # While DB is running, check if we already have cached audio for this agent
         cached_audio = _GREETING_AUDIO_CACHE.get(f"{self.agent_id}_{self.language}")
 
-        self.agent_tts_lang, greeting = await db_task
+        self.agent_tts_lang, greeting, self.strategy_key = await db_task
+
+        # Determine greeting audio path
+        greeting_file = "hosp_step1_greeting.raw" if self.strategy_key == "hospital_minimal" else f"{self.language}_step1_greeting.raw"
+        greeting_text = _AUDIO_TRANSCRIPTIONS.get(greeting_file, greeting)
 
         # Record the greeting message in the database so it appears in the chat transcript
-        await save_message(self.conversation, "bot", greeting)
+        await save_message(self.conversation, "bot", greeting_text)
 
+        local_greeting_path = os.path.join("mp3_responses", greeting_file)
         if cached_audio:
             # ⚡ INSTANT: stream pre-synthesized bytes directly — zero TTS latency
             print("⚡ Greeting served from audio cache (0ms TTS)")
             self.tts_task = asyncio.create_task(self._stream_cached_greeting(cached_audio))
+        elif os.path.exists(local_greeting_path):
+            print(f"🚀 INSTANT GREETING: Found local file {local_greeting_path}")
+            with open(local_greeting_path, "rb") as f:
+                ulaw = f.read()
+            self.tts_task = asyncio.create_task(self._stream_cached_greeting(ulaw))
         else:
             # First call for this agent: synthesize and cache for future calls
             tts_task_lang = "gu" if self.agent_tts_lang == "gu" else ("en" if self.agent_tts_lang == "interview_en" else None)
@@ -10168,9 +10173,12 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         filename = filename.replace(".mp3", ".raw")
         
         # Determine current language prefix (e.g., 'hi_', 'en_', 'gu_')
-        lang_prefix = f"{self.language}_"
-        if not filename.startswith(lang_prefix):
-            filename = f"{lang_prefix}{filename}"
+        # Check if the file exists directly first (e.g. hosp_step2_ask_slot.raw)
+        file_path = os.path.join("mp3_responses", filename)
+        if not os.path.exists(file_path):
+            lang_prefix = f"{self.language}_"
+            if not filename.startswith(lang_prefix):
+                filename = f"{lang_prefix}{filename}"
             
         # Record the bot reply in the database chat logs
         transcription = _AUDIO_TRANSCRIPTIONS.get(filename)
@@ -10234,7 +10242,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         normalized = text.lower().strip()
 
         # ── AUTOMOBILE INTENT ROUTER (FAST-PATH) ──────────────────
-        if AUTOMOBILE_MATCHER:
+        if AUTOMOBILE_MATCHER and getattr(self, "strategy_key", None) == "automobile":
             try:
                 # 1. Initialize/Load current phase (Safe attribute check)
                 current_phase = "GREETING_REPLY"
@@ -10374,28 +10382,49 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             if not reply:
                 return
 
-            reply_for_user = reply
-            if not skip_output_translation and self.language != "en":
-                reply_for_user = await sync_to_async(translate_text)(
-                    reply, from_lang="en", to_lang=self.language
+            # Parse PLAY_AUDIO tag if present
+            audio_match = re.search(r'\[\s*PLAY_AUDIO:\s*([a-zA-Z0-9_\-\.]+)(?:\.raw)?\s*\]', reply, re.I)
+            if audio_match:
+                audio_filename = audio_match.group(1).strip()
+                if not audio_filename.endswith(".raw"):
+                    audio_filename += ".raw"
+                print(f"🎯 [PLAY_AUDIO TAG DETECTED IN STATIC REPLY]: {audio_filename}")
+                
+                # Retrieve translation/transcription to log to DB
+                transcription = _AUDIO_TRANSCRIPTIONS.get(audio_filename, reply)
+                await save_message(self.conversation, "bot", transcription)
+                
+                if self.tts_task and not self.tts_task.done():
+                    self.tts_task.cancel()
+                    try:
+                        await self.tts_task
+                    except asyncio.CancelledError:
+                        pass
+                        
+                self.tts_task = asyncio.create_task(self._stream_local_audio_file(audio_filename))
+            else:
+                reply_for_user = reply
+                if not skip_output_translation and self.language != "en":
+                    reply_for_user = await sync_to_async(translate_text)(
+                        reply, from_lang="en", to_lang=self.language
+                    )
+
+                total_ms = round((time.time() - pipeline_start) * 1000)
+                print(f"⏱ PIPELINE (static): prep={prep_ms}ms | TOTAL={total_ms}ms")
+
+                await save_message(self.conversation, "bot", reply_for_user)
+                print("🤖 BOT REPLY:", reply_for_user)
+
+                if self.tts_task and not self.tts_task.done():
+                    self.tts_task.cancel()
+                    try:
+                        await self.tts_task
+                    except asyncio.CancelledError:
+                        pass
+
+                self.tts_task = asyncio.create_task(
+                    self.send_tts(reply_for_user, tts_language=tts_language)
                 )
-
-            total_ms = round((time.time() - pipeline_start) * 1000)
-            print(f"⏱ PIPELINE (static): prep={prep_ms}ms | TOTAL={total_ms}ms")
-
-            await save_message(self.conversation, "bot", reply_for_user)
-            print("🤖 BOT REPLY:", reply_for_user)
-
-            if self.tts_task and not self.tts_task.done():
-                self.tts_task.cancel()
-                try:
-                    await self.tts_task
-                except asyncio.CancelledError:
-                    pass
-
-            self.tts_task = asyncio.create_task(
-                self.send_tts(reply_for_user, tts_language=tts_language)
-            )
 
             if prep_result.get("auto_disconnect"):
                 print("📴 AUTO-DISCONNECT (static reply): Booking confirmed by user — ending call")
@@ -10800,7 +10829,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         """
         import os
         lang = tts_language or self.language
-        local_greeting = os.path.join("mp3_responses", f"{lang}_step1_greeting.raw")
+        greeting_file = "hosp_step1_greeting.raw" if getattr(self, "strategy_key", None) == "hospital_minimal" else f"{lang}_step1_greeting.raw"
+        local_greeting = os.path.join("mp3_responses", greeting_file)
         if os.path.exists(local_greeting):
             print(f"🚀 INSTANT GREETING: Found local file {local_greeting}")
             with open(local_greeting, "rb") as f:

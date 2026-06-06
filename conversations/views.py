@@ -680,8 +680,8 @@ import re
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from rest_framework.decorators import api_view
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
 
 from django.shortcuts import render
 
@@ -921,12 +921,17 @@ def call_analytics_page(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def call_analytics_data(request):
     """
     Returns all voice-call conversations grouped by user_number,
     with summary stats for the dashboard.
     """
     conversations = Conversation.objects.all().order_by("-started_at")
+
+    # Scope queryset to user's assigned agent if applicable
+    if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+        conversations = conversations.filter(agent=request.user.profile.assigned_agent)
 
     total_sessions = conversations.count()
 
@@ -985,6 +990,7 @@ def call_analytics_data(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def call_analytics_session(request, session_id):
     """
     Returns full message list for a specific session.
@@ -993,6 +999,11 @@ def call_analytics_session(request, session_id):
         conversation = Conversation.objects.get(session_id=session_id)
     except Conversation.DoesNotExist:
         return Response({"error": "Session not found"}, status=404)
+
+    # Scoping check
+    if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+        if conversation.agent != request.user.profile.assigned_agent:
+            return Response({"error": "Forbidden: You do not have permission to access this session's data."}, status=403)
 
     messages = Message.objects.filter(conversation=conversation).order_by("created_at")
 
@@ -1022,6 +1033,7 @@ def call_analytics_session(request, session_id):
 # ======================================================
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def call_analytics_per_bot(request):
     """
     Returns analytics broken down by each bot (VoiceAgent).
@@ -1030,6 +1042,8 @@ def call_analytics_per_bot(request):
     from agents.models import VoiceAgent
 
     bots = VoiceAgent.objects.filter(is_active=True)
+    if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+        bots = bots.filter(id=request.user.profile.assigned_agent.id)
     bot_stats = []
 
     for bot in bots:
@@ -1098,6 +1112,7 @@ def lead_analysis_page(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def lead_analysis_data(request):
     """
     Returns all lead analyses with summary stats.
@@ -1110,6 +1125,10 @@ def lead_analysis_data(request):
     ).prefetch_related(
         "conversation__messages"
     ).order_by("-analyzed_at")
+
+    # Scope query to assigned agent if applicable
+    if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+        leads = leads.filter(agent=request.user.profile.assigned_agent)
 
     # Filters
     level = request.GET.get("level")
@@ -1142,6 +1161,7 @@ def lead_analysis_data(request):
 
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def lead_analysis_detail(request, session_id):
     """
     Returns lead analysis for a specific session, including full conversation.
@@ -1150,6 +1170,11 @@ def lead_analysis_detail(request, session_id):
         conversation = Conversation.objects.get(session_id=session_id)
     except Conversation.DoesNotExist:
         return Response({"error": "Conversation not found"}, status=404)
+
+    # Scoping check
+    if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+        if conversation.agent != request.user.profile.assigned_agent:
+            return Response({"error": "Forbidden: You do not have permission to access this lead's data."}, status=403)
 
     try:
         lead = LeadAnalysis.objects.select_related(

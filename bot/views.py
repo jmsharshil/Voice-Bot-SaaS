@@ -1164,6 +1164,15 @@ def trigger_call(request):
         phone = request.data.get("phone")
         phones = request.data.get("phones")
         language = request.data.get("language", "en")
+        
+        # Resolve scoped agent if logged in
+        agent_id = None
+        if request.user and request.user.is_authenticated:
+            if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+                agent_id = str(request.user.profile.assigned_agent.id)
+        
+        if not agent_id:
+            agent_id = request.data.get("agent_id") or "21bdd3bf-45bd-487c-8283-7b2957e472ba"
 
         # ─────────────────────────────────────────────
         # CASE 1: SINGLE CALL
@@ -1173,18 +1182,18 @@ def trigger_call(request):
             if str(phone).startswith("91") and len(str(phone)) == 12:
                 normalized_phone = str(phone)[2:]
 
-            print(f"📞 Single Call → {normalized_phone} (Lang: {language})")
+            print(f"📞 Single Call → {normalized_phone} (Lang: {language}, Agent: {agent_id})")
 
             payload = {
                 "to": normalized_phone,
                 "caller_id": "+917969016753",
                 "ref": f"crm-{uuid.uuid4()}",
-                "bot_url": "wss://kia-voicebot-f6h2ceg6gyaueadg.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=21bdd3bf-45bd-487c-8283-7b2957e472ba"
+                "bot_url": f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}"
             }
 
 
             response = requests.post(
-                "https://voice-bot.on-forge.com/api/dial",
+                "https://call-route.on-forge.com/api/dial",
                 json=payload,
                 headers={
                     "Content-Type": "application/json",
@@ -1209,17 +1218,17 @@ def trigger_call(request):
                 if str(phone).startswith("91") and len(str(phone)) == 12:
                     normalized_phone = str(phone)[2:]
 
-                print(f"📞 Bulk Call → {normalized_phone} (Lang: {language})")
+                print(f"📞 Bulk Call → {normalized_phone} (Lang: {language}, Agent: {agent_id})")
 
                 payload = {
                     "to": normalized_phone,
                     "caller_id": "+917969016753",
                     "ref": f"crm-{uuid.uuid4()}",
-                    "bot_url": "wss://kia-voicebot-f6h2ceg6gyaueadg.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=21bdd3bf-45bd-487c-8283-7b2957e472ba"
+                    "bot_url": f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}"
                 }
 
                 response = requests.post(
-                    "https://voice-bot.on-forge.com/api/dial",
+                    "https://call-route.on-forge.com/api/dial",
                     json=payload,
                     headers={
                         "Content-Type": "application/json",
@@ -1258,9 +1267,20 @@ def upload_call_file(request):
     Uses the AUTO-DIALER queue — only 2 calls at a time.
     When one call ends, the next is auto-triggered.
     """
-    global _campaign_active, _campaign_stats
+    global _campaign_active, _campaign_stats, BOT_URL
 
     file = request.FILES.get("file")
+    
+    # Resolve scoped agent if logged in
+    agent_id = None
+    if request.user and request.user.is_authenticated:
+        if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+            agent_id = str(request.user.profile.assigned_agent.id)
+            
+    if not agent_id:
+        agent_id = request.data.get("agent_id") or "21bdd3bf-45bd-487c-8283-7b2957e472ba"
+        
+    BOT_URL = f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
@@ -1338,10 +1358,10 @@ _campaign_stats = {
 _missed_calls = []            # Numbers that timed out (No Answer)
 
 # Telecom config
-TELECOM_DIAL_URL = "https://voice-bot.on-forge.com/api/dial"
+TELECOM_DIAL_URL = "https://call-route.on-forge.com/api/dial"
 TELECOM_API_KEY = "7a3e957ed459dfebc486ee58d6059928d02c4aab20c9f698bd50e2636f8df1be"
 CALLER_ID = "+917969016753"
-BOT_URL = "wss://kia-voicebot-f6h2ceg6gyaueadg.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=21bdd3bf-45bd-487c-8283-7b2957e472ba"
+BOT_URL = "wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id=21bdd3bf-45bd-487c-8283-7b2957e472ba"
 
 
 def _normalize_phone(phone):
@@ -1542,11 +1562,22 @@ def start_auto_campaign(request):
     When each call ends (CDR webhook), the next number is dialed automatically.
 
     POST body:
-        { "phones": ["9909466119", "9876543210", ...] }
+        { "phones": ["9909466119", "9876543210", ...], "agent_id": "..." }
     OR upload an Excel file:
         form-data: file=<excel>, field name "file"
     """
-    global _campaign_active, _campaign_stats, _current_campaign_id
+    global _campaign_active, _campaign_stats, _current_campaign_id, BOT_URL
+
+    # Resolve scoped agent if logged in
+    agent_id = None
+    if request.user and request.user.is_authenticated:
+        if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+            agent_id = str(request.user.profile.assigned_agent.id)
+            
+    if not agent_id:
+        agent_id = request.data.get("agent_id") or "21bdd3bf-45bd-487c-8283-7b2957e472ba"
+        
+    BOT_URL = f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
     if _campaign_active:
         with _call_queue_lock:
@@ -1728,7 +1759,7 @@ def export_leads_excel(request):
             if hasattr(lead.conversation, 'cdr') and lead.conversation.cdr:
                 rec_url = lead.conversation.cdr.recording_file_name
                 if rec_url and not rec_url.startswith("http"):
-                    rec_url = f"https://voice-bot.on-forge.com/recordings/{rec_url}"
+                    rec_url = f"https://call-route.on-forge.com/api/dial{rec_url}"
         except:
             pass
 

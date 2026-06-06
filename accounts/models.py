@@ -18,6 +18,13 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True)
     custom_permissions = models.JSONField(default=dict, blank=True, null=True, help_text="Overrides role permissions")
+    assigned_agent = models.ForeignKey(
+        'agents.VoiceAgent',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Limits access to this voice agent's data only"
+    )
 
     def __str__(self):
         return f"{self.user.username} Profile"

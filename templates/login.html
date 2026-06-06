@@ -564,6 +564,7 @@
                     }
                     localStorage.setItem('permissions', JSON.stringify(data.permissions || {}));
                     localStorage.setItem('role', data.role || 'No Role');
+                    localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
 
                     // Dynamic Redirect based on Permissions
                     let redirectUrl = '/navya-analytics/lead-analysis/'; // Default

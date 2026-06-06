@@ -23,6 +23,7 @@ ROLE_STRATEGY_MAP = {
 
     # Automobile roles — all map to same "automobile" strategy
     "Automobile Advisor": "automobile",
+    "Hospital Appointment Advisor": "hospital_minimal",
 }
 
 

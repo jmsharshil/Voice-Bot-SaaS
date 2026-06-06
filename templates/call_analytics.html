@@ -978,6 +978,12 @@
             localStorage.removeItem('username');
             window.location.replace('/accounts/login/');
         }
+        function getAuthHeaders() {
+            return {
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                'Content-Type': 'application/json'
+            };
+        }
     </script>
 
     <!-- STAT CARDS -->
@@ -1101,7 +1107,7 @@
         /* ── Load Dashboard ─────────────────────── */
         async function loadDashboard() {
             try {
-                const res = await fetch("/api/call-analytics/data/");
+                const res = await fetch("/api/call-analytics/data/", { headers: getAuthHeaders() });
                 const data = await res.json();
 
                 document.getElementById("statSessions").textContent = data.total_sessions;
@@ -1207,7 +1213,7 @@
             box.innerHTML = '<div class="loading"><div class="spinner"></div> Loading messages…</div>';
 
             try {
-                const res = await fetch(`/api/call-analytics/session/${session.session_id}/`);
+                const res = await fetch(`/api/call-analytics/session/${session.session_id}/`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 renderMessages(data.messages);
             } catch (e) {
@@ -1261,7 +1267,7 @@
         /* ── Auto Refresh ───────────────────────── */
         setInterval(async () => {
             try {
-                const res = await fetch("/api/call-analytics/data/");
+                const res = await fetch("/api/call-analytics/data/", { headers: getAuthHeaders() });
                 const data = await res.json();
 
                 document.getElementById("statSessions").textContent = data.total_sessions;
@@ -1276,7 +1282,7 @@
 
                 // Refresh active session messages
                 if (activeSessionId) {
-                    const r2 = await fetch(`/api/call-analytics/session/${activeSessionId}/`);
+                    const r2 = await fetch(`/api/call-analytics/session/${activeSessionId}/`, { headers: getAuthHeaders() });
                     const d2 = await r2.json();
                     const box = document.getElementById("messagesBox");
                     const curCount = box.querySelectorAll(".msg").length;
@@ -1304,10 +1310,28 @@
         const BOT_EMOJIS = ["🤖", "🧠", "💬", "📞", "🎯"];
 
         async function loadPerBotAnalytics() {
+            const assignedAgentId = localStorage.getItem('assigned_agent_id');
+            if (assignedAgentId && assignedAgentId !== 'null') {
+                const perbotSec = document.querySelector(".perbot-section");
+                if (perbotSec) perbotSec.style.display = "none";
+            }
             try {
-                const res = await fetch("/api/call-analytics/per-bot/");
+                const res = await fetch("/api/call-analytics/per-bot/", { headers: getAuthHeaders() });
                 const data = await res.json();
-                renderBotCards(data.bots || []);
+                
+                if (data.bots && data.bots.length > 0) {
+                    const b = data.bots[0];
+                    if (assignedAgentId && assignedAgentId !== 'null') {
+                        const displayName = b.company && b.company !== '—' ? `${b.company} Analytics` : `${b.bot_name} Analytics`;
+                        document.title = `${displayName} — Voice Bot Dashboard`;
+                        const titleEl = document.querySelector(".header-title");
+                        if (titleEl) titleEl.textContent = displayName;
+                    }
+                }
+                
+                if (!assignedAgentId || assignedAgentId === 'null') {
+                    renderBotCards(data.bots || []);
+                }
             } catch (e) {
                 console.error("Per-bot load error:", e);
             }

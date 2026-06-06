@@ -107,6 +107,7 @@ def login_view(request):
     # Extract role and permissions
     role_name = None
     permissions = {}
+    assigned_agent_id = None
     if hasattr(user, 'profile'):
         if user.profile.role:
             role_name = user.profile.role.name
@@ -115,6 +116,9 @@ def login_view(request):
         # Merge custom permissions if they exist
         if user.profile.custom_permissions:
             permissions.update(user.profile.custom_permissions)
+
+        if user.profile.assigned_agent:
+            assigned_agent_id = str(user.profile.assigned_agent.id)
     
     # Also default to is_admin=True if django superuser
     if user.is_superuser:
@@ -127,7 +131,8 @@ def login_view(request):
             "username": user.username,
             "email": user.email,
             "role": role_name,
-            "permissions": permissions
+            "permissions": permissions,
+            "assigned_agent_id": assigned_agent_id,
         },
         status=status.HTTP_200_OK,
     )

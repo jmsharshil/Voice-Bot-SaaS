@@ -982,6 +982,10 @@
     </div>
 
     <script>
+        if (!localStorage.getItem('access_token')) {
+            window.location.replace('/accounts/login/');
+        }
+
         (function () {
             const u = localStorage.getItem('username') || 'User';
             document.getElementById('profileAvatar').textContent = u.charAt(0).toUpperCase();
@@ -1265,9 +1269,16 @@
             btn.querySelector('.btn-text').textContent = 'Triggering Calls…';
             overlay.classList.add('active');
 
+            const token = localStorage.getItem('access_token');
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = 'Bearer ' + token;
+            }
+
             try {
                 const res = await fetch("/bot/upload-call/", {
                     method: "POST",
+                    headers: headers,
                     body: formData
                 });
 

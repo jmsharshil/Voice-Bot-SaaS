@@ -21,6 +21,9 @@ from conversations.services.core.strategies import (
     automobile_qualification_strategy,
     automobile_qualification_prepare,
     automobile_qualification_finalize,
+    hospital_minimal_strategy,
+    hospital_minimal_prepare,
+    hospital_minimal_finalize,
 )
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
@@ -33,6 +36,7 @@ STRATEGY_MAP = {
     "real_estate":  realestate_inquiry_strategy,
     "interview_bot": interview_bot_strategy,
     "automobile": automobile_qualification_strategy,
+    "hospital_minimal": hospital_minimal_strategy,
 }
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
@@ -43,6 +47,7 @@ PREPARE_MAP = {
     "interview_bot": interview_bot_prepare,
     "insurance": insurance_transaction_prepare,
     "automobile": automobile_qualification_prepare,
+    "hospital_minimal": hospital_minimal_prepare,
 }
 
 FINALIZE_MAP = {
@@ -52,6 +57,7 @@ FINALIZE_MAP = {
     "interview_bot": interview_bot_finalize,
     "insurance": insurance_transaction_finalize, 
     "automobile": automobile_qualification_finalize,
+    "hospital_minimal": hospital_minimal_finalize,
 }
 
 

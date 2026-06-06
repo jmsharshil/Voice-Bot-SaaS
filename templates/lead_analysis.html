@@ -989,6 +989,12 @@
             // replace() removes this page from history — back button will skip it
             window.location.replace('/accounts/login/');
         }
+        function getAuthHeaders() {
+            return {
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                'Content-Type': 'application/json'
+            };
+        }
     </script>
 
     <!-- STAT CARDS (clickable filters) -->
@@ -1193,7 +1199,7 @@
          async function loadLeads() {
             try {
                 let url = "/api/lead-analysis/data/";
-                const res = await fetch(url);
+                const res = await fetch(url, { headers: getAuthHeaders() });
                 const data = await res.json();
 
                 animateCount("statHot", data.stats.hot);
@@ -1435,7 +1441,7 @@
             box.innerHTML = '<div class="loading"><div class="spinner"></div> Loading conversation…</div>';
 
             try {
-                const res = await fetch(`/api/lead-analysis/detail/${lead.session_id}/`);
+                const res = await fetch(`/api/lead-analysis/detail/${lead.session_id}/`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 renderMessages(data.messages || []);
             } catch (e) {
@@ -1466,7 +1472,7 @@
         /* ── Auto Refresh ───────────────────────── */
         async function pollCampaign() {
             try {
-                const res = await fetch("/bot/auto-campaign/status/");
+                const res = await fetch("/bot/auto-campaign/status/", { headers: getAuthHeaders() });
                 const data = await res.json();
                 const monitor = document.getElementById("dialerMonitor");
 
@@ -1544,7 +1550,7 @@
             if (activeLeadSession.startsWith("missed-")) return;
 
             try {
-                const res = await fetch(`/api/lead-analysis/detail/${activeLeadSession}/`);
+                const res = await fetch(`/api/lead-analysis/detail/${activeLeadSession}/`, { headers: getAuthHeaders() });
                 if (!res.ok) return;
                 const data = await res.json();
 
@@ -1700,8 +1706,31 @@
             }
         }
 
+        async function initScopedUI() {
+            const assignedAgentId = localStorage.getItem('assigned_agent_id');
+            if (assignedAgentId && assignedAgentId !== 'null') {
+                const filterAgent = document.getElementById("filterAgent");
+                if (filterAgent) filterAgent.style.display = "none";
+                
+                try {
+                    const res = await fetch("/api/call-analytics/per-bot/", { headers: getAuthHeaders() });
+                    const botData = await res.json();
+                    if (botData.bots && botData.bots.length > 0) {
+                        const b = botData.bots[0];
+                        const displayName = b.company && b.company !== '—' ? `${b.company} Leads` : `${b.bot_name} Leads`;
+                        document.title = `${displayName} — Lead Intelligence`;
+                        const titleEl = document.querySelector(".header-title");
+                        if (titleEl) titleEl.textContent = displayName;
+                    }
+                } catch (e) {
+                    console.error("Error fetching bot details:", e);
+                }
+            }
+        }
+
         /* ── Init ────────────────────────────────── */
         window.onload = () => {
+            initScopedUI();
             loadLeads();
             pollCampaign();
         };
