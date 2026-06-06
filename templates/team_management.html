@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Management Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #ffffff;
+            --bg-main: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+            --blur-bg: rgba(15, 23, 42, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Page Wrapper for Blur Effect */
+        #pageWrapper {
+            transition: filter 0.3s ease;
+        }
+
+        #pageWrapper.blurred {
+            filter: blur(8px);
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .header {
+            background-color: var(--bg-card);
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .header h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--bg-dark);
+            letter-spacing: -0.02em;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .add-user-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
+        }
+
+        .add-user-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(99, 102, 241, 0.4);
+        }
+
+        .logout-btn {
+            background: transparent;
+            color: var(--danger);
+            border: 1.5px solid var(--danger);
+            padding: 0.55rem 1.25rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            background: var(--danger);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
+        }
+
+        .dashboard-btn {
+            background: transparent;
+            color: var(--primary);
+            border: 1.5px solid var(--primary);
+            padding: 0.55rem 1.25rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .dashboard-btn:hover {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2.5rem auto;
+            padding: 0 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card-header {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--bg-dark);
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background-color: #f8fafc;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            background-color: #ffffff;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            margin-top: 0.75rem;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            cursor: pointer;
+            font-size: 0.95rem;
+            color: var(--text-main);
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 1.1rem;
+            height: 1.1rem;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            padding: 0.85rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.2s;
+            font-size: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(99, 102, 241, 0.4);
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .badge {
+            background-color: #f1f5f9;
+            color: #475569;
+            padding: 0.3rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.4rem;
+            display: inline-block;
+            margin-bottom: 0.4rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .badge.active {
+            background-color: #ecfdf5;
+            color: var(--success);
+            border-color: #a7f3d0;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert.success {
+            background: #ecfdf5;
+            color: var(--success);
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert.error {
+            background: #fef2f2;
+            color: var(--danger);
+            border: 1px solid #fecaca;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--blur-bg);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--bg-dark);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .close-modal:hover {
+            color: var(--danger);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Wrapper for blur effect -->
+    <div id="pageWrapper">
+        <div class="header">
+            <h1>👥 Workspace Team Members</h1>
+            <div class="header-actions">
+                <a href="/navya-analytics/lead-analysis/" class="dashboard-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    Dashboard
+                </a>
+                <button class="add-user-btn" onclick="openTeamModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add Team Member
+                </button>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="card">
+                <div class="card-header">Active Team Members</div>
+                <div id="tableAlert" class="alert"></div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name & Email</th>
+                                <th>Permissions Granted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teamTableBody">
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="teamModalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Team Member</h2>
+                <button class="close-modal" onclick="closeTeamModal()">&times;</button>
+            </div>
+            <div id="teamAlert" class="alert"></div>
+            <form id="teamForm">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="teamName" class="form-control" placeholder="Enter username" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="teamEmail" class="form-control" placeholder="Enter email address" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="teamPassword" class="form-control" placeholder="Create a password" required>
+                </div>
+                <div class="form-group">
+                    <label>Permissions (Select Dashboards)</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="perm_leads" checked>
+                            Lead Analysis Access
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="perm_calls" checked>
+                            Call Analysis Access
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn" style="margin-top: 1rem;">Create User</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/accounts';
+        const token = localStorage.getItem('access_token');
+        const isAdmin = localStorage.getItem('is_admin') === 'true';
+        let perms = {};
+        try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) {}
+
+        // Route Guard: Must be logged in AND must have permission to manage team
+        if (!token) {
+            window.location.replace('/accounts/login/');
+        } else if (!isAdmin && !perms.can_manage_team) {
+            alert('Access Denied: You do not have permission to manage team members.');
+            window.location.replace('/navya-analytics/lead-analysis/');
+        }
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+
+        function showAlert(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.innerText = message;
+            el.className = `alert ${type}`;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+
+        async function fetchTeam() {
+            try {
+                const res = await fetch(`${API_BASE}/team/`, { headers });
+                if (res.status === 401 || res.status === 403) {
+                    alert("Unauthorized. Only Team Administrators can view this page.");
+                    return;
+                }
+                const team = await res.json();
+                const tbody = document.getElementById('teamTableBody');
+                tbody.innerHTML = '';
+
+                if (team.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">No team members added yet.</td></tr>';
+                    return;
+                }
+
+                team.forEach(member => {
+                    let cp = member.profile && member.profile.custom_permissions ? member.profile.custom_permissions : {};
+                    let permBadges = '';
+                    if (cp.can_view_leads) permBadges += '<span class="badge active">Lead Access</span>';
+                    if (cp.can_view_calls) permBadges += '<span class="badge active">Call Access</span>';
+                    if (!cp.can_view_leads && !cp.can_view_calls) permBadges += '<span class="badge">No Access Selected</span>';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>
+                                <strong>${member.username}</strong><br>
+                                <span style="color:var(--text-muted);font-size:0.8rem">${member.email}</span>
+                            </td>
+                            <td>
+                                ${permBadges}
+                            </td>
+                            <td>
+                                <button class="logout-btn" style="padding:0.3rem 0.6rem; font-size:0.8rem;" onclick="deleteMember(${member.id}, '${member.username}')">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Handle Team User Creation
+        document.getElementById('teamForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('teamName').value;
+            const email = document.getElementById('teamEmail').value;
+            const password = document.getElementById('teamPassword').value;
+
+            const can_view_leads = document.getElementById('perm_leads').checked;
+            const can_view_calls = document.getElementById('perm_calls').checked;
+
+            const payload = {
+                username,
+                email,
+                password,
+                permissions: {
+                    can_view_leads,
+                    can_view_calls
+                }
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/team/`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.status === 201 || res.status === 200) {
+                    showAlert('teamAlert', 'Team member added successfully!', 'success');
+                    fetchTeam();
+                    setTimeout(() => {
+                        closeTeamModal();
+                    }, 1500);
+                } else {
+                    const err = await res.json();
+                    showAlert('teamAlert', 'Error: ' + JSON.stringify(err), 'error');
+                }
+            } catch (error) {
+                showAlert('teamAlert', 'Network Error.', 'error');
+            }
+        });
+
+        async function deleteMember(memberId, username) {
+            if (!confirm(`Are you sure you want to remove "${username}" from your team?`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/team/${memberId}/`, {
+                    method: 'DELETE',
+                    headers
+                });
+                if (res.ok) {
+                    showAlert('tableAlert', `Team member ${username} removed successfully.`, 'success');
+                    fetchTeam();
+                } else {
+                    showAlert('tableAlert', 'Failed to delete team member.', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.replace('/accounts/login/');
+        }
+
+        // Modal Logic
+        const modalOverlay = document.getElementById('teamModalOverlay');
+        const pageWrapper = document.getElementById('pageWrapper');
+
+        function openTeamModal() {
+            modalOverlay.classList.add('active');
+            pageWrapper.classList.add('blurred');
+        }
+
+        function closeTeamModal() {
+            modalOverlay.classList.remove('active');
+            pageWrapper.classList.remove('blurred');
+            document.getElementById('teamForm').reset();
+            document.getElementById('teamAlert').style.display = 'none';
+        }
+
+        modalOverlay.addEventListener('click', function (e) {
+            if (e.target === modalOverlay) {
+                closeTeamModal();
+            }
+        });
+
+        fetchTeam();
+    </script>
+</body>
+
+</html>

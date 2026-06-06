@@ -1172,7 +1172,10 @@ def trigger_call(request):
                 agent_id = str(request.user.profile.assigned_agent.id)
         
         if not agent_id:
-            agent_id = request.data.get("agent_id") or "21bdd3bf-45bd-487c-8283-7b2957e472ba"
+            agent_id = request.data.get("agent_id")
+        
+        if not agent_id:
+            return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
 
         # ─────────────────────────────────────────────
         # CASE 1: SINGLE CALL
@@ -1278,7 +1281,10 @@ def upload_call_file(request):
             agent_id = str(request.user.profile.assigned_agent.id)
             
     if not agent_id:
-        agent_id = request.data.get("agent_id") or "21bdd3bf-45bd-487c-8283-7b2957e472ba"
+        agent_id = request.data.get("agent_id")
+    
+    if not agent_id:
+        return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
         
     BOT_URL = f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
@@ -1575,7 +1581,10 @@ def start_auto_campaign(request):
             agent_id = str(request.user.profile.assigned_agent.id)
             
     if not agent_id:
-        agent_id = request.data.get("agent_id") or "21bdd3bf-45bd-487c-8283-7b2957e472ba"
+        agent_id = request.data.get("agent_id")
+    
+    if not agent_id:
+        return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
         
     BOT_URL = f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 

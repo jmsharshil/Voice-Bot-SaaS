@@ -162,6 +162,93 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsSuperAdminOrAdmin]
 
 
+# --- Client Team Management (For client admins managing their sub-users) ---
+
+class TeamListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not hasattr(request.user, 'profile') or not request.user.profile.assigned_agent:
+            return Response({"error": "No voice bot assigned to your account."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        profile = request.user.profile
+        can_manage = profile.custom_permissions.get('can_manage_team', False) or (profile.role and profile.role.permissions.get('can_manage_team', False))
+        if not can_manage:
+            return Response({"error": "You do not have permission to manage team members."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Fetch other users with the same assigned agent (excluding current user and superusers)
+        team_users = User.objects.filter(
+            profile__assigned_agent=profile.assigned_agent
+        ).exclude(id=request.user.id).exclude(is_superuser=True)
+
+        serializer = UserSerializer(team_users, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        if not hasattr(request.user, 'profile') or not request.user.profile.assigned_agent:
+            return Response({"error": "No voice bot assigned to your account."}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile = request.user.profile
+        can_manage = profile.custom_permissions.get('can_manage_team', False) or (profile.role and profile.role.permissions.get('can_manage_team', False))
+        if not can_manage:
+            return Response({"error": "You do not have permission to manage team members."}, status=status.HTTP_403_FORBIDDEN)
+
+        username = request.data.get("username")
+        email = request.data.get("email")
+        password = request.data.get("password")
+        permissions = request.data.get("permissions", {})
+
+        if not username or not password or not email:
+            return Response({"error": "Username, email, and password are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(username=username).exists():
+            return Response({"error": "Username already exists."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create user
+        user = User.objects.create_user(username=username, email=email, password=password)
+        
+        # Configure sub-user profile
+        user.profile.assigned_agent = profile.assigned_agent
+        user.profile.custom_permissions = {
+            "can_view_leads": permissions.get("can_view_leads", False),
+            "can_view_calls": permissions.get("can_view_calls", False),
+            "can_manage_team": False
+        }
+        # Inherit role (e.g. Kia Client/Hospital Client) but ensure they can't manage team
+        user.profile.role = profile.role
+        user.profile.created_by = request.user
+        user.profile.save()
+
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class TeamDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        if not hasattr(request.user, 'profile') or not request.user.profile.assigned_agent:
+            return Response({"error": "No voice bot assigned to your account."}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile = request.user.profile
+        can_manage = profile.custom_permissions.get('can_manage_team', False) or (profile.role and profile.role.permissions.get('can_manage_team', False))
+        if not can_manage:
+            return Response({"error": "You do not have permission to delete team members."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Only allow deleting users assigned to the same agent
+        user_to_delete = User.objects.filter(
+            id=pk,
+            profile__assigned_agent=profile.assigned_agent
+        ).first()
+
+        if not user_to_delete:
+            return Response({"error": "Team member not found or does not belong to your bot's scope."}, status=status.HTTP_404_NOT_FOUND)
+
+        if user_to_delete.id == request.user.id:
+            return Response({"error": "You cannot delete yourself."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_to_delete.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 def login_page(request):
     return render(request, "login.html")
@@ -171,3 +258,6 @@ def signup_page(request):
 
 def admin_management_page(request):
     return render(request, "admin_management.html")
+
+def team_management_page(request):
+    return render(request, "team_management.html")

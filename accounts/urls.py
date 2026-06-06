@@ -20,14 +20,15 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     RegisterView, login_view, login_page, admin_management_page,
-    RoleListView, RoleDetailView, UserListView, UserDetailView
+    RoleListView, RoleDetailView, UserListView, UserDetailView,
+    TeamListView, TeamDetailView, team_management_page
 )
 
 urlpatterns = [
     # Pages
     path("login/", login_page, name="login"),
     path("admin-management/", admin_management_page, name="admin-management"),
-
+    path("team-management/", team_management_page, name="team-management"),
 
     # Auth APIs
     path("register/", RegisterView.as_view(), name="register"),
@@ -39,4 +40,8 @@ urlpatterns = [
     path("roles/<int:pk>/", RoleDetailView.as_view(), name="role-detail"),
     path("users/", UserListView.as_view(), name="user-list"),
     path("users/<int:pk>/", UserDetailView.as_view(), name="user-detail"),
+
+    # Client Team Management APIs
+    path("team/", TeamListView.as_view(), name="team-list"),
+    path("team/<int:pk>/", TeamDetailView.as_view(), name="team-detail"),
 ]

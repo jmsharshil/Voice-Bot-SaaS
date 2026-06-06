@@ -21,6 +21,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import Role, UserProfile
+from agents.models import VoiceAgent
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -32,22 +33,30 @@ class UserProfileSerializer(serializers.ModelSerializer):
     role_id = serializers.PrimaryKeyRelatedField(
         queryset=Role.objects.all(), source="role", write_only=True, required=False, allow_null=True
     )
+    assigned_agent_id = serializers.PrimaryKeyRelatedField(
+        queryset=VoiceAgent.objects.all(), source="assigned_agent", required=False, allow_null=True
+    )
+    assigned_agent_name = serializers.CharField(source="assigned_agent.name", read_only=True, allow_null=True)
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True, allow_null=True)
 
     class Meta:
         model = UserProfile
-        fields = ["role", "role_id", "custom_permissions"]
+        fields = ["role", "role_id", "custom_permissions", "assigned_agent_id", "assigned_agent_name", "created_by_username"]
 
 class UserSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer(read_only=True)
     role_id = serializers.PrimaryKeyRelatedField(
         queryset=Role.objects.all(), source="profile.role", write_only=True, required=False, allow_null=True
     )
+    assigned_agent_id = serializers.PrimaryKeyRelatedField(
+        queryset=VoiceAgent.objects.all(), source="profile.assigned_agent", required=False, allow_null=True
+    )
 
     custom_permissions = serializers.JSONField(source="profile.custom_permissions", write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "profile", "role_id", "custom_permissions"]
+        fields = ["id", "username", "email", "profile", "role_id", "assigned_agent_id", "custom_permissions"]
 
     def update(self, instance, validated_data):
         profile_data = validated_data.pop('profile', {})
@@ -55,6 +64,8 @@ class UserSerializer(serializers.ModelSerializer):
             instance.profile.role = profile_data['role']
         if 'custom_permissions' in profile_data:
             instance.profile.custom_permissions = profile_data['custom_permissions']
+        if 'assigned_agent' in profile_data:
+            instance.profile.assigned_agent = profile_data['assigned_agent']
         instance.profile.save()
         return super().update(instance, validated_data)
 
@@ -84,14 +95,18 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     role_name = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
     permissions = serializers.JSONField(write_only=True, required=False, allow_null=True)
+    assigned_agent_id = serializers.PrimaryKeyRelatedField(
+        queryset=VoiceAgent.objects.all(), write_only=True, required=False, allow_null=True
+    )
 
     class Meta:
         model = User
-        fields = ["username", "email", "password", "role_name", "permissions"]
+        fields = ["username", "email", "password", "role_name", "permissions", "assigned_agent_id"]
 
     def create(self, validated_data):
         role_name = validated_data.pop("role_name", None)
         permissions = validated_data.pop("permissions", None)
+        assigned_agent = validated_data.pop("assigned_agent_id", None)
         user = User.objects.create_user(**validated_data)
         
         # If a role name is provided, get or create it with the specified permissions
@@ -106,6 +121,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         # just in case the role existed but had different permissions, ensuring this user gets what was checked.
         if permissions is not None:
             user.profile.custom_permissions = permissions
+            
+        if assigned_agent:
+            user.profile.assigned_agent = assigned_agent
             
         user.profile.save()
         return user

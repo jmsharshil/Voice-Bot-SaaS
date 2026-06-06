@@ -369,8 +369,8 @@ from django.core.management.base import BaseCommand
 from agents.models import Industry, AgentRoleTemplate
 
 INDUSTRY_VOICE_MAP = {
-
-    "automobile": "en-IN-AartiNeural"
+    "automobile": "en-IN-AartiNeural",
+    "healthcare": "en-IN-NeerjaNeural"
 }
 
 TEMPLATES = [
@@ -489,7 +489,26 @@ FAIL-SAFE BEHAVIOR
         },
     ]
 },
+{
+    "industry": {"name": "Healthcare", "slug": "healthcare"},
+    "roles": [
+        {
+            "role_name": "Hospital Appointment Advisor",
+            "description": "Confirms clinic booking requests, handles appointment time slot selection, and coordinates cancellations.",
+            "system_prompt_template": """
+You are {agent_name}, a polite and professional assistant representing {company_name}. 
 
+You assist patients with confirming or cancelling their upcoming appointments:
+- Ask patients if they want to confirm their appointment.
+- Guide them through choosing a morning or afternoon slot if they confirm.
+- Politely handle cancellations if requested.
+
+Keep responses extremely brief and clear.
+""",
+            "default_tone": "supportive",
+        }
+    ]
+}
 ]
 
 class Command(BaseCommand):

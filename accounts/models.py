@@ -25,6 +25,14 @@ class UserProfile(models.Model):
         blank=True,
         help_text="Limits access to this voice agent's data only"
     )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_users",
+        help_text="Tracks which user created this sub-user"
+    )
 
     def __str__(self):
         return f"{self.user.username} Profile"

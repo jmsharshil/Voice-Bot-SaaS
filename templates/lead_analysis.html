@@ -923,6 +923,7 @@
                         <div class="pd-name" id="pdName">User</div>
                         <div class="pd-label">Logged in</div>
                     </div>
+                    <a href="/accounts/team-management/" id="teamBtn" style="display:none; text-decoration:none; padding:11px 16px; font-size:13px; font-weight:600; color:#4f46e5; border-bottom:1px solid #f1f5f9; align-items:center; gap:8px;" class="pd-item">👥 Manage Team</a>
                     <button class="pd-logout" onclick="logout()">🚪 Logout</button>
                 </div>
             </div>
@@ -965,10 +966,19 @@
             document.getElementById('pdName').textContent = username;
 
             // Show Admin Panel button & Campaign History button if user is admin
-            if (localStorage.getItem('is_admin') === 'true') {
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            if (isAdmin) {
                 document.getElementById('adminBtn').style.display = 'inline-flex';
                 const campaignBtn = document.getElementById('campaignHistoryBtn');
                 if (campaignBtn) campaignBtn.style.display = 'inline-flex';
+            }
+
+            // Show Team Management button if user has permission
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) {}
+            if (isAdmin || perms.can_manage_team) {
+                const teamBtn = document.getElementById('teamBtn');
+                if (teamBtn) teamBtn.style.display = 'flex';
             }
         })();
 

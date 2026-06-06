@@ -465,10 +465,43 @@
                                 <th>User</th>
                                 <th>Role</th>
                                 <th>Permissions (Override)</th>
+                                <th>Assigned Bot</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
+                            <!-- Loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Voice Bots Card (Full width) -->
+            <div class="card" style="margin-top: 2rem;">
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Voice Bots (Agents)</span>
+                    <button class="add-user-btn" onclick="openAgentModal()" style="box-shadow: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Create Voice Bot
+                    </button>
+                </div>
+                <div id="agentTableAlert" class="alert"></div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Bot Name</th>
+                                <th>Industry & Role</th>
+                                <th>API Key</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agentsTableBody">
                             <!-- Loaded via JS -->
                         </tbody>
                     </table>
@@ -504,6 +537,12 @@
                     <input type="text" id="userRole" class="form-control" placeholder="e.g. Sales Manager" required>
                 </div>
                 <div class="form-group">
+                    <label>Assigned Bot (Optional)</label>
+                    <select id="userAssignedAgent" class="form-control">
+                        <option value="">No Bot Assigned</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Permissions (Select Multiple)</label>
                     <div class="checkbox-group">
                         <label class="checkbox-label">
@@ -525,8 +564,43 @@
         </div>
     </div>
 
+    <!-- Agent Modal Overlay -->
+    <div class="modal-overlay" id="agentModalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Create New Voice Bot</h2>
+                <button class="close-modal" onclick="closeAgentModal()">&times;</button>
+            </div>
+            <div id="agentAlert" class="alert"></div>
+            <form id="agentForm">
+                <div class="form-group">
+                    <label>Bot Name</label>
+                    <input type="text" id="agentName" class="form-control" placeholder="e.g. City Clinic Bot" required>
+                </div>
+                <div class="form-group">
+                    <label>Company Name (Optional)</label>
+                    <input type="text" id="agentCompany" class="form-control" placeholder="e.g. City General Hospital">
+                </div>
+                <div class="form-group">
+                    <label>Industry</label>
+                    <select id="agentIndustry" class="form-control" required onchange="populateRolesForIndustry(this.value)">
+                        <option value="">Select Industry</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Role Template</label>
+                    <select id="agentRoleTemplate" class="form-control" required>
+                        <option value="">Select Role Template (Choose Industry First)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn" style="margin-top: 1rem;">Create Bot</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '/api/accounts';
+        const AGENT_API_BASE = '/api/agents';
         const token = localStorage.getItem('access_token');
         const isAdmin = localStorage.getItem('is_admin');
 
@@ -572,7 +646,48 @@
                 const tbody = document.getElementById('usersTableBody');
                 tbody.innerHTML = '';
 
+                // Group users hierarchically (sub-users under their creator)
+                const parents = [];
+                const childrenByParent = {};
+                const orphans = [];
+
                 users.forEach(user => {
+                    const parentUsername = user.profile && user.profile.created_by_username;
+                    if (parentUsername) {
+                        if (!childrenByParent[parentUsername]) {
+                            childrenByParent[parentUsername] = [];
+                        }
+                        childrenByParent[parentUsername].push(user);
+                    } else {
+                        parents.push(user);
+                    }
+                });
+
+                // Check for orphans whose parents are not in the list (e.g. deleted parents)
+                const parentUsernames = new Set(parents.map(u => u.username));
+                Object.keys(childrenByParent).forEach(pName => {
+                    if (!parentUsernames.has(pName)) {
+                        orphans.push(...childrenByParent[pName]);
+                        delete childrenByParent[pName];
+                    }
+                });
+
+                const orderedUsers = [];
+                parents.forEach(parent => {
+                    orderedUsers.push({ user: parent, isChild: false });
+                    const children = childrenByParent[parent.username] || [];
+                    children.forEach(child => {
+                        orderedUsers.push({ user: child, isChild: true });
+                    });
+                });
+                orphans.forEach(orphan => {
+                    orderedUsers.push({ user: orphan, isChild: false });
+                });
+
+                orderedUsers.forEach(item => {
+                    const user = item.user;
+                    const isChild = item.isChild;
+
                     let roleId = user.profile && user.profile.role ? user.profile.role.id : '';
 
                     let roleOptions = '<option value="">No Role</option>';
@@ -587,17 +702,43 @@
                     let permVal = "inherit";
                     if (cp && Object.keys(cp).length > 0) {
                         if (cp.is_admin) permVal = "admin";
+                        else if (cp.can_manage_team) permVal = "team_admin";
                         else if (cp.can_view_leads && cp.can_view_calls) permVal = "both";
                         else if (cp.can_view_leads) permVal = "lead";
                         else if (cp.can_view_calls) permVal = "call";
                     }
 
-                    tbody.innerHTML += `
-                        <tr>
+                    // Determine assigned agent
+                    let assignedAgentId = user.profile ? user.profile.assigned_agent_id : '';
+                    let agentOptions = '<option value="">No Bot Assigned</option>';
+                    if (window.allAgents) {
+                        window.allAgents.forEach(a => {
+                            agentOptions += `<option value="${a.id}" ${a.id === assignedAgentId ? 'selected' : ''}>${a.name} (${a.industry_name || 'Generic'})</option>`;
+                        });
+                    }
+
+                    let rowStyle = isChild ? 'style="background-color: #fafbfd;"' : '';
+                    let userCellContent = '';
+                    if (isChild) {
+                        userCellContent = `
+                            <td style="padding-left: 2.5rem; position: relative;">
+                                <span style="position: absolute; left: 1rem; color: var(--primary); font-weight: bold; font-size: 1.1rem;">↳</span>
+                                <strong>${user.username}</strong> <span style="color:var(--text-muted); font-size:0.75rem; font-weight:600;">(Team Member)</span><br>
+                                <span style="color:var(--text-muted);font-size:0.8rem">${user.email}</span>
+                            </td>
+                        `;
+                    } else {
+                        userCellContent = `
                             <td>
                                 <strong>${user.username}</strong><br>
                                 <span style="color:var(--text-muted);font-size:0.8rem">${user.email}</span>
                             </td>
+                        `;
+                    }
+
+                    tbody.innerHTML += `
+                        <tr ${rowStyle}>
+                            ${userCellContent}
                             <td>
                                 <select class="form-control" style="padding:0.4rem 1.5rem 0.4rem 0.4rem; font-size:0.85rem; text-overflow:ellipsis;" onchange="updateUserRole(${user.id}, this.value)">
                                     ${roleOptions}
@@ -609,7 +750,13 @@
                                     <option value="lead" ${permVal === 'lead' ? 'selected' : ''}>Lead Analysis Only</option>
                                     <option value="call" ${permVal === 'call' ? 'selected' : ''}>Call Analysis Only</option>
                                     <option value="both" ${permVal === 'both' ? 'selected' : ''}>Both Lead & Call</option>
+                                    <option value="team_admin" ${permVal === 'team_admin' ? 'selected' : ''}>Both + Manage Team</option>
                                     <option value="admin" ${permVal === 'admin' ? 'selected' : ''}>Full System Access</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-control" style="padding:0.4rem 1.5rem 0.4rem 0.4rem; font-size:0.85rem; text-overflow:ellipsis;" onchange="updateUserAgent(${user.id}, this.value)">
+                                    ${agentOptions}
                                 </select>
                             </td>
                             <td>
@@ -632,6 +779,7 @@
             const email = document.getElementById('userEmail').value;
             const password = document.getElementById('userPassword').value;
             const role_name = document.getElementById('userRole').value;
+            const assigned_agent_id = document.getElementById('userAssignedAgent').value || null;
 
             const is_admin = document.getElementById('user_perm_admin').checked;
             const can_view_leads = document.getElementById('user_perm_leads').checked;
@@ -642,6 +790,7 @@
                 email,
                 password,
                 role_name: role_name,
+                assigned_agent_id: assigned_agent_id,
                 permissions: {
                     is_admin,
                     can_view_leads,
@@ -697,6 +846,7 @@
             try {
                 let custom_permissions = {};
                 if (permMode === 'admin') custom_permissions = { is_admin: true };
+                else if (permMode === 'team_admin') custom_permissions = { can_view_leads: true, can_view_calls: true, can_manage_team: true };
                 else if (permMode === 'both') custom_permissions = { can_view_leads: true, can_view_calls: true };
                 else if (permMode === 'lead') custom_permissions = { can_view_leads: true };
                 else if (permMode === 'call') custom_permissions = { can_view_calls: true };
@@ -744,11 +894,142 @@
         // Initial Load - Sequential to ensure roles are loaded before users
         async function init() {
             await fetchRoles();
+            await fetchAgents();
             await fetchUsers();
+            await fetchIndustries();
+        }
+
+        async function fetchAgents() {
+            try {
+                const res = await fetch(`${AGENT_API_BASE}/my/`, { headers });
+                window.allAgents = await res.json();
+
+                // Populate agents table
+                const tbody = document.getElementById('agentsTableBody');
+                tbody.innerHTML = '';
+
+                window.allAgents.forEach(agent => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>
+                                <strong>${agent.name}</strong>
+                            </td>
+                            <td>
+                                ${agent.industry_name || 'N/A'} - ${agent.role_name || 'N/A'}
+                            </td>
+                            <td>
+                                <code style="background:#f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.85rem;">${agent.api_key}</code>
+                            </td>
+                            <td>
+                                <span class="badge ${agent.is_active ? 'admin' : ''}" style="cursor: pointer; font-size:0.8rem; padding:0.3rem 0.6rem;" onclick="toggleAgentActive('${agent.id}')">
+                                    ${agent.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td>
+                                <button class="action-btn" style="padding:0.3rem 0.6rem; font-size:0.8rem;" onclick="regenerateAgentKey('${agent.id}')">Regenerate Key</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // Also populate the assigned bot select dropdown in Add User modal
+                const modalSelect = document.getElementById('userAssignedAgent');
+                modalSelect.innerHTML = '<option value="">No Bot Assigned</option>';
+                window.allAgents.forEach(agent => {
+                    modalSelect.innerHTML += `<option value="${agent.id}">${agent.name} (${agent.industry_name || 'Generic'})</option>`;
+                });
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function toggleAgentActive(agentId) {
+            try {
+                const res = await fetch(`${AGENT_API_BASE}/${agentId}/toggle/`, {
+                    method: 'PATCH',
+                    headers
+                });
+                if (res.ok) {
+                    showAlert('agentTableAlert', 'Agent status toggled successfully.', 'success');
+                    fetchAgents();
+                    fetchUsers();
+                } else {
+                    showAlert('agentTableAlert', 'Failed to toggle agent status.', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function regenerateAgentKey(agentId) {
+            if (!confirm("Are you sure you want to regenerate the API key for this bot? The old API key will stop working immediately.")) return;
+            try {
+                const res = await fetch(`${AGENT_API_BASE}/${agentId}/regenerate-key/`, {
+                    method: 'POST',
+                    headers
+                });
+                if (res.ok) {
+                    showAlert('agentTableAlert', 'API key regenerated successfully.', 'success');
+                    fetchAgents();
+                } else {
+                    showAlert('agentTableAlert', 'Failed to regenerate API key.', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function updateUserAgent(userId, agentId) {
+            try {
+                const payload = { assigned_agent_id: agentId ? agentId : null };
+                const res = await fetch(`${API_BASE}/users/${userId}/`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    showAlert('tableAlert', 'User assigned agent updated successfully.', 'success');
+                } else {
+                    showAlert('tableAlert', 'Failed to update user assigned agent.', 'error');
+                    fetchUsers(); // revert changes if failed
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function fetchIndustries() {
+            try {
+                const res = await fetch(`${AGENT_API_BASE}/industries/`, { headers });
+                window.allIndustries = await res.json();
+                
+                const indSelect = document.getElementById('agentIndustry');
+                indSelect.innerHTML = '<option value="">Select Industry</option>';
+                window.allIndustries.forEach(ind => {
+                    indSelect.innerHTML += `<option value="${ind.id}">${ind.name}</option>`;
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function populateRolesForIndustry(industryId) {
+            const roleSelect = document.getElementById('agentRoleTemplate');
+            roleSelect.innerHTML = '<option value="">Select Role Template</option>';
+            if (!industryId) return;
+
+            const selectedInd = window.allIndustries.find(ind => ind.id == industryId);
+            if (selectedInd && selectedInd.roles) {
+                selectedInd.roles.forEach(r => {
+                    roleSelect.innerHTML += `<option value="${r.id}">${r.role_name}</option>`;
+                });
+            }
         }
 
         // Modal Logic
         const modalOverlay = document.getElementById('userModalOverlay');
+        const agentModalOverlay = document.getElementById('agentModalOverlay');
         const pageWrapper = document.getElementById('pageWrapper');
 
         function openUserModal() {
@@ -763,10 +1044,68 @@
             document.getElementById('userAlert').style.display = 'none';
         }
 
+        function openAgentModal() {
+            agentModalOverlay.classList.add('active');
+            pageWrapper.classList.add('blurred');
+            fetchIndustries();
+        }
+
+        function closeAgentModal() {
+            agentModalOverlay.classList.remove('active');
+            pageWrapper.classList.remove('blurred');
+            document.getElementById('agentForm').reset();
+            document.getElementById('agentRoleTemplate').innerHTML = '<option value="">Select Role Template (Choose Industry First)</option>';
+            document.getElementById('agentAlert').style.display = 'none';
+        }
+
         // Close modal when clicking outside of it
         modalOverlay.addEventListener('click', function (e) {
             if (e.target === modalOverlay) {
                 closeUserModal();
+            }
+        });
+
+        agentModalOverlay.addEventListener('click', function (e) {
+            if (e.target === agentModalOverlay) {
+                closeAgentModal();
+            }
+        });
+
+        // Handle Agent Bot Creation
+        document.getElementById('agentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('agentName').value;
+            const company_name = document.getElementById('agentCompany').value;
+            const industry = document.getElementById('agentIndustry').value;
+            const role_template = document.getElementById('agentRoleTemplate').value;
+
+            const payload = {
+                name,
+                company_name,
+                industry: parseInt(industry),
+                role_template: parseInt(role_template)
+            };
+
+            try {
+                const res = await fetch(`${AGENT_API_BASE}/create/`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.status === 201 || res.status === 200) {
+                    showAlert('agentAlert', 'Voice Bot created successfully!', 'success');
+                    fetchAgents();
+                    fetchUsers();
+                    setTimeout(() => {
+                        closeAgentModal();
+                    }, 1500);
+                } else {
+                    const err = await res.json();
+                    showAlert('agentAlert', 'Error: ' + JSON.stringify(err), 'error');
+                }
+            } catch (error) {
+                showAlert('agentAlert', 'Network Error.', 'error');
             }
         });
 

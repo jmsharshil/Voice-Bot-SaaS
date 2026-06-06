@@ -228,13 +228,39 @@ class ListUserAgentsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        agents = VoiceAgent.objects.filter(owner=request.user)
+        is_admin = False
+        if request.user.is_superuser:
+            is_admin = True
+        elif hasattr(request.user, 'profile') and request.user.profile.role:
+            perms = request.user.profile.role.permissions
+            if perms.get('is_admin', False):
+                is_admin = True
+        if hasattr(request.user, 'profile') and request.user.profile.custom_permissions:
+            if request.user.profile.custom_permissions.get('is_admin', False):
+                is_admin = True
+
+        if is_admin:
+            agents = VoiceAgent.objects.all()
+        else:
+            # If the user has an assigned agent, let them see it as well
+            assigned_agent = None
+            if hasattr(request.user, 'profile') and request.user.profile.assigned_agent:
+                assigned_agent = request.user.profile.assigned_agent
+
+            if assigned_agent:
+                # Merge querysets using |
+                agents = VoiceAgent.objects.filter(owner=request.user) | VoiceAgent.objects.filter(id=assigned_agent.id)
+            else:
+                agents = VoiceAgent.objects.filter(owner=request.user)
+
         return Response([
             {
                 "id": str(a.id),
                 "name": a.name,
                 "is_active": a.is_active,
-                "api_key": str(a.api_key)
+                "api_key": str(a.api_key),
+                "industry_name": a.industry.name if a.industry else "",
+                "role_name": a.role_template.role_name if a.role_template else ""
             }
             for a in agents
         ])
@@ -244,7 +270,22 @@ class ToggleAgentView(APIView):
     permission_classes = [IsAuthenticated]
 
     def patch(self, request, agent_id):
-        agent = VoiceAgent.objects.filter(id=agent_id, owner=request.user).first()
+        is_admin = False
+        if request.user.is_superuser:
+            is_admin = True
+        elif hasattr(request.user, 'profile') and request.user.profile.role:
+            perms = request.user.profile.role.permissions
+            if perms.get('is_admin', False):
+                is_admin = True
+        if hasattr(request.user, 'profile') and request.user.profile.custom_permissions:
+            if request.user.profile.custom_permissions.get('is_admin', False):
+                is_admin = True
+
+        if is_admin:
+            agent = VoiceAgent.objects.filter(id=agent_id).first()
+        else:
+            agent = VoiceAgent.objects.filter(id=agent_id, owner=request.user).first()
+
         if not agent:
             return Response({"error": "Not found"}, status=404)
 
@@ -257,7 +298,22 @@ class RegenerateAPIKeyView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, agent_id):
-        agent = VoiceAgent.objects.filter(id=agent_id, owner=request.user).first()
+        is_admin = False
+        if request.user.is_superuser:
+            is_admin = True
+        elif hasattr(request.user, 'profile') and request.user.profile.role:
+            perms = request.user.profile.role.permissions
+            if perms.get('is_admin', False):
+                is_admin = True
+        if hasattr(request.user, 'profile') and request.user.profile.custom_permissions:
+            if request.user.profile.custom_permissions.get('is_admin', False):
+                is_admin = True
+
+        if is_admin:
+            agent = VoiceAgent.objects.filter(id=agent_id).first()
+        else:
+            agent = VoiceAgent.objects.filter(id=agent_id, owner=request.user).first()
+
         if not agent:
             return Response({"error": "Not found"}, status=404)
 
