@@ -200,6 +200,20 @@ class Campaign(models.Model):
     is_active       = models.BooleanField(default=True)
     started_at      = models.DateTimeField(auto_now_add=True)
     ended_at        = models.DateTimeField(null=True, blank=True)
+    created_by      = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="campaigns"
+    )
+    agent           = models.ForeignKey(
+        'agents.VoiceAgent',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="campaigns"
+    )
 
     class Meta:
         ordering = ["-started_at"]

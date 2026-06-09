@@ -51,9 +51,12 @@ from .views import (
     start_auto_campaign,
     auto_campaign_status,
     stop_auto_campaign,
+    pause_auto_campaign,
+    resume_auto_campaign,
     export_leads_excel,
     campaign_history_page,
     campaign_history_data,
+    download_sample_excel,
 
     # webhook
     whatsapp_webhook,
@@ -111,11 +114,14 @@ urlpatterns = [
     path("upload-call/", upload_call_file),
     path("upload-call-page/", upload_call_page),
     path("export/leads/", export_leads_excel),
+    path("download-sample/", download_sample_excel),
     
     # Auto-dialer campaign
     path("auto-campaign/start/", start_auto_campaign),
     path("auto-campaign/status/", auto_campaign_status),
     path("auto-campaign/stop/", stop_auto_campaign),
+    path("auto-campaign/pause/", pause_auto_campaign),
+    path("auto-campaign/resume/", resume_auto_campaign),
 
     # Campaign History (Admin)
     path("campaigns/", campaign_history_page),

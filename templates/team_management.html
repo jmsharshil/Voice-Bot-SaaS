@@ -65,6 +65,7 @@
             color: var(--bg-dark);
             letter-spacing: -0.02em;
         }
+        .back-to-dashboard-btn:hover { background: #cbd5e1 !important; color: #0f172a !important; transform: scale(1.05); }
 
         .header-actions {
             display: flex;
@@ -109,6 +110,24 @@
             background: var(--danger);
             color: white;
             box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
+        }
+
+        .edit-btn {
+            background: transparent;
+            color: var(--primary);
+            border: 1.5px solid var(--primary);
+            padding: 0.55rem 1.25rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .edit-btn:hover {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2);
         }
 
         .dashboard-btn {
@@ -402,7 +421,14 @@
     <!-- Wrapper for blur effect -->
     <div id="pageWrapper">
         <div class="header">
-            <h1>👥 Workspace Team Members</h1>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <a href="/navya-analytics/lead-analysis/" class="back-to-dashboard-btn" title="Back to Lead Intelligence" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; color: #475569; text-decoration: none; transition: all 0.2s; border: 1px solid #e2e8f0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+                <h1>👥 Workspace Team Members</h1>
+            </div>
             <div class="header-actions">
                 <a href="/navya-analytics/lead-analysis/" class="dashboard-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -478,6 +504,10 @@
                             <input type="checkbox" id="perm_calls" checked>
                             Call Analysis Access
                         </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="perm_campaigns" checked>
+                            Campaign History Access
+                        </label>
                     </div>
                 </div>
                 <button type="submit" class="btn" style="margin-top: 1rem;">Create User</button>
@@ -495,7 +525,7 @@
         // Route Guard: Must be logged in AND must have permission to manage team
         if (!token) {
             window.location.replace('/accounts/login/');
-        } else if (!isAdmin && !perms.can_manage_team) {
+        } else if (isAdmin || !perms.can_manage_team) {
             alert('Access Denied: You do not have permission to manage team members.');
             window.location.replace('/navya-analytics/lead-analysis/');
         }
@@ -513,6 +543,9 @@
             setTimeout(() => el.style.display = 'none', 4000);
         }
 
+        let currentEditUserId = null;
+        window.teamMembers = [];
+
         async function fetchTeam() {
             try {
                 const res = await fetch(`${API_BASE}/team/`, { headers });
@@ -521,6 +554,7 @@
                     return;
                 }
                 const team = await res.json();
+                window.teamMembers = team;
                 const tbody = document.getElementById('teamTableBody');
                 tbody.innerHTML = '';
 
@@ -534,7 +568,8 @@
                     let permBadges = '';
                     if (cp.can_view_leads) permBadges += '<span class="badge active">Lead Access</span>';
                     if (cp.can_view_calls) permBadges += '<span class="badge active">Call Access</span>';
-                    if (!cp.can_view_leads && !cp.can_view_calls) permBadges += '<span class="badge">No Access Selected</span>';
+                    if (cp.can_view_campaigns) permBadges += '<span class="badge active">Campaign Access</span>';
+                    if (!cp.can_view_leads && !cp.can_view_calls && !cp.can_view_campaigns) permBadges += '<span class="badge">No Access Selected</span>';
 
                     tbody.innerHTML += `
                         <tr>
@@ -546,6 +581,7 @@
                                 ${permBadges}
                             </td>
                             <td>
+                                <button class="edit-btn" style="padding:0.3rem 0.6rem; font-size:0.8rem; margin-right: 0.5rem;" onclick="editMember(${member.id})">Edit</button>
                                 <button class="logout-btn" style="padding:0.3rem 0.6rem; font-size:0.8rem;" onclick="deleteMember(${member.id}, '${member.username}')">Delete</button>
                             </td>
                         </tr>
@@ -556,7 +592,14 @@
             }
         }
 
-        // Handle Team User Creation
+        function editMember(memberId) {
+            const member = window.teamMembers.find(m => m.id === memberId);
+            if (member) {
+                openTeamModal(member);
+            }
+        }
+
+        // Handle Team User Creation or Update
         document.getElementById('teamForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('teamName').value;
@@ -565,26 +608,39 @@
 
             const can_view_leads = document.getElementById('perm_leads').checked;
             const can_view_calls = document.getElementById('perm_calls').checked;
+            const can_view_campaigns = document.getElementById('perm_campaigns').checked;
 
             const payload = {
                 username,
                 email,
-                password,
                 permissions: {
                     can_view_leads,
-                    can_view_calls
+                    can_view_calls,
+                    can_view_campaigns
                 }
             };
 
+            if (password) {
+                payload.password = password;
+            }
+
             try {
-                const res = await fetch(`${API_BASE}/team/`, {
-                    method: 'POST',
+                let url = `${API_BASE}/team/`;
+                let method = 'POST';
+                if (currentEditUserId) {
+                    url = `${API_BASE}/team/${currentEditUserId}/`;
+                    method = 'PUT';
+                }
+
+                const res = await fetch(url, {
+                    method: method,
                     headers: headers,
                     body: JSON.stringify(payload)
                 });
 
                 if (res.status === 201 || res.status === 200) {
-                    showAlert('teamAlert', 'Team member added successfully!', 'success');
+                    const successMsg = currentEditUserId ? 'Team member updated successfully!' : 'Team member added successfully!';
+                    showAlert('teamAlert', successMsg, 'success');
                     fetchTeam();
                     setTimeout(() => {
                         closeTeamModal();
@@ -625,7 +681,39 @@
         const modalOverlay = document.getElementById('teamModalOverlay');
         const pageWrapper = document.getElementById('pageWrapper');
 
-        function openTeamModal() {
+        function openTeamModal(editUser = null) {
+            const modalTitle = document.querySelector('.modal-title');
+            const submitBtn = document.querySelector('#teamForm .btn');
+            const passwordInput = document.getElementById('teamPassword');
+
+            if (editUser && editUser.id) {
+                currentEditUserId = editUser.id;
+                modalTitle.innerText = "Edit Team Member";
+                submitBtn.innerText = "Save Changes";
+                passwordInput.required = false;
+                passwordInput.placeholder = "Leave blank to keep current password";
+
+                document.getElementById('teamName').value = editUser.username || '';
+                document.getElementById('teamEmail').value = editUser.email || '';
+                document.getElementById('teamPassword').value = '';
+
+                let cp = editUser.profile && editUser.profile.custom_permissions ? editUser.profile.custom_permissions : {};
+                document.getElementById('perm_leads').checked = !!cp.can_view_leads;
+                document.getElementById('perm_calls').checked = !!cp.can_view_calls;
+                document.getElementById('perm_campaigns').checked = !!cp.can_view_campaigns;
+            } else {
+                currentEditUserId = null;
+                modalTitle.innerText = "Add New Team Member";
+                submitBtn.innerText = "Create User";
+                passwordInput.required = true;
+                passwordInput.placeholder = "Create a password";
+
+                document.getElementById('teamForm').reset();
+                document.getElementById('perm_leads').checked = true;
+                document.getElementById('perm_calls').checked = true;
+                document.getElementById('perm_campaigns').checked = true;
+            }
+
             modalOverlay.classList.add('active');
             pageWrapper.classList.add('blurred');
         }
@@ -635,6 +723,7 @@
             pageWrapper.classList.remove('blurred');
             document.getElementById('teamForm').reset();
             document.getElementById('teamAlert').style.display = 'none';
+            currentEditUserId = null;
         }
 
         modalOverlay.addEventListener('click', function (e) {

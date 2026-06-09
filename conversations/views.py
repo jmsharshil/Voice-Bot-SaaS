@@ -906,6 +906,67 @@ def get_conversation_messages(request, session_id):
     })
 
 
+@api_view(["GET"])
+def get_campaign_lead_conversation(request):
+    """
+    Fetches the conversation transcript for a specific lead in a campaign.
+    Query params: campaign_id, phone
+    """
+    campaign_id = request.query_params.get("campaign_id")
+    phone = request.query_params.get("phone")
+
+    if not campaign_id or not phone:
+        return Response({"error": "campaign_id and phone are required"}, status=400)
+
+    # Normalize phone number
+    from bot.views import _normalize_phone
+    phone = _normalize_phone(phone)
+
+    try:
+        # Find the conversation. Since we added campaign_id on Conversation model, we can filter by it!
+        conversation = Conversation.objects.filter(campaign_id=campaign_id, user_number=phone).order_by("-started_at").first()
+        if not conversation:
+            # Fallback to search by user_number alone if campaign_id is not saved on old logs
+            conversation = Conversation.objects.filter(user_number=phone).order_by("-started_at").first()
+
+        if not conversation:
+            return Response({"error": "No conversation found for this number"}, status=404)
+
+        # Get messages
+        messages = Message.objects.filter(conversation=conversation).order_by("created_at")
+        
+        # Serialize messages
+        msg_data = []
+        for m in messages:
+            msg_data.append({
+                "role": m.role,
+                "text": m.text,
+                "created_at": m.created_at.isoformat()
+            })
+
+        # Include LeadAnalysis summary if available
+        lead_summary = ""
+        lead_level = "unknown"
+        try:
+            if hasattr(conversation, 'lead_analysis') and conversation.lead_analysis:
+                lead_summary = conversation.lead_analysis.summary
+                lead_level = conversation.lead_analysis.lead_level
+        except:
+            pass
+
+        return Response({
+            "session_id": conversation.session_id,
+            "user_number": conversation.user_number,
+            "started_at": conversation.started_at.isoformat(),
+            "ended_at": conversation.ended_at.isoformat() if conversation.ended_at else None,
+            "lead_level": lead_level,
+            "lead_summary": lead_summary,
+            "messages": msg_data
+        })
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
 
 
 # ======================================================

@@ -135,6 +135,7 @@
             z-index: 100;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         }
+        .back-to-dashboard-btn:hover { background: #2b4c7e !important; color: #ffffff !important; transform: scale(1.05); }
 
         .header::before {
             content: '';
@@ -754,6 +755,13 @@
             gap: 8px;
         }
 
+        .download-sample-btn:hover {
+            background: #1e3a5f !important;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 95, 0.15);
+        }
+
         .excel-section .section-title .title-icon {
             font-size: 18px;
         }
@@ -947,6 +955,52 @@
                 overflow-x: auto;
             }
         }
+
+        /* Bot select dropdown styles */
+        .bot-select-group {
+            text-align: left;
+            margin-bottom: 20px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1.5px solid #e2e8f0;
+        }
+
+        .bot-select-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #4f46e5;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .bot-select {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #1e293b;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .bot-select:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
     </style>
 
 </head>
@@ -965,6 +1019,11 @@
 
     <!-- HEADER / NAVBAR -->
     <div class="header">
+        <a href="/navya-analytics/lead-analysis/" class="back-to-dashboard-btn" title="Back to Lead Intelligence" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #24446b; color: #cbd5e1; text-decoration: none; margin-right: 4px; transition: all 0.2s; border: 1px solid #2b4c7e;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </a>
         <span>Upload Call File</span>
         <div class="nav-right">
             <a href="/navya-analytics/lead-analysis/" class="nav-btn">📊 Lead Analysis</a>
@@ -986,11 +1045,50 @@
             window.location.replace('/accounts/login/');
         }
 
-        (function () {
+        document.addEventListener('DOMContentLoaded', async function () {
             const u = localStorage.getItem('username') || 'User';
-            document.getElementById('profileAvatar').textContent = u.charAt(0).toUpperCase();
-            document.getElementById('pdName').textContent = u;
-        })();
+            const avatar = document.getElementById('profileAvatar');
+            const pdName = document.getElementById('pdName');
+            if (avatar) avatar.textContent = u.charAt(0).toUpperCase();
+            if (pdName) pdName.textContent = u;
+
+            // Show and load bots if user is admin
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            if (isAdmin) {
+                const group = document.getElementById('botSelectorGroup');
+                const select = document.getElementById('botSelect');
+                if (group && select) {
+                    group.style.display = 'block';
+                    select.required = true;
+                    
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        const res = await fetch("/api/agents/my/", {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        if (res.ok) {
+                            const agents = await res.json();
+                            select.innerHTML = '<option value="">-- Choose a Voice Bot --</option>';
+                            agents.forEach(agent => {
+                                const opt = document.createElement('option');
+                                opt.value = agent.id;
+                                opt.textContent = agent.name;
+                                select.appendChild(opt);
+                            });
+                        } else {
+                            select.innerHTML = '<option value="">Failed to load bots</option>';
+                        }
+                    } catch (err) {
+                        console.error("Error loading bots:", err);
+                        select.innerHTML = '<option value="">Error loading bots</option>';
+                    }
+                }
+            }
+        });
+
         function toggleProfile(e) {
             e.stopPropagation();
             document.getElementById('profileDropdown').classList.toggle('open');
@@ -1002,6 +1100,7 @@
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
             localStorage.removeItem('username');
+            localStorage.removeItem('is_admin');
             window.location.replace('/accounts/login/');
         }
     </script>
@@ -1068,6 +1167,14 @@
                             title="Remove file">✕</button>
                     </div>
 
+                    <!-- Bot selector dropdown for superadmin -->
+                    <div class="bot-select-group" id="botSelectorGroup" style="display: none;">
+                        <label class="bot-select-label" for="botSelect">Select Bot for Campaign</label>
+                        <select class="bot-select" id="botSelect" name="agent_id">
+                            <option value="">-- Choose a Voice Bot --</option>
+                        </select>
+                    </div>
+
                     <button type="submit" class="upload-btn" id="uploadBtn">
                         <span class="btn-spinner"></span>
                         <span class="btn-icon">📞</span>
@@ -1082,11 +1189,15 @@
 
             <!-- EXCEL FORMAT -->
             <div class="excel-section">
-                <div class="section-title">
-                    <span class="title-icon">📋</span> Required Excel Format
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 8px;">
+                    <div class="section-title" style="margin-bottom: 0;">
+                        <span class="title-icon">📋</span> Required Excel Format
+                    </div>
+                    <a href="/bot/download-sample/" class="download-sample-btn" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #1e3a5f; text-decoration: none; padding: 6px 12px; border-radius: 8px; border: 1px solid #1e3a5f; background: transparent; transition: all 0.2s; cursor: pointer;">
+                        📥 Download Sample Excel
+                    </a>
                 </div>
-                <div class="section-subtitle">Your Excel file must contain a <strong>phone</strong> column with customer
-                    numbers</div>
+                <div class="section-subtitle">Your Excel file must contain <strong>name</strong> and <strong>phone</strong> columns.</div>
 
                 <div class="excel-table-wrapper">
                     <table class="excel-table">
@@ -1094,58 +1205,36 @@
                             <tr>
                                 <th>name</th>
                                 <th>phone</th>
-                                <th>policy_number</th>
-                                <th>policy_expiry</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td>John</td>
-                                <td>9198765XXXXX</td>
-                                <td>POL1001</td>
-                                <td>28-03-2026</td>
+                                <td>abc</td>
+                                <td>99798xxxxx</td>
                             </tr>
                             <tr>
-                                <td>Sara</td>
-                                <td>9191234XXXXX</td>
-                                <td>POL1003</td>
-                                <td>26-03-2026</td>
+                                <td>abc</td>
+                                <td>972777xxxx</td>
                             </tr>
                             <tr>
-                                <td>Tony</td>
-                                <td>9187654XXXXX</td>
-                                <td>POL1005</td>
-                                <td>27-03-2026</td>
+                                <td>abc</td>
+                                <td>9825385135</td>
                             </tr>
                             <tr>
-                                <td>Elley</td>
-                                <td>9187654XXXXX</td>
-                                <td>POL1006</td>
-                                <td>27-03-2026</td>
+                                <td>abc</td>
+                                <td>9825223052</td>
                             </tr>
                             <tr>
-                                <td>Hulk</td>
-                                <td>9187654XXXXX</td>
-                                <td>POL1007</td>
-                                <td>27-03-2026</td>
+                                <td>abc</td>
+                                <td>9825223154</td>
                             </tr>
                             <tr>
-                                <td>Locky</td>
-                                <td>9187654XXXXX</td>
-                                <td>POL1008</td>
-                                <td>27-03-2026</td>
+                                <td>abc</td>
+                                <td>9727770273</td>
                             </tr>
                             <tr>
-                                <td>Lussy</td>
-                                <td>9187654XXXXX</td>
-                                <td>POL1009</td>
-                                <td>27-03-2026</td>
-                            </tr>
-                            <tr>
-                                <td>Elisa</td>
-                                <td>9187654XXXXX</td>
-                                <td>POL1010</td>
-                                <td>27-03-2026</td>
+                                <td>abc</td>
+                                <td>9099019819</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1153,8 +1242,7 @@
 
                 <div class="format-note">
                     <span class="note-icon">💡</span>
-                    <span>Phone numbers must include country code (e.g. 91 for India). The <strong>phone</strong> column
-                        is required — all other columns are optional but recommended for CRM tracking.</span>
+                    <span>The <strong>name</strong> and <strong>phone</strong> columns are required to initiate AI voice call campaigns. Download the reference file above for the correct structure.</span>
                 </div>
             </div>
 
@@ -1256,6 +1344,15 @@
                 return;
             }
 
+            // Validate bot selection for admin
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            const botSelect = document.getElementById('botSelect');
+            if (isAdmin && botSelect && !botSelect.value) {
+                showToast('Please select a Voice Bot before uploading.', 'warning');
+                botSelect.focus();
+                return;
+            }
+
             const formData = new FormData(this);
             const resultEl = document.getElementById("result");
             const btn = document.getElementById("uploadBtn");
@@ -1284,14 +1381,21 @@
 
                 const data = await res.json();
 
+                if (!res.ok) {
+                    resultEl.className = 'error';
+                    resultEl.innerText = "❌ " + (data.error || 'Upload failed.');
+                    showToast(data.error || 'Upload failed.', 'warning');
+                    return;
+                }
+
                 resultEl.className = 'success';
-                resultEl.innerText = "✅ Calls triggered: " + data.total + ". Redirecting to Lead Analysis…";
+                resultEl.innerText = "✅ Calls triggered: " + data.total + ". Redirecting to Campaign History…";
                 showToast('Calls triggered! Redirecting…', 'success');
 
-                // Reset file & redirect to Lead Analysis after 2s
+                // Reset file & redirect to Campaign History after 2s
                 removeFile();
                 setTimeout(() => {
-                    window.location.href = '/navya-analytics/lead-analysis/';
+                    window.location.href = '/bot/campaigns/';
                 }, 2000);
 
             } catch (err) {

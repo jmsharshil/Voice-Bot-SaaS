@@ -1191,7 +1191,7 @@ def trigger_call(request):
                 "to": normalized_phone,
                 "caller_id": "+917969016753",
                 "ref": f"crm-{uuid.uuid4()}",
-                "bot_url": f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}"
+                "bot_url": f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}"
             }
 
 
@@ -1227,7 +1227,7 @@ def trigger_call(request):
                     "to": normalized_phone,
                     "caller_id": "+917969016753",
                     "ref": f"crm-{uuid.uuid4()}",
-                    "bot_url": f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}"
+                    "bot_url": f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}"
                 }
 
                 response = requests.post(
@@ -1270,7 +1270,7 @@ def upload_call_file(request):
     Uses the AUTO-DIALER queue — only 2 calls at a time.
     When one call ends, the next is auto-triggered.
     """
-    global _campaign_active, _campaign_stats, BOT_URL
+    global _campaign_active, _campaign_stats, _campaign_paused, BOT_URL
 
     file = request.FILES.get("file")
     
@@ -1281,12 +1281,12 @@ def upload_call_file(request):
             agent_id = str(request.user.profile.assigned_agent.id)
             
     if not agent_id:
-        agent_id = request.data.get("agent_id")
+        agent_id = request.data.get("agent_id") or request.POST.get("agent_id")
     
     if not agent_id:
         return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
         
-    BOT_URL = f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
+    BOT_URL = f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
@@ -1301,14 +1301,29 @@ def upload_call_file(request):
             "remaining_in_queue": remaining,
         }, status=409)
 
-    df = pd.read_excel(file)
+    try:
+        df = pd.read_excel(file)
+    except Exception as e:
+        return Response({"error": f"Failed to read Excel file: {e}"}, status=400)
+
+    # Find the phone column case-insensitively
+    phone_col = None
+    for col in df.columns:
+        c_clean = str(col).strip().lower()
+        if c_clean in ["phone", "phone number", "mobile", "mobile number", "number", "phone_number", "contact"]:
+            phone_col = col
+            break
+            
+    if not phone_col and len(df.columns) > 0:
+        phone_col = df.columns[0]
 
     phones = []
-    for _, row in df.iterrows():
-        phone = str(row.get("phone") or "").strip()
-        if not phone:
-            continue
-        phones.append(_normalize_phone(phone))
+    if phone_col is not None:
+        for _, row in df.iterrows():
+            phone = str(row.get(phone_col) or "").strip()
+            if not phone:
+                continue
+            phones.append(_normalize_phone(phone))
 
     phones = [p for p in phones if p]
 
@@ -1319,14 +1334,34 @@ def upload_call_file(request):
     with _call_queue_lock:
         _call_queue.clear()
         _active_calls.clear()
+        _answered_calls.clear()
         _call_queue.extend(phones)
 
     _campaign_active = True
+    _campaign_paused = False
     _campaign_stats["total"] = len(phones)
     _campaign_stats["completed"] = 0
     _campaign_stats["started_at"] = timezone.now().isoformat()
+    _missed_calls.clear()
+    _save_campaign_state()
 
-    print(f"🚀 AUTO-DIALER (file upload): Campaign started with {len(phones)} numbers (max {MAX_CONCURRENT_CALLS} concurrent)")
+    # Create a Campaign history record
+    campaign_name = file.name
+    try:
+        campaign_obj = Campaign.objects.create(
+            name=campaign_name or f"Campaign {timezone.now().strftime('%d %b %Y %I:%M %p')}",
+            phone_list=json.dumps(phones),
+            total_count=len(phones),
+            is_active=True,
+            created_by=request.user if request.user and request.user.is_authenticated else None,
+            agent_id=agent_id,
+        )
+        global _current_campaign_id
+        _current_campaign_id = campaign_obj.id
+        print(f"🚀 AUTO-DIALER (file upload): Campaign #{campaign_obj.id} started with {len(phones)} numbers (max {MAX_CONCURRENT_CALLS} concurrent)")
+    except Exception as e:
+        _current_campaign_id = None
+        print(f"WARNING: Failed to create Campaign record: {e}")
 
     # Dial first 2 numbers
     dial_next_from_queue()
@@ -1335,6 +1370,7 @@ def upload_call_file(request):
         "status": "campaign_started",
         "total": len(phones),
         "concurrent_calls": MAX_CONCURRENT_CALLS,
+        "campaign_id": _current_campaign_id,
         "message": f"First {min(MAX_CONCURRENT_CALLS, len(phones))} calls triggered. Remaining will auto-dial as each call ends.",
     })
 
@@ -1353,6 +1389,7 @@ _call_queue = []              # Phone numbers waiting to be dialed
 _active_calls = set()         # Phone numbers currently being called
 _answered_calls = set()       # Phone numbers that picked up
 _campaign_active = False
+_campaign_paused = False
 MAX_CONCURRENT_CALLS = 2      # Always keep 2 calls active
 _current_campaign_id = None   # ID of the active Campaign record
 
@@ -1367,7 +1404,7 @@ _missed_calls = []            # Numbers that timed out (No Answer)
 TELECOM_DIAL_URL = "https://call-route.on-forge.com/api/dial"
 TELECOM_API_KEY = "7a3e957ed459dfebc486ee58d6059928d02c4aab20c9f698bd50e2636f8df1be"
 CALLER_ID = "+917969016753"
-BOT_URL = "wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id=21bdd3bf-45bd-487c-8283-7b2957e472ba"
+BOT_URL = "wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id=21bdd3bf-45bd-487c-8283-7b2957e472ba"
 
 
 def _normalize_phone(phone):
@@ -1440,7 +1477,11 @@ def dial_next_from_queue():
     Called after CDR webhook fires (a call ended) or at campaign start.
     Returns the number of new calls triggered.
     """
-    global _campaign_active
+    global _campaign_active, _campaign_paused
+
+    if _campaign_paused:
+        print("AUTO-DIALER: Dialer is paused. Skipping dialing next.")
+        return 0
 
     calls_triggered = 0
 
@@ -1465,11 +1506,15 @@ def dial_next_from_queue():
             _active_calls.add(normalized)
 
         # Dial outside the lock
+        bot_url_full = f"{BOT_URL}&phone={normalized}"
+        if _current_campaign_id:
+            bot_url_full += f"&campaign_id={_current_campaign_id}"
+
         payload = {
             "to": normalized,
             "caller_id": CALLER_ID,
             "ref": f"auto-{uuid.uuid4()}",
-            "bot_url": f"{BOT_URL}&phone={normalized}",
+            "bot_url": bot_url_full,
         }
 
         try:
@@ -1572,7 +1617,7 @@ def start_auto_campaign(request):
     OR upload an Excel file:
         form-data: file=<excel>, field name "file"
     """
-    global _campaign_active, _campaign_stats, _current_campaign_id, BOT_URL
+    global _campaign_active, _campaign_stats, _current_campaign_id, _campaign_paused, BOT_URL
 
     # Resolve scoped agent if logged in
     agent_id = None
@@ -1581,12 +1626,12 @@ def start_auto_campaign(request):
             agent_id = str(request.user.profile.assigned_agent.id)
             
     if not agent_id:
-        agent_id = request.data.get("agent_id")
+        agent_id = request.data.get("agent_id") or request.POST.get("agent_id")
     
     if not agent_id:
         return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
         
-    BOT_URL = f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
+    BOT_URL = f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
     if _campaign_active:
         with _call_queue_lock:
@@ -1611,7 +1656,18 @@ def start_auto_campaign(request):
         campaign_name = campaign_name or file.name
         try:
             df = pd.read_excel(file)
-            phones = [str(row.get("phone", "")).strip() for _, row in df.iterrows() if row.get("phone")]
+            phone_col = None
+            for col in df.columns:
+                c_clean = str(col).strip().lower()
+                if c_clean in ["phone", "phone number", "mobile", "mobile number", "number", "phone_number", "contact"]:
+                    phone_col = col
+                    break
+            if not phone_col and len(df.columns) > 0:
+                phone_col = df.columns[0]
+            
+            phones = []
+            if phone_col is not None:
+                phones = [str(row.get(phone_col, "")).strip() for _, row in df.iterrows() if row.get(phone_col)]
         except Exception as e:
             return Response({"error": f"Failed to read Excel file: {e}"}, status=400)
 
@@ -1633,6 +1689,7 @@ def start_auto_campaign(request):
         _call_queue.extend(phones)
 
     _campaign_active = True
+    _campaign_paused = False
     _campaign_stats["total"] = len(phones)
     _campaign_stats["completed"] = 0
     _campaign_stats["started_at"] = timezone.now().isoformat()
@@ -1647,6 +1704,8 @@ def start_auto_campaign(request):
             phone_list=json.dumps(phones),
             total_count=len(phones),
             is_active=True,
+            created_by=request.user if request.user and request.user.is_authenticated else None,
+            agent_id=agent_id,
         )
         _current_campaign_id = campaign_obj.id
         print(f"AUTO-DIALER: Campaign #{campaign_obj.id} started with {len(phones)} numbers (max {MAX_CONCURRENT_CALLS} concurrent)")
@@ -1666,10 +1725,51 @@ def start_auto_campaign(request):
     })
 
 
+def _is_campaign_visible_to_user(campaign, user):
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    
+    assigned_agent = None
+    if hasattr(user, "profile"):
+        assigned_agent = user.profile.assigned_agent
+        
+    if not assigned_agent:
+        return True # Superadmin (no assigned agent limits)
+        
+    # Scoped user: only if campaign is for their agent, and wasn't created by a superadmin
+    if campaign.agent != assigned_agent:
+        return False
+        
+    if campaign.created_by:
+        if campaign.created_by.is_superuser:
+            return False
+        if hasattr(campaign.created_by, "profile") and campaign.created_by.profile.assigned_agent is None:
+            return False
+            
+    return True
+
+
 @api_view(["GET"])
 def auto_campaign_status(request):
     _ensure_state_loaded()
     """Returns the current status of the auto-dial campaign."""
+    
+    if _current_campaign_id:
+        try:
+            curr_camp = Campaign.objects.get(id=_current_campaign_id)
+            if not _is_campaign_visible_to_user(curr_camp, request.user):
+                return Response({
+                    "active": False,
+                    "total": 0,
+                    "completed": 0,
+                    "remaining_in_queue": 0,
+                    "active_calls": [],
+                    "no_answer_count": 0,
+                })
+        except Campaign.DoesNotExist:
+            pass
     
     # If in-memory is empty but we aren't active, try loading from DB to restore IF it's still marked active
     if not _campaign_active and _campaign_stats.get("total") == 0:
@@ -1711,6 +1811,7 @@ def auto_campaign_status(request):
 
     return Response({
         "active": final_active,
+        "paused": _campaign_paused,
         "total": final_total,
         "completed": final_completed,
         "remaining_in_queue": remaining if _campaign_active else 0,
@@ -1725,7 +1826,15 @@ def auto_campaign_status(request):
 @api_view(["POST"])
 def stop_auto_campaign(request):
     """Stops the current auto-dial campaign."""
-    global _campaign_active
+    global _campaign_active, _campaign_paused
+
+    if _current_campaign_id:
+        try:
+            curr_camp = Campaign.objects.get(id=_current_campaign_id)
+            if not _is_campaign_visible_to_user(curr_camp, request.user):
+                return Response({"error": "You do not have permission to control this campaign."}, status=403)
+        except Campaign.DoesNotExist:
+            pass
 
     with _call_queue_lock:
         remaining = len(_call_queue)
@@ -1733,6 +1842,7 @@ def stop_auto_campaign(request):
         _active_calls.clear()
 
     _campaign_active = False
+    _campaign_paused = False
     _finalize_campaign() # Close the Campaign history record
 
     print(f"AUTO-DIALER: Campaign stopped. {remaining} numbers were still in queue.")
@@ -1743,6 +1853,47 @@ def stop_auto_campaign(request):
     })
 
 
+@api_view(["POST"])
+def pause_auto_campaign(request):
+    """Pauses the current auto-dial campaign."""
+    global _campaign_paused
+    if not _campaign_active:
+        return Response({"error": "No active campaign running"}, status=400)
+
+    if _current_campaign_id:
+        try:
+            curr_camp = Campaign.objects.get(id=_current_campaign_id)
+            if not _is_campaign_visible_to_user(curr_camp, request.user):
+                return Response({"error": "You do not have permission to control this campaign."}, status=403)
+        except Campaign.DoesNotExist:
+            pass
+
+    _campaign_paused = True
+    print("AUTO-DIALER: Campaign paused.")
+    return Response({"status": "campaign_paused"})
+
+
+@api_view(["POST"])
+def resume_auto_campaign(request):
+    """Resumes the current auto-dial campaign."""
+    global _campaign_paused
+    if not _campaign_active:
+        return Response({"error": "No active campaign running"}, status=400)
+
+    if _current_campaign_id:
+        try:
+            curr_camp = Campaign.objects.get(id=_current_campaign_id)
+            if not _is_campaign_visible_to_user(curr_camp, request.user):
+                return Response({"error": "You do not have permission to control this campaign."}, status=403)
+        except Campaign.DoesNotExist:
+            pass
+
+    _campaign_paused = False
+    print("AUTO-DIALER: Campaign resumed. Dialing next...")
+    dial_next_from_queue()
+    return Response({"status": "campaign_resumed"})
+
+
 @api_view(["GET"])
 def export_leads_excel(request):
     """
@@ -1751,7 +1902,32 @@ def export_leads_excel(request):
     from conversations.models import LeadAnalysis, Message
     from django.utils import timezone
     
-    leads = LeadAnalysis.objects.all().select_related('conversation', 'agent')
+    from rest_framework_simplejwt.tokens import AccessToken
+    from django.contrib.auth.models import User
+
+    # Authenticate via query param if accessed from a standard browser download link
+    token = request.query_params.get("token")
+    if token:
+        try:
+            access_token = AccessToken(token)
+            user_id = access_token["user_id"]
+            request.user = User.objects.get(id=user_id)
+        except Exception as e:
+            print(f"Token validation failed in export: {e}")
+
+    if not request.user or not request.user.is_authenticated:
+        return Response({"error": "Authentication required"}, status=401)
+
+    assigned_agent = None
+    if hasattr(request.user, "profile"):
+        assigned_agent = request.user.profile.assigned_agent
+
+    is_super = request.user.is_superuser or not assigned_agent
+
+    if is_super:
+        leads = LeadAnalysis.objects.all().select_related('conversation', 'agent')
+    else:
+        leads = LeadAnalysis.objects.filter(agent=assigned_agent).select_related('conversation', 'agent')
     
     data = []
     for lead in leads:
@@ -1787,11 +1963,23 @@ def export_leads_excel(request):
 
     # 2. Add Missed Calls from the last campaign
     try:
-        status = CampaignStatus.objects.get(id=1)
-        missed_list = json.loads(status.missed_calls) if status.missed_calls else []
+        if is_super:
+            status = CampaignStatus.objects.get(id=1)
+            missed_list = json.loads(status.missed_calls) if status.missed_calls else []
+            started_at = status.started_at
+        else:
+            # Get the last campaign run for the scoped agent
+            last_campaign = Campaign.objects.filter(agent=assigned_agent).order_by("-started_at").first()
+            if last_campaign:
+                missed_list = json.loads(last_campaign.missed_calls) if last_campaign.missed_calls else []
+                started_at = last_campaign.started_at
+            else:
+                missed_list = []
+                started_at = None
+
         for phone in missed_list:
             data.append({
-                "Analyzed At": status.started_at.strftime("%Y-%m-%d %H:%M") if status.started_at else "—",
+                "Analyzed At": started_at.strftime("%Y-%m-%d %H:%M") if started_at else "—",
                 "Agent": "Auto-Dialer",
                 "Customer Name": "—",
                 "Phone Number": phone,
@@ -1874,7 +2062,8 @@ def campaign_history_page(request):
 def campaign_history_data(request):
     """Returns all past campaigns with stats for the admin dashboard."""
     campaigns = Campaign.objects.all().order_by("-started_at")
-    
+    campaigns = [c for c in campaigns if _is_campaign_visible_to_user(c, request.user)]
+
     data = []
     for c in campaigns:
         missed_list = json.loads(c.missed_calls) if c.missed_calls else []
@@ -1897,6 +2086,8 @@ def campaign_history_data(request):
             "started_at": c.started_at.isoformat() if c.started_at else None,
             "ended_at": c.ended_at.isoformat() if c.ended_at else None,
             "duration_seconds": duration_seconds,
+            "created_by": c.created_by.username if c.created_by else None,
+            "bot_name": c.agent.name if c.agent else None,
         })
     
     # Summary stats
@@ -1914,3 +2105,35 @@ def campaign_history_data(request):
         },
         "campaigns": data,
     })
+
+
+@api_view(["GET"])
+def download_sample_excel(request):
+    """
+    Generates and returns a sample Excel file containing 'name' and 'phone' columns.
+    """
+    import io
+    import pandas as pd
+    from django.http import HttpResponse
+
+    # Create a simple DataFrame matching the user's requested format
+    data = {
+        "name": ["abc", "abc", "abc", "abc", "abc", "abc", "abc"],
+        "phone": ["9979xxxxx", "972777xxxxx", "982538xxxx", "982522xxxx", "982522xxxx", "972777xxxx", "909901xxxx"]
+    }
+    df = pd.DataFrame(data)
+
+    # Write DataFrame to an in-memory buffer as an Excel file
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Sheet1")
+    output.seek(0)
+
+    # Set up HTTP response with correct content type and filename
+    response = HttpResponse(
+        output.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = "attachment; filename=sample_call_format.xlsx"
+    return response
+

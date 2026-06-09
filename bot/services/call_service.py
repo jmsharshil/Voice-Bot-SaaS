@@ -17,7 +17,7 @@
 # VOICE_BOT_WS_URL = getattr(
 #     settings,
 #     "VOICE_BOT_WS_URL",
-#     "wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/",
+#     "wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/",
 # )
 # VOICE_BOT_AGENT_ID = getattr(
 #     settings,

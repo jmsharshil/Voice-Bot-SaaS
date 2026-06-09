@@ -104,6 +104,7 @@
             color: #0f172a;
             letter-spacing: -0.02em
         }
+        .back-to-dashboard-btn:hover { background: #cbd5e1 !important; color: #0f172a !important; transform: scale(1.05); }
 
         .header-sub {
             font-size: 12px;
@@ -917,6 +918,11 @@
 
     <!-- HEADER -->
     <div class="header">
+        <a href="/navya-analytics/lead-analysis/" class="back-to-dashboard-btn" title="Back to Lead Intelligence" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; color: #475569; text-decoration: none; margin-right: 4px; transition: all 0.2s; border: 1px solid #e2e8f0;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </a>
         <div class="header-dot"></div>
         <span class="header-title">Navya Analytics</span>
         <span class="header-sub">Voice Bot Conversations</span>
@@ -1176,6 +1182,14 @@
             });
         }
 
+        function matchNumber(userNum, query) {
+            if (!query) return true;
+            const qClean = query.replace(/\D/g, "");
+            const numClean = userNum.replace(/\D/g, "");
+            if (qClean && numClean.includes(qClean)) return true;
+            return userNum.toLowerCase().includes(query);
+        }
+
         /* ── Toggle Number Expand ───────────────── */
         function toggleNumber(number, wrapper) {
             if (activeNumber === number) {
@@ -1185,7 +1199,7 @@
             }
             renderNumbers(allNumbers.filter(n => {
                 const q = document.getElementById("searchInput").value.toLowerCase();
-                return !q || n.user_number.toLowerCase().includes(q);
+                return matchNumber(n.user_number, q);
             }));
         }
 
@@ -1223,7 +1237,7 @@
             // Re-render to update active states
             renderNumbers(allNumbers.filter(n => {
                 const q = document.getElementById("searchInput").value.toLowerCase();
-                return !q || n.user_number.toLowerCase().includes(q);
+                return matchNumber(n.user_number, q);
             }));
         }
 
@@ -1260,7 +1274,7 @@
         /* ── Search Filter ──────────────────────── */
         function filterNumbers(query) {
             const q = query.toLowerCase();
-            const filtered = allNumbers.filter(n => n.user_number.toLowerCase().includes(q));
+            const filtered = allNumbers.filter(n => matchNumber(n.user_number, q));
             renderNumbers(filtered);
         }
 
@@ -1277,7 +1291,7 @@
 
                 allNumbers = data.numbers || [];
                 const q = document.getElementById("searchInput").value.toLowerCase();
-                const filtered = q ? allNumbers.filter(n => n.user_number.toLowerCase().includes(q)) : allNumbers;
+                const filtered = allNumbers.filter(n => matchNumber(n.user_number, q));
                 renderNumbers(filtered);
 
                 // Refresh active session messages

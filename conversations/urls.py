@@ -1,6 +1,6 @@
 from .views import (
     ChatAPIView, DemoChatAPIView, demo_page,
-    get_conversations, get_conversation_messages,
+    get_conversations, get_conversation_messages, get_campaign_lead_conversation,
     call_analytics_page, call_analytics_data, call_analytics_session,
     call_analytics_per_bot,
     lead_analysis_page, lead_analysis_data, lead_analysis_detail,
@@ -13,6 +13,7 @@ urlpatterns = [
     path("demo/chat/", DemoChatAPIView.as_view()),
     path("", demo_page, name="demo-page"),
     path("conversations/", get_conversations),
+    path("conversations/campaign-lead/", get_campaign_lead_conversation),
     path("conversations/<str:session_id>/", get_conversation_messages),
 
     # Call Analytics Dashboard

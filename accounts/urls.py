@@ -21,7 +21,9 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     RegisterView, login_view, login_page, admin_management_page,
     RoleListView, RoleDetailView, UserListView, UserDetailView,
-    TeamListView, TeamDetailView, team_management_page
+    TeamListView, TeamDetailView, team_management_page,
+    forgot_password_view, reset_password_view,
+    forgot_password_page, reset_password_page
 )
 
 urlpatterns = [
@@ -29,11 +31,15 @@ urlpatterns = [
     path("login/", login_page, name="login"),
     path("admin-management/", admin_management_page, name="admin-management"),
     path("team-management/", team_management_page, name="team-management"),
+    path("forgot-password/", forgot_password_page, name="forgot-password"),
+    path("reset-password/", reset_password_page, name="reset-password"),
 
     # Auth APIs
     path("register/", RegisterView.as_view(), name="register"),
     path("login-api/", login_view, name="login-api"),
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("forgot-password-api/", forgot_password_view, name="forgot-password-api"),
+    path("reset-password-api/", reset_password_view, name="reset-password-api"),
     
     # Admin / Role Management APIs
     path("roles/", RoleListView.as_view(), name="role-list"),

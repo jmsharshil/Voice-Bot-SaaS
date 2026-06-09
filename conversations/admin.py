@@ -22,14 +22,38 @@ class ConversationSessionAdmin(admin.ModelAdmin):
     list_filter = ("agent", "current_intent", "stage")
     readonly_fields = ("created_at", "updated_at")
 
+from django.utils.html import format_html
+from django.urls import reverse
+
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
-    list_display = ("user_number", "session_id", "stream_sid", "agent", "started_at", "ended_at")
-    search_fields = ("user_number", "session_id", "stream_sid")
+    list_display = ("id", "user_number", "session_id", "campaign_link", "agent", "started_at", "ended_at")
+    search_fields = ("user_number", "session_id", "stream_sid", "campaign_id")
     list_filter = ("agent", "started_at")
     readonly_fields = ("started_at",)
 
-admin.site.register(Message)
+    def campaign_link(self, obj):
+        if obj.campaign_id:
+            try:
+                url = reverse('admin:bot_campaign_change', args=[obj.campaign_id])
+                return format_html('<a href="{}">Campaign #{}</a>', url, obj.campaign_id)
+            except:
+                return f"Campaign #{obj.campaign_id}"
+        return "—"
+    campaign_link.short_description = "Campaign"
+
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ("id", "conversation", "role", "text_snippet", "created_at")
+    list_filter = ("role", "created_at")
+    search_fields = ("conversation__user_number", "text")
+    readonly_fields = ("created_at",)
+    ordering = ("-created_at",)
+
+    def text_snippet(self, obj):
+        return obj.text[:60] + "..." if len(obj.text) > 60 else obj.text
+    text_snippet.short_description = "Message Text"
 
 
 @admin.register(LeadAnalysis)

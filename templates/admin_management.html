@@ -65,6 +65,7 @@
             color: var(--bg-dark);
             letter-spacing: -0.02em;
         }
+        .back-to-dashboard-btn:hover { background: #cbd5e1 !important; color: #0f172a !important; transform: scale(1.05); }
 
         .header-actions {
             display: flex;
@@ -431,7 +432,14 @@
     <!-- Wrapper for blur effect -->
     <div id="pageWrapper">
         <div class="header">
-            <h1>Admin Control Panel - Roles & Users</h1>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <a href="/navya-analytics/lead-analysis/" class="back-to-dashboard-btn" title="Back to Lead Intelligence" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; color: #475569; text-decoration: none; transition: all 0.2s; border: 1px solid #e2e8f0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </a>
+                <h1>Admin Control Panel - Roles & Users</h1>
+            </div>
             <div class="header-actions">
                 <a href="/navya-analytics/lead-analysis/" class="dashboard-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -556,6 +564,10 @@
                         <label class="checkbox-label">
                             <input type="checkbox" id="user_perm_calls" value="can_view_calls">
                             Call Analysis Access
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="user_perm_campaigns" value="can_view_campaigns">
+                            Campaign History Access
                         </label>
                     </div>
                 </div>
@@ -703,9 +715,13 @@
                     if (cp && Object.keys(cp).length > 0) {
                         if (cp.is_admin) permVal = "admin";
                         else if (cp.can_manage_team) permVal = "team_admin";
+                        else if (cp.can_view_leads && cp.can_view_calls && cp.can_view_campaigns) permVal = "all_three";
+                        else if (cp.can_view_leads && cp.can_view_campaigns) permVal = "lead_campaign";
+                        else if (cp.can_view_calls && cp.can_view_campaigns) permVal = "call_campaign";
                         else if (cp.can_view_leads && cp.can_view_calls) permVal = "both";
                         else if (cp.can_view_leads) permVal = "lead";
                         else if (cp.can_view_calls) permVal = "call";
+                        else if (cp.can_view_campaigns) permVal = "campaign";
                     }
 
                     // Determine assigned agent
@@ -749,8 +765,12 @@
                                     <option value="inherit" ${permVal === 'inherit' ? 'selected' : ''}>Inherit from Role</option>
                                     <option value="lead" ${permVal === 'lead' ? 'selected' : ''}>Lead Analysis Only</option>
                                     <option value="call" ${permVal === 'call' ? 'selected' : ''}>Call Analysis Only</option>
-                                    <option value="both" ${permVal === 'both' ? 'selected' : ''}>Both Lead & Call</option>
-                                    <option value="team_admin" ${permVal === 'team_admin' ? 'selected' : ''}>Both + Manage Team</option>
+                                    <option value="campaign" ${permVal === 'campaign' ? 'selected' : ''}>Campaign History Only</option>
+                                    <option value="both" ${permVal === 'both' ? 'selected' : ''}>Lead & Call</option>
+                                    <option value="lead_campaign" ${permVal === 'lead_campaign' ? 'selected' : ''}>Lead & Campaign</option>
+                                    <option value="call_campaign" ${permVal === 'call_campaign' ? 'selected' : ''}>Call & Campaign</option>
+                                    <option value="all_three" ${permVal === 'all_three' ? 'selected' : ''}>Lead, Call & Campaign</option>
+                                    <option value="team_admin" ${permVal === 'team_admin' ? 'selected' : ''}>All + Manage Team</option>
                                     <option value="admin" ${permVal === 'admin' ? 'selected' : ''}>Full System Access</option>
                                 </select>
                             </td>
@@ -784,6 +804,7 @@
             const is_admin = document.getElementById('user_perm_admin').checked;
             const can_view_leads = document.getElementById('user_perm_leads').checked;
             const can_view_calls = document.getElementById('user_perm_calls').checked;
+            const can_view_campaigns = document.getElementById('user_perm_campaigns').checked;
 
             const payload = {
                 username,
@@ -794,7 +815,8 @@
                 permissions: {
                     is_admin,
                     can_view_leads,
-                    can_view_calls
+                    can_view_calls,
+                    can_view_campaigns
                 }
             };
 
@@ -846,10 +868,14 @@
             try {
                 let custom_permissions = {};
                 if (permMode === 'admin') custom_permissions = { is_admin: true };
-                else if (permMode === 'team_admin') custom_permissions = { can_view_leads: true, can_view_calls: true, can_manage_team: true };
+                else if (permMode === 'team_admin') custom_permissions = { can_view_leads: true, can_view_calls: true, can_view_campaigns: true, can_manage_team: true };
+                else if (permMode === 'all_three') custom_permissions = { can_view_leads: true, can_view_calls: true, can_view_campaigns: true };
+                else if (permMode === 'lead_campaign') custom_permissions = { can_view_leads: true, can_view_campaigns: true };
+                else if (permMode === 'call_campaign') custom_permissions = { can_view_calls: true, can_view_campaigns: true };
                 else if (permMode === 'both') custom_permissions = { can_view_leads: true, can_view_calls: true };
                 else if (permMode === 'lead') custom_permissions = { can_view_leads: true };
                 else if (permMode === 'call') custom_permissions = { can_view_calls: true };
+                else if (permMode === 'campaign') custom_permissions = { can_view_campaigns: true };
                 // if inherit, custom_permissions remains empty {}
 
                 const res = await fetch(`${API_BASE}/users/${userId}/`, {

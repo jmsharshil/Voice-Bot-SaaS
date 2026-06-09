@@ -193,8 +193,8 @@ class CampaignStatusAdmin(admin.ModelAdmin):
 
 @admin.register(Campaign)
 class CampaignAdmin(admin.ModelAdmin):
-    list_display    = ("id", "name", "total_count", "completed_count", "answered_count", "is_active", "started_at", "ended_at")
-    list_filter     = ("is_active", "started_at")
-    search_fields   = ("name",)
+    list_display    = ("id", "name", "created_by", "agent", "total_count", "completed_count", "answered_count", "is_active", "started_at", "ended_at")
+    list_filter     = ("is_active", "started_at", "created_by", "agent")
+    search_fields   = ("name", "created_by__username", "agent__name")
     readonly_fields = ("started_at", "ended_at")
     ordering        = ("-started_at",)

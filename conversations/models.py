@@ -28,6 +28,7 @@ class ConversationSession(models.Model):
 
 class Conversation(models.Model):
     agent = models.ForeignKey(VoiceAgent, on_delete=models.CASCADE)
+    campaign_id = models.IntegerField(null=True, blank=True, db_index=True)
 
     session_id = models.CharField(max_length=100, unique=True)
     stream_sid = models.CharField(max_length=100, blank=True, null=True, db_index=True)
