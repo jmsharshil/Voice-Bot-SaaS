@@ -1346,7 +1346,8 @@ def upload_call_file(request):
     _save_campaign_state()
 
     # Create a Campaign history record
-    campaign_name = file.name
+    # campaign_name = file.name
+    campaign_name = request.POST.get("campaign_name", "").strip() or file.name
     try:
         campaign_obj = Campaign.objects.create(
             name=campaign_name or f"Campaign {timezone.now().strftime('%d %b %Y %I:%M %p')}",
@@ -1923,6 +1924,7 @@ def export_leads_excel(request):
         assigned_agent = request.user.profile.assigned_agent
 
     is_super = request.user.is_superuser or not assigned_agent
+    include_topic = request.user.is_superuser
 
     if is_super:
         leads = LeadAnalysis.objects.all().select_related('conversation', 'agent')
@@ -1951,15 +1953,16 @@ def export_leads_excel(request):
         data.append({
             "Analyzed At": lead.analyzed_at.strftime("%Y-%m-%d %H:%M"),
             "Agent": lead.agent.name if lead.agent else "Unknown",
-            "Customer Name": lead.user_name or "Unknown",
+            # "Customer Name": lead.user_name or "Unknown",
             "Phone Number": lead.user_phone or lead.conversation.user_number,
             "Email": lead.user_email or "—",
             "Interest Level": lead.get_lead_level_display(),
-            "Topic": lead.interest_topic or "—",
             "Recording Link": rec_url,
             "AI Summary": lead.summary or "—",
             "Full Transcript": transcript.strip()
         })
+        if include_topic:
+            data[-1]["Topic"] = lead.interest_topic or "—"
 
     # 2. Add Missed Calls from the last campaign
     try:
@@ -1981,23 +1984,30 @@ def export_leads_excel(request):
             data.append({
                 "Analyzed At": started_at.strftime("%Y-%m-%d %H:%M") if started_at else "—",
                 "Agent": "Auto-Dialer",
-                "Customer Name": "—",
+                # "Customer Name": "—",
                 "Phone Number": phone,
                 "Email": "—",
                 "Interest Level": "MISSED (No Answer)",
-                "Topic": "Campaign Missed Call",
                 "Recording Link": "—",
                 "AI Summary": "The call was not picked up by the customer.",
                 "Full Transcript": "—"
             })
+            if include_topic:
+                data[-1]["Topic"] = "Campaign Missed Call"
     except:
         pass
     
     if not data:
         # Return empty excel with headers if no leads
-        df = pd.DataFrame(columns=["Analyzed At", "Agent", "Customer Name", "Phone Number", "Email", "Interest Level", "Topic", "Recording Link", "AI Summary", "Full Transcript"])
+        columns = ["Analyzed At", "Agent", "Phone Number", "Email", "Interest Level"]
+        if include_topic:
+            columns.append("Topic")
+        columns.extend(["Recording Link", "AI Summary", "Full Transcript"])
+        df = pd.DataFrame(columns=columns)
     else:
         df = pd.DataFrame(data)
+        if not include_topic and "Topic" in df.columns:
+            df = df.drop(columns=["Topic"])
 
     # Create Excel in memory
     output = io.BytesIO()

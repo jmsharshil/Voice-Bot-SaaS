@@ -394,7 +394,7 @@
 
     <!-- HEADER -->
     <div class="header">
-        <a href="/navya-analytics/lead-analysis/" class="back-to-dashboard-btn" title="Back to Lead Intelligence" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; color: #475569; text-decoration: none; margin-right: 4px; transition: all 0.2s; border: 1px solid #e2e8f0;">
+        <a href="/dashboard/" class="back-to-dashboard-btn" title="Back to Lead Intelligence" style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9; color: #475569; text-decoration: none; margin-right: 4px; transition: all 0.2s; border: 1px solid #e2e8f0;">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
@@ -409,9 +409,11 @@
                 <span style="font-size: 11px; font-weight: 600; color: #64748b;" id="refreshStatus">Live</span>
             </div>
 
-            <a href="/navya-analytics/lead-analysis/" class="header-link">Lead Analysis</a>
-            <a href="/navya-analytics/" class="header-link">Call Analytics</a>
-            <a href="/bot/upload-call-page/" class="header-link">Upload & Call</a>
+            <a href="/dashboard/" class="header-link">Lead Analysis</a>
+            <a href="/analytics/" class="header-link">Call Analytics</a>
+            {% comment %} <a href="/bot/upload-call-page/" class="header-link">Upload & Call</a> {% endcomment %}
+            <a href="/bot/dashboard/" class="header-link">Upload & Call</a>
+
 
             <!-- Profile Dropdown -->
             <div class="profile-wrap" id="profileWrap" style="margin-left: 12px;">
@@ -437,7 +439,7 @@
             try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) {}
             if (!isAdmin && !perms.can_view_campaigns) {
                 alert('Access Denied: You do not have permission to view Campaign History.');
-                window.location.replace('/navya-analytics/lead-analysis/');
+                window.location.replace('/dashboard/');
             }
         }
     </script>

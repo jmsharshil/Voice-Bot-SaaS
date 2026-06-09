@@ -530,6 +530,46 @@
             document.getElementById('successBox').classList.add('show');
         }
 
+        async function restoreSessionIfPresent() {
+            const accessToken = localStorage.getItem('access_token');
+            const refreshToken = localStorage.getItem('refresh_token');
+
+            if (accessToken) {
+                {% comment %} window.location.replace('/navya-analytics/lead-analysis/'); {% endcomment %}
+                window.location.replace('/dashboard/');
+
+                return;
+            }
+
+            if (!refreshToken) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/accounts/token/refresh/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh: refreshToken }),
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.access) {
+                    localStorage.setItem('access_token', data.access);
+                    {% comment %} window.location.replace('/navya-analytics/lead-analysis/'); {% endcomment %}
+                    window.location.replace('/dashboard/');
+
+                }
+            } catch (error) {
+                console.error('Session restore failed:', error);
+            }
+        }
+
+        restoreSessionIfPresent();
+
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('submitBtn');
@@ -569,16 +609,7 @@
                     localStorage.setItem('role', data.role || 'No Role');
                     localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
 
-                    // Dynamic Redirect based on Permissions
-                    let redirectUrl = '/navya-analytics/lead-analysis/'; // Default
-                    if (data.permissions) {
-                        if (data.permissions.is_admin || data.permissions.can_view_leads) {
-                            redirectUrl = '/navya-analytics/lead-analysis/';
-                        } else if (data.permissions.can_view_calls) {
-                            redirectUrl = '/navya-analytics/';
-                        }
-                    }
-                    window.location.replace(redirectUrl);
+                    window.location.replace('/dashboard/');
                 } else if (data.code === 'user_not_found') {
                     signupAlertMsg.innerText = data.error;
                     signupAlert.classList.add('show');

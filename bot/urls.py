@@ -100,7 +100,7 @@ urlpatterns = [
     path("upload-page/",        upload_page_view),
 
     # ── Dashboard ───────────────────────────────────────────
-    path("dashboard/",                                  dashboard_view),
+    # path("dashboard/",                                  dashboard_view),
     path("dashboard/data/",                             dashboard_data),
     path("dashboard/conversations/",                    get_conversations),
     path("dashboard/messages/<int:customer_id>/",       get_messages),
@@ -112,7 +112,9 @@ urlpatterns = [
     path("mark-answered/", mark_answered),
 
     path("upload-call/", upload_call_file),
-    path("upload-call-page/", upload_call_page),
+    # path("upload-call-page/", upload_call_page),
+    path("dashboard/", upload_call_page),
+
     path("export/leads/", export_leads_excel),
     path("download-sample/", download_sample_excel),
     
