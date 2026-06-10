@@ -133,6 +133,7 @@ def login_view(request):
             "role": role_name,
             "permissions": permissions,
             "assigned_agent_id": assigned_agent_id,
+            "is_superuser": user.is_superuser,
         },
         status=status.HTTP_200_OK,
     )

@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <script src="/static/js/auth_helper.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lead Analysis — Voice Bot Intelligence</title>
@@ -1658,17 +1659,63 @@
         setInterval(refreshActiveLeadMessages, 2000);
 
         /* ── Quick Call Modal Functions ── */
-        function openQuickCallModal(e) {
+        let agentsLoadedForQuickCall = false;
+
+        async function openQuickCallModal(e) {
             if (e) e.preventDefault();
             const overlay = document.getElementById('quickCallOverlay');
             overlay.classList.add('active');
             document.getElementById('quickCallPhone').focus();
+
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+            const role = localStorage.getItem('role') || '';
+            const assignedAgentId = localStorage.getItem('assigned_agent_id');
+            const isSuperAdmin = isSuperuser || 
+                                 (role.toLowerCase() === 'super admin' || role.toLowerCase() === 'superadmin') || 
+                                 (isAdmin && (!assignedAgentId || assignedAgentId === 'null' || assignedAgentId === ''));
+
+            const agentGroup = document.getElementById('quickCallAgentGroup');
+            if (isSuperAdmin && agentGroup) {
+                agentGroup.style.display = 'block';
+                if (!agentsLoadedForQuickCall) {
+                    try {
+                        const selectEl = document.getElementById('quickCallAgent');
+                        if (selectEl) selectEl.innerHTML = '<option value="">Loading bots...</option>';
+                        
+                        const res = await fetch("/api/agents/my/", { headers: getAuthHeaders() });
+                        if (res.ok) {
+                            const agentsList = await res.json();
+                            if (selectEl) {
+                                selectEl.innerHTML = '<option value="">Choose a Bot...</option>';
+                                agentsList.forEach(agent => {
+                                    const opt = document.createElement('option');
+                                    opt.value = agent.id;
+                                    opt.textContent = `${agent.name} (${agent.industry_name || 'Generic'})`;
+                                    selectEl.appendChild(opt);
+                                });
+                                agentsLoadedForQuickCall = true;
+                            }
+                        } else {
+                            if (selectEl) selectEl.innerHTML = '<option value="">Failed to load bots</option>';
+                        }
+                    } catch (err) {
+                        console.error("Error fetching agents for quick call:", err);
+                        const selectEl = document.getElementById('quickCallAgent');
+                        if (selectEl) selectEl.innerHTML = '<option value="">Error loading bots</option>';
+                    }
+                }
+            } else if (agentGroup) {
+                agentGroup.style.display = 'none';
+            }
         }
 
         function closeQuickCallModal() {
             const overlay = document.getElementById('quickCallOverlay');
             overlay.classList.remove('active');
             document.getElementById('quickCallPhone').value = '';
+            const selectEl = document.getElementById('quickCallAgent');
+            if (selectEl) selectEl.value = '';
             const alertBox = document.getElementById('quickCallAlert');
             alertBox.style.display = 'none';
             alertBox.innerText = '';
@@ -1712,6 +1759,26 @@
                 alert('Warning: Phone number must be at least 10 digits.');
                 return;
             }
+
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+            const role = localStorage.getItem('role') || '';
+            const assignedAgentId = localStorage.getItem('assigned_agent_id');
+            const isSuperAdmin = isSuperuser || 
+                                 (role.toLowerCase() === 'super admin' || role.toLowerCase() === 'superadmin') || 
+                                 (isAdmin && (!assignedAgentId || assignedAgentId === 'null' || assignedAgentId === ''));
+
+            let agentIdToSend = null;
+            if (isSuperAdmin) {
+                const selectEl = document.getElementById('quickCallAgent');
+                agentIdToSend = selectEl ? selectEl.value : null;
+                if (!agentIdToSend) {
+                    alertBox.className = 'modal-alert error';
+                    alertBox.innerText = 'Please select a Voice Bot.';
+                    alertBox.style.display = 'block';
+                    return;
+                }
+            }
             
             submitBtn.disabled = true;
             submitBtn.innerHTML = 'Triggering...';
@@ -1725,11 +1792,16 @@
                 if (token) {
                     headers['Authorization'] = `Bearer ${token}`;
                 }
+
+                const requestPayload = { phone: phone, language: language };
+                if (agentIdToSend) {
+                    requestPayload.agent_id = agentIdToSend;
+                }
                 
                 const response = await fetch('/bot/trigger-call/', {
                     method: 'POST',
                     headers: headers,
-                    body: JSON.stringify({ phone: phone, language: language })
+                    body: JSON.stringify(requestPayload)
                 });
                 
                 const data = await response.json();
@@ -1813,6 +1885,12 @@
                 <div class="form-group">
                     <label for="quickCallPhone">Phone Number</label>
                     <input type="text" id="quickCallPhone" class="form-control" placeholder="e.g. 0123456789" required onkeydown="handleQuickCallKeydown(event)">
+                </div>
+                <div class="form-group" id="quickCallAgentGroup" style="display: none;">
+                    <label for="quickCallAgent">Select Voice Bot</label>
+                    <select id="quickCallAgent" class="form-control">
+                        <option value="">Choose a Bot...</option>
+                    </select>
                 </div>
                 
                 <button class="modal-btn" id="quickCallSubmitBtn" onclick="triggerQuickCall()">

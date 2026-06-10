@@ -1168,7 +1168,18 @@ def trigger_call(request):
         # Resolve scoped agent if logged in
         agent_id = None
         if request.user and request.user.is_authenticated:
-            if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+            is_superadmin = request.user.is_superuser
+            if not is_superadmin and hasattr(request.user, "profile"):
+                profile = request.user.profile
+                is_admin_role = False
+                if profile.role:
+                    is_admin_role = profile.role.permissions.get("is_admin", False) or profile.role.name.lower() in ["super admin", "superadmin"]
+                if profile.custom_permissions:
+                    is_admin_role = is_admin_role or profile.custom_permissions.get("is_admin", False)
+                if is_admin_role and not profile.assigned_agent:
+                    is_superadmin = True
+            
+            if not is_superadmin and hasattr(request.user, "profile") and request.user.profile.assigned_agent:
                 agent_id = str(request.user.profile.assigned_agent.id)
         
         if not agent_id:
@@ -1191,7 +1202,7 @@ def trigger_call(request):
                 "to": normalized_phone,
                 "caller_id": "+917969016753",
                 "ref": f"crm-{uuid.uuid4()}",
-                "bot_url": f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}"
+                "bot_url": f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
             }
 
 
@@ -1227,7 +1238,7 @@ def trigger_call(request):
                     "to": normalized_phone,
                     "caller_id": "+917969016753",
                     "ref": f"crm-{uuid.uuid4()}",
-                    "bot_url": f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}"
+                    "bot_url": f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
                 }
 
                 response = requests.post(
@@ -1277,7 +1288,18 @@ def upload_call_file(request):
     # Resolve scoped agent if logged in
     agent_id = None
     if request.user and request.user.is_authenticated:
-        if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+        is_superadmin = request.user.is_superuser
+        if not is_superadmin and hasattr(request.user, "profile"):
+            profile = request.user.profile
+            is_admin_role = False
+            if profile.role:
+                is_admin_role = profile.role.permissions.get("is_admin", False) or profile.role.name.lower() in ["super admin", "superadmin"]
+            if profile.custom_permissions:
+                is_admin_role = is_admin_role or profile.custom_permissions.get("is_admin", False)
+            if is_admin_role and not profile.assigned_agent:
+                is_superadmin = True
+                
+        if not is_superadmin and hasattr(request.user, "profile") and request.user.profile.assigned_agent:
             agent_id = str(request.user.profile.assigned_agent.id)
             
     if not agent_id:

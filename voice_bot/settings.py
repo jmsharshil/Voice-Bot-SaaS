@@ -53,7 +53,7 @@ WA_SENDER_BASE_URL = os.getenv("WA_SENDER_BASE_URL")
 SECRET_KEY = 'django-insecure-*7s*aaz)wrq!lexszd)#u*k!f^uv^imr70+j)7rk-xhq8*l(5k'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 ALLOWED_HOSTS = ["*","multivoicebot-d3eyanb4h2g4crhh.centralindia-01.azurewebsites.net", "insurancebot-b3aha4cmfnbghza7.centralindia-01.azurewebsites.net"]
 
 
@@ -314,4 +314,4 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'testing251299@gmail.com'
 EMAIL_HOST_PASSWORD = 'hqnc uhzo lwch iwss'
-DEFAULT_FROM_EMAIL = 'AI SalesBot <testing251299@gmail.com>'
+DEFAULT_FROM_EMAIL = 'AI SalesBot <testing251299@gmail.com>'
