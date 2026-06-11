@@ -1202,7 +1202,7 @@ def trigger_call(request):
                 "to": normalized_phone,
                 "caller_id": "+917969016753",
                 "ref": f"crm-{uuid.uuid4()}",
-                "bot_url": f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
+                "bot_url": f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
             }
 
 
@@ -1238,7 +1238,7 @@ def trigger_call(request):
                     "to": normalized_phone,
                     "caller_id": "+917969016753",
                     "ref": f"crm-{uuid.uuid4()}",
-                    "bot_url": f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
+                    "bot_url": f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
                 }
 
                 response = requests.post(
@@ -1308,7 +1308,7 @@ def upload_call_file(request):
     if not agent_id:
         return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
         
-    BOT_URL = f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
+    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
 
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
@@ -1427,7 +1427,7 @@ _missed_calls = []            # Numbers that timed out (No Answer)
 TELECOM_DIAL_URL = "https://call-route.on-forge.com/api/dial"
 TELECOM_API_KEY = "7a3e957ed459dfebc486ee58d6059928d02c4aab20c9f698bd50e2636f8df1be"
 CALLER_ID = "+917969016753"
-BOT_URL = "wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id=b60b4343-39f3-488b-9ff3-4686a9bf63cc"
+BOT_URL = "wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
 
 
 def _normalize_phone(phone):
@@ -1654,7 +1654,7 @@ def start_auto_campaign(request):
     if not agent_id:
         return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
         
-    BOT_URL = f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
+    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
 
     if _campaign_active:
         with _call_queue_lock:
