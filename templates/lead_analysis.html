@@ -390,7 +390,8 @@
             display: flex;
             flex-direction: column;
             background: #ffffff;
-            position: relative
+            position: relative;
+            overflow-y: auto;
         }
 
         .detail-header {
@@ -639,10 +640,59 @@
             transform: translateY(0)
         }
 
+        /* CONVERSATION PANEL */
+        .conversation-panel {
+            width: 480px;
+            min-width: 400px;
+            border-left: 1px solid #e2e8f0;
+            display: none;
+            flex-direction: column;
+            background: #ffffff;
+        }
+
+        .conversation-panel.show {
+            display: flex;
+        }
+
+        .conversation-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #ffffff;
+        }
+
+        .ch-icon {
+            font-size: 18px;
+        }
+
+        .ch-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        @media(max-width:1400px) {
+            .lead-list-panel {
+                width: 350px;
+                min-width: 350px;
+            }
+            .conversation-panel {
+                width: 400px;
+                min-width: 380px;
+            }
+        }
+
         @media(max-width:1100px) {
             .lead-list-panel {
-                width: 320px;
-                min-width: 320px
+                width: 300px;
+                min-width: 300px;
+            }
+            .conversation-panel {
+                width: 350px;
+                min-width: 320px;
             }
         }
 
@@ -1120,7 +1170,14 @@
                 <div class="detail-empty-title">Select a lead to view analysis</div>
                 <div class="detail-empty-sub">Click on any lead from the list to see full details and conversation</div>
             </div>
+        </div>
 
+        <!-- CONVERSATION PANEL -->
+        <div class="conversation-panel" id="conversationPanel">
+            <div class="conversation-header">
+                <span class="ch-icon">💬</span>
+                <span class="ch-title">Conversation History</span>
+            </div>
             <div class="messages" id="messagesBox"></div>
         </div>
 
@@ -1430,12 +1487,14 @@
             const summary = document.getElementById("detailSummary");
             const empty = document.getElementById("detailEmpty");
             const box = document.getElementById("messagesBox");
+            const convPanel = document.getElementById("conversationPanel");
 
             // Show header
             header.classList.add("show");
             summary.classList.add("show");
             empty.style.display = "none";
             box.classList.add("show");
+            if (convPanel) convPanel.classList.add("show");
 
             // Avatar
             const avatar = document.getElementById("dhAvatar");
