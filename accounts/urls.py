@@ -23,7 +23,8 @@ from .views import (
     RoleListView, RoleDetailView, UserListView, UserDetailView,
     TeamListView, TeamDetailView, team_management_page,
     forgot_password_view, reset_password_view,
-    forgot_password_page, reset_password_page
+    forgot_password_page, reset_password_page,
+    UploadProfilePictureView, CurrentUserView
 )
 
 urlpatterns = [
@@ -40,6 +41,8 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("forgot-password-api/", forgot_password_view, name="forgot-password-api"),
     path("reset-password-api/", reset_password_view, name="reset-password-api"),
+    path("profile/upload-picture/", UploadProfilePictureView.as_view(), name="profile-upload-picture"),
+    path("me/", CurrentUserView.as_view(), name="current-user"),
     
     # Admin / Role Management APIs
     path("roles/", RoleListView.as_view(), name="role-list"),

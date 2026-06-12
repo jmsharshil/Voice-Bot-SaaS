@@ -65,3 +65,14 @@ urlpatterns = [
     path('', include('assistant.urls')),
     path('bot/', include('bot.urls')),
 ]
+
+from django.conf import settings
+from django.urls import re_path
+from django.views.static import serve
+
+# Serve media files (profile pictures, etc.) regardless of DEBUG setting.
+# Django's static() helper refuses to work when DEBUG=False, so we use
+# re_path + serve directly so Daphne/ASGI can serve uploaded media.
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+]

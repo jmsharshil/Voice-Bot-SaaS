@@ -25,6 +25,17 @@ from conversations.services.core.strategies import (
     hospital_minimal_prepare,
     hospital_minimal_finalize,
 )
+try:
+    from automobile_bot.strategy import (
+        automobile_Naavya_strategy,
+        automobile_Naavya_prepare,
+        automobile_Naavya_finalize,
+    )
+except ImportError:
+    automobile_Naavya_strategy = None
+    automobile_Naavya_prepare = None
+    automobile_Naavya_finalize = None
+
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
 from django.core.cache import cache
@@ -38,6 +49,8 @@ STRATEGY_MAP = {
     "automobile": automobile_qualification_strategy,
     "hospital_minimal": hospital_minimal_strategy,
 }
+if automobile_Naavya_strategy:
+    STRATEGY_MAP["automobile_Naavya"] = automobile_Naavya_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -49,6 +62,8 @@ PREPARE_MAP = {
     "automobile": automobile_qualification_prepare,
     "hospital_minimal": hospital_minimal_prepare,
 }
+if automobile_Naavya_prepare:
+    PREPARE_MAP["automobile_Naavya"] = automobile_Naavya_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -59,6 +74,8 @@ FINALIZE_MAP = {
     "automobile": automobile_qualification_finalize,
     "hospital_minimal": hospital_minimal_finalize,
 }
+if automobile_Naavya_finalize:
+    FINALIZE_MAP["automobile_Naavya"] = automobile_Naavya_finalize
 
 
 def _resolve_agent(agent):

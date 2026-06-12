@@ -3,6 +3,14 @@ ASGI config for voice_bot project.
 """
 
 import os
+import sys
+import codecs
+
+# Prevent Windows console encoding errors with emojis/non-ASCII chars
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'replace')
+if sys.stderr.encoding != 'utf-8':
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'replace')
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "voice_bot.settings")
 

@@ -31,6 +31,12 @@ except Exception as e:
     print(f"⚠️ Failed to load AutomobileMatcher: {e}")
     AUTOMOBILE_MATCHER = None
 
+try:
+    NAAVYA_MATCHER = AutomobileMatcher("automobile_bot/data/Naavya_intents.json")
+except Exception as e:
+    print(f"⚠️ Failed to load NaavyaMatcher: {e}")
+    NAAVYA_MATCHER = None
+
 from elevenlabs import ElevenLabs, VoiceSettings
 
 ELEVENLABS_CLIENT = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
@@ -84,6 +90,42 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "hosp_step2_ask_slot.raw": "Great! Would you prefer a morning session between 10 to 12, or an afternoon session between 2 to 4?",
     "hosp_step3_closing.raw": "Perfect! Your slot has been confirmed. We have sent the confirmation details on WhatsApp. Thank you, take care!",
     "hosp_step_cancellation.raw": "Understood. We have cancelled your request. Have a good day. Goodbye!",
+
+    # NAAVYA AUTOMOBILE BOT (HINDI)
+    "Naavya/hi_step1_greeting.raw": "Namaste! Main Naavya bol rahi hoon JMS automobile se. Aasha karti hoon aapka din achha ja raha hoga. Kya main aapse do minute baat kar sakti hoon?",
+    "Naavya/hi_step2_discover_use.raw": "Bahut shukriya. Main aapki zaroorat ko thoda aur behatar samajhna chahti hoon. Kya aap gaadi zyada shehar mein chalane ke liye dekh rahe hain, lambi yatraon ke liye, ya dono ke liye?",
+    "Naavya/hi_step2_end_call.raw": "Koi baat nahi sir. Aapne apna samay diya uske liye dhanyavaad. Agar bhavishya mein gaadi se judi kisi bhi jaankari ki zaroorat ho, toh humse kabhi bhi sampark kar sakte hain. Aapka din shubh ho.",
+    "Naavya/hi_step3_discover_budget.raw": "Samajh gayi. Taaki main aapko behtar vikalp suggest kar sakoon, kya aap apna  budget range bata sakte hain?",
+    "Naavya/hi_step4_discover_family.raw": "Bahut badhiya. Kya yeh gaadi mukhyata aapke vyaktigat upyog ke liye hogi ya poore parivaar ke liye bhi?",
+    "Naavya/hi_step5_discover_musthaves.raw": "Aur kya aapki koi khaas pasand ya requirement hai? Jaise sunroof, automatic transmission, electric vehicle, ya phir adhik safety features?",
+    "Naavya/hi_step6_pitch_visit.raw": "Sach kahun toh gaadi ki asli premium feeling usmein baithkar hi mehsoos hoti hai. Photos aur videos us experience ko poori tarah nahi dikha paate. Kya aap is hafte showroom visit karna pasand karenge?",
+    "Naavya/hi_step7_offer_testdrive.raw": "Aur ek test drive se aap gaadi ki comfort, performance aur driving experience ko khud mehsoos kar sakte hain. Kya main aapke liye ek test drive schedule kar doon?",
+    "Naavya/hi_step8_collect_details.raw": "Bahut achha. Kripya apna naam, suvidhajanak din aur samay  bata dijiye taaki main booking confirm kar sakoon..",
+    "Naavya/hi_step9_closing.raw": " Aapki booking safaltaapurvak note kar li gayi hai. Aapka din mangalmay ho.",
+
+    # NAAVYA AUTOMOBILE BOT (ENGLISH)
+    "Naavya/en_step1_greeting.raw": "Hi there! This is Priya. So lovely to connect with you! Are you exploring a new car today, or is there a specific model you have your eye on?",
+    "Naavya/en_step2_discover_use.raw": "That's wonderful! To understand your needs better, are you looking for a car for daily city use, weekend adventures, or a mix of both?",
+    "Naavya/en_step2_end_call.raw": "No worries at all. Thank you so much for taking the call. Feel free to connect whenever you're ready to explore. Take care! Goodbye!",
+    "Naavya/en_step3_discover_budget.raw": "Got it. And what budget range are you considering? A rough ballpark is totally fine.",
+    "Naavya/en_step4_discover_family.raw": "Understood. Will this vehicle be primarily for yourself, or is it for the family too?",
+    "Naavya/en_step5_discover_musthaves.raw": "Great choice! And do you have any must-haves, like a sunroof, an EV, an automatic gearbox, or high ground clearance?",
+    "Naavya/en_step6_pitch_visit.raw": "Honestly, pictures and specs don't capture how premium it feels inside. Sitting inside makes all the difference! Would you like to visit our showroom this week?",
+    "Naavya/en_step7_offer_testdrive.raw": "And of course, the best part — would you like to take it for a spin? A test drive tells you what no brochure can. What day works best for you?",
+    "Naavya/en_step8_collect_details.raw": "Perfect! May I have your name, preferred date and time, and your phone number to confirm the booking?",
+    "Naavya/en_step9_closing.raw": "Awesome! I have got you booked. We will have everything ready for you. Really looking forward to meeting you. Drive safe!",
+
+    # NAAVYA AUTOMOBILE BOT (GUJARATI)
+    "Naavya/gu_step1_greeting.raw": "હેલો! કેમ છો? હું પ્રિયા બોલી રહી છું. તમારી સાથે વાત કરીને આનંદ થયો! શું તમે આજે કોઈ નવી કાર જોવા માંગો છો કે કોઈ ખાસ મોડેલ વિશે વાત કરવી છે?",
+    "Naavya/gu_step2_discover_use.raw": "ખૂબ સરસ! તમારી જરૂરિયાતોને વધુ સારી રીતે સમજવા માટે, શું તમે આ કાર રોજિંદા સિટી ડ્રાઇવ માટે જુઓ છો, વીકેન્ડ મુસાફરી માટે, કે બંનેના મિક્સ માટે?",
+    "Naavya/gu_step2_end_call.raw": "કોઈ વાંધો નહીં. કૉલ પર વાત કરવા બદલ આભાર. જ્યારે પણ કાર વિશે કોઈ માહિતી જોઈએ, ચોક્કસ સંપર્ક કરજો. આવજો!",
+    "Naavya/gu_step3_discover_budget.raw": "બરાબર. અને તમારું અંદાજિત બજેટ કેટલું છે? એક અંદાજ આપશો તો પણ ચાલશે.",
+    "Naavya/gu_step4_discover_family.raw": "સમજી ગઈ. અને આ ગાડી મુખ્યત્વે તમારા પોતાના વપરાશ માટે છે, કે ફેમિલી માટે પણ છે?",
+    "Naavya/gu_step5_discover_musthaves.raw": "સરસ! અને શું તમારી કોઈ ખાસ જરૂરિયાતો છે, જેમ કે સનરૂફ, ઇલેક્ટ્રિક કાર, ઓટોમેટિક ગીયરબોક્સ, કે વધુ ગ્રાઉન્ડ ક્લિયરન્સ?",
+    "Naavya/gu_step6_pitch_visit.raw": "સાચું કહું તો, ફોટા કે વિડીયોમાં તે પ્રીમિયમ ફીલ નથી આવતી જે કારમાં બેસીને આવે છે. શું તમે આ અઠવાડિયે શોરૂમની મુલાકાત લેવાનું પસંદ કરશો?",
+    "Naavya/gu_step7_offer_testdrive.raw": "અને હા, સૌથી ઉત્તમ વસ્તુ — શું તમે ટેસ્ટ ડ્રાઇવ લેવા માંગો છો? એક વાર ચલાવી જોશો તો બધો ખ્યાલ આવી જશે. તમારા માટે કયો દિવસ અનુકૂળ રહેશે?",
+    "Naavya/gu_step8_collect_details.raw": "ખૂબ સરસ! ટેસ્ટ ડ્રાઈવ બુક કરવા માટે કૃપા કરીને તમારું નામ, અનુકૂળ તારીખ અને સમય, અને ફોન નંબર જણાવશો?",
+    "Naavya/gu_step9_closing.raw": "ખૂબ સરસ! મેં તમારી એપોઇન્ટમેન્ટ બુક કરી લીધી છે. અમે શોરૂમ પર તમારી રાહ જોઈશું. સેફ ડ્રાઇવ કરજો! આવજો!",
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
@@ -544,7 +586,12 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         self.agent_tts_lang, greeting, self.strategy_key = await db_task
 
         # Determine greeting audio path
-        greeting_file = "hosp_step1_greeting.raw" if self.strategy_key == "hospital_minimal" else f"{self.language}_step1_greeting.raw"
+        if self.strategy_key == "hospital_minimal":
+            greeting_file = "hosp_step1_greeting.raw"
+        elif self.strategy_key == "automobile_Naavya":
+            greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
+        else:
+            greeting_file = f"{self.language}_step1_greeting.raw"
         greeting_text = _AUDIO_TRANSCRIPTIONS.get(greeting_file, greeting)
 
         # Record the greeting message in the database so it appears in the chat transcript
@@ -950,8 +997,13 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         file_path = os.path.join("mp3_responses", filename)
         if not os.path.exists(file_path):
             lang_prefix = f"{self.language}_"
-            if not filename.startswith(lang_prefix):
-                filename = f"{lang_prefix}{filename}"
+            if "/" in filename:
+                folder, name = filename.split("/", 1)
+                if not name.startswith(lang_prefix):
+                    filename = f"{folder}/{lang_prefix}{name}"
+            else:
+                if not filename.startswith(lang_prefix):
+                    filename = f"{lang_prefix}{filename}"
             
         # Record the bot reply in the database chat logs
         transcription = _AUDIO_TRANSCRIPTIONS.get(filename)
@@ -1015,7 +1067,11 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         normalized = text.lower().strip()
 
         # ── AUTOMOBILE INTENT ROUTER (FAST-PATH) ──────────────────
-        if AUTOMOBILE_MATCHER and getattr(self, "strategy_key", None) == "automobile":
+        is_automobile = getattr(self, "strategy_key", None) == "automobile"
+        is_naavya = getattr(self, "strategy_key", None) == "automobile_Naavya"
+        
+        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER):
+            matcher = NAAVYA_MATCHER if is_naavya else AUTOMOBILE_MATCHER
             try:
                 # 1. Initialize/Load current phase (Safe attribute check)
                 current_phase = "GREETING_REPLY"
@@ -1032,7 +1088,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     pass
 
                 # 2. Check for semantic match (Fast-Path)
-                match_result = AUTOMOBILE_MATCHER.find_match(text, current_phase=current_phase, threshold=0.70)
+                match_result = matcher.find_match(text, current_phase=current_phase, threshold=0.70)
 
                 if match_result["match_type"] != "NONE":
                     intent_name = match_result['intent']['intent_name']

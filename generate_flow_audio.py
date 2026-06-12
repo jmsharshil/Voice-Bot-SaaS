@@ -225,7 +225,14 @@ def generate_tts_file(filename, text, lang="en"):
 if __name__ == "__main__":
     import sys
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    print("Generating Multilingual Flow Audio Assets via ElevenLabs...")
+    
+    # Check if specific filenames (or filters) were passed as arguments
+    target_filters = sys.argv[1:] if len(sys.argv) > 1 else []
+    
+    if target_filters:
+        print(f"Generating audio only for files matching: {target_filters}")
+    else:
+        print("Generating Multilingual Flow Audio Assets via ElevenLabs...")
     assets = [
 
         # ══════════════════════════════════════════════════════════════════════
@@ -248,7 +255,7 @@ if __name__ == "__main__":
         ("hi_step4_ask_callback.raw", "Thank you, confirming ke liye. For best deals, offers aur poori details ke liye, kya main apni dedicated sales team se ek callback arrange kar sakti hoon? Woh aapko personally assist karenge.", "hi"),
 
         # Step 4 — Callback refused / end call
-        ("hi_step4_end_call.raw", "Bilkul samajh gayi. Koi tension nahi. Jab bhi aap ready hon, hum hamesha aapke liye yahan hain. Aapka bahut bahut shukriya. Aapka din mubarak ho. Namaste!", "hi"),
+        ("hi_step4_end_call.raw", "Bilkul samajh gayi. Koi tension nahi. Jab bhi aap ready hon, hum hamesha aapke liye yahan hain. Aapka bahut bahut shukriya. Aapka din shubh ho. Namaste!", "hi"),
 
         # Step 5 — Ask preferred callback time
         ("hi_step5_ask_time.raw", "Wonderful! Main abhi ye note kar leti hoon. Callback ke liye konsa time best rahega aapke liye? Aur koi specific din bhi batayein agar aapko convenient ho.", "hi"),
@@ -324,7 +331,14 @@ if __name__ == "__main__":
         ("gu_step8_closing.raw", "Thank you so much! અમારી sales team ટૂંક સમયમાં તમારો contact કરશે. તમારો આટલો કિંમતી સમય આપવા બદલ ખૂબ ખૂબ આભાર.", "gu"),
     ]
 
+    generated_count = 0
     for filename, text, lang in assets:
+        if target_filters and not any(t_filter in filename for t_filter in target_filters):
+            continue
         generate_tts_file(filename, text, lang)
+        generated_count += 1
 
-    print("\n[DONE] All Aaisha multilingual flow audio is ready.")
+    if target_filters:
+        print(f"\n[DONE] Finished processing. Generated {generated_count} matching asset(s).")
+    else:
+        print("\n[DONE] All Aaisha multilingual flow audio is ready.")

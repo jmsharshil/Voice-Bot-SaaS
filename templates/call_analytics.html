@@ -185,12 +185,58 @@
             cursor: pointer;
             user-select: none;
             border: 2px solid rgba(79, 70, 229, 0.2);
-            transition: box-shadow .2s
+            transition: box-shadow .2s;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
 
         .profile-avatar:hover {
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12)
         }
+
+        .minutes-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.08));
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #059669;
+            cursor: default;
+            position: relative;
+            margin-right: 10px;
+            transition: all 0.2s;
+        }
+        .minutes-badge:hover {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.14));
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+        .minutes-badge .minutes-icon { font-size: 13px; }
+        .minutes-badge .minutes-tooltip {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 220px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
+            padding: 12px 16px;
+            z-index: 999;
+            font-size: 12px;
+            color: #334155;
+            font-weight: 500;
+        }
+        .minutes-badge:hover .minutes-tooltip { display: block; }
+        .minutes-tooltip .tooltip-row { display: flex; justify-content: space-between; padding: 4px 0; }
+        .minutes-tooltip .tooltip-row.remaining { color: #059669; font-weight: 700; border-top: 1px solid #f1f5f9; margin-top: 4px; padding-top: 8px; }
+        .minutes-badge.warning { background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(217,119,6,0.08)); border-color: rgba(245,158,11,0.3); color: #d97706; }
+        .minutes-badge.danger { background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(220,38,38,0.08)); border-color: rgba(239,68,68,0.3); color: #dc2626; }
 
         .profile-dropdown {
             display: none;
@@ -924,14 +970,23 @@
                 <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
         </a>
-        <div class="header-dot"></div>
+        <div class="header-logo-icon" style="background: rgba(13, 148, 136, 0.1); color: #0d9488; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+        </div>
         <span class="header-title">Navya Analytics</span>
         <span class="header-sub">Voice Bot Conversations</span>
         <div class="header-right">
-            <a href="/dashboard/" id="leadAnalysisBtn" class="header-link" style="display:none;">🎯
-                Lead Analysis</a>
+            <a href="/bot/dashboard/" id="triggerCallBtn" class="header-link" style="display:none;">📞 Trigger-Call</a>
             <div class="live-badge">
                 <div class="live-dot"></div>Live
+            </div>
+            <!-- Minutes Badge -->
+            <div class="minutes-badge" id="minutesBadge" style="display:none;">
+                <span class="minutes-icon">⏱️</span>
+                <span id="minutesText">—/—</span>
+                <div class="minutes-tooltip" id="minutesTooltip"></div>
             </div>
             <div class="profile-wrap">
                 <div class="profile-avatar" id="profileAvatar" onclick="toggleProfile(event)">?</div>
@@ -939,6 +994,12 @@
                     <div class="pd-header">
                         <div class="pd-name" id="pdName">User</div>
                         <div class="pd-label">Logged in</div>
+                    </div>
+                    <div style="border-bottom: 1px solid #f1f5f9; padding: 4px 0;">
+                        <label for="profilePicInput" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; font-size: 13px; color: #475569; cursor: pointer; transition: background 0.2s; font-weight: 500;" class="pd-item-upload">
+                            📷 Upload Photo
+                        </label>
+                        <input type="file" id="profilePicInput" accept="image/*" style="display: none;" onchange="uploadProfilePicture(event)">
                     </div>
                     <button class="pd-logout" onclick="logoutUser()">🚪 Logout</button>
                 </div>
@@ -960,18 +1021,129 @@
                 window.location.replace('/accounts/login/');
             }
 
-            // Conditionally show Lead Analysis button
-            if (isAdmin || perms.can_view_leads) {
-                const btn = document.getElementById('leadAnalysisBtn');
+            // Conditionally show Trigger-Call button
+            if (isAdmin || perms.can_view_campaigns) {
+                const btn = document.getElementById('triggerCallBtn');
                 if (btn) btn.style.display = 'inline-flex';
             }
         }
 
-        (function () {
-            const u = localStorage.getItem('username') || 'User';
-            document.getElementById('profileAvatar').textContent = u.charAt(0).toUpperCase();
-            document.getElementById('pdName').textContent = u;
+        async function uploadProfilePicture(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const avatar = document.getElementById('profileAvatar');
+            const originalText = avatar.textContent;
+            avatar.textContent = '...';
+
+            const formData = new FormData();
+            formData.append('profile_picture', file);
+
+            try {
+                const response = await fetch('/api/accounts/profile/upload-picture/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('profile_picture', data.profile_picture || '');
+                    if (avatar) {
+                        avatar.style.backgroundImage = `url('${data.profile_picture}')`;
+                        avatar.textContent = '';
+                    }
+                } else {
+                    const err = await response.json();
+                    alert('Failed to upload profile picture: ' + (err.error || 'Unknown error'));
+                    avatar.textContent = originalText;
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error uploading profile picture.');
+                avatar.textContent = originalText;
+            }
+        }
+
+        // Set profile avatar & name from localStorage & sync from API
+        (async function () {
+            const username = localStorage.getItem('username') || 'User';
+            const avatar = document.getElementById('profileAvatar');
+            const pdName = document.getElementById('pdName');
+            if (pdName) pdName.textContent = username;
+
+            const updateAvatar = (picUrl) => {
+                if (avatar) {
+                    const currentUsername = localStorage.getItem('username') || 'User';
+                    if (picUrl && picUrl !== 'null' && picUrl !== '') {
+                        avatar.style.backgroundImage = `url('${picUrl}')`;
+                        avatar.textContent = '';
+                    } else {
+                        avatar.style.backgroundImage = 'linear-gradient(135deg, #4f46e5, #7c3aed)';
+                        avatar.textContent = currentUsername.charAt(0).toUpperCase();
+                    }
+                }
+            };
+
+            // First load from localStorage for instant display
+            updateAvatar(localStorage.getItem('profile_picture'));
+
+            // Then fetch from server to sync and ensure it is always up to date
+            try {
+                const res = await fetch('/api/accounts/me/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('profile_picture', data.profile_picture || '');
+                    localStorage.setItem('username', data.username);
+                    if (pdName) pdName.textContent = data.username;
+                    updateAvatar(data.profile_picture);
+                }
+            } catch (e) {
+                console.error('Failed to sync profile', e);
+            }
         })();
+
+        // Load minutes usage
+        async function loadMinutesUsage() {
+            try {
+                const res = await fetch('/api/minutes-usage/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const badge = document.getElementById('minutesBadge');
+                const text = document.getElementById('minutesText');
+                const tooltip = document.getElementById('minutesTooltip');
+                if (!badge) return;
+                if (data.is_admin) {
+                    text.textContent = `${data.total_used}/${data.total_quota} min`;
+                    let h = '';
+                    if (data.bots) data.bots.forEach(b => { h += `<div class="tooltip-row"><span>${b.bot_name}</span><span>${b.used_minutes}/${b.quota_minutes}</span></div>`; });
+                    h += `<div class="tooltip-row remaining"><span>⏳ Remaining</span><span>${data.total_remaining} min</span></div>`;
+                    tooltip.innerHTML = h;
+                    const pct = data.total_quota > 0 ? (data.total_used / data.total_quota) * 100 : 0;
+                    badge.classList.remove('warning','danger');
+                    if (pct >= 90) badge.classList.add('danger'); else if (pct >= 70) badge.classList.add('warning');
+                } else {
+                    if (data.quota_minutes === 0 && !data.bot_name) { badge.style.display='none'; return; }
+                    text.textContent = `${data.used_minutes}/${data.quota_minutes} min`;
+                    let h = `<div class="tooltip-row"><span>Bot</span><span>${data.bot_name||'—'}</span></div>`;
+                    h += `<div class="tooltip-row"><span>Used</span><span>${data.used_minutes} min</span></div>`;
+                    h += `<div class="tooltip-row remaining"><span>⏳ Remaining</span><span>${data.remaining_minutes} min</span></div>`;
+                    tooltip.innerHTML = h;
+                    const pct = data.quota_minutes > 0 ? (data.used_minutes / data.quota_minutes) * 100 : 0;
+                    badge.classList.remove('warning','danger');
+                    if (pct >= 90) badge.classList.add('danger'); else if (pct >= 70) badge.classList.add('warning');
+                }
+                badge.style.display = 'inline-flex';
+            } catch (e) { console.error('Failed to load minutes usage', e); }
+        }
+        loadMinutesUsage();
+
         function toggleProfile(e) {
             e.stopPropagation();
             document.getElementById('profileDropdown').classList.toggle('open');

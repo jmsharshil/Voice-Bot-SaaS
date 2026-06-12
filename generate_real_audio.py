@@ -177,7 +177,14 @@ def generate_tts_file(filename, text):
 if __name__ == "__main__":
     import sys
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    print("Generating Consumer-Match Voice Assets via ElevenLabs...")
+    
+    # Check if specific filenames (or filters) were passed as arguments
+    target_filters = sys.argv[1:] if len(sys.argv) > 1 else []
+    
+    if target_filters:
+        print(f"Generating audio only for files matching: {target_filters}")
+    else:
+        print("Generating Consumer-Match Voice Assets via ElevenLabs...")
     assets = [
         ("test_drive_offer.raw",        "Great! Kya aap iski test drive lena pasand karenge?"),
         ("ask_venue_showroom_home.raw",  "Great! Aap test drive kahan pasand karenge, showroom aana chahenge ya ghar par?"),
@@ -189,7 +196,14 @@ if __name__ == "__main__":
         ("greeting.raw",                 "Hello, main Kia motors se baat kar rahi hoon. Kya meri baat Ayushi se ho rahi hai?"),
     ]
 
+    generated_count = 0
     for filename, text in assets:
+        if target_filters and not any(t_filter in filename for t_filter in target_filters):
+            continue
         generate_tts_file(filename, text)
+        generated_count += 1
 
-    print("\nDone!")
+    if target_filters:
+        print(f"\n[DONE] Finished processing. Generated {generated_count} matching asset(s).")
+    else:
+        print("\nDone!")

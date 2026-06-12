@@ -1445,3 +1445,100 @@ def telecom_cdr_list(request):
         "unmatched": unmatched_count,
         "records": records,
     })
+
+
+# ======================================================
+# CALL MINUTES USAGE API
+# ======================================================
+import math
+
+def _round_seconds_to_billed_minutes(total_seconds):
+    """
+    Rounding logic:
+      1-29 sec  → 0.5 min (30 sec)
+      30-59 sec → 1 min
+      60-89 sec → 1.5 min
+      90-119 sec → 2 min
+      i.e. round UP to the nearest 30-second interval, then convert to minutes.
+    """
+    if total_seconds <= 0:
+        return 0.0
+    # Shift by 1 to align the boundaries correctly (1-29 -> 1, 30-59 -> 2, etc.)
+    shifted_seconds = total_seconds + 1
+    rounded_intervals = math.ceil(shifted_seconds / 30)
+    return rounded_intervals * 30 / 60.0
+
+
+def _calculate_bot_usage(agent):
+    """Calculate total billed minutes for a given VoiceAgent."""
+    completed = Conversation.objects.filter(
+        agent=agent,
+        ended_at__isnull=False
+    )
+    total_billed = 0.0
+    for c in completed:
+        raw_seconds = (c.ended_at - c.started_at).total_seconds()
+        if raw_seconds > 0:
+            total_billed += _round_seconds_to_billed_minutes(raw_seconds)
+    return round(total_billed, 1)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def minutes_usage_api(request):
+    """
+    Returns call minutes usage vs quota.
+    - Superadmin: returns usage for ALL bots
+    - Subadmin/User: returns usage for their assigned bot only
+    """
+    user = request.user
+    is_admin = user.is_superuser
+
+    results = []
+
+    if is_admin:
+        # Superadmin sees all bots
+        bots = VoiceAgent.objects.filter(is_active=True)
+        for bot in bots:
+            used = _calculate_bot_usage(bot)
+            results.append({
+                "bot_id": str(bot.id),
+                "bot_name": bot.name,
+                "used_minutes": used,
+                "quota_minutes": bot.minutes_quota,
+                "remaining_minutes": round(max(bot.minutes_quota - used, 0), 1),
+            })
+        # Also provide a combined total
+        total_used = sum(r["used_minutes"] for r in results)
+        total_quota = sum(r["quota_minutes"] for r in results)
+        return Response({
+            "is_admin": True,
+            "total_used": round(total_used, 1),
+            "total_quota": total_quota,
+            "total_remaining": round(max(total_quota - total_used, 0), 1),
+            "bots": results,
+        })
+    else:
+        # Subadmin / normal user — show their assigned bot's usage
+        assigned_agent = None
+        if hasattr(user, 'profile') and user.profile.assigned_agent:
+            assigned_agent = user.profile.assigned_agent
+
+        if assigned_agent:
+            used = _calculate_bot_usage(assigned_agent)
+            return Response({
+                "is_admin": False,
+                "bot_id": str(assigned_agent.id),
+                "bot_name": assigned_agent.name,
+                "used_minutes": used,
+                "quota_minutes": assigned_agent.minutes_quota,
+                "remaining_minutes": round(max(assigned_agent.minutes_quota - used, 0), 1),
+            })
+        else:
+            return Response({
+                "is_admin": False,
+                "used_minutes": 0,
+                "quota_minutes": 0,
+                "remaining_minutes": 0,
+                "message": "No bot assigned to this user.",
+            })

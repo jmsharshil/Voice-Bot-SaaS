@@ -626,6 +626,7 @@
                     localStorage.setItem('role', data.role || 'No Role');
                     localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
                     localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
+                    localStorage.setItem('profile_picture', data.profile_picture || '');
 
                     window.location.replace('/dashboard/');
                 } else if (data.code === 'user_not_found') {

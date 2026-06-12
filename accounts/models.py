@@ -33,6 +33,7 @@ class UserProfile(models.Model):
         related_name="created_users",
         help_text="Tracks which user created this sub-user"
     )
+    profile_picture = models.ImageField(upload_to="profile_pics/", null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.username} Profile"

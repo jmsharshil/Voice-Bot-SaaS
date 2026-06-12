@@ -41,7 +41,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ["role", "role_id", "custom_permissions", "assigned_agent_id", "assigned_agent_name", "created_by_username"]
+        fields = ["role", "role_id", "custom_permissions", "assigned_agent_id", "assigned_agent_name", "created_by_username", "profile_picture"]
 
 class UserSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer(read_only=True)

@@ -204,6 +204,15 @@ class CreateAgentView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        minutes_quota = request.data.get("minutes_quota")
+        if minutes_quota is not None:
+            try:
+                minutes_quota = int(minutes_quota)
+            except ValueError:
+                return Response({"error": "minutes_quota must be an integer"}, status=400)
+        else:
+            minutes_quota = 5000
+
         try:
             agent = VoiceAgent.objects.create(
                 owner=request.user,
@@ -211,6 +220,7 @@ class CreateAgentView(APIView):
                 role_template=role_template,
                 name=name,
                 company_name=company_name,
+                minutes_quota=minutes_quota,
             )
         except ValidationError as e:
             return Response({"error": str(e)}, status=400)
@@ -253,6 +263,20 @@ class ListUserAgentsView(APIView):
             else:
                 agents = VoiceAgent.objects.filter(owner=request.user)
 
+        from conversations.models import Conversation
+        import math
+
+        def calculate_usage(agent):
+            completed = Conversation.objects.filter(agent=agent, ended_at__isnull=False)
+            total_billed = 0.0
+            for c in completed:
+                raw_seconds = (c.ended_at - c.started_at).total_seconds()
+                if raw_seconds > 0:
+                    shifted_seconds = raw_seconds + 1
+                    rounded_intervals = math.ceil(shifted_seconds / 30)
+                    total_billed += rounded_intervals * 30 / 60.0
+            return round(total_billed, 1)
+
         return Response([
             {
                 "id": str(a.id),
@@ -260,7 +284,9 @@ class ListUserAgentsView(APIView):
                 "is_active": a.is_active,
                 "api_key": str(a.api_key),
                 "industry_name": a.industry.name if a.industry else "",
-                "role_name": a.role_template.role_name if a.role_template else ""
+                "role_name": a.role_template.role_name if a.role_template else "",
+                "minutes_quota": a.minutes_quota,
+                "used_minutes": calculate_usage(a),
             }
             for a in agents
         ])
@@ -377,4 +403,45 @@ class DemoBotResolverAPIView(APIView):
             "bot_id": str(bot.id),
             "name": bot.name,
             "api_key": str(bot.api_key)
+        })
+
+
+class UpdateAgentQuotaView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, agent_id):
+        is_admin = False
+        if request.user.is_superuser:
+            is_admin = True
+        elif hasattr(request.user, 'profile') and request.user.profile.role:
+            perms = request.user.profile.role.permissions
+            if perms.get('is_admin', False):
+                is_admin = True
+        if hasattr(request.user, 'profile') and request.user.profile.custom_permissions:
+            if request.user.profile.custom_permissions.get('is_admin', False):
+                is_admin = True
+
+        if not is_admin:
+            return Response({"error": "Only administrators can update call minute quotas."}, status=403)
+
+        agent = VoiceAgent.objects.filter(id=agent_id).first()
+        if not agent:
+            return Response({"error": "Agent not found"}, status=404)
+
+        quota = request.data.get("minutes_quota")
+        if quota is None:
+            return Response({"error": "minutes_quota is required"}, status=400)
+
+        try:
+            quota = int(quota)
+            if quota < 0:
+                raise ValueError
+        except ValueError:
+            return Response({"error": "minutes_quota must be a positive integer"}, status=400)
+
+        agent.minutes_quota = quota
+        agent.save()
+        return Response({
+            "agent_id": str(agent.id),
+            "minutes_quota": agent.minutes_quota
         })

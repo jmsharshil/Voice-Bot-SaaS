@@ -108,6 +108,8 @@ def login_view(request):
     role_name = None
     permissions = {}
     assigned_agent_id = None
+    profile_picture_url = None
+
     if hasattr(user, 'profile'):
         if user.profile.role:
             role_name = user.profile.role.name
@@ -119,6 +121,9 @@ def login_view(request):
 
         if user.profile.assigned_agent:
             assigned_agent_id = str(user.profile.assigned_agent.id)
+            
+        if user.profile.profile_picture:
+            profile_picture_url = request.build_absolute_uri(user.profile.profile_picture.url)
     
     # Also default to is_admin=True if django superuser
     if user.is_superuser:
@@ -134,6 +139,7 @@ def login_view(request):
             "permissions": permissions,
             "assigned_agent_id": assigned_agent_id,
             "is_superuser": user.is_superuser,
+            "profile_picture": profile_picture_url,
         },
         status=status.HTTP_200_OK,
     )
@@ -304,6 +310,67 @@ class TeamDetailView(APIView):
 
         user_to_delete.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UploadProfilePictureView(APIView):
+    permission_classes = [IsAuthenticated]
+    from rest_framework.parsers import MultiPartParser, FormParser
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        if not hasattr(request.user, 'profile'):
+            return Response({"error": "Profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        file_obj = request.FILES.get('profile_picture')
+        if not file_obj:
+            return Response({"error": "No image file provided."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        profile = request.user.profile
+        profile.profile_picture = file_obj
+        profile.save()
+        
+        image_url = request.build_absolute_uri(profile.profile_picture.url)
+        return Response({
+            "message": "Profile picture updated successfully.",
+            "profile_picture": image_url
+        }, status=status.HTTP_200_OK)
+
+
+class CurrentUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        role_name = None
+        permissions = {}
+        assigned_agent_id = None
+        profile_picture_url = None
+        if hasattr(user, 'profile'):
+            if user.profile.role:
+                role_name = user.profile.role.name
+                permissions = dict(user.profile.role.permissions)
+            
+            if user.profile.custom_permissions:
+                permissions.update(user.profile.custom_permissions)
+
+            if user.profile.assigned_agent:
+                assigned_agent_id = str(user.profile.assigned_agent.id)
+
+            if user.profile.profile_picture:
+                profile_picture_url = request.build_absolute_uri(user.profile.profile_picture.url)
+
+        if user.is_superuser:
+            permissions['is_admin'] = True
+
+        return Response({
+            "username": user.username,
+            "email": user.email,
+            "role": role_name,
+            "permissions": permissions,
+            "assigned_agent_id": assigned_agent_id,
+            "is_superuser": user.is_superuser,
+            "profile_picture": profile_picture_url,
+        }, status=status.HTTP_200_OK)
 
 
 def login_page(request):

@@ -5,6 +5,7 @@ from .views import (
     call_analytics_per_bot,
     lead_analysis_page, lead_analysis_data, lead_analysis_detail,
     telecom_cdr_webhook, telecom_cdr_list,
+    minutes_usage_api,
 )
 from django.urls import path
 
@@ -30,4 +31,7 @@ urlpatterns = [
     # Telecom CDR Webhook
     path("webhook/cdr/", telecom_cdr_webhook),
     path("cdr/list/", telecom_cdr_list),
+
+    # Minutes Usage
+    path("minutes-usage/", minutes_usage_api),
 ]
