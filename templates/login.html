@@ -415,6 +415,43 @@
                 border-radius: 28px;
             }
         }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 1rem;
+            }
+
+            .split-wrapper {
+                border-radius: 20px;
+            }
+
+            .form-panel {
+                padding: 2rem 1.5rem;
+                border-radius: 20px;
+            }
+
+            .form-header h1 {
+                font-size: 1.4rem;
+            }
+
+            .form-header p {
+                font-size: 0.82rem;
+            }
+
+            .input-wrap input {
+                padding: 0.7rem 0.9rem 0.7rem 2.4rem;
+                font-size: 0.88rem;
+            }
+
+            .submit-btn {
+                padding: 0.75rem;
+                font-size: 0.88rem;
+            }
+
+            .footer {
+                font-size: 0.8rem;
+            }
+        }
     </style>
 </head>
 
@@ -545,12 +582,26 @@
             }
         }
 
+        function getRedirectUrl(perms, isAdmin) {
+            if (isAdmin || perms.can_view_leads) {
+                return '/dashboard/';
+            } else if (perms.can_view_calls) {
+                return '/analytics/';
+            } else if (perms.can_view_campaigns) {
+                return '/bot/campaigns/';
+            }
+            return '/dashboard/'; // default fallback
+        }
+
         async function restoreSessionIfPresent() {
             const accessToken = localStorage.getItem('access_token');
             const refreshToken = localStorage.getItem('refresh_token');
 
             if (accessToken && !isTokenExpired(accessToken)) {
-                window.location.replace('/dashboard/');
+                let perms = {};
+                try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) {}
+                const isAdmin = localStorage.getItem('is_admin') === 'true';
+                window.location.replace(getRedirectUrl(perms, isAdmin));
                 return;
             }
 
@@ -578,7 +629,10 @@
                 const data = await response.json();
                 if (data.access) {
                     localStorage.setItem('access_token', data.access);
-                    window.location.replace('/dashboard/');
+                    let perms = {};
+                    try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) {}
+                    const isAdmin = localStorage.getItem('is_admin') === 'true';
+                    window.location.replace(getRedirectUrl(perms, isAdmin));
                 }
             } catch (error) {
                 console.error('Session restore failed:', error);
@@ -627,8 +681,10 @@
                     localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
                     localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
                     localStorage.setItem('profile_picture', data.profile_picture || '');
+                    localStorage.setItem('company_logo', data.company_logo || '');
 
-                    window.location.replace('/dashboard/');
+                    const redirectUrl = getRedirectUrl(data.permissions || {}, data.permissions?.is_admin || false);
+                    window.location.replace(redirectUrl);
                 } else if (data.code === 'user_not_found') {
                     signupAlertMsg.innerText = data.error;
                     signupAlert.classList.add('show');

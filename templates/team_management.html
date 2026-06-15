@@ -414,6 +414,61 @@
         .close-modal:hover {
             color: var(--danger);
         }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .header { flex-direction: column; gap: 0.75rem; padding: 1rem; align-items: stretch; }
+            .header > div:first-child { justify-content: center; }
+            .header h1 { font-size: 1.05rem; text-align: center; }
+            .header-actions { justify-content: center; flex-wrap: wrap; gap: 0.5rem; }
+            .header-actions .dashboard-btn,
+            .header-actions .add-user-btn,
+            .header-actions .logout-btn { padding: 0.45rem 0.85rem; font-size: 0.82rem; }
+            .container { padding: 0 0.75rem; margin: 1rem auto; gap: 1rem; }
+            .card { padding: 1rem; border-radius: 10px; }
+            .card-header { font-size: 1rem; margin-bottom: 1rem; padding-bottom: 0.75rem; }
+            .table-responsive table { min-width: 500px; }
+            th, td { padding: 0.6rem 0.5rem; font-size: 0.82rem; }
+            th { font-size: 0.65rem; }
+            .modal-content { max-width: 95%; padding: 1.5rem; border-radius: 12px; }
+            .modal-title { font-size: 1.1rem; }
+            .form-control { padding: 0.65rem 0.8rem; font-size: 0.9rem; }
+        }
+
+        @media (max-width: 576px) {
+            .header { padding: 0.75rem; }
+            .header > div:first-child { gap: 8px !important; }
+            .header h1 { font-size: 0.9rem; }
+            .back-to-dashboard-btn { width: 30px !important; height: 30px !important; }
+            .header-actions .dashboard-btn,
+            .header-actions .add-user-btn,
+            .header-actions .logout-btn { padding: 0.4rem 0.6rem; font-size: 0.75rem; border-radius: 6px; }
+            .container { padding: 0 0.5rem; margin: 0.75rem auto; }
+            .card { padding: 0.75rem; border-radius: 8px; }
+            .card-header { font-size: 0.9rem; }
+            .table-responsive table { min-width: 420px; }
+            th, td { padding: 0.5rem 0.4rem; font-size: 0.78rem; }
+            th { font-size: 0.6rem; }
+            .badge { padding: 0.2rem 0.4rem; font-size: 0.65rem; }
+            .edit-btn, .logout-btn { font-size: 0.72rem !important; padding: 0.25rem 0.5rem !important; }
+            .modal-overlay { padding: 0.5rem; align-items: flex-start; }
+            .modal-content { max-width: 100%; padding: 1.25rem; max-height: calc(100vh - 1rem); }
+            .modal-title { font-size: 1rem; }
+            .form-group label { font-size: 0.75rem; }
+            .form-control { padding: 0.6rem 0.7rem; font-size: 0.85rem; }
+            .checkbox-group { padding: 0.75rem; gap: 0.65rem; }
+            .checkbox-label { font-size: 0.85rem; }
+            .btn { padding: 0.7rem 1rem; font-size: 0.9rem; }
+        }
+
+        @media (max-width: 400px) {
+            .header h1 { font-size: 0.78rem; }
+            .container { padding: 0 0.35rem; }
+            .card { padding: 0.6rem; }
+            .table-responsive table { min-width: 380px; }
+            th, td { padding: 0.4rem 0.3rem; font-size: 0.72rem; }
+            .modal-content { padding: 1rem; }
+        }
     </style>
 </head>
 
@@ -497,17 +552,26 @@
                 <div class="form-group">
                     <label>Permissions (Select Dashboards)</label>
                     <div class="checkbox-group">
+                        <label class="checkbox-label" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="perm_all" checked onchange="toggleSelectAll('perm_all', ['perm_leads', 'perm_calls', 'perm_campaigns', 'perm_team'])">
+                            <strong>Select All Permissions</strong>
+                        </label>
+                        <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 0.5rem 0;">
                         <label class="checkbox-label">
-                            <input type="checkbox" id="perm_leads" checked>
-                            Lead Analysis Access
+                            <input type="checkbox" id="perm_leads" checked onchange="updateSelectAllState('perm_all', ['perm_leads', 'perm_calls', 'perm_campaigns', 'perm_team'])">
+                            Call Trigger Access
                         </label>
                         <label class="checkbox-label">
-                            <input type="checkbox" id="perm_calls" checked>
+                            <input type="checkbox" id="perm_calls" checked onchange="updateSelectAllState('perm_all', ['perm_leads', 'perm_calls', 'perm_campaigns', 'perm_team'])">
                             Call Analysis Access
                         </label>
                         <label class="checkbox-label">
-                            <input type="checkbox" id="perm_campaigns" checked>
+                            <input type="checkbox" id="perm_campaigns" checked onchange="updateSelectAllState('perm_all', ['perm_leads', 'perm_calls', 'perm_campaigns', 'perm_team'])">
                             Campaign History Access
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="perm_team" checked onchange="updateSelectAllState('perm_all', ['perm_leads', 'perm_calls', 'perm_campaigns', 'perm_team'])">
+                            Manage Team Access (All + Manage Team)
                         </label>
                     </div>
                 </div>
@@ -517,18 +581,47 @@
     </div>
 
     <script>
+        function toggleSelectAll(allCheckboxId, checkboxIds) {
+            const allCheckbox = document.getElementById(allCheckboxId);
+            if (!allCheckbox) return;
+            checkboxIds.forEach(id => {
+                const cb = document.getElementById(id);
+                if (cb) {
+                    cb.checked = allCheckbox.checked;
+                }
+            });
+        }
+
+        function updateSelectAllState(allCheckboxId, checkboxIds) {
+            const allCheckbox = document.getElementById(allCheckboxId);
+            if (!allCheckbox) return;
+            const allChecked = checkboxIds.every(id => {
+                const cb = document.getElementById(id);
+                return cb ? cb.checked : true;
+            });
+            allCheckbox.checked = allChecked;
+        }
+
         const API_BASE = '/api/accounts';
         const token = localStorage.getItem('access_token');
         const isAdmin = localStorage.getItem('is_admin') === 'true';
         let perms = {};
         try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) {}
 
-        // Route Guard: Must be logged in AND must have permission to manage team
         if (!token) {
             window.location.replace('/accounts/login/');
         } else if (isAdmin || !perms.can_manage_team) {
             alert('Access Denied: You do not have permission to manage team members.');
-            window.location.replace('/dashboard/');
+            if (perms.can_view_leads) {
+                window.location.replace('/dashboard/');
+            } else if (perms.can_view_calls) {
+                window.location.replace('/analytics/');
+            } else if (perms.can_view_campaigns) {
+                window.location.replace('/bot/campaigns/');
+            } else {
+                localStorage.clear();
+                window.location.replace('/accounts/login/');
+            }
         }
 
         const headers = {
@@ -570,7 +663,8 @@
                     if (cp.can_view_leads) permBadges += '<span class="badge active">Lead Access</span>';
                     if (cp.can_view_calls) permBadges += '<span class="badge active">Call Access</span>';
                     if (cp.can_view_campaigns) permBadges += '<span class="badge active">Campaign Access</span>';
-                    if (!cp.can_view_leads && !cp.can_view_calls && !cp.can_view_campaigns) permBadges += '<span class="badge">No Access Selected</span>';
+                    if (cp.can_manage_team) permBadges += '<span class="badge active" style="background-color: #3b82f6;">Manage Team</span>';
+                    if (!cp.can_view_leads && !cp.can_view_calls && !cp.can_view_campaigns && !cp.can_manage_team) permBadges += '<span class="badge">No Access Selected</span>';
 
                     tbody.innerHTML += `
                         <tr>
@@ -610,6 +704,7 @@
             const can_view_leads = document.getElementById('perm_leads').checked;
             const can_view_calls = document.getElementById('perm_calls').checked;
             const can_view_campaigns = document.getElementById('perm_campaigns').checked;
+            const can_manage_team = document.getElementById('perm_team').checked;
 
             const payload = {
                 username,
@@ -617,7 +712,8 @@
                 permissions: {
                     can_view_leads,
                     can_view_calls,
-                    can_view_campaigns
+                    can_view_campaigns,
+                    can_manage_team
                 }
             };
 
@@ -702,6 +798,8 @@
                 document.getElementById('perm_leads').checked = !!cp.can_view_leads;
                 document.getElementById('perm_calls').checked = !!cp.can_view_calls;
                 document.getElementById('perm_campaigns').checked = !!cp.can_view_campaigns;
+                document.getElementById('perm_team').checked = !!cp.can_manage_team;
+                updateSelectAllState('perm_all', ['perm_leads', 'perm_calls', 'perm_campaigns', 'perm_team']);
             } else {
                 currentEditUserId = null;
                 modalTitle.innerText = "Add New Team Member";
@@ -710,9 +808,11 @@
                 passwordInput.placeholder = "Create a password";
 
                 document.getElementById('teamForm').reset();
+                document.getElementById('perm_all').checked = true;
                 document.getElementById('perm_leads').checked = true;
                 document.getElementById('perm_calls').checked = true;
                 document.getElementById('perm_campaigns').checked = true;
+                document.getElementById('perm_team').checked = true;
             }
 
             modalOverlay.classList.add('active');

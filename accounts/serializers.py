@@ -41,7 +41,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ["role", "role_id", "custom_permissions", "assigned_agent_id", "assigned_agent_name", "created_by_username", "profile_picture"]
+        fields = ["role", "role_id", "custom_permissions", "assigned_agent_id", "assigned_agent_name", "created_by_username", "profile_picture", "company_logo"]
 
 class UserSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer(read_only=True)
@@ -98,15 +98,17 @@ class RegisterSerializer(serializers.ModelSerializer):
     assigned_agent_id = serializers.PrimaryKeyRelatedField(
         queryset=VoiceAgent.objects.all(), write_only=True, required=False, allow_null=True
     )
+    company_logo = serializers.ImageField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = User
-        fields = ["username", "email", "password", "role_name", "permissions", "assigned_agent_id"]
+        fields = ["username", "email", "password", "role_name", "permissions", "assigned_agent_id", "company_logo"]
 
     def create(self, validated_data):
         role_name = validated_data.pop("role_name", None)
         permissions = validated_data.pop("permissions", None)
         assigned_agent = validated_data.pop("assigned_agent_id", None)
+        company_logo = validated_data.pop("company_logo", None)
         user = User.objects.create_user(**validated_data)
         
         # If a role name is provided, get or create it with the specified permissions
@@ -124,6 +126,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             
         if assigned_agent:
             user.profile.assigned_agent = assigned_agent
+            
+        if company_logo:
+            user.profile.company_logo = company_logo
             
         user.profile.save()
         return user

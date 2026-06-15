@@ -429,17 +429,28 @@ class UpdateAgentQuotaView(APIView):
             return Response({"error": "Agent not found"}, status=404)
 
         quota = request.data.get("minutes_quota")
-        if quota is None:
-            return Response({"error": "minutes_quota is required"}, status=400)
+        add_minutes = request.data.get("add_minutes")
 
-        try:
-            quota = int(quota)
-            if quota < 0:
-                raise ValueError
-        except ValueError:
-            return Response({"error": "minutes_quota must be a positive integer"}, status=400)
+        if quota is None and add_minutes is None:
+            return Response({"error": "Either minutes_quota or add_minutes is required"}, status=400)
 
-        agent.minutes_quota = quota
+        if add_minutes is not None:
+            try:
+                add_minutes = int(add_minutes)
+                if add_minutes < 0:
+                    raise ValueError
+            except ValueError:
+                return Response({"error": "add_minutes must be a positive integer"}, status=400)
+            agent.minutes_quota += add_minutes
+        else:
+            try:
+                quota = int(quota)
+                if quota < 0:
+                    raise ValueError
+            except ValueError:
+                return Response({"error": "minutes_quota must be a positive integer"}, status=400)
+            agent.minutes_quota = quota
+
         agent.save()
         return Response({
             "agent_id": str(agent.id),

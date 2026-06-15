@@ -34,6 +34,30 @@ class UserProfile(models.Model):
         help_text="Tracks which user created this sub-user"
     )
     profile_picture = models.ImageField(upload_to="profile_pics/", null=True, blank=True)
+    company_logo = models.ImageField(upload_to="company_logos/", null=True, blank=True)
+
+    def get_company_logo(self):
+        """
+        Returns the company logo for this profile, or recursively checks
+        the creator's profile until a company logo is found.
+        """
+        if self.company_logo:
+            return self.company_logo
+            
+        current = self
+        visited = {current.id}
+        while current.created_by:
+            try:
+                creator_profile = current.created_by.profile
+                if creator_profile.id in visited:
+                    break
+                visited.add(creator_profile.id)
+                if creator_profile.company_logo:
+                    return creator_profile.company_logo
+                current = creator_profile
+            except UserProfile.DoesNotExist:
+                break
+        return None
 
     def __str__(self):
         return f"{self.user.username} Profile"

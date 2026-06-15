@@ -133,6 +133,87 @@
             transform: translateY(-1px)
         }
 
+        /* Unified Header Navigation styles */
+        .nav-tabs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 8px;
+            border-right: 1px solid #e2e8f0;
+            padding-right: 12px;
+        }
+        .nav-tab {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-tab:hover {
+            color: #4f46e5;
+            background: #f1f5f9;
+        }
+        .nav-tab.active {
+            color: #4f46e5;
+            background: #e0e7ff;
+        }
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-action-btn {
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+        .nav-action-btn:hover {
+            transform: translateY(-1px);
+        }
+        .nav-action-btn-primary {
+            background: #4f46e5;
+            color: #ffffff;
+        }
+        .nav-action-btn-primary:hover {
+            background: #4338ca;
+        }
+        .nav-action-btn-success {
+            background: #10b981;
+            color: #ffffff;
+        }
+        .nav-action-btn-success:hover {
+            background: #059669;
+        }
+        .nav-action-btn-warning {
+            background: #fff7ed;
+            color: #ea580c;
+            border-color: rgba(234,88,12,0.2);
+        }
+        .nav-action-btn-warning:hover {
+            background: #ffedd5;
+        }
+        .nav-action-btn-info {
+            background: #eff6ff;
+            color: #3b82f6;
+            border-color: rgba(59,130,246,0.2);
+        }
+        .nav-action-btn-info:hover {
+            background: #dbeafe;
+        }
+
         /* STAT CARDS */
         .cards {
             display: grid;
@@ -694,6 +775,87 @@
                 width: 350px;
                 min-width: 320px;
             }
+            .header { padding: 14px 20px; }
+            .cards { padding: 20px; gap: 14px; }
+            .main { margin: 0 20px 20px; }
+            .nav-tab { padding: 6px 10px; font-size: 12px; }
+            .nav-action-btn { padding: 6px 10px; font-size: 12px; }
+        }
+
+        @media(max-width:900px) {
+            .main { flex-direction: column; height: auto; min-height: 70vh; margin: 0 16px 16px; }
+            .lead-list-panel { width: 100%; min-width: unset; max-height: 40vh; border-right: none; border-bottom: 1px solid #e2e8f0; }
+            .conversation-panel { width: 100%; min-width: unset; max-height: 40vh; border-left: none; border-top: 1px solid #e2e8f0; }
+            .cards { grid-template-columns: repeat(3, 1fr); padding: 16px; gap: 12px; }
+            .card { padding: 18px; }
+            .card-value { font-size: 26px; }
+        }
+
+        @media(max-width:768px) {
+            .header { flex-wrap: wrap; padding: 12px 16px; gap: 8px; }
+            .header-title { font-size: 15px; }
+            .header-sub { font-size: 11px; padding: 3px 8px; margin-left: 4px; }
+            .header-right { width: 100%; justify-content: center; flex-wrap: wrap; gap: 6px; }
+            .nav-tabs { border-right: none; padding-right: 0; margin-right: 0; flex-wrap: wrap; justify-content: center; }
+            .nav-tab { padding: 5px 8px; font-size: 11px; gap: 4px; }
+            .nav-actions { flex-wrap: wrap; justify-content: center; }
+            .nav-action-btn { padding: 5px 8px; font-size: 11px; }
+            .minutes-badge { font-size: 11px; padding: 4px 10px; }
+            .cards { grid-template-columns: repeat(2, 1fr); padding: 12px; }
+            .card { padding: 16px; }
+            .card-value { font-size: 24px; }
+            .card-label { font-size: 10px; }
+            .main { border-radius: 14px; }
+            .lead-list-panel { max-height: 35vh; }
+            .lead-item { padding: 14px; gap: 12px; }
+            .lead-badge { width: 36px; height: 36px; font-size: 16px; border-radius: 10px; }
+            .lead-name { font-size: 13px; }
+            .lead-topic { font-size: 11px; }
+            .lead-meta { font-size: 10px; }
+            .lead-level-tag { font-size: 9px; padding: 3px 8px; }
+            .detail-header { padding: 16px 18px; }
+            .dh-name { font-size: 17px; }
+            .messages { padding: 16px; }
+            .msg { max-width: 85%; font-size: 13px; padding: 12px 16px; }
+            .export-btn { padding: 6px 12px; font-size: 12px; }
+            .profile-avatar { width: 32px; height: 32px; font-size: 13px; }
+        }
+
+        @media(max-width:576px) {
+            .header { padding: 10px 12px; }
+            .header-title { font-size: 14px; }
+            .header-sub { display: none; }
+            .header-dot { width: 8px; height: 8px; }
+            .nav-tab { padding: 4px 6px; font-size: 10px; }
+            .nav-action-btn { font-size: 10px; padding: 4px 8px; }
+            .minutes-badge { font-size: 10px; padding: 3px 8px; margin-right: 4px; }
+            .profile-avatar { width: 30px; height: 30px; font-size: 12px; }
+            .cards { grid-template-columns: 1fr 1fr; padding: 10px 8px; gap: 8px; }
+            .card { padding: 14px; border-radius: 12px; }
+            .card-value { font-size: 20px; }
+            .card-label { font-size: 9px; }
+            .main { margin: 0 8px 12px; border-radius: 12px; }
+            .lead-list-panel { max-height: 32vh; }
+            .lead-item { padding: 12px; gap: 10px; }
+            .lead-badge { width: 32px; height: 32px; font-size: 14px; border-radius: 8px; }
+            .lead-name { font-size: 12px; }
+            .search-box { padding: 12px; }
+            .search-input { padding: 10px 12px; font-size: 13px; }
+            .detail-cards { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+            .dc { padding: 8px 10px; }
+            .dc-label { font-size: 8px; }
+            .dc-value { font-size: 12px; }
+            .messages { padding: 12px 10px; gap: 8px; }
+            .msg { max-width: 90%; font-size: 12.5px; padding: 10px 14px; border-radius: 12px; }
+            .msg-label { font-size: 9px; }
+            .export-btn { padding: 5px 10px; font-size: 11px; gap: 5px; }
+        }
+
+        @media(max-width:480px) {
+            .cards { grid-template-columns: 1fr; }
+            .header-right { gap: 4px; }
+            .nav-tabs { gap: 2px; }
+            .main { margin: 0 6px 8px; }
         }
 
         /* ── Profile Dropdown ── */
@@ -1026,20 +1188,23 @@
                 <circle cx="12" cy="12" r="2"></circle>
             </svg>
         </div>
+        <img class="header-company-logo" style="height: 32px; max-width: 120px; object-fit: contain; display: none;" alt="Company Logo">
         <span class="header-title">Lead Intelligence</span>
         <span class="header-sub">AI-Powered Call Analysis</span>
         <div class="header-right">
-            <a href="#" onclick="openQuickCallModal(event)" class="header-link"
-                style="background:#fff7ed; color:#ea580c; border-color:rgba(234,88,12,0.2);">📞 Quick Call</a>
-            <a href="/bot/dashboard/" class="header-link"
-                style="background:#f0fdf4; color:#16a34a; border-color:rgba(22,163,74,0.2);">📞 Trigger-Call</a>
-            <a href="/bot/export/leads/" class="export-btn" download>📗 Export to Excel</a>
-            <a href="/analytics/" id="callAnalyticsBtn" class="header-link" style="display:none;">📈 Call Analytics</a>
-            <a href="/bot/campaigns/" id="campaignHistoryBtn" class="header-link"
-                style="display:none; background:#faf5ff; color:#a855f7; border-color:rgba(168,85,247,0.2);">🕒 Campaign History</a>
-            <a href="/accounts/admin-management/" id="adminBtn" class="header-link"
-                style="display:none; background:#eff6ff; color:#3b82f6; border-color:rgba(59,130,246,0.2);">⚙️ Add
-                User</a>
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs">
+                <a href="/dashboard/" id="navLeadAnalysis" class="nav-tab active">🧠 Lead Analysis</a>
+                <a href="/analytics/" id="callAnalyticsBtn" class="nav-tab" style="display:none;">📈 Call Analytics</a>
+                <a href="/bot/campaigns/" id="campaignHistoryBtn" class="nav-tab" style="display:none;">🕒 Campaign History</a>
+                <a href="/bot/dashboard/" id="triggerCallBtn" class="nav-tab" style="display:none;">📞 Trigger-Call</a>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="nav-actions">
+                <a href="#" onclick="openQuickCallModal(event)" class="nav-action-btn nav-action-btn-warning">📞 Quick Call</a>
+                <a href="/accounts/admin-management/" id="adminBtn" class="nav-action-btn nav-action-btn-info" style="display:none;">⚙️ Add Client</a>
+            </div>
 
             <!-- Minutes Badge -->
             <div class="minutes-badge" id="minutesBadge" style="display:none;">
@@ -1086,14 +1251,399 @@
             try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) { }
 
             if (!isAdmin && !perms.can_view_leads) {
-                alert('Access Denied: You do not have permission to view Lead Analysis.');
-                window.location.replace('/accounts/login/');
+                if (perms.can_view_calls) {
+                    window.location.replace('/analytics/');
+                } else if (perms.can_view_campaigns) {
+                    window.location.replace('/bot/campaigns/');
+                } else {
+                    alert('Access Denied: You do not have permission to view any dashboard. Please contact your administrator.');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    localStorage.removeItem('username');
+                    localStorage.removeItem('is_admin');
+                    localStorage.removeItem('permissions');
+                    window.location.replace('/accounts/login/');
+                }
             }
 
             // Conditionally show Call Analytics button
             if (isAdmin || perms.can_view_calls) {
                 const btn = document.getElementById('callAnalyticsBtn');
                 if (btn) btn.style.display = 'inline-flex';
+            }
+        }
+
+        function showMinutesWarningModal(botName, usedMinutes, threshold) {
+            if (document.getElementById('minutesWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'minutesWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(4px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2rem';
+            content.style.borderRadius = '16px';
+            content.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+            content.style.maxWidth = '450px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '64px';
+            iconContainer.style.height = '64px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.style.marginRight = 'auto';
+            iconContainer.style.marginLeft = 'auto';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Minutes Usage Warning';
+            title.style.fontSize = '1.4rem';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.5';
+            msg.style.marginBottom = '1.5rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `Your voice bot <strong style="color: #f8f8f2;">${botName}</strong> has crossed the <strong style="color: #ef4444;">${threshold} minutes</strong> usage threshold.<br><br>Total used minutes: <span style="font-size: 1.15rem; font-weight: bold; color: #f8f8f2; background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">${usedMinutes} minutes</span>.`;
+
+            const btn = document.createElement('button');
+            btn.innerText = 'Acknowledge';
+            btn.style.width = '100%';
+            btn.style.padding = '0.75rem 1rem';
+            btn.style.backgroundColor = '#ef4444';
+            btn.style.color = '#ffffff';
+            btn.style.border = 'none';
+            btn.style.borderRadius = '8px';
+            btn.style.fontWeight = '600';
+            btn.style.cursor = 'pointer';
+            btn.style.transition = 'background-color 0.2s ease, transform 0.1s ease';
+            
+            btn.onmouseover = () => btn.style.backgroundColor = '#dc2626';
+            btn.onmouseout = () => btn.style.backgroundColor = '#ef4444';
+            btn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            content.appendChild(btn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function showLowMinutesWarningModal(botName, remainingMinutes) {
+            if (document.getElementById('lowMinutesWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'lowMinutesWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(4px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2rem';
+            content.style.borderRadius = '16px';
+            content.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+            content.style.maxWidth = '450px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '64px';
+            iconContainer.style.height = '64px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.style.marginRight = 'auto';
+            iconContainer.style.marginLeft = 'auto';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Critical Quota Warning';
+            title.style.fontSize = '1.4rem';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.5';
+            msg.style.marginBottom = '1.5rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `Your voice bot <strong style="color: #f8f8f2;">${botName}</strong> is running extremely low on minutes.<br><br>Remaining minutes: <span style="font-size: 1.15rem; font-weight: bold; color: #f8f8f2; background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">${remainingMinutes} minutes</span>.<br><br>Please contact us to add more minutes and avoid any disruption.`;
+
+            // Contact Us Button
+            const contactBtn = document.createElement('a');
+            contactBtn.href = 'mailto:support@example.com?subject=Voice%20Bot%20Recharge%20Request';
+            contactBtn.innerText = '📧 Contact Support';
+            contactBtn.style.display = 'block';
+            contactBtn.style.width = '100%';
+            contactBtn.style.padding = '0.75rem 1rem';
+            contactBtn.style.backgroundColor = '#4f46e5';
+            contactBtn.style.color = '#ffffff';
+            contactBtn.style.borderRadius = '8px';
+            contactBtn.style.fontWeight = '600';
+            contactBtn.style.textAlign = 'center';
+            contactBtn.style.textDecoration = 'none';
+            contactBtn.style.marginBottom = '0.75rem';
+            contactBtn.style.transition = 'background-color 0.2s ease';
+            contactBtn.onmouseover = () => contactBtn.style.backgroundColor = '#4338ca';
+            contactBtn.onmouseout = () => contactBtn.style.backgroundColor = '#4f46e5';
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.innerText = 'Dismiss';
+            dismissBtn.style.width = '100%';
+            dismissBtn.style.padding = '0.75rem 1rem';
+            dismissBtn.style.backgroundColor = 'transparent';
+            dismissBtn.style.color = '#a6adc8';
+            dismissBtn.style.border = '1px solid #45475a';
+            dismissBtn.style.borderRadius = '8px';
+            dismissBtn.style.fontWeight = '600';
+            dismissBtn.style.cursor = 'pointer';
+            dismissBtn.style.transition = 'background-color 0.2s ease, color 0.2s ease';
+            dismissBtn.onmouseover = () => {
+                dismissBtn.style.backgroundColor = '#313244';
+                dismissBtn.style.color = '#f8f8f2';
+            };
+            dismissBtn.onmouseout = () => {
+                dismissBtn.style.backgroundColor = 'transparent';
+                dismissBtn.style.color = '#a6adc8';
+            };
+            dismissBtn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            content.appendChild(contactBtn);
+            content.appendChild(dismissBtn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function showQuotaExhaustedWarningModal(botName) {
+            if (document.getElementById('quotaExhaustedWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'quotaExhaustedWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.65)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(6px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2.5rem 2rem';
+            content.style.borderRadius = '20px';
+            content.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
+            content.style.maxWidth = '460px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '72px';
+            iconContainer.style.height = '72px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Call Quota Exhausted';
+            title.style.fontSize = '1.5rem';
+            title.style.fontWeight = '700';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.6';
+            msg.style.marginBottom = '2rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `All allocated call credits for your bot <strong style="color: #f8f8f2;">${botName}</strong> have been fully utilized.<br><br>Please contact support to add more credits to resume making calls.`;
+
+            const contactBtn = document.createElement('a');
+            contactBtn.href = 'mailto:support@example.com?subject=Voice%20Bot%20Recharge%20Request';
+            contactBtn.innerText = '📞 Request More Credits';
+            contactBtn.style.display = 'block';
+            contactBtn.style.width = '100%';
+            contactBtn.style.padding = '0.85rem 1rem';
+            contactBtn.style.backgroundColor = '#ef4444';
+            contactBtn.style.color = '#ffffff';
+            contactBtn.style.borderRadius = '10px';
+            contactBtn.style.fontWeight = '600';
+            contactBtn.style.textAlign = 'center';
+            contactBtn.style.textDecoration = 'none';
+            contactBtn.style.marginBottom = '0.75rem';
+            contactBtn.style.transition = 'background-color 0.2s ease';
+            contactBtn.onmouseover = () => contactBtn.style.backgroundColor = '#dc2626';
+            contactBtn.onmouseout = () => contactBtn.style.backgroundColor = '#ef4444';
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.innerText = 'Dismiss';
+            dismissBtn.style.width = '100%';
+            dismissBtn.style.padding = '0.85rem 1rem';
+            dismissBtn.style.backgroundColor = 'transparent';
+            dismissBtn.style.color = '#a6adc8';
+            dismissBtn.style.border = '1px solid #45475a';
+            dismissBtn.style.borderRadius = '10px';
+            dismissBtn.style.fontWeight = '600';
+            dismissBtn.style.cursor = 'pointer';
+            dismissBtn.style.transition = 'background-color 0.2s ease, color 0.2s ease';
+            dismissBtn.onmouseover = () => {
+                dismissBtn.style.backgroundColor = '#313244';
+                dismissBtn.style.color = '#f8f8f2';
+            };
+            dismissBtn.onmouseout = () => {
+                dismissBtn.style.backgroundColor = 'transparent';
+                dismissBtn.style.color = '#a6adc8';
+            };
+            dismissBtn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            content.appendChild(contactBtn);
+            content.appendChild(dismissBtn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function checkRemainingMinutesThreshold(data) {
+            if (!data || data.is_admin || !data.bot_id) return;
+            const remaining = parseFloat(data.remaining_minutes) || 0;
+            if (remaining <= 0) {
+                const key = 'shown_exhausted_warning_' + data.bot_id;
+                if (!localStorage.getItem(key)) {
+                    showQuotaExhaustedWarningModal(data.bot_name || 'Bot');
+                    localStorage.setItem(key, 'true');
+                }
+            } else if (remaining <= 100) {
+                const key = 'shown_low_minutes_warning_' + data.bot_id;
+                if (!localStorage.getItem(key)) {
+                    showLowMinutesWarningModal(data.bot_name || 'Bot', remaining);
+                    localStorage.setItem(key, 'true');
+                }
+            } else {
+                localStorage.removeItem('shown_low_minutes_warning_' + data.bot_id);
+                localStorage.removeItem('shown_exhausted_warning_' + data.bot_id);
+            }
+        }
+
+        function checkMinutesUsageThreshold(data) {
+            if (!data || data.is_admin || !data.bot_id) return;
+            const used = parseFloat(data.used_minutes) || 0;
+            const threshold = Math.floor(used / 500) * 500;
+            if (threshold >= 500) {
+                const key = 'shown_warning_threshold_' + data.bot_id;
+                const lastShown = parseInt(localStorage.getItem(key) || '0', 10);
+                if (threshold > lastShown) {
+                    showMinutesWarningModal(data.bot_name || 'Bot', used, threshold);
+                    localStorage.setItem(key, threshold.toString());
+                }
             }
         }
 
@@ -1111,20 +1661,8 @@
                 if (!badge) return;
 
                 if (data.is_admin) {
-                    text.textContent = `${data.total_used}/${data.total_quota} min`;
-                    let tooltipHtml = '';
-                    if (data.bots && data.bots.length > 0) {
-                        data.bots.forEach(b => {
-                            tooltipHtml += `<div class="tooltip-row"><span>${b.bot_name}</span><span>${b.used_minutes}/${b.quota_minutes}</span></div>`;
-                        });
-                    }
-                    tooltipHtml += `<div class="tooltip-row remaining"><span>⏳ Remaining</span><span>${data.total_remaining} min</span></div>`;
-                    tooltip.innerHTML = tooltipHtml;
-
-                    const pct = data.total_quota > 0 ? (data.total_used / data.total_quota) * 100 : 0;
-                    badge.classList.remove('warning', 'danger');
-                    if (pct >= 90) badge.classList.add('danger');
-                    else if (pct >= 70) badge.classList.add('warning');
+                    badge.style.display = 'none';
+                    return;
                 } else {
                     if (data.quota_minutes === 0 && !data.bot_name) {
                         badge.style.display = 'none';
@@ -1138,8 +1676,12 @@
 
                     const pct = data.quota_minutes > 0 ? (data.used_minutes / data.quota_minutes) * 100 : 0;
                     badge.classList.remove('warning', 'danger');
-                    if (pct >= 90) badge.classList.add('danger');
+                    if (pct >= 90 || (data.remaining_minutes <= 100)) badge.classList.add('danger');
                     else if (pct >= 70) badge.classList.add('warning');
+
+                    // Check for threshold warning popups
+                    checkMinutesUsageThreshold(data);
+                    checkRemainingMinutesThreshold(data);
                 }
                 badge.style.display = 'inline-flex';
             } catch (e) {
@@ -1207,8 +1749,25 @@
                 }
             };
 
+            const updateCompanyLogo = (logoUrl) => {
+                const logoIcon = document.querySelector('.header-logo-icon');
+                const companyLogoImg = document.querySelector('.header-company-logo');
+                if (logoIcon && companyLogoImg) {
+                    if (logoUrl && logoUrl !== 'null' && logoUrl !== '') {
+                        logoIcon.style.display = 'none';
+                        companyLogoImg.src = logoUrl;
+                        companyLogoImg.style.display = 'block';
+                    } else {
+                        logoIcon.style.display = 'inline-flex';
+                        companyLogoImg.style.display = 'none';
+                        companyLogoImg.src = '';
+                    }
+                }
+            };
+
             // First load from localStorage for instant display
             updateAvatar(localStorage.getItem('profile_picture'));
+            updateCompanyLogo(localStorage.getItem('company_logo'));
 
             // Then fetch from server to sync and ensure it is always up to date
             try {
@@ -1218,9 +1777,11 @@
                 if (res.ok) {
                     const data = await res.json();
                     localStorage.setItem('profile_picture', data.profile_picture || '');
+                    localStorage.setItem('company_logo', data.company_logo || '');
                     localStorage.setItem('username', data.username);
                     if (pdName) pdName.textContent = data.username;
                     updateAvatar(data.profile_picture);
+                    updateCompanyLogo(data.company_logo);
                 }
             } catch (e) {
                 console.error('Failed to sync profile', e);
@@ -1238,6 +1799,8 @@
             if (isAdmin || perms.can_view_campaigns) {
                 const campaignBtn = document.getElementById('campaignHistoryBtn');
                 if (campaignBtn) campaignBtn.style.display = 'inline-flex';
+                const triggerBtn = document.getElementById('triggerCallBtn');
+                if (triggerBtn) triggerBtn.style.display = 'inline-flex';
             }
 
             // Show Team Management button if user has permission (but hide for superadmin)
@@ -1341,9 +1904,14 @@
                     <option value="week">Last 7 Days</option>
                 </select>
             </div>
-            <div class="list-header">
-                <span>All Leads</span>
-                <span id="leadCount">0 leads</span>
+            <div class="list-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <span>All Leads</span>
+                    <span id="leadCount" style="margin-left: 6px;">0 leads</span>
+                </div>
+                <a href="/bot/export/leads/" class="export-btn" download style="margin-left: auto; text-decoration: none; padding: 6px 12px; font-size: 11.5px; background: #10b981; color: #fff; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #059669; transition: all 0.2s;">
+                    📗 Export
+                </a>
             </div>
             <div class="lead-list" id="leadList">
                 <div class="loading">

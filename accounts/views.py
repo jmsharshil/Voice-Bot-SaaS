@@ -51,8 +51,11 @@ class IsSuperAdminOrAdmin(IsAuthenticated):
             perms = request.user.profile.role.permissions
             return perms.get('is_admin', False)
         return False
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
 class RegisterView(APIView):
     permission_classes = [IsSuperAdminOrAdmin]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -109,6 +112,7 @@ def login_view(request):
     permissions = {}
     assigned_agent_id = None
     profile_picture_url = None
+    company_logo_url = None
 
     if hasattr(user, 'profile'):
         if user.profile.role:
@@ -124,6 +128,10 @@ def login_view(request):
             
         if user.profile.profile_picture:
             profile_picture_url = request.build_absolute_uri(user.profile.profile_picture.url)
+
+        resolved_logo = user.profile.get_company_logo()
+        if resolved_logo:
+            company_logo_url = request.build_absolute_uri(resolved_logo.url)
     
     # Also default to is_admin=True if django superuser
     if user.is_superuser:
@@ -140,6 +148,7 @@ def login_view(request):
             "assigned_agent_id": assigned_agent_id,
             "is_superuser": user.is_superuser,
             "profile_picture": profile_picture_url,
+            "company_logo": company_logo_url,
         },
         status=status.HTTP_200_OK,
     )
@@ -220,7 +229,7 @@ class TeamListView(APIView):
             "can_view_leads": permissions.get("can_view_leads", False),
             "can_view_calls": permissions.get("can_view_calls", False),
             "can_view_campaigns": permissions.get("can_view_campaigns", False),
-            "can_manage_team": False
+            "can_manage_team": permissions.get("can_manage_team", False)
         }
         # Inherit role (e.g. Kia Client/Hospital Client) but ensure they can't manage team
         user.profile.role = profile.role
@@ -273,7 +282,7 @@ class TeamDetailView(APIView):
         user_to_edit.save()
 
         # Update permissions
-        if "can_view_leads" in permissions or "can_view_calls" in permissions or "can_view_campaigns" in permissions:
+        if "can_view_leads" in permissions or "can_view_calls" in permissions or "can_view_campaigns" in permissions or "can_manage_team" in permissions:
             if not user_to_edit.profile.custom_permissions:
                 user_to_edit.profile.custom_permissions = {}
             if "can_view_leads" in permissions:
@@ -282,6 +291,8 @@ class TeamDetailView(APIView):
                 user_to_edit.profile.custom_permissions["can_view_calls"] = permissions.get("can_view_calls", False)
             if "can_view_campaigns" in permissions:
                 user_to_edit.profile.custom_permissions["can_view_campaigns"] = permissions.get("can_view_campaigns", False)
+            if "can_manage_team" in permissions:
+                user_to_edit.profile.custom_permissions["can_manage_team"] = permissions.get("can_manage_team", False)
             user_to_edit.profile.save()
 
         serializer = UserSerializer(user_to_edit)
@@ -345,6 +356,7 @@ class CurrentUserView(APIView):
         permissions = {}
         assigned_agent_id = None
         profile_picture_url = None
+        company_logo_url = None
         if hasattr(user, 'profile'):
             if user.profile.role:
                 role_name = user.profile.role.name
@@ -359,6 +371,10 @@ class CurrentUserView(APIView):
             if user.profile.profile_picture:
                 profile_picture_url = request.build_absolute_uri(user.profile.profile_picture.url)
 
+            resolved_logo = user.profile.get_company_logo()
+            if resolved_logo:
+                company_logo_url = request.build_absolute_uri(resolved_logo.url)
+
         if user.is_superuser:
             permissions['is_admin'] = True
 
@@ -370,6 +386,7 @@ class CurrentUserView(APIView):
             "assigned_agent_id": assigned_agent_id,
             "is_superuser": user.is_superuser,
             "profile_picture": profile_picture_url,
+            "company_logo": company_logo_url,
         }, status=status.HTTP_200_OK)
 
 

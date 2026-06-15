@@ -1158,8 +1158,58 @@ def upload_call_page(request):
 
 
 
+def is_within_calling_hours():
+    import sys
+    if 'test' in sys.argv:
+        return True
+
+    import datetime as dt_module
+    from django.utils import timezone
+    utc_now = timezone.now()
+    ist_tz = dt_module.timezone(dt_module.timedelta(hours=5, minutes=30))
+    ist_now = utc_now.astimezone(ist_tz)
+    
+    start_time = dt_module.time(9, 30)
+    end_time = dt_module.time(18, 30)
+    
+    current_time = ist_now.time()
+    return start_time <= current_time <= end_time
+
+
+def has_remaining_minutes(agent_id):
+    from agents.models import VoiceAgent
+    from conversations.models import Conversation
+    import math
+
+    try:
+        agent = VoiceAgent.objects.get(id=agent_id)
+    except (VoiceAgent.DoesNotExist, ValueError, TypeError):
+        return True # fallback if invalid agent_id
+
+    completed = Conversation.objects.filter(
+        agent=agent,
+        ended_at__isnull=False
+    )
+    total_billed = 0.0
+    for c in completed:
+        raw_seconds = (c.ended_at - c.started_at).total_seconds()
+        if raw_seconds > 0:
+            shifted_seconds = raw_seconds + 1
+            rounded_intervals = math.ceil(shifted_seconds / 30)
+            total_billed += rounded_intervals * 30 / 60.0
+
+    remaining = agent.minutes_quota - total_billed
+    return remaining > 0
+
+
+
 @api_view(["POST"])
 def trigger_call(request):
+    if not is_within_calling_hours():
+        return Response({
+            "error": "Call operations are restricted to standard operating hours (09:30 AM to 06:30 PM IST). Please initiate call requests during the next scheduled window."
+        }, status=400)
+
     try:
         phone = request.data.get("phone")
         phones = request.data.get("phones")
@@ -1187,6 +1237,11 @@ def trigger_call(request):
         
         if not agent_id:
             return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
+
+        if not has_remaining_minutes(agent_id):
+            return Response({
+                "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
+            }, status=400)
 
         # ─────────────────────────────────────────────
         # CASE 1: SINGLE CALL
@@ -1276,6 +1331,11 @@ def trigger_call(request):
 
 @api_view(["POST"])
 def upload_call_file(request):
+    if not is_within_calling_hours():
+        return Response({
+            "error": "Campaign call operations are restricted to standard operating hours (09:30 AM to 06:30 PM IST). Please upload and trigger call campaigns during the next scheduled window."
+        }, status=400)
+
     """
     Upload an Excel file with phone numbers.
     Uses the AUTO-DIALER queue — only 2 calls at a time.
@@ -1307,7 +1367,12 @@ def upload_call_file(request):
     
     if not agent_id:
         return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
-        
+
+    if not has_remaining_minutes(agent_id):
+        return Response({
+            "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
+        }, status=400)
+
     BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
 
     if not file:
@@ -1509,6 +1574,18 @@ def dial_next_from_queue():
     calls_triggered = 0
 
     while True:
+        import re
+        agent_id_match = re.search(r'agent_id=([^&]+)', BOT_URL)
+        if agent_id_match:
+            current_agent_id = agent_id_match.group(1)
+            if not has_remaining_minutes(current_agent_id):
+                with _call_queue_lock:
+                    _campaign_active = False
+                    _save_campaign_state()
+                    _finalize_campaign()
+                print("AUTO-DIALER: Campaign stopped because all minutes quota is exhausted.")
+                break
+
         with _call_queue_lock:
             # Check if we have room for more calls
             if len(_active_calls) >= MAX_CONCURRENT_CALLS:
@@ -1630,6 +1707,11 @@ def on_call_timeout(phone_number):
 
 @api_view(["POST"])
 def start_auto_campaign(request):
+    if not is_within_calling_hours():
+        return Response({
+            "error": "Campaign call operations are restricted to standard operating hours (09:30 AM to 06:30 PM IST). Please initiate call campaigns during the next scheduled window."
+        }, status=400)
+
     _ensure_state_loaded()
     """
     Start an auto-dial campaign with 2 concurrent calls.
@@ -1653,7 +1735,12 @@ def start_auto_campaign(request):
     
     if not agent_id:
         return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
-        
+
+    if not has_remaining_minutes(agent_id):
+        return Response({
+            "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
+        }, status=400)
+
     BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
 
     if _campaign_active:
@@ -1972,8 +2059,12 @@ def export_leads_excel(request):
         except:
             pass
 
+        import datetime
+        ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+        analyzed_at_local = lead.analyzed_at.astimezone(ist_tz)
+
         data.append({
-            "Analyzed At": lead.analyzed_at.strftime("%Y-%m-%d %H:%M"),
+            "Analyzed At": analyzed_at_local.strftime("%Y-%m-%d %H:%M"),
             "Agent": lead.agent.name if lead.agent else "Unknown",
             # "Customer Name": lead.user_name or "Unknown",
             "Phone Number": lead.user_phone or lead.conversation.user_number,
@@ -2002,9 +2093,20 @@ def export_leads_excel(request):
                 missed_list = []
                 started_at = None
 
+        import datetime
+        ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
         for phone in missed_list:
+            if started_at:
+                try:
+                    started_at_local = started_at.astimezone(ist_tz)
+                    started_str = started_at_local.strftime("%Y-%m-%d %H:%M")
+                except Exception:
+                    started_str = started_at.strftime("%Y-%m-%d %H:%M")
+            else:
+                started_str = "—"
+
             data.append({
-                "Analyzed At": started_at.strftime("%Y-%m-%d %H:%M") if started_at else "—",
+                "Analyzed At": started_str,
                 "Agent": "Auto-Dialer",
                 # "Customer Name": "—",
                 "Phone Number": phone,

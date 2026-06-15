@@ -429,6 +429,354 @@
         .close-modal:hover {
             color: var(--danger);
         }
+
+        /* Quota Modal styles */
+        .segmented-control .mode-btn {
+            background: transparent;
+            color: var(--text-muted);
+        }
+        .segmented-control .mode-btn.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .preset-btn:hover {
+            border-color: var(--primary) !important;
+            color: var(--primary) !important;
+            background: #eef2ff !important;
+        }
+
+        /* ============================================
+           RESPONSIVE STYLES
+           ============================================ */
+
+        /* Tablet & small laptops (≤ 1024px) */
+        @media (max-width: 1024px) {
+            .container {
+                padding: 0 1rem;
+                margin: 1.5rem auto;
+                gap: 1.5rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+                border-radius: 12px;
+            }
+
+            th, td {
+                padding: 0.75rem 0.6rem;
+                font-size: 0.88rem;
+            }
+
+            th {
+                font-size: 0.7rem;
+            }
+
+            .header {
+                padding: 1rem 1.25rem;
+            }
+
+            .header h1 {
+                font-size: 1.15rem;
+            }
+
+            .table-responsive {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Ensure tables scroll nicely */
+            .table-responsive table {
+                min-width: 700px;
+            }
+        }
+
+        /* Tablets portrait & large phones (≤ 768px) */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 0.75rem;
+                padding: 1rem;
+                align-items: stretch;
+            }
+
+            .header > div:first-child {
+                justify-content: center;
+            }
+
+            .header h1 {
+                font-size: 1.05rem;
+                text-align: center;
+            }
+
+            .header-actions {
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .header-actions .dashboard-btn,
+            .header-actions .add-user-btn,
+            .header-actions .logout-btn {
+                padding: 0.45rem 0.85rem;
+                font-size: 0.82rem;
+            }
+
+            .container {
+                padding: 0 0.75rem;
+                margin: 1rem auto;
+                gap: 1rem;
+            }
+
+            .card {
+                padding: 1rem;
+                border-radius: 10px;
+            }
+
+            .card-header {
+                font-size: 1rem;
+                margin-bottom: 1rem;
+                padding-bottom: 0.75rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .card-header .add-user-btn {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.75rem;
+            }
+
+            .table-responsive table {
+                min-width: 600px;
+            }
+
+            th, td {
+                padding: 0.6rem 0.5rem;
+                font-size: 0.82rem;
+            }
+
+            th {
+                font-size: 0.65rem;
+            }
+
+            /* Modal adjustments */
+            .modal-content {
+                max-width: 95%;
+                padding: 1.5rem;
+                border-radius: 12px;
+            }
+
+            .modal-overlay {
+                padding: 1rem 0.5rem;
+            }
+
+            .modal-title {
+                font-size: 1.1rem;
+            }
+
+            .form-control {
+                padding: 0.65rem 0.8rem;
+                font-size: 0.9rem;
+            }
+
+            /* Quota modal stat cards */
+            #quotaForm > div:nth-child(3) {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            /* Segmented control text */
+            .segmented-control .mode-btn {
+                font-size: 0.78rem !important;
+                padding: 0.4rem 0.25rem !important;
+            }
+        }
+
+        /* Phones (≤ 576px) */
+        @media (max-width: 576px) {
+            .header {
+                padding: 0.75rem;
+            }
+
+            .header > div:first-child {
+                gap: 8px !important;
+            }
+
+            .header h1 {
+                font-size: 0.9rem;
+            }
+
+            .back-to-dashboard-btn {
+                width: 30px !important;
+                height: 30px !important;
+            }
+
+            .back-to-dashboard-btn svg {
+                width: 16px;
+                height: 16px;
+            }
+
+            .header-actions {
+                gap: 0.4rem;
+            }
+
+            .header-actions .dashboard-btn svg,
+            .header-actions .add-user-btn svg {
+                width: 14px;
+                height: 14px;
+            }
+
+            .header-actions .dashboard-btn,
+            .header-actions .add-user-btn,
+            .header-actions .logout-btn {
+                padding: 0.4rem 0.6rem;
+                font-size: 0.75rem;
+                border-radius: 6px;
+            }
+
+            .container {
+                padding: 0 0.5rem;
+                margin: 0.75rem auto;
+                gap: 0.75rem;
+            }
+
+            .card {
+                padding: 0.75rem;
+                border-radius: 8px;
+            }
+
+            .card-header {
+                font-size: 0.9rem;
+                margin-bottom: 0.75rem;
+                padding-bottom: 0.6rem;
+            }
+
+            .card-header .add-user-btn {
+                font-size: 0.72rem;
+                padding: 0.35rem 0.6rem;
+            }
+
+            .table-responsive {
+                border-radius: 6px;
+            }
+
+            .table-responsive table {
+                min-width: 520px;
+            }
+
+            th, td {
+                padding: 0.5rem 0.4rem;
+                font-size: 0.78rem;
+            }
+
+            th {
+                font-size: 0.6rem;
+                letter-spacing: 0.03em;
+            }
+
+            .action-btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.72rem;
+                margin-right: 0.25rem;
+            }
+
+            .badge {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.65rem;
+            }
+
+            /* Modal full-screen on small phones */
+            .modal-overlay {
+                padding: 0.5rem;
+                align-items: flex-start;
+            }
+
+            .modal-content {
+                max-width: 100%;
+                padding: 1.25rem;
+                border-radius: 10px;
+                max-height: calc(100vh - 1rem);
+            }
+
+            .modal-title {
+                font-size: 1rem;
+            }
+
+            .form-group label {
+                font-size: 0.75rem;
+            }
+
+            .form-control {
+                padding: 0.6rem 0.7rem;
+                font-size: 0.85rem;
+            }
+
+            .checkbox-group {
+                padding: 0.75rem;
+                gap: 0.65rem;
+            }
+
+            .checkbox-label {
+                font-size: 0.85rem;
+            }
+
+            .btn {
+                padding: 0.7rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            /* Quota modal adjustments */
+            .segmented-control .mode-btn {
+                font-size: 0.72rem !important;
+                padding: 0.35rem 0.2rem !important;
+            }
+
+            .preset-btn {
+                padding: 0.25rem 0.5rem !important;
+                font-size: 0.7rem !important;
+            }
+        }
+
+        /* Very small phones (≤ 400px) */
+        @media (max-width: 400px) {
+            .header h1 {
+                font-size: 0.78rem;
+            }
+
+            .header-actions .dashboard-btn span,
+            .header-actions .dashboard-btn svg {
+                display: none;
+            }
+
+            .header-actions .dashboard-btn::after {
+                content: '🏠';
+                font-size: 1rem;
+            }
+
+            .header-actions .add-user-btn {
+                gap: 0.25rem;
+            }
+
+            .container {
+                padding: 0 0.35rem;
+            }
+
+            .card {
+                padding: 0.6rem;
+            }
+
+            .table-responsive table {
+                min-width: 450px;
+            }
+
+            th, td {
+                padding: 0.4rem 0.3rem;
+                font-size: 0.72rem;
+            }
+
+            .modal-content {
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 
@@ -460,7 +808,7 @@
                         <line x1="12" y1="5" x2="12" y2="19"></line>
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                     </svg>
-                    Add User
+                    Add Client
                 </button>
                 <button class="logout-btn" onclick="logout()">Logout</button>
             </div>
@@ -528,7 +876,7 @@
     <div class="modal-overlay" id="userModalOverlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Add New User</h2>
+                <h2 class="modal-title">Add New Client</h2>
                 <button class="close-modal" onclick="closeUserModal()">&times;</button>
             </div>
             <div id="userAlert" class="alert"></div>
@@ -557,27 +905,40 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Company Logo (Optional)</label>
+                    <input type="file" id="userCompanyLogo" class="form-control" accept="image/*">
+                </div>
+                <div class="form-group">
                     <label>Permissions (Select Multiple)</label>
                     <div class="checkbox-group">
+                        <label class="checkbox-label" style="margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="user_perm_all" onchange="toggleSelectAll('user_perm_all', ['user_perm_leads', 'user_perm_calls', 'user_perm_campaigns', 'user_perm_team'])">
+                            <strong>Select All Permissions</strong>
+                        </label>
+                        <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 0.5rem 0;">
                         <label class="checkbox-label">
                             <input type="checkbox" id="user_perm_admin" value="is_admin">
                             Full System Access (Super Admin)
                         </label>
                         <label class="checkbox-label">
-                            <input type="checkbox" id="user_perm_leads" value="can_view_leads">
-                            Lead Analysis Access
+                            <input type="checkbox" id="user_perm_leads" value="can_view_leads" onchange="updateSelectAllState('user_perm_all', ['user_perm_leads', 'user_perm_calls', 'user_perm_campaigns', 'user_perm_team'])">
+                            Call Trigger Access
                         </label>
                         <label class="checkbox-label">
-                            <input type="checkbox" id="user_perm_calls" value="can_view_calls">
+                            <input type="checkbox" id="user_perm_calls" value="can_view_calls" onchange="updateSelectAllState('user_perm_all', ['user_perm_leads', 'user_perm_calls', 'user_perm_campaigns', 'user_perm_team'])">
                             Call Analysis Access
                         </label>
                         <label class="checkbox-label">
-                            <input type="checkbox" id="user_perm_campaigns" value="can_view_campaigns">
+                            <input type="checkbox" id="user_perm_campaigns" value="can_view_campaigns" onchange="updateSelectAllState('user_perm_all', ['user_perm_leads', 'user_perm_calls', 'user_perm_campaigns', 'user_perm_team'])">
                             Campaign History Access
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="user_perm_team" value="can_manage_team" onchange="updateSelectAllState('user_perm_all', ['user_perm_leads', 'user_perm_calls', 'user_perm_campaigns', 'user_perm_team'])">
+                            Manage Team Access (All + Manage Team)
                         </label>
                     </div>
                 </div>
-                <button type="submit" class="btn" style="margin-top: 1rem;">Create User</button>
+                <button type="submit" class="btn" style="margin-top: 1rem;">Create Client</button>
             </form>
         </div>
     </div>
@@ -620,18 +981,131 @@
         </div>
     </div>
 
+    <!-- Quota Modal Overlay -->
+    <div class="modal-overlay" id="quotaModalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Credit Quota</h2>
+                <button class="close-modal" onclick="closeQuotaModal()">&times;</button>
+            </div>
+            <div id="quotaAlert" class="alert"></div>
+            <form id="quotaForm">
+                <input type="hidden" id="quotaAgentId">
+                <div class="form-group">
+                    <label>Voice Bot Name</label>
+                    <input type="text" id="quotaAgentName" class="form-control" readonly style="background-color: #f1f5f9; cursor: not-allowed; font-weight: 500;">
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Current Quota</label>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: var(--primary); background: #eef2ff; padding: 0.75rem 1rem; border-radius: 8px; border: 1px dashed var(--primary); text-align: center;">
+                            <span id="quotaCurrentLimitVal">0</span> min
+                        </div>
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Minutes Used</label>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 0.75rem 1rem; border-radius: 8px; border: 1px dashed #cbd5e1; text-align: center;">
+                            <span id="quotaUsedMinutesVal">0</span> min
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Adjustment Mode</label>
+                    <div class="segmented-control" style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 8px; margin-top: 0.5rem; margin-bottom: 1rem; border: 1px solid var(--border);">
+                        <button type="button" id="btnModeSet" class="mode-btn active" onclick="setQuotaMode('set')" style="flex: 1; border: none; padding: 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">
+                            Set Absolute Quota
+                        </button>
+                        <button type="button" id="btnModeAdjust" class="mode-btn" onclick="setQuotaMode('adjust')" style="flex: 1; border: none; padding: 0.5rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s;">
+                            Add / Subtract Quota
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Set Absolute Limit Section -->
+                <div id="setQuotaSection" class="form-group">
+                    <label>New Quota Limit (Minutes)</label>
+                    <input type="number" id="quotaAbsoluteLimit" class="form-control" placeholder="Enter new quota limit" min="0">
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+                        Sets the total quota limit directly. For example, enter 3000 to limit this bot to 3000 minutes.
+                    </p>
+                </div>
+
+                <!-- Adjust Limit Section -->
+                <div id="adjustQuotaSection" class="form-group" style="display: none;">
+                    <label>Adjustment Value</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select id="quotaAdjustSign" class="form-control" style="width: 80px; font-size: 1.1rem; font-weight: bold; flex-shrink: 0; padding: 0.8rem 0.5rem; background: #f8fafc; text-align: center;">
+                            <option value="+">+</option>
+                            <option value="-">-</option>
+                        </select>
+                        <input type="number" id="quotaAdjustAmount" class="form-control" placeholder="Enter minutes amount" min="1">
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+                        Adds or subtracts minutes to/from the current limit.
+                    </p>
+                    
+                    <!-- Quick Presets -->
+                    <div style="margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        <button type="button" class="preset-btn" onclick="applyQuotaPreset(500)" style="background: #ffffff; border: 1px solid var(--border); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; cursor: pointer; color: var(--text-main); transition: all 0.2s;">+500 min</button>
+                        <button type="button" class="preset-btn" onclick="applyQuotaPreset(1000)" style="background: #ffffff; border: 1px solid var(--border); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; cursor: pointer; color: var(--text-main); transition: all 0.2s;">+1,000 min</button>
+                        <button type="button" class="preset-btn" onclick="applyQuotaPreset(2000)" style="background: #ffffff; border: 1px solid var(--border); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; cursor: pointer; color: var(--text-main); transition: all 0.2s;">+2,000 min</button>
+                        <button type="button" class="preset-btn" onclick="applyQuotaPreset(5000)" style="background: #ffffff; border: 1px solid var(--border); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; cursor: pointer; color: var(--text-main); transition: all 0.2s;">+5,000 min</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; margin-top: 2rem;">
+                    <button type="button" class="logout-btn" style="flex: 1; border-color: #cbd5e1; color: #64748b;" onclick="closeQuotaModal()">Cancel</button>
+                    <button type="submit" class="btn" style="flex: 2; margin-top: 0;">Save Quota</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
+        function toggleSelectAll(allCheckboxId, checkboxIds) {
+            const allCheckbox = document.getElementById(allCheckboxId);
+            if (!allCheckbox) return;
+            checkboxIds.forEach(id => {
+                const cb = document.getElementById(id);
+                if (cb) {
+                    cb.checked = allCheckbox.checked;
+                }
+            });
+        }
+
+        function updateSelectAllState(allCheckboxId, checkboxIds) {
+            const allCheckbox = document.getElementById(allCheckboxId);
+            if (!allCheckbox) return;
+            const allChecked = checkboxIds.every(id => {
+                const cb = document.getElementById(id);
+                return cb ? cb.checked : true;
+            });
+            allCheckbox.checked = allChecked;
+        }
+
         const API_BASE = '/api/accounts';
         const AGENT_API_BASE = '/api/agents';
         const token = localStorage.getItem('access_token');
         const isAdmin = localStorage.getItem('is_admin');
 
-        // Route Guard: Must be logged in AND must be an admin
         if (!token) {
             window.location.replace('/accounts/login/');
         } else if (isAdmin !== 'true') {
             alert('Access Denied: You do not have administrator privileges.');
-            window.location.replace('/dashboard/');
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) { }
+            if (perms.can_view_leads) {
+                window.location.replace('/dashboard/');
+            } else if (perms.can_view_calls) {
+                window.location.replace('/analytics/');
+            } else if (perms.can_view_campaigns) {
+                window.location.replace('/bot/campaigns/');
+            } else {
+                localStorage.clear();
+                window.location.replace('/accounts/login/');
+            }
         }
 
         const headers = {
@@ -773,13 +1247,13 @@
                             <td>
                                 <select class="form-control" style="padding:0.4rem 1.5rem 0.4rem 0.4rem; font-size:0.85rem; text-overflow:ellipsis;" onchange="updateUserPermissions(${user.id}, this.value)">
                                     <option value="inherit" ${permVal === 'inherit' ? 'selected' : ''}>Inherit from Role</option>
-                                    <option value="lead" ${permVal === 'lead' ? 'selected' : ''}>Lead Analysis Only</option>
+                                    <option value="lead" ${permVal === 'lead' ? 'selected' : ''}>Call Trigger Only</option>
                                     <option value="call" ${permVal === 'call' ? 'selected' : ''}>Call Analysis Only</option>
                                     <option value="campaign" ${permVal === 'campaign' ? 'selected' : ''}>Campaign History Only</option>
-                                    <option value="both" ${permVal === 'both' ? 'selected' : ''}>Lead & Call</option>
-                                    <option value="lead_campaign" ${permVal === 'lead_campaign' ? 'selected' : ''}>Lead & Campaign</option>
+                                    <option value="both" ${permVal === 'both' ? 'selected' : ''}>Call Trigger & Call</option>
+                                    <option value="lead_campaign" ${permVal === 'lead_campaign' ? 'selected' : ''}>Call Trigger & Campaign</option>
                                     <option value="call_campaign" ${permVal === 'call_campaign' ? 'selected' : ''}>Call & Campaign</option>
-                                    <option value="all_three" ${permVal === 'all_three' ? 'selected' : ''}>Lead, Call & Campaign</option>
+                                    <option value="all_three" ${permVal === 'all_three' ? 'selected' : ''}>Call Trigger, Call & Campaign</option>
                                     <option value="team_admin" ${permVal === 'team_admin' ? 'selected' : ''}>All + Manage Team</option>
                                     <option value="admin" ${permVal === 'admin' ? 'selected' : ''}>Full System Access</option>
                                 </select>
@@ -809,42 +1283,51 @@
             const email = document.getElementById('userEmail').value;
             const password = document.getElementById('userPassword').value;
             const role_name = document.getElementById('userRole').value;
-            const assigned_agent_id = document.getElementById('userAssignedAgent').value || null;
+            const assigned_agent_id = document.getElementById('userAssignedAgent').value;
 
             const is_admin = document.getElementById('user_perm_admin').checked;
             const can_view_leads = document.getElementById('user_perm_leads').checked;
             const can_view_calls = document.getElementById('user_perm_calls').checked;
             const can_view_campaigns = document.getElementById('user_perm_campaigns').checked;
+            const can_manage_team = document.getElementById('user_perm_team').checked;
 
-            const payload = {
-                username,
-                email,
-                password,
-                role_name: role_name,
-                assigned_agent_id: assigned_agent_id,
-                permissions: {
-                    is_admin,
-                    can_view_leads,
-                    can_view_calls,
-                    can_view_campaigns
-                }
-            };
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('email', email);
+            formData.append('password', password);
+            formData.append('role_name', role_name);
+            if (assigned_agent_id) {
+                formData.append('assigned_agent_id', assigned_agent_id);
+            }
+            formData.append('permissions', JSON.stringify({
+                is_admin,
+                can_view_leads,
+                can_view_calls,
+                can_view_campaigns,
+                can_manage_team
+            }));
+
+            const logoInput = document.getElementById('userCompanyLogo');
+            if (logoInput && logoInput.files[0]) {
+                formData.append('company_logo', logoInput.files[0]);
+            }
 
             try {
-                // Notice this hits the public register endpoint which accepts role_id 
-                // Alternatively, an admin could hit POST /api/accounts/users/ 
-                // but our RegisterSerializer is specifically built to handle password hashing easily.
+                const uploadHeaders = {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                };
                 const res = await fetch(`${API_BASE}/register/`, {
                     method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(payload)
+                    headers: uploadHeaders,
+                    body: formData
                 });
 
                 if (res.status === 201 || res.status === 200) {
-                    showAlert('userAlert', 'User created successfully!', 'success');
+                    showAlert('userAlert', 'Client created successfully!', 'success');
                     fetchUsers(); // Refresh lists
                     setTimeout(() => {
                         closeUserModal();
+                        if (logoInput) logoInput.value = ''; // Reset file input
                     }, 1500);
                 } else {
                     const err = await res.json();
@@ -959,7 +1442,7 @@
                                 <span style="font-weight:600; color:var(--text-main);">${agent.used_minutes}</span>
                                 <span style="color:var(--text-muted);">/</span>
                                 <span style="color:var(--text-muted);">${agent.minutes_quota} min</span>
-                                <button class="action-btn" style="padding:0.15rem 0.45rem; font-size:0.75rem; margin-left:6px; background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="editQuota('${agent.id}', ${agent.minutes_quota}, '${agent.name}')">✏️ Edit</button>
+                                <button class="action-btn" style="padding:0.15rem 0.45rem; font-size:0.75rem; margin-left:6px; background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openQuotaModal('${agent.id}', ${agent.minutes_quota}, '${agent.name}', ${agent.used_minutes})">✏️ Edit</button>
                             </td>
                             <td>
                                 <span class="badge ${agent.is_active ? 'admin' : ''}" style="cursor: pointer; font-size:0.8rem; padding:0.3rem 0.6rem;" onclick="toggleAgentActive('${agent.id}')">
@@ -1021,32 +1504,127 @@
             }
         }
 
-        async function editQuota(agentId, currentQuota, agentName) {
-            const newQuotaStr = prompt(`Enter new call minutes quota for "${agentName}":`, currentQuota);
-            if (newQuotaStr === null) return; // cancelled
-            const newQuota = parseInt(newQuotaStr.trim());
-            if (isNaN(newQuota) || newQuota < 0) {
-                alert("Please enter a valid positive integer for the minutes quota.");
-                return;
+        let activeQuotaMode = 'set';
+
+        function openQuotaModal(agentId, currentQuota, agentName, usedMinutes) {
+            document.getElementById('quotaAgentId').value = agentId;
+            document.getElementById('quotaAgentName').value = agentName;
+            document.getElementById('quotaCurrentLimitVal').innerText = currentQuota;
+            document.getElementById('quotaUsedMinutesVal').innerText = usedMinutes || 0;
+            
+            // Default to absolute limit input
+            document.getElementById('quotaAbsoluteLimit').value = currentQuota;
+            document.getElementById('quotaAdjustAmount').value = '';
+            document.getElementById('quotaAdjustSign').value = '+';
+            
+            setQuotaMode('set');
+            
+            document.getElementById('quotaModalOverlay').classList.add('active');
+            document.getElementById('pageWrapper').classList.add('blurred');
+        }
+
+        function closeQuotaModal() {
+            document.getElementById('quotaModalOverlay').classList.remove('active');
+            document.getElementById('pageWrapper').classList.remove('blurred');
+            document.getElementById('quotaForm').reset();
+            document.getElementById('quotaAlert').style.display = 'none';
+        }
+
+        function setQuotaMode(mode) {
+            activeQuotaMode = mode;
+            const btnSet = document.getElementById('btnModeSet');
+            const btnAdjust = document.getElementById('btnModeAdjust');
+            const secSet = document.getElementById('setQuotaSection');
+            const secAdjust = document.getElementById('adjustQuotaSection');
+            
+            if (mode === 'set') {
+                btnSet.classList.add('active');
+                btnAdjust.classList.remove('active');
+                secSet.style.display = 'block';
+                secAdjust.style.display = 'none';
+                document.getElementById('quotaAbsoluteLimit').setAttribute('required', 'required');
+                document.getElementById('quotaAdjustAmount').removeAttribute('required');
+            } else {
+                btnSet.classList.remove('active');
+                btnAdjust.classList.add('active');
+                secSet.style.display = 'none';
+                secAdjust.style.display = 'block';
+                document.getElementById('quotaAbsoluteLimit').removeAttribute('required');
+                document.getElementById('quotaAdjustAmount').setAttribute('required', 'required');
             }
+        }
+
+        function applyQuotaPreset(amount) {
+            document.getElementById('quotaAdjustSign').value = '+';
+            document.getElementById('quotaAdjustAmount').value = amount;
+        }
+
+        const quotaModalOverlay = document.getElementById('quotaModalOverlay');
+        quotaModalOverlay.addEventListener('click', function (e) {
+            if (e.target === quotaModalOverlay) {
+                closeQuotaModal();
+            }
+        });
+
+        // Hook the quota form submission
+        document.getElementById('quotaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const agentId = document.getElementById('quotaAgentId').value;
+            const currentQuota = parseInt(document.getElementById('quotaCurrentLimitVal').innerText);
+            
+            let payload = {};
+            let newQuota = 0;
+            
+            if (activeQuotaMode === 'set') {
+                newQuota = parseInt(document.getElementById('quotaAbsoluteLimit').value);
+                if (isNaN(newQuota) || newQuota < 0) {
+                    showAlert('quotaAlert', 'Please enter a valid non-negative number for the quota limit.', 'error');
+                    return;
+                }
+                payload = { minutes_quota: newQuota };
+            } else {
+                const sign = document.getElementById('quotaAdjustSign').value;
+                const adjustVal = parseInt(document.getElementById('quotaAdjustAmount').value);
+                
+                if (isNaN(adjustVal) || adjustVal <= 0) {
+                    showAlert('quotaAlert', 'Please enter a valid positive number for adjustment.', 'error');
+                    return;
+                }
+                
+                if (sign === '+') {
+                    newQuota = currentQuota + adjustVal;
+                } else {
+                    newQuota = currentQuota - adjustVal;
+                    if (newQuota < 0) {
+                        showAlert('quotaAlert', 'The resulting quota limit cannot be negative.', 'error');
+                        return;
+                    }
+                }
+                payload = { minutes_quota: newQuota };
+            }
+
             try {
                 const res = await fetch(`${AGENT_API_BASE}/${agentId}/update-quota/`, {
                     method: 'PATCH',
                     headers,
-                    body: JSON.stringify({ minutes_quota: newQuota })
+                    body: JSON.stringify(payload)
                 });
                 if (res.ok) {
-                    showAlert('agentTableAlert', `Minutes quota for "${agentName}" updated to ${newQuota} min successfully.`, 'success');
+                    const data = await res.json();
+                    showAlert('quotaAlert', `Quota updated successfully! New limit: ${data.minutes_quota} min.`, 'success');
                     fetchAgents();
+                    setTimeout(() => {
+                        closeQuotaModal();
+                    }, 1500);
                 } else {
                     const err = await res.json();
-                    alert("Failed to update quota: " + (err.error || 'Unknown error'));
+                    showAlert('quotaAlert', "Failed to update quota: " + (err.error || 'Unknown error'), 'error');
                 }
             } catch (e) {
                 console.error(e);
-                alert("Network error updating quota.");
+                showAlert('quotaAlert', "Network error updating quota.", 'error');
             }
-        }
+        });
 
         async function updateUserAgent(userId, agentId) {
             try {
