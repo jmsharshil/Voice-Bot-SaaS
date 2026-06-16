@@ -1920,6 +1920,10 @@
                     localStorage.setItem('profile_picture', data.profile_picture || '');
                     localStorage.setItem('company_logo', data.company_logo || '');
                     localStorage.setItem('username', data.username);
+                    localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
+                    localStorage.setItem('is_admin', data.permissions?.is_admin ? 'true' : 'false');
+                    localStorage.setItem('role', data.role || '');
+                    localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
                     if (pdName) pdName.textContent = data.username;
                     updateAvatar(data.profile_picture);
                     updateCompanyLogo(data.company_logo);

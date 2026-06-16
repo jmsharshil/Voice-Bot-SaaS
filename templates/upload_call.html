@@ -152,7 +152,7 @@
             margin-left: 8px;
         }
 
-        .header .nav-right {
+        .header-right {
             margin-left: auto;
             display: flex;
             align-items: center;
@@ -1363,9 +1363,18 @@
                     localStorage.setItem('profile_picture', data.profile_picture || '');
                     localStorage.setItem('company_logo', data.company_logo || '');
                     localStorage.setItem('username', data.username);
+                    localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
+                    localStorage.setItem('is_admin', data.permissions?.is_admin ? 'true' : 'false');
+                    localStorage.setItem('role', data.role || '');
+                    localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
                     if (pdName) pdName.textContent = data.username;
                     updateAvatar(data.profile_picture);
                     updateCompanyLogo(data.company_logo);
+
+                    // Re-run bot selector initialization with fresh data
+                    if (typeof checkAndInitBotSelector === 'function') {
+                        await checkAndInitBotSelector();
+                    }
                 }
             } catch (e) {
                 console.error('Failed to sync profile', e);
@@ -1803,12 +1812,18 @@
         }
         loadMinutesUsage();
 
-            // Show and load bots if user is admin
-            const isAdmin = localStorage.getItem('is_admin') === 'true';
-            if (isAdmin) {
+            async function checkAndInitBotSelector() {
+                const isAdmin = localStorage.getItem('is_admin') === 'true';
+                const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+                const role = localStorage.getItem('role') || '';
+                const assignedAgentId = localStorage.getItem('assigned_agent_id');
+                const isSuperAdmin = isSuperuser || 
+                                     (role.toLowerCase() === 'super admin' || role.toLowerCase() === 'superadmin') || 
+                                     (isAdmin && (!assignedAgentId || assignedAgentId === 'null' || assignedAgentId === ''));
+
                 const group = document.getElementById('botSelectorGroup');
                 const select = document.getElementById('botSelect');
-                if (group && select) {
+                if (isSuperAdmin && group && select) {
                     group.style.display = 'block';
                     select.required = true;
                     
@@ -1836,8 +1851,14 @@
                         console.error("Error loading bots:", err);
                         select.innerHTML = '<option value="">Error loading bots</option>';
                     }
+                } else if (group) {
+                    group.style.display = 'none';
+                    if (select) select.required = false;
                 }
             }
+
+            // Run initial check
+            await checkAndInitBotSelector();
         });
 
         function toggleProfile(e) {
@@ -2111,10 +2132,17 @@
                 return;
             }
 
-            // Validate bot selection for admin
+            // Validate bot selection for superadmin
             const isAdmin = localStorage.getItem('is_admin') === 'true';
+            const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+            const role = localStorage.getItem('role') || '';
+            const assignedAgentId = localStorage.getItem('assigned_agent_id');
+            const isSuperAdmin = isSuperuser || 
+                                 (role.toLowerCase() === 'super admin' || role.toLowerCase() === 'superadmin') || 
+                                 (isAdmin && (!assignedAgentId || assignedAgentId === 'null' || assignedAgentId === ''));
+
             const botSelect = document.getElementById('botSelect');
-            if (isAdmin && botSelect && !botSelect.value) {
+            if (isSuperAdmin && botSelect && !botSelect.value) {
                 showToast('Please select a Voice Bot before uploading.', 'warning');
                 botSelect.focus();
                 return;
