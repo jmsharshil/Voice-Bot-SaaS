@@ -36,6 +36,17 @@ except ImportError:
     automobile_Naavya_prepare = None
     automobile_Naavya_finalize = None
 
+try:
+    from loan_bot.strategy import (
+        loan_bot_strategy,
+        loan_bot_prepare,
+        loan_bot_finalize,
+    )
+except ImportError:
+    loan_bot_strategy = None
+    loan_bot_prepare = None
+    loan_bot_finalize = None
+
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
 from django.core.cache import cache
@@ -51,6 +62,8 @@ STRATEGY_MAP = {
 }
 if automobile_Naavya_strategy:
     STRATEGY_MAP["automobile_Naavya"] = automobile_Naavya_strategy
+if loan_bot_strategy:
+    STRATEGY_MAP["loan_strategy"] = loan_bot_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -64,6 +77,8 @@ PREPARE_MAP = {
 }
 if automobile_Naavya_prepare:
     PREPARE_MAP["automobile_Naavya"] = automobile_Naavya_prepare
+if loan_bot_prepare:
+    PREPARE_MAP["loan_strategy"] = loan_bot_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -76,6 +91,8 @@ FINALIZE_MAP = {
 }
 if automobile_Naavya_finalize:
     FINALIZE_MAP["automobile_Naavya"] = automobile_Naavya_finalize
+if loan_bot_finalize:
+    FINALIZE_MAP["loan_strategy"] = loan_bot_finalize
 
 
 def _resolve_agent(agent):

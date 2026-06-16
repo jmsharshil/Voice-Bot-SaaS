@@ -370,7 +370,8 @@ from agents.models import Industry, AgentRoleTemplate
 
 INDUSTRY_VOICE_MAP = {
     "automobile": "en-IN-AartiNeural",
-    "healthcare": "en-IN-NeerjaNeural"
+    "healthcare": "en-IN-NeerjaNeural",
+    "loans": "en-IN-AartiNeural"
 }
 
 TEMPLATES = [
@@ -620,6 +621,19 @@ You assist patients with confirming or cancelling their upcoming appointments:
 Keep responses extremely brief and clear.
 """,
             "default_tone": "supportive",
+        }
+    ]
+},
+{
+    "industry": {"name": "Loans", "slug": "loans"},
+    "roles": [
+        {
+            "role_name": "JMS Loan Advisor",
+            "description": "Provides information about various types of loans including home loan, business loan and personal loan.",
+            "system_prompt_template": """
+You are {agent_name}, a helpful and polite JMS Loan Advisor at {company_name}.
+""",
+            "default_tone": "polite",
         }
     ]
 }

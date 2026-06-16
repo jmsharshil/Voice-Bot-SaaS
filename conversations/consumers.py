@@ -37,6 +37,12 @@ except Exception as e:
     print(f"⚠️ Failed to load NaavyaMatcher: {e}")
     NAAVYA_MATCHER = None
 
+try:
+    LOAN_MATCHER = AutomobileMatcher("loan_bot/data/loan_intents.json")
+except Exception as e:
+    print(f"⚠️ Failed to load LoanMatcher: {e}")
+    LOAN_MATCHER = None
+
 from elevenlabs import ElevenLabs, VoiceSettings
 
 ELEVENLABS_CLIENT = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
@@ -126,6 +132,13 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "Naavya/gu_step7_offer_testdrive.raw": "અને હા, સૌથી ઉત્તમ વસ્તુ — શું તમે ટેસ્ટ ડ્રાઇવ લેવા માંગો છો? એક વાર ચલાવી જોશો તો બધો ખ્યાલ આવી જશે. તમારા માટે કયો દિવસ અનુકૂળ રહેશે?",
     "Naavya/gu_step8_collect_details.raw": "ખૂબ સરસ! ટેસ્ટ ડ્રાઈવ બુક કરવા માટે કૃપા કરીને તમારું નામ, અનુકૂળ તારીખ અને સમય, અને ફોન નંબર જણાવશો?",
     "Naavya/gu_step9_closing.raw": "ખૂબ સરસ! મેં તમારી એપોઇન્ટમેન્ટ બુક કરી લીધી છે. અમે શોરૂમ પર તમારી રાહ જોઈશું. સેફ ડ્રાઇવ કરજો! આવજો!",
+
+    # JMS BANK LOAN BOT
+    "loan_bot/loan_step1_greeting.raw": "Hello! Namaste... main JMS Bank ki taraf se Naavya bol rahi hoon. Aaj main aapko hamare exclusive loan products ke baare mein batana chahti hoon — home loan, business loan, personal loan aur bahut kuch. Kya aap apne kisi financial goal ke liye loan explore kar rahe hain?",
+    "loan_bot/loan_step2_discover_type.raw": "Wonderful! JMS Bank mein hum aapki har zaroorat ke liye tailor-made loan solutions offer karte hain — chahe wo dream home ho, apna business grow karna ho, ya koi personal zaroorat. Aap kaunsa loan option explore karna chahenge?",
+    "loan_bot/loan_step3_discover_amount.raw": "Great choice! aapko approximately kitne amount ka loan chahiye? Exact figure nahi pata toh koi baat nahi, ek rough idea bhi kaafi hai — hum uske hisaab se best plan suggest kar sakte hain.",
+    "loan_bot/loan_step4_closing.raw": "Excellent! Aapki saari details note kar li gayi hain. Hamari expert team bahut jald aapse connect karegi aur aapke liye best loan offer ready karegi. JMS Bank choose karne ke liye bahut bahut shukriya!",
+    "loan_bot/loan_step_rejection.raw": "Bilkul theek hai, koi problem nahi! Jab bhi aapko zaroorat ho, JMS Bank hamesha aapke liye available hai. Apna precious time dene ke liye dil se shukriya. Aapka din bahut accha jaye!",
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
@@ -572,6 +585,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             state["detected_language"] = language
             if strategy_key == "hospital_minimal":
                 state["step"] = "confirm_interest"
+            elif strategy_key == "loan_strategy":
+                state["call_phase"] = "interest_confirmation"
             session.state = state
             session.save()
             
@@ -588,6 +603,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         # Determine greeting audio path
         if self.strategy_key == "hospital_minimal":
             greeting_file = "hosp_step1_greeting.raw"
+        elif self.strategy_key == "loan_strategy":
+            greeting_file = "loan_bot/loan_step1_greeting.raw"
         elif self.strategy_key == "automobile_Naavya":
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         else:
@@ -1066,12 +1083,16 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
         normalized = text.lower().strip()
 
-        # ── AUTOMOBILE INTENT ROUTER (FAST-PATH) ──────────────────
+        # ── INTENT ROUTER (FAST-PATH) ──────────────────
         is_automobile = getattr(self, "strategy_key", None) == "automobile"
         is_naavya = getattr(self, "strategy_key", None) == "automobile_Naavya"
+        is_loan = getattr(self, "strategy_key", None) == "loan_strategy"
         
-        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER):
-            matcher = NAAVYA_MATCHER if is_naavya else AUTOMOBILE_MATCHER
+        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER):
+            if is_loan:
+                matcher = LOAN_MATCHER
+            else:
+                matcher = NAAVYA_MATCHER if is_naavya else AUTOMOBILE_MATCHER
             try:
                 # 1. Initialize/Load current phase (Safe attribute check)
                 current_phase = "GREETING_REPLY"
@@ -1083,6 +1104,18 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     )()
                     if session and session.state:
                         current_phase = session.state.get("current_phase", "GREETING_REPLY")
+                        if is_loan:
+                            current_phase = session.state.get("call_phase", "interest_confirmation")
+                            # Map strategy phase to intents phase if they differ:
+                            # 'interest_confirmation' -> 'GREETING_REPLY'
+                            # 'discover_loan_type' -> 'DISCOVER_LOAN_TYPE'
+                            # 'collect_amount' -> 'COLLECT_ANSWERS'
+                            phase_map = {
+                                "interest_confirmation": "GREETING_REPLY",
+                                "discover_loan_type": "DISCOVER_LOAN_TYPE",
+                                "collect_amount": "COLLECT_ANSWERS",
+                            }
+                            current_phase = phase_map.get(current_phase, "GREETING_REPLY")
                         self.current_phase = current_phase
                 except:
                     pass
@@ -1104,6 +1137,14 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                             if session:
                                 state = session.state or {}
                                 state["current_phase"] = next_phase
+                                if is_loan:
+                                    rev_map = {
+                                        "GREETING_REPLY": "interest_confirmation",
+                                        "DISCOVER_LOAN_TYPE": "discover_loan_type",
+                                        "COLLECT_ANSWERS": "collect_amount",
+                                        "CLOSING": "closing"
+                                    }
+                                    state["call_phase"] = rev_map.get(next_phase, "interest_confirmation")
                                 session.state = state
                                 await sync_to_async(session.save)()
                                 self.current_phase = next_phase
@@ -1212,7 +1253,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 return
 
             # Parse PLAY_AUDIO tag if present
-            audio_match = re.search(r'\[\s*PLAY_AUDIO:\s*([a-zA-Z0-9_\-\.]+)(?:\.raw)?\s*\]', reply, re.I)
+            audio_match = re.search(r'\[\s*PLAY_AUDIO:\s*([a-zA-Z0-9_\-\./]+)(?:\.raw)?\s*\]', reply, re.I)
             if audio_match:
                 audio_filename = audio_match.group(1).strip()
                 if not audio_filename.endswith(".raw"):
@@ -1289,7 +1330,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
         def _strip_disconnect_tags(text):
             text = re.sub(r'\[\s*PLAY_AUDIO:[^\]]*\]', '', text, flags=re.I)
-            text = re.sub(r'PLAY_AUDIO:\s*[a-zA-Z0-9_\-\.]*(?:\.raw)?', '', text, flags=re.I)
+            text = re.sub(r'PLAY_AUDIO:\s*[a-zA-Z0-9_\-\./]*(?:\.raw)?', '', text, flags=re.I)
             for t in ["[BOOKING_CONFIRMED]", "[NOT_INTERESTED]", "[LEAD_COMPLETE]", "[END_CALL]",
                       "BOOKING_CONFIRMED", "NOT_INTERESTED", "LEAD_COMPLETE", "END_CALL"]:
                 text = text.replace(t, "")

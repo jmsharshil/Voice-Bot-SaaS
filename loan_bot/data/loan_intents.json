@@ -1,0 +1,295 @@
+{
+    "global_intents": [],
+    "flow_intents": [
+        {
+            "phase": "GREETING_REPLY",
+            "intents": [
+                {
+                    "intent_name": "interest_confirmed",
+                    "mp3_file": "loan_bot/loan_step2_discover_type.raw",
+                    "next_phase": "DISCOVER_LOAN_TYPE",
+                    "triggers": [
+                        
+                        "yes", "yeah", "yep", "yup", "yea", "sure", "ok", "okay", "okay sure",
+                        "of course", "definitely", "absolutely", "why not", "certainly",
+                        "please", "go ahead", "tell me", "tell me more", "interested",
+                        "i am interested", "yes i am", "yes please", "yes go ahead",
+                        "yes speaking", "yes i want", "i want", "i need", "i need a loan",
+                        "i want a loan", "sounds good", "let's go", "let's do it",
+                        "proceed", "continue", "sure go on", "fine", "alright",
+                        "roger", "noted", "correct", "right", "agreed",
+
+                        "haan", "han", "ha", "hanji", "haan ji", "ji", "ji haan", "ji ha",
+                        "ji zaroor", "zaroor", "bilkul", "bilkul ji", "haan bilkul",
+                        "haan sure", "haan ok", "haan theek hai", "theek hai",
+                        "theek hai ji", "achha", "achha ji", "accha", "accha ji",
+                        "acha", "acha ji", "batao", "batao ji", "bataiye", "haan bataiye",
+                        "chahiye", "loan chahiye", "chahiye mujhe", "mujhe chahiye",
+                        "mujhe loan chahiye", "lena hai", "lena chahta hoon",
+                        "lena chahti hoon", "interest hai", "interested hoon",
+                        "haan interested hoon", "sun raha hoon", "sun rahi hoon",
+                        "bol sakte ho", "bol sakte hain", "bolo", "haan bolo",
+                        "try karna chahta hoon", "apply karna chahta hoon",
+                        "apply karna chahti hoon", "apply karna hai",
+
+                        
+                        "हाँ", "हाँ जी", "हाँ बताइए", "हाँ बताओ", "हाँ जरूर",
+                        "बिल्कुल", "बिल्कुल जी", "ज़रूर", "ठीक है", "ठीक है जी",
+                        "अच्छा", "अच्छा जी", "चाहिए", "लोन चाहिए", "मुझे चाहिए",
+                        "हाँ चाहिए", "बताइए", "बताओ", "सुन रहा हूँ", "सुन रही हूँ",
+                        "हाँ सर", "हाँ मैडम", "हाँ करो", "हाँ बोलो", "इंटरेस्टेड हूँ",
+                        "मुझे लोन चाहिए", "लेना है", "लेना चाहता हूँ", "लेना चाहती हूँ",
+                        "आगे बढ़ो", "आगे बताओ", "समझाओ", "जानना चाहता हूँ",
+                        "जानना चाहती हूँ", "अप्लाई करना है",
+
+                        
+                        "હા", "હા જી", "હા બોલો", "હા બતાવો", "ચોક્કસ", "જી",
+                        "જી હા", "જરૂર", "બિલકુલ", "ઠીક છે", "ઠીક છે જી",
+                        "સારું", "સારું જી", "આગળ કહો", "કહો", "બોલો",
+                        "મારે જોઈએ", "લોન જોઈએ", "મને લોન જોઈએ",
+                        "ઈન્ટરેસ્ટ છે", "ઈચ્છા છે", "અરજી કરવી છે",
+                        "હા ચાલો", "ચાલો", "ચાલો ને", "હા સર", "હા મેડમ",
+                        "સાંભળી રહ્યો છું", "સાંભળી રહી છું", "જણાવો",
+
+                        
+                        "hmm", "hm", "mmm", "uh huh", "uhh okay", "ohh okay",
+                        "oh okay", "oh yes", "oh haan", "oh ha", "arey haan",
+                        "arre haan", "arre ha", "oho", "wah", "bhai haan",
+                        "yaar haan", "done", "deal", "let's see", "dekh lete hain",
+                        "dekhte hain", "try karte hain", "kyu nahi", "kyun nahi",
+                        "koi baat nahi", "chalo", "chalo ji", "chalo batao",
+                        "chal batao", "chal bata", "aa jao", "shuru karo",
+                        "start karo", "aage bado", "bolte raho"
+                    ]
+                },
+                {
+                    "intent_name": "interest_denied",
+                    "mp3_file": "loan_bot/loan_step_rejection.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        
+                        "no", "nope", "nah", "not interested", "no thanks",
+                        "no thank you", "not now", "not today", "cancel", "stop",
+                        "don't call", "do not call", "remove my number", "don't call again",
+                        "wrong number", "already have a loan", "already taken",
+                        "busy", "not free", "call later", "call back later",
+                        "i'll think", "i will think", "not required", "don't need",
+                        "no need", "i'm good", "i am good", "no loan needed",
+                        "not looking", "not planning", "maybe later", "later",
+                        "disconnect", "hang up", "end call", "bye", "goodbye",
+
+                        
+                        "nahi", "na", "nahi chahiye", "nahi chahiye mujhe",
+                        "abhi nahi", "baad mein", "baad mein call karna",
+                        "baad mein baat karte hain", "nahi lena", "nahi leni",
+                        "shukriya nahi", "wrong number hai", "galat number",
+                        "pehle se hai", "pehle se le rakha hai", "loan hai mere paas",
+                        "busy hoon", "meeting mein hoon", "driving kar raha hoon",
+                        "driving kar rahi hoon", "office mein hoon", "kaam mein hoon",
+                        "baat nahi karni", "time nahi hai", "time nahi",
+                        "nahi karna", "rehne do", "jaane do", "chhod do",
+                        "chodh do", "mat karo", "band karo", "chup karo",
+                        "call mat karo", "mujhe mat call karna",
+                        "soch ke batata hoon", "soch ke batati hoon",
+                        "sochna hai", "soch raha hoon", "soch rahi hoon",
+                        "zaroorat nahi", "jaroorat nahi", "nahi chahiye bhai",
+
+                        
+                        "नहीं", "ना", "नहीं चाहिए", "अभी नहीं", "बाद में",
+                        "गलत नंबर", "पहले से है", "लोन है मेरे पास",
+                        "नहीं लेना", "बात नहीं करनी", "समय नहीं है",
+                        "बंद करो", "छोड़ो", "रहने दो", "मत करो",
+                        "जी नहीं", "नहीं जी", "नहीं करना", "व्यस्त हूँ",
+                        "जरूरत नहीं", "सोचना है", "सोच के बताऊंगा",
+                        "सोच के बताऊंगी", "ज़रूरत नहीं", "नहीं लेनी",
+                        "कट करो", "काट दो", "फ़ोन रखो",
+
+                        
+                        "નથી", "ના", "નહીં", "નથી જોઈતી", "નહીં જોઈએ",
+                        "અત્યારે નહીં", "પછી", "ખોટો નંબર", "પહેલેથી છે",
+                        "લોન છે", "વ્યસ્ત છું", "મીટિંગ માં છું",
+                        "રહેવા દો", "નથી લેવી", "ફોન કાપો",
+                        "બંધ કરો", "જરૂર નથી", "સમય નથી",
+                        "વિચારીશ", "વિચારી ને જણાવીશ", "ના જી",
+                        "ઠીક છે ના", "ફોન મૂકો",
+
+                        
+                        "huh", "what", "what do you want", "who is this",
+                        "kaun hai", "kaun ho tum", "kaun bol raha hai",
+                        "samajh nahi aaya", "kya bol raha hai", "kya bol rahi ho",
+                        "bakwaas", "bakwas", "chup", "shut up", "go away",
+                        "leave me alone", "disturb mat karo", "tang mat karo",
+                        "pareshan mat karo", "number block karunga",
+                        "number block karungi", "police ko bulaunga",
+                        "spam", "scam", "fraud", "ye fraud hai",
+                        "mujhe nahi pata", "pata nahi", "samajh nahi aaya"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "DISCOVER_LOAN_TYPE",
+            "intents": [
+                {
+                    "intent_name": "type_answered",
+                    "mp3_file": "loan_bot/loan_step3_discover_amount.raw",
+                    "next_phase": "COLLECT_ANSWERS",
+                    "triggers": [
+                        
+                        "home loan", "house loan", "property loan", "housing loan",
+                        "business loan", "commercial loan", "shop loan", "office loan",
+                        "personal loan", "car loan", "vehicle loan", "auto loan",
+                        "bike loan", "two wheeler loan", "four wheeler loan",
+                        "education loan", "study loan", "college loan",
+                        "gold loan", "jewellery loan", "jewelry loan",
+                        "land loan", "plot loan", "agriculture loan",
+                        "farm loan", "medical loan", "wedding loan",
+                        "marriage loan", "travel loan", "holiday loan",
+                        "laptop loan", "mobile loan", "gadget loan",
+                        "home", "house", "property", "business", "personal",
+                        "car", "vehicle", "bike", "education", "gold",
+                        "land", "plot", "farm", "medical", "wedding",
+
+                        
+                        "ghar ke liye", "ghar lena hai", "ghar kharidna hai",
+                        "makan ke liye", "plot ke liye", "zameen ke liye",
+                        "business ke liye", "dukaan ke liye", "shop ke liye",
+                        "factory ke liye", "office ke liye", "startup ke liye",
+                        "personal chahiye", "apne liye", "khud ke liye",
+                        "gaadi ke liye", "car ke liye", "bike ke liye",
+                        "padhai ke liye", "college ke liye", "fees ke liye",
+                        "sona ke liye", "gold ke liye", "gehna ke liye",
+                        "shaadi ke liye", "marriage ke liye", "beti ki shaadi",
+                        "medical ke liye", "ilaaj ke liye", "hospital ke liye",
+                        "renovation ke liye", "makaan banana hai",
+                        "ghar banana hai", "construction ke liye",
+                        "home loan chahiye", "business loan chahiye",
+                        "personal loan chahiye", "car loan chahiye",
+                        "koi bhi loan", "kuch bhi chalega", "aap batao",
+
+                       
+                        "घर के लिए", "मकान के लिए", "घर लेना है",
+                        "घर खरीदना है", "बिजनेस के लिए", "व्यापार के लिए",
+                        "दुकान के लिए", "ऑफिस के लिए", "स्टार्टअप के लिए",
+                        "पर्सनल लोन", "व्यक्तिगत लोन", "अपने लिए",
+                        "गाड़ी के लिए", "कार के लिए", "बाइक के लिए",
+                        "पढ़ाई के लिए", "कॉलेज के लिए", "फीस के लिए",
+                        "सोने के लिए", "गोल्ड लोन", "गहने के लिए",
+                        "शादी के लिए", "बेटी की शादी", "इलाज के लिए",
+                        "अस्पताल के लिए", "निर्माण के लिए", "मकान बनाना है",
+                        "कोई भी लोन", "जो भी हो", "होम लोन", "बिजनेस लोन",
+                        "कार लोन", "एजुकेशन लोन",
+
+                       
+                        "ઘર માટે", "મકાન માટે", "ઘર ખરીદવું છે",
+                        "બિઝનેસ માટે", "ધંધા માટે", "દુકાન માટે",
+                        "ઓફિસ માટે", "ફેક્ટરી માટે", "સ્ટાર્ટઅપ માટે",
+                        "પર્સનલ લોન", "પોતાના માટે", "ગાડી માટે",
+                        "કાર માટે", "બાઇક માટે", "ભણતર માટે",
+                        "કૉલેજ માટે", "ફી માટે", "સોના માટે",
+                        "ઘરેણા માટે", "લગ્ન માટે", "દીકરીના લગ્ન",
+                        "હૉસ્પિટલ માટે", "સારવાર માટે", "મકાન બાંધવું છે",
+                        "કોઈ પણ લોન", "હોમ લોન", "બિઝનેસ લોન",
+
+                        
+                        "pata nahi", "kuch bhi", "jo bhi ho",
+                        "samjha nahi", "koi sa bhi", "sab chahiye",
+                        "jo sasta ho", "jo jaldi mile", "urgent hai",
+                        "bahut urgent", "aaj chahiye", "kal chahiye",
+                        "jaldi chahiye", "ek", "do", "teen",
+                        "pehla wala", "doosra wala", "teesra wala",
+                        "first one", "second one", "all of them"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "COLLECT_ANSWERS",
+            "intents": [
+                {
+                    "intent_name": "amount_answered",
+                    "mp3_file": "loan_bot/loan_step4_closing.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                       
+                        "50000", "75000", "100000", "150000", "200000",
+                        "500000", "1000000", "2000000", "5000000", "10000000",
+
+                        
+                        "fifty thousand", "seventy five thousand",
+                        "one lakh", "two lakh", "three lakh", "four lakh",
+                        "five lakh", "six lakh", "seven lakh", "eight lakh",
+                        "nine lakh", "ten lakh", "fifteen lakh", "twenty lakh",
+                        "twenty five lakh", "thirty lakh", "forty lakh",
+                        "fifty lakh", "sixty lakh", "seventy lakh",
+                        "eighty lakh", "ninety lakh", "one crore",
+                        "two crore", "three crore", "five crore",
+                        "ten crore", "half crore", "quarter crore",
+                        "1 lakh", "2 lakh", "3 lakh", "4 lakh", "5 lakh",
+                        "6 lakh", "7 lakh", "8 lakh", "9 lakh", "10 lakh",
+                        "12 lakh", "15 lakh", "20 lakh", "25 lakh",
+                        "30 lakh", "40 lakh", "50 lakh", "75 lakh",
+                        "1 crore", "2 crore", "5 crore",
+                        "lakh", "lakhs", "crore", "crores",
+                        "thousand", "thousands", "k", "amount",
+                        "budget", "around", "approximately",
+                        "small amount", "big amount", "large amount",
+                        "not sure", "depends", "flexible",
+
+                        
+                        "ek lakh", "do lakh", "teen lakh", "chaar lakh",
+                        "paanch lakh", "chheh lakh", "saat lakh",
+                        "aath lakh", "nau lakh", "das lakh",
+                        "pandrah lakh", "bees lakh", "pachees lakh",
+                        "tees lakh", "chalees lakh", "pachaas lakh",
+                        "pachhattar lakh", "ek karod", "do karod",
+                        "teen karod", "paanch karod",
+                        "kuch lakh", "kai lakh", "thoda sa",
+                        "bahut zyada", "zyada nahi", "kam chahiye",
+                        "50 hazaar", "ek hazaar", "das hazaar",
+                        "lagbhag ek lakh", "roughly 5 lakh",
+                        "5 se 10 lakh", "10 se 20 lakh",
+                        "20 se 50 lakh", "50 lakh se zyada",
+                        "1 crore se kam", "pata nahi exact",
+                        "roughly batata hoon", "roughly bolun toh",
+                        "around 10 lakh", "around 20 lakh",
+                        "around 50 lakh", "around 1 crore",
+
+                        
+                        "एक लाख", "दो लाख", "तीन लाख", "चार लाख",
+                        "पाँच लाख", "छह लाख", "सात लाख", "आठ लाख",
+                        "नौ लाख", "दस लाख", "पंद्रह लाख", "बीस लाख",
+                        "पच्चीस लाख", "तीस लाख", "पचास लाख",
+                        "पचहत्तर लाख", "एक करोड़", "दो करोड़",
+                        "पाँच करोड़", "कुछ लाख", "थोड़ा सा",
+                        "बहुत ज़्यादा", "ज़्यादा नहीं", "कम चाहिए",
+                        "पता नहीं एग्जैक्ट", "लगभग", "करीब",
+                        "५ लाख", "१० लाख", "२० लाख", "५० लाख",
+                        "१ करोड़", "२ करोड़",
+
+                    
+                        "એક લાખ", "બે લાખ", "ત્રણ લાખ", "ચાર લાખ",
+                        "પાંચ લાખ", "છ લાખ", "સાત લાખ", "આઠ લાખ",
+                        "નવ લાખ", "દસ લાખ", "પંદર લાખ", "વીસ લાખ",
+                        "પચ્ચીસ લાખ", "ત્રીસ લાખ", "પચાસ લાખ",
+                        "પંચોતેર લાખ", "એક કરોડ", "બે કરોડ",
+                        "પાંચ કરોડ", "અમુક લાખ", "થોડું",
+                        "ઘણું", "ઓછું", "ખ્યાલ નથી",
+                        "આશરે", "લગભગ",
+                        "૫ લાખ", "૧૦ લાખ", "૨૦ લાખ", "૫૦ લાખ",
+                        "૧ કરોડ", "૨ કરોડ",
+
+                        "bohot saara", "bahut saara", "itna hi chahiye",
+                        "jo mile", "jo mil sake", "maximum",
+                        "minimum", "as much as possible",
+                        "jitna ho sake", "jitna de sako",
+                        "jitna mil sakta ho", "koi limit nahi",
+                        "no limit", "unlimited", "thoda", "zyada",
+                        "ek do lakh", "5-10 lakh", "10-20 lakh",
+                        "half", "double", "triple"
+                    ]
+                }
+            ]
+        }
+    ]
+}
