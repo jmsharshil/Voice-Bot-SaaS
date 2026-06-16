@@ -648,8 +648,23 @@ tr.selected-row td.phone { color: #00a884 !important; }
 @media (max-width: 768px) {
     .header { padding: 14px 16px; font-size: 17px; gap: 10px; }
     .header .nav-btn { padding: 7px 12px; font-size: 11.5px; }
-    .cards { padding: 14px 10px 6px; gap: 8px; }
-    .card { padding: 14px 14px; }
+    .cards {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 10px;
+        padding: 14px 10px 6px;
+        scrollbar-width: none;
+    }
+    .cards::-webkit-scrollbar {
+        display: none;
+    }
+    .card {
+        flex: 0 0 160px;
+        padding: 14px 14px;
+        animation: none;
+    }
     .card > div:first-child { font-size: 10px; letter-spacing: 0.8px; }
     .card h2 { font-size: 24px; }
     .main { margin: 8px 10px 16px; border-radius: 10px; }
@@ -677,8 +692,24 @@ tr.selected-row td.phone { color: #00a884 !important; }
     .header { padding: 12px 12px; font-size: 15px; gap: 8px; }
     .header .nav-right { gap: 8px; }
     .header .nav-btn { padding: 6px 10px; font-size: 11px; border-radius: 6px; }
-    .cards { flex-wrap: wrap; padding: 10px 8px 4px; gap: 6px; }
-    .card { flex: 1 1 calc(50% - 4px); min-width: 120px; padding: 12px 12px; border-radius: 10px; }
+    .cards {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 8px;
+        padding: 10px 8px 4px;
+        scrollbar-width: none;
+    }
+    .cards::-webkit-scrollbar {
+        display: none;
+    }
+    .card {
+        flex: 0 0 145px;
+        padding: 12px 12px;
+        border-radius: 10px;
+        animation: none;
+    }
     .card > div:first-child { font-size: 9px; letter-spacing: 0.6px; margin-bottom: 4px; }
     .card h2 { font-size: 22px; margin-top: 4px; }
     .main { margin: 6px 8px 12px; border-radius: 10px; flex-direction: column; height: auto; min-height: auto; }
@@ -732,8 +763,8 @@ tr.selected-row td.phone { color: #00a884 !important; }
 @media (max-width: 420px) {
     .header { padding: 10px 10px; font-size: 14px; }
     .header .nav-btn { padding: 5px 8px; font-size: 10px; gap: 4px; }
-    .cards { gap: 5px; padding: 8px 6px 4px; }
-    .card { padding: 10px 10px; border-radius: 8px; }
+    .cards { gap: 6px; padding: 8px 6px 4px; }
+    .card { flex: 0 0 135px; padding: 10px 10px; border-radius: 8px; }
     .card > div:first-child { font-size: 8.5px; }
     .card h2 { font-size: 20px; letter-spacing: -0.5px; }
     .main { margin: 4px 6px 10px; border-radius: 8px; }
@@ -757,9 +788,9 @@ tr.selected-row td.phone { color: #00a884 !important; }
 /* --- Very Small Phone (≤360px) --- */
 @media (max-width: 360px) {
     .header { font-size: 13px; }
-    .cards { flex-direction: column; }
-    .card { flex: 1 1 100%; }
-    .card h2 { font-size: 22px; }
+    .cards { gap: 6px; padding: 8px 6px 4px; }
+    .card { flex: 0 0 120px; padding: 8px; }
+    .card h2 { font-size: 18px; }
     .tab-btn { font-size: 9.5px; }
     .msg { max-width: 92%; }
     .call-btn { padding: 4px 7px; font-size: 9.5px; }

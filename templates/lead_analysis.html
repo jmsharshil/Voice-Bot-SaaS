@@ -782,31 +782,181 @@
             .nav-action-btn { padding: 6px 10px; font-size: 12px; }
         }
 
+        /* Back to list button styles */
+        .back-to-list-btn {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-right: 12px;
+        }
+        .back-to-list-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
         @media(max-width:900px) {
-            .main { flex-direction: column; height: auto; min-height: 70vh; margin: 0 16px 16px; }
-            .lead-list-panel { width: 100%; min-width: unset; max-height: 40vh; border-right: none; border-bottom: 1px solid #e2e8f0; }
-            .conversation-panel { width: 100%; min-width: unset; max-height: 40vh; border-left: none; border-top: 1px solid #e2e8f0; }
-            .cards { grid-template-columns: repeat(3, 1fr); padding: 16px; gap: 12px; }
-            .card { padding: 18px; }
+            .back-to-list-btn {
+                display: inline-flex;
+            }
+            .main {
+                flex-direction: column;
+                height: calc(100vh - 210px);
+                margin: 0 12px 12px;
+                border-radius: 12px;
+            }
+
+            /* Master-Detail Toggle on Mobile */
+            .main:not(.lead-active) .lead-list-panel {
+                display: flex;
+                width: 100%;
+                min-width: unset;
+                height: 100%;
+                max-height: unset;
+                border-right: none;
+            }
+            .main:not(.lead-active) .detail-panel,
+            .main:not(.lead-active) .conversation-panel {
+                display: none;
+            }
+
+            .main.lead-active .lead-list-panel {
+                display: none;
+            }
+            .main.lead-active .detail-panel {
+                display: flex;
+                flex: 1;
+                width: 100%;
+                height: 55%;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .main.lead-active .conversation-panel {
+                display: flex;
+                flex: 1;
+                width: 100%;
+                height: 45%;
+                border-left: none;
+            }
+
+            .cards {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                gap: 12px;
+                padding: 16px;
+                scrollbar-width: none;
+            }
+            .cards::-webkit-scrollbar {
+                display: none;
+            }
+            .card {
+                flex: 0 0 160px;
+                padding: 16px;
+                animation: none;
+            }
             .card-value { font-size: 26px; }
         }
 
         @media(max-width:768px) {
-            .header { flex-wrap: wrap; padding: 12px 16px; gap: 8px; }
-            .header-title { font-size: 15px; }
-            .header-sub { font-size: 11px; padding: 3px 8px; margin-left: 4px; }
-            .header-right { width: 100%; justify-content: center; flex-wrap: wrap; gap: 6px; }
-            .nav-tabs { border-right: none; padding-right: 0; margin-right: 0; flex-wrap: wrap; justify-content: center; }
-            .nav-tab { padding: 5px 8px; font-size: 11px; gap: 4px; }
-            .nav-actions { flex-wrap: wrap; justify-content: center; }
-            .nav-action-btn { padding: 5px 8px; font-size: 11px; }
-            .minutes-badge { font-size: 11px; padding: 4px 10px; }
-            .cards { grid-template-columns: repeat(2, 1fr); padding: 12px; }
-            .card { padding: 16px; }
-            .card-value { font-size: 24px; }
-            .card-label { font-size: 10px; }
-            .main { border-radius: 14px; }
-            .lead-list-panel { max-height: 35vh; }
+            .header {
+                display: grid;
+                grid-template-columns: auto 1fr auto auto;
+                align-items: center;
+                gap: 10px 8px;
+                padding: 10px 12px;
+            }
+            .header-logo-icon, .header-company-logo {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .header-title {
+                grid-column: 2;
+                grid-row: 1;
+                font-size: 15px;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .header-sub {
+                display: none;
+            }
+            .header-right {
+                display: contents;
+            }
+            .minutes-badge {
+                grid-column: 3;
+                grid-row: 1;
+                justify-self: end;
+                margin-right: 0 !important;
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+            .profile-wrap {
+                grid-column: 4;
+                grid-row: 1;
+                justify-self: end;
+            }
+            .profile-avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+            }
+            .nav-tabs {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding: 0 0 4px 0;
+                margin: 0;
+                border-right: none;
+                gap: 6px;
+                justify-content: flex-start;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .nav-tabs::-webkit-scrollbar {
+                display: none;
+            }
+            .nav-tab {
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            .nav-actions {
+                grid-column: 1 / -1;
+                grid-row: 3;
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                gap: 6px;
+                justify-content: flex-start;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .nav-actions::-webkit-scrollbar {
+                display: none;
+            }
+            .nav-action-btn {
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .main { border-radius: 10px; }
             .lead-item { padding: 14px; gap: 12px; }
             .lead-badge { width: 36px; height: 36px; font-size: 16px; border-radius: 10px; }
             .lead-name { font-size: 13px; }
@@ -818,24 +968,18 @@
             .messages { padding: 16px; }
             .msg { max-width: 85%; font-size: 13px; padding: 12px 16px; }
             .export-btn { padding: 6px 12px; font-size: 12px; }
-            .profile-avatar { width: 32px; height: 32px; font-size: 13px; }
         }
 
         @media(max-width:576px) {
-            .header { padding: 10px 12px; }
-            .header-title { font-size: 14px; }
-            .header-sub { display: none; }
-            .header-dot { width: 8px; height: 8px; }
-            .nav-tab { padding: 4px 6px; font-size: 10px; }
-            .nav-action-btn { font-size: 10px; padding: 4px 8px; }
-            .minutes-badge { font-size: 10px; padding: 3px 8px; margin-right: 4px; }
+            .nav-tab { padding: 5px 10px; font-size: 11px; }
+            .nav-action-btn { font-size: 11px; padding: 5px 10px; }
+            .minutes-badge { font-size: 10px; padding: 3px 8px; }
             .profile-avatar { width: 30px; height: 30px; font-size: 12px; }
-            .cards { grid-template-columns: 1fr 1fr; padding: 10px 8px; gap: 8px; }
-            .card { padding: 14px; border-radius: 12px; }
+            .cards { padding: 10px 8px; gap: 8px; }
+            .card { flex: 0 0 140px; padding: 12px; border-radius: 10px; }
             .card-value { font-size: 20px; }
             .card-label { font-size: 9px; }
-            .main { margin: 0 8px 12px; border-radius: 12px; }
-            .lead-list-panel { max-height: 32vh; }
+            .main { margin: 0 8px 8px; border-radius: 8px; }
             .lead-item { padding: 12px; gap: 10px; }
             .lead-badge { width: 32px; height: 32px; font-size: 14px; border-radius: 8px; }
             .lead-name { font-size: 12px; }
@@ -852,10 +996,7 @@
         }
 
         @media(max-width:480px) {
-            .cards { grid-template-columns: 1fr; }
-            .header-right { gap: 4px; }
-            .nav-tabs { gap: 2px; }
-            .main { margin: 0 6px 8px; }
+            .main { margin: 0 6px 6px; }
         }
 
         /* ── Profile Dropdown ── */
@@ -1602,7 +1743,7 @@
             content.appendChild(iconContainer);
             content.appendChild(title);
             content.appendChild(msg);
-            content.appendChild(contactBtn);
+            // content.appendChild(contactBtn);
             content.appendChild(dismissBtn);
             modal.appendChild(content);
             document.body.appendChild(modal);
@@ -1924,6 +2065,7 @@
         <div class="detail-panel">
             <div class="detail-header" id="detailHeader">
                 <div class="dh-top">
+                    <button class="back-to-list-btn" onclick="goBackToList(event)">← Back</button>
                     <div class="dh-avatar" id="dhAvatar">?</div>
                     <div class="dh-info">
                         <div class="dh-name" id="dhName">—</div>
@@ -2253,10 +2395,33 @@
             renderLeads();
         }
 
+        function goBackToList(event) {
+            if (event) event.preventDefault();
+            const mainContainer = document.querySelector(".main");
+            if (mainContainer) mainContainer.classList.remove("lead-active");
+            activeLeadSession = null;
+            renderLeads();
+            
+            const header = document.getElementById("detailHeader");
+            const summary = document.getElementById("detailSummary");
+            const empty = document.getElementById("detailEmpty");
+            const box = document.getElementById("messagesBox");
+            const convPanel = document.getElementById("conversationPanel");
+            
+            if (header) header.classList.remove("show");
+            if (summary) summary.classList.remove("show");
+            if (empty) empty.style.display = "flex";
+            if (box) box.classList.remove("show");
+            if (convPanel) convPanel.classList.remove("show");
+        }
+
         /* ── Open Lead Detail ───────────────────── */
         async function openLead(lead) {
             activeLeadSession = lead.session_id;
             renderLeads(); // Update active state
+
+            const mainContainer = document.querySelector(".main");
+            if (mainContainer) mainContainer.classList.add("lead-active");
 
             const header = document.getElementById("detailHeader");
             const summary = document.getElementById("detailSummary");
