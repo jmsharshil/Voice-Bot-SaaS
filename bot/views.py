@@ -1257,7 +1257,7 @@ def trigger_call(request):
                 "to": normalized_phone,
                 "caller_id": "+917969016753",
                 "ref": f"crm-{uuid.uuid4()}",
-                "bot_url": f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
+                "bot_url": f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
             }
 
 
@@ -1293,7 +1293,7 @@ def trigger_call(request):
                     "to": normalized_phone,
                     "caller_id": "+917969016753",
                     "ref": f"crm-{uuid.uuid4()}",
-                    "bot_url": f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
+                    "bot_url": f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
                 }
 
                 response = requests.post(
@@ -1373,7 +1373,7 @@ def upload_call_file(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
+    BOT_URL = f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
@@ -1492,7 +1492,7 @@ _missed_calls = []            # Numbers that timed out (No Answer)
 TELECOM_DIAL_URL = "https://call-route.on-forge.com/api/dial"
 TELECOM_API_KEY = "7a3e957ed459dfebc486ee58d6059928d02c4aab20c9f698bd50e2636f8df1be"
 CALLER_ID = "+917969016753"
-BOT_URL = "wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
+BOT_URL = "wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
 
 def _normalize_phone(phone):
@@ -1741,7 +1741,7 @@ def start_auto_campaign(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
+    BOT_URL = f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
     if _campaign_active:
         with _call_queue_lock:

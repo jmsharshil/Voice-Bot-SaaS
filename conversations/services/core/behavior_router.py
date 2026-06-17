@@ -26,6 +26,7 @@ ROLE_STRATEGY_MAP = {
     "Naavya Automobile Advisor": "automobile_Naavya",
     "Hospital Appointment Advisor": "hospital_minimal",
     "JMS Loan Advisor": "loan_strategy",
+    "JMS Loan Reminder Advisor": "reminder_strategy",
 }
 
 

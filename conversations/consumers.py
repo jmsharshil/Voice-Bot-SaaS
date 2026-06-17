@@ -43,6 +43,12 @@ except Exception as e:
     print(f"⚠️ Failed to load LoanMatcher: {e}")
     LOAN_MATCHER = None
 
+try:
+    REMINDER_MATCHER = AutomobileMatcher("reminder_bot/data/reminder_intents.json")
+except Exception as e:
+    print(f"⚠️ Failed to load ReminderMatcher: {e}")
+    REMINDER_MATCHER = None
+
 from elevenlabs import ElevenLabs, VoiceSettings
 
 ELEVENLABS_CLIENT = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
@@ -139,6 +145,12 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "loan_bot/loan_step3_discover_amount.raw": "Great choice! aapko approximately kitne amount ka loan chahiye? Exact figure nahi pata toh koi baat nahi, ek rough idea bhi kaafi hai — hum uske hisaab se best plan suggest kar sakte hain.",
     "loan_bot/loan_step4_closing.raw": "Excellent! Aapki saari details note kar li gayi hain. Hamari expert team bahut jald aapse connect karegi aur aapke liye best loan offer ready karegi. JMS Bank choose karne ke liye bahut bahut shukriya!",
     "loan_bot/loan_step_rejection.raw": "Bilkul theek hai, koi problem nahi! Jab bhi aapko zaroorat ho, JMS Bank hamesha aapke liye available hai. Apna precious time dene ke liye dil se shukriya. Aapka din bahut accha jaye!",
+
+    # JMS BANK LOAN REMINDER BOT
+    "reminder_bot/reminder_step1_greeting.raw": "નમસ્તે! હું જે એમ એસ બેંકમાંથી નવ્યા બોલું છું. તમારી ઈ એમ આઈ ની તારીખ નજીક છે, તમે ક્યારે ચુકવણી કરશો?",
+    "reminder_bot/reminder_step2_ask_mode.raw": "ધન્યવાદ જણાવવા માટે, તમે કઈ રીતે ચુકવણી કરશો? યુ પી આઈ, નેટબેંકિંગ કે અન્ય કોઈ રીતે?",
+    "reminder_bot/reminder_step3_closing.raw": "સરસ! તમારી વિગતો નોંધી લેવામાં આવી છે. સમયસર ચુકવણી કરવા બદલ આભાર!",
+    "reminder_bot/reminder_step_rejection.raw": "તમારી અસુવિધા બદલ દિલગીર છું. તમારી માહિતી નોંધી લેવામાં આવી છે. સમયસર ચુકવણી કરવા બદલ આભાર!",
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
@@ -348,7 +360,7 @@ SSML_STYLE_MAP = {
 SSML_PROSODY_MAP = {
     "en": {"rate": "0%", "pitch": "0%", "volume": "0%"},
     "hi": {"rate": "0%", "pitch": "0%", "volume": "0%"},
-    "gu": {"rate": "+10%", "pitch": "0%", "volume": "0%"},
+    "gu": {"rate": "+20%", "pitch": "0%", "volume": "0%"},
 }   
 
 
@@ -562,7 +574,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             strategy_key = get_role_strategy(role_name)
             
             # 1. Determine TTS Lang
-            if strategy_key == "real_estate":
+            if strategy_key in ["real_estate", "reminder_strategy"]:
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
@@ -572,7 +584,10 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             # 2. Get Opening Message
             summary_txt = agent.summary.strip().rstrip(".") if agent.summary else ""
             if tts_lang == "gu":
-                greeting = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
+                if strategy_key == "reminder_strategy":
+                    greeting = "નમસ્તે! હું જે એમ એસ બેંકમાંથી નવ્યા બોલું છું. તમારી ઈ એમ આઈ ની તારીખ નજીક છે, તમે ક્યારે ચુકવણી કરશો?"
+                else:
+                    greeting = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
             elif tts_lang == "interview_en":
                 greeting = f"Hello, I am {agent.name}."
             else:
@@ -585,7 +600,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             state["detected_language"] = language
             if strategy_key == "hospital_minimal":
                 state["step"] = "confirm_interest"
-            elif strategy_key == "loan_strategy":
+            elif strategy_key in ["loan_strategy", "reminder_strategy"]:
                 state["call_phase"] = "interest_confirmation"
             session.state = state
             session.save()
@@ -605,6 +620,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             greeting_file = "hosp_step1_greeting.raw"
         elif self.strategy_key == "loan_strategy":
             greeting_file = "loan_bot/loan_step1_greeting.raw"
+        elif self.strategy_key == "reminder_strategy":
+            greeting_file = "reminder_bot/reminder_step1_greeting.raw"
         elif self.strategy_key == "automobile_Naavya":
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         else:
@@ -1087,10 +1104,13 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         is_automobile = getattr(self, "strategy_key", None) == "automobile"
         is_naavya = getattr(self, "strategy_key", None) == "automobile_Naavya"
         is_loan = getattr(self, "strategy_key", None) == "loan_strategy"
+        is_reminder = getattr(self, "strategy_key", None) == "reminder_strategy"
         
-        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER):
+        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER):
             if is_loan:
                 matcher = LOAN_MATCHER
+            elif is_reminder:
+                matcher = REMINDER_MATCHER
             else:
                 matcher = NAAVYA_MATCHER if is_naavya else AUTOMOBILE_MATCHER
             try:
@@ -1114,6 +1134,14 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                                 "interest_confirmation": "GREETING_REPLY",
                                 "discover_loan_type": "DISCOVER_LOAN_TYPE",
                                 "collect_amount": "COLLECT_ANSWERS",
+                            }
+                            current_phase = phase_map.get(current_phase, "GREETING_REPLY")
+                        elif is_reminder:
+                            current_phase = session.state.get("call_phase", "interest_confirmation")
+                            phase_map = {
+                                "interest_confirmation": "GREETING_REPLY",
+                                "ask_payment_mode": "ASK_PAYMENT_MODE",
+                                "closing": "CLOSING",
                             }
                             current_phase = phase_map.get(current_phase, "GREETING_REPLY")
                         self.current_phase = current_phase
@@ -1142,6 +1170,13 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                                         "GREETING_REPLY": "interest_confirmation",
                                         "DISCOVER_LOAN_TYPE": "discover_loan_type",
                                         "COLLECT_ANSWERS": "collect_amount",
+                                        "CLOSING": "closing"
+                                    }
+                                    state["call_phase"] = rev_map.get(next_phase, "interest_confirmation")
+                                elif is_reminder:
+                                    rev_map = {
+                                        "GREETING_REPLY": "interest_confirmation",
+                                        "ASK_PAYMENT_MODE": "ask_payment_mode",
                                         "CLOSING": "closing"
                                     }
                                     state["call_phase"] = rev_map.get(next_phase, "interest_confirmation")
@@ -1584,6 +1619,29 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
     def _synthesize_ulaw(self, text: str, language: str = None) -> bytes:
         lang = language or self.language
+        if lang == "gu":
+            try:
+                ssml = build_ssml(text, lang)
+                synthesizer = self._get_synthesizer(lang)
+                result = synthesizer.speak_ssml_async(ssml).get()
+                
+                if result.reason == speechsdk.ResultReason.Canceled:
+                    details = result.cancellation_details
+                    print("❌ Azure TTS Canceled:", details.reason, details.error_details)
+                    return b""
+                    
+                pcm = result.audio_data
+                pcm = strip_wav_header(pcm)
+                
+                if len(pcm) % 2 != 0:
+                    pcm = pcm[:-1]
+                    
+                pcm = _amplify_pcm(pcm, gain=0.6)
+                return encode_g711(pcm)
+            except Exception as azure_err:
+                print(f"❌ Azure synthesis failed for Gujarati: {azure_err}")
+                return b""
+
         voice_id = ELEVENLABS_VOICE_MAP.get(lang, ELEVENLABS_VOICE_MAP["en"])
         
         # Strip any SSML/XML tags before sending to ElevenLabs
