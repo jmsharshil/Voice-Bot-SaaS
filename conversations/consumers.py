@@ -49,6 +49,12 @@ except Exception as e:
     print(f"⚠️ Failed to load ReminderMatcher: {e}")
     REMINDER_MATCHER = None
 
+try:
+    TEMP_REAL_ESTATE_MATCHER = AutomobileMatcher("temp_real_estate_bot/data/real_estate_intents.json")
+except Exception as e:
+    print(f"⚠️ Failed to load TempRealEstateMatcher: {e}")
+    TEMP_REAL_ESTATE_MATCHER = None
+
 from elevenlabs import ElevenLabs, VoiceSettings
 
 ELEVENLABS_CLIENT = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
@@ -151,6 +157,13 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "reminder_bot/reminder_step2_ask_mode.raw": "ધન્યવાદ જણાવવા માટે, તમે કઈ રીતે ચુકવણી કરશો? યુ પી આઈ, નેટબેંકિંગ કે અન્ય કોઈ રીતે?",
     "reminder_bot/reminder_step3_closing.raw": "સરસ! તમારી વિગતો નોંધી લેવામાં આવી છે. સમયસર ચુકવણી કરવા બદલ આભાર!",
     "reminder_bot/reminder_step_rejection.raw": "તમારી અસુવિધા બદલ દિલગીર છું. તમારી માહિતી નોંધી લેવામાં આવી છે. સમયસર ચુકવણી કરવા બદલ આભાર!",
+
+    # JMS REAL ESTATE BOT
+    "temp_real_estate_bot/real_estate_step1_greeting.raw": "હલો, નમસ્તે જી! હું જે એમ એસ રિયલ એસ્ટેટ તરફથી નવ્યા વાત કરું છું. અમે અત્યારે ખૂબ જ સરસ લોકેશન પર લક્ઝુરિયસ ફ્લેટ્સ વેચી રહ્યા છીએ. તો મને જણાવશો ને, તમારે કયા પ્રકારનો ફ્લેટ જોઈએ છે, જેમ કે વન બીએચકે કે ટુ બીએચકે?",
+    "temp_real_estate_bot/real_estate_step2_ask_area.raw": "અરે વાહ, ખૂબ જ સરસ! તો તમે અમદાવાદમાં કયા એરિયા કે વિસ્તારમાં ફ્લેટ લેવાનું વધારે પસંદ કરશો? જેમ કે બોપલ, સેટેલાઇટ કે પછી કોઈ બીજો વિસ્તાર?",
+    "temp_real_estate_bot/real_estate_step3_ask_budget.raw": "ઓકે, એ તો ઘણો જ સરસ એરિયા છે! અને તમારું અંદાજિત બજેટ કેટલું રાખ્યું છે? કોઈ પણ આશરે કિંમત જણાવશો તો પણ ચાલશે.",
+    "temp_real_estate_bot/real_estate_step4_ask_name.raw": "જી ચોક્કસ, મેં વિગત નોંધી લીધી છે. તો બસ છેલ્લે તમારી આ જરૂરિયાત રજીસ્ટર કરવા માટે હું તમારું શુભ નામ જાણી શકું? પ્લીઝ તમારું નામ જણાવો ને.",
+    "temp_real_estate_bot/real_estate_step5_closing.raw": "જી ખૂબ ખૂબ આભાર! મેં તમારી બધી જ જરૂરિયાતો અહીંયા નોંધી લીધી છે. અમારી સેલ્સ ટીમ ખૂબ જ ટૂંક સમયમાં તમારો સંપર્ક કરશે અને તમને વધુ માહિતી આપશે. તમારો કિંમતી સમય આપવા બદલ ખૂબ આભાર, આવજો!",
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
@@ -574,7 +587,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             strategy_key = get_role_strategy(role_name)
             
             # 1. Determine TTS Lang
-            if strategy_key in ["real_estate", "reminder_strategy"]:
+            if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy"]:
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
@@ -586,6 +599,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             if tts_lang == "gu":
                 if strategy_key == "reminder_strategy":
                     greeting = "નમસ્તે! હું જે એમ એસ બેંકમાંથી નવ્યા બોલું છું. તમારી ઈ એમ આઈ ની તારીખ નજીક છે, તમે ક્યારે ચુકવણી કરશો?"
+                elif strategy_key == "temp_real_estate_strategy":
+                    greeting = "હલો, નમસ્તે જી! હું જે એમ એસ રિયલ એસ્ટેટ તરફથી નવ્યા વાત કરું છું. અમે અત્યારે ખૂબ જ સરસ લોકેશન પર લક્ઝુરિયસ ફ્લેટ્સ વેચી રહ્યા છીએ. તો મને જણાવશો ને, તમારે કયા પ્રકારનો ફ્લેટ જોઈએ છે, જેમ કે વન બીએચકે કે ટુ બીએચકે?"
                 else:
                     greeting = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
             elif tts_lang == "interview_en":
@@ -600,8 +615,11 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             state["detected_language"] = language
             if strategy_key == "hospital_minimal":
                 state["step"] = "confirm_interest"
-            elif strategy_key in ["loan_strategy", "reminder_strategy"]:
-                state["call_phase"] = "interest_confirmation"
+            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy"]:
+                if strategy_key == "temp_real_estate_strategy":
+                    state["call_phase"] = "collect_flat_type"
+                else:
+                    state["call_phase"] = "interest_confirmation"
             session.state = state
             session.save()
             
@@ -622,6 +640,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             greeting_file = "loan_bot/loan_step1_greeting.raw"
         elif self.strategy_key == "reminder_strategy":
             greeting_file = "reminder_bot/reminder_step1_greeting.raw"
+        elif self.strategy_key == "temp_real_estate_strategy":
+            greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
         elif self.strategy_key == "automobile_Naavya":
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         else:
@@ -1105,12 +1125,15 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         is_naavya = getattr(self, "strategy_key", None) == "automobile_Naavya"
         is_loan = getattr(self, "strategy_key", None) == "loan_strategy"
         is_reminder = getattr(self, "strategy_key", None) == "reminder_strategy"
+        is_temp_real_estate = getattr(self, "strategy_key", None) == "temp_real_estate_strategy"
         
-        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER):
+        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER):
             if is_loan:
                 matcher = LOAN_MATCHER
             elif is_reminder:
                 matcher = REMINDER_MATCHER
+            elif is_temp_real_estate:
+                matcher = TEMP_REAL_ESTATE_MATCHER
             else:
                 matcher = NAAVYA_MATCHER if is_naavya else AUTOMOBILE_MATCHER
             try:
@@ -1144,12 +1167,51 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                                 "closing": "CLOSING",
                             }
                             current_phase = phase_map.get(current_phase, "GREETING_REPLY")
+                        elif is_temp_real_estate:
+                            current_phase = session.state.get("call_phase", "collect_flat_type")
+                            phase_map = {
+                                "collect_flat_type": "GREETING_REPLY",
+                                "collect_area": "ASK_AREA",
+                                "collect_budget": "ASK_BUDGET",
+                                "collect_name": "ASK_NAME",
+                                "closing": "CLOSING",
+                            }
+                            current_phase = phase_map.get(current_phase, "GREETING_REPLY")
                         self.current_phase = current_phase
                 except:
                     pass
 
                 # 2. Check for semantic match (Fast-Path)
-                match_result = matcher.find_match(text, current_phase=current_phase, threshold=0.70)
+                if is_temp_real_estate and current_phase == "ASK_BUDGET":
+                    # Intercept: User can say anything in budget phase. Move to name collection.
+                    match_result = {
+                        "match_type": "CONTEXTUAL",
+                        "intent": {
+                            "intent_name": "budget_answered",
+                            "mp3_file": "temp_real_estate_bot/real_estate_step4_ask_name.raw",
+                            "next_phase": "ASK_NAME"
+                        },
+                        "score": 1.0,
+                        "action": "play_audio",
+                        "mp3": "temp_real_estate_bot/real_estate_step4_ask_name.raw",
+                        "next_phase": "ASK_NAME"
+                    }
+                elif is_temp_real_estate and current_phase == "ASK_NAME":
+                    # Intercept: User can say anything for name. Move to closing and disconnect.
+                    match_result = {
+                        "match_type": "CONTEXTUAL",
+                        "intent": {
+                            "intent_name": "name_answered",
+                            "mp3_file": "temp_real_estate_bot/real_estate_step5_closing.raw",
+                            "next_phase": "CLOSING"
+                        },
+                        "score": 1.0,
+                        "action": "play_audio",
+                        "mp3": "temp_real_estate_bot/real_estate_step5_closing.raw",
+                        "next_phase": "CLOSING"
+                    }
+                else:
+                    match_result = matcher.find_match(text, current_phase=current_phase, threshold=0.70)
 
                 if match_result["match_type"] != "NONE":
                     intent_name = match_result['intent']['intent_name']
@@ -1180,6 +1242,15 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                                         "CLOSING": "closing"
                                     }
                                     state["call_phase"] = rev_map.get(next_phase, "interest_confirmation")
+                                elif is_temp_real_estate:
+                                    rev_map = {
+                                        "GREETING_REPLY": "collect_flat_type",
+                                        "ASK_AREA": "collect_area",
+                                        "ASK_BUDGET": "collect_budget",
+                                        "ASK_NAME": "collect_name",
+                                        "CLOSING": "closing"
+                                    }
+                                    state["call_phase"] = rev_map.get(next_phase, "collect_flat_type")
                                 session.state = state
                                 await sync_to_async(session.save)()
                                 self.current_phase = next_phase
@@ -1751,13 +1822,25 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
     # ================= TTS (static replies / intro) =================
 
     async def _synthesize_and_cache_greeting(self, text: str, tts_language: str = None):
-        """
-        Check for a local language-specific greeting file first. 
-        If it exists, play it instantly. Otherwise, synthesize and cache.
-        """
+        # Check for a local language-specific greeting file first. 
+        # If it exists, play it instantly. Otherwise, synthesize and cache.
+        # """
         import os
         lang = tts_language or self.language
-        greeting_file = "hosp_step1_greeting.raw" if getattr(self, "strategy_key", None) == "hospital_minimal" else f"{lang}_step1_greeting.raw"
+        
+        if getattr(self, "strategy_key", None) == "hospital_minimal":
+            greeting_file = "hosp_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "loan_strategy":
+            greeting_file = "loan_bot/loan_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "reminder_strategy":
+            greeting_file = "reminder_bot/reminder_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "temp_real_estate_strategy":
+            greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "automobile_Naavya":
+            greeting_file = f"Naavya/{lang}_step1_greeting.raw"
+        else:
+            greeting_file = f"{lang}_step1_greeting.raw"
+            
         local_greeting = os.path.join("mp3_responses", greeting_file)
         if os.path.exists(local_greeting):
             print(f"🚀 INSTANT GREETING: Found local file {local_greeting}")
