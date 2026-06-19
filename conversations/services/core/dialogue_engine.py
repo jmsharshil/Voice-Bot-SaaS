@@ -58,6 +58,17 @@ except ImportError:
     reminder_bot_prepare = None
     reminder_bot_finalize = None
 
+try:
+    from temp_real_estate_bot.strategy import (
+        temp_real_estate_strategy,
+        temp_real_estate_prepare,
+        temp_real_estate_finalize,
+    )
+except ImportError:
+    temp_real_estate_strategy = None
+    temp_real_estate_prepare = None
+    temp_real_estate_finalize = None
+
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
 from django.core.cache import cache
@@ -77,6 +88,8 @@ if loan_bot_strategy:
     STRATEGY_MAP["loan_strategy"] = loan_bot_strategy
 if reminder_bot_strategy:
     STRATEGY_MAP["reminder_strategy"] = reminder_bot_strategy
+if temp_real_estate_strategy:
+    STRATEGY_MAP["temp_real_estate_strategy"] = temp_real_estate_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -94,6 +107,8 @@ if loan_bot_prepare:
     PREPARE_MAP["loan_strategy"] = loan_bot_prepare
 if reminder_bot_prepare:
     PREPARE_MAP["reminder_strategy"] = reminder_bot_prepare
+if temp_real_estate_prepare:
+    PREPARE_MAP["temp_real_estate_strategy"] = temp_real_estate_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -110,6 +125,8 @@ if loan_bot_finalize:
     FINALIZE_MAP["loan_strategy"] = loan_bot_finalize
 if reminder_bot_finalize:
     FINALIZE_MAP["reminder_strategy"] = reminder_bot_finalize
+if temp_real_estate_finalize:
+    FINALIZE_MAP["temp_real_estate_strategy"] = temp_real_estate_finalize
 
 
 def _resolve_agent(agent):
@@ -372,7 +389,7 @@ def get_agent_tts_language(agent_id):
         strategy_key = get_role_strategy(role_name)
         print(f"🔍 Agent role_name: {role_name} | strategy_key: {strategy_key}")
 
-        if strategy_key in ["real_estate", "reminder_strategy"]:
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy"]:
             return "gu"           # Gujarati, Dhwani voice
         elif strategy_key == "interview_bot":
             return "interview_en" # English only, no translation

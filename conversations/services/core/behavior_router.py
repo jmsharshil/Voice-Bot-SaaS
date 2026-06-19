@@ -27,6 +27,7 @@ ROLE_STRATEGY_MAP = {
     "Hospital Appointment Advisor": "hospital_minimal",
     "JMS Loan Advisor": "loan_strategy",
     "JMS Loan Reminder Advisor": "reminder_strategy",
+    "Naavya JMS Real Estate Advisor": "temp_real_estate_strategy",
 }
 
 

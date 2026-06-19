@@ -8,9 +8,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("AutomobileMatcher")
 
 class AutomobileMatcher:
-    def __init__(self, intents_file: str):
+    _shared_model = None
+
+    def __init__(self, intents_file: str, model=None):
         self.intents_file = intents_file
-        self.model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+        if model is not None:
+            self.model = model
+        else:
+            if AutomobileMatcher._shared_model is None:
+                AutomobileMatcher._shared_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+            self.model = AutomobileMatcher._shared_model
         self.global_intents = []
         self.phase_intents = {} # {phase_name: [intents]}
         self.load_data()
