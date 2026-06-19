@@ -176,6 +176,7 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsSuperAdminOrAdmin]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
 
 # --- Client Team Management (For client admins managing their sub-users) ---
