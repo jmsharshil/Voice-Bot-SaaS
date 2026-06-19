@@ -54,19 +54,57 @@ class UserSerializer(serializers.ModelSerializer):
 
     custom_permissions = serializers.JSONField(source="profile.custom_permissions", write_only=True, required=False, allow_null=True)
 
+    # Add write-only fields for user update details
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    role_name = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
+    permissions = serializers.JSONField(write_only=True, required=False, allow_null=True)
+    company_logo = serializers.ImageField(write_only=True, required=False, allow_null=True)
+
+    is_superuser = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = User
-        fields = ["id", "username", "email", "profile", "role_id", "assigned_agent_id", "custom_permissions"]
+        fields = [
+            "id", "username", "email", "profile", "role_id", "assigned_agent_id", 
+            "custom_permissions", "password", "role_name", "permissions", "company_logo",
+            "is_superuser"
+        ]
 
     def update(self, instance, validated_data):
         profile_data = validated_data.pop('profile', {})
+        role_name = validated_data.pop('role_name', None)
+        permissions = validated_data.pop('permissions', None)
+        company_logo = validated_data.pop('company_logo', None)
+        password = validated_data.pop('password', None)
+
         if 'role' in profile_data:
             instance.profile.role = profile_data['role']
+        elif role_name:
+            role, created = Role.objects.get_or_create(name=role_name)
+            instance.profile.role = role
+
         if 'custom_permissions' in profile_data:
             instance.profile.custom_permissions = profile_data['custom_permissions']
+        elif permissions is not None:
+            if isinstance(permissions, str):
+                import json
+                try:
+                    permissions = json.loads(permissions)
+                except Exception:
+                    pass
+            instance.profile.custom_permissions = permissions
+
         if 'assigned_agent' in profile_data:
             instance.profile.assigned_agent = profile_data['assigned_agent']
+
+        if company_logo:
+            instance.profile.company_logo = company_logo
+
         instance.profile.save()
+
+        if password:
+            instance.set_password(password)
+
         return super().update(instance, validated_data)
 
 # class RegisterSerializer(serializers.ModelSerializer):
