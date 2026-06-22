@@ -18,13 +18,13 @@ def create_agent():
         owner = User.objects.first()
         
     if not owner:
-        print("❌ Error: No User found in database. Please create a user first.")
+        print("[ERROR] Error: No User found in database. Please create a user first.")
         return
 
     # 2. Fetch Industry
     industry = Industry.objects.filter(slug="temp-real-estate").first()
     if not industry:
-        print("❌ Error: Temp Real Estate Industry not found. Did you run seed_roles?")
+        print("[ERROR] Error: Temp Real Estate Industry not found. Did you run seed_roles?")
         return
 
     # 3. Fetch Role Template
@@ -34,7 +34,7 @@ def create_agent():
     ).first()
     
     if not role_template:
-        print("❌ Error: Role template 'Naavya JMS Real Estate Advisor' not found. Did you run seed_roles?")
+        print("[ERROR] Error: Role template 'Naavya JMS Real Estate Advisor' not found. Did you run seed_roles?")
         return
 
     # 4. Create VoiceAgent
@@ -45,7 +45,7 @@ def create_agent():
     ).first()
 
     if agent:
-        print(f"ℹ️ Voice Agent '{agent.name}' (ID: {agent.id}) already exists for user '{owner.username}'.")
+        print(f"[INFO] Voice Agent '{agent.name}' (ID: {agent.id}) already exists for user '{owner.username}'.")
         return agent
 
     agent = VoiceAgent.objects.create(
@@ -60,7 +60,7 @@ def create_agent():
         minutes_quota=5000
     )
 
-    print(f"✅ Voice Agent '{agent.name}' created successfully!")
+    print(f"[OK] Voice Agent '{agent.name}' created successfully!")
     print(f"   ID: {agent.id}")
     print(f"   API Key: {agent.api_key}")
     print(f"   Owner: {agent.owner.username}")

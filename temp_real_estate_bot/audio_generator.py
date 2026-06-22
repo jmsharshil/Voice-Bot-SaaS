@@ -2,27 +2,14 @@ import os
 import sys
 import audioop
 from dotenv import load_dotenv
-import azure.cognitiveservices.speech as speechsdk
+import requests
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 load_dotenv()
 
-AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY")
-AZURE_SPEECH_REGION = os.getenv("AZURE_SPEECH_REGION")
-
-VOICE_NAME = "gu-IN-DhwaniNeural"
-
-def _amplify_pcm(pcm_data: bytes, gain: float = 1.0) -> bytes:
-    try:
-        import numpy as np
-        samples = np.frombuffer(pcm_data, dtype=np.int16).astype(np.float32)
-        samples = samples * gain
-        samples = np.clip(samples, -32768, 32767)
-        return samples.astype(np.int16).tobytes()
-    except Exception as e:
-        print(f"Amplify error: {e}")
-        return pcm_data
+SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
+API_URL = "https://api.sarvam.ai/text-to-speech/stream"
 
 def generate_tts_file(filename, text):
     subfolder = "temp_real_estate_bot"
@@ -31,46 +18,35 @@ def generate_tts_file(filename, text):
     
     file_path = os.path.join(target_dir, filename)
 
+    headers = {
+        "api-subscription-key": SARVAM_API_KEY,
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "text": text,
+        "target_language_code": "gu-IN",
+        "speaker": "ishita",
+        "model": "bulbul:v3",
+        "pace": 1.17,
+        "speech_sample_rate": 8000,
+        "output_audio_codec": "mulaw",
+        "enable_preprocessing": True
+    }
+
     try:
-        speech_config = speechsdk.SpeechConfig(
-            subscription=AZURE_SPEECH_KEY,
-            region=AZURE_SPEECH_REGION
-        )
-        speech_config.speech_synthesis_voice_name = VOICE_NAME
-        speech_config.set_speech_synthesis_output_format(
-            speechsdk.SpeechSynthesisOutputFormat.Raw8Khz16BitMonoPcm
-        )
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=20)
+        response.raise_for_status()
+        
+        audio_data = response.content
+        if not audio_data:
+            print(f"❌ Sarvam returned empty audio for: {filename}")
+            return
 
-        synthesizer = speechsdk.SpeechSynthesizer(
-            speech_config=speech_config,
-            audio_config=None
-        )
+        with open(file_path, "wb") as f:
+            f.write(audio_data)
 
-        ssml = f"""
-        <speak version='1.0' xmlns="http://www.w3.org/2001/10/synthesis" 
-               xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang='gu-IN'>
-            <voice name='{VOICE_NAME}'>
-                <mstts:silence type="Leading" value="100ms"/>
-                <prosody rate='+20%' pitch='0%' volume='0%'>
-                    {text}
-                </prosody>
-                <mstts:silence type="Tailing" value="50ms"/>
-            </voice>
-        </speak>
-        """
-
-        result = synthesizer.speak_ssml_async(ssml).get()
-
-        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-            pcm = result.audio_data
-            pcm = _amplify_pcm(pcm, gain=2.0)
-            ulaw = audioop.lin2ulaw(pcm, 2)
-            
-            with open(file_path, "wb") as f:
-                f.write(ulaw)
-            print(f"[OK] Voice Generated: {file_path}")
-        else:
-            print(f"[FAIL] Synthesis failed for {filename}: {result.reason}")
+        print(f"[OK] Voice Generated: {file_path}")
 
     except Exception as e:
         print(f"[FAIL] Failed to generate {filename}: {e}")
@@ -81,7 +57,7 @@ if __name__ == "__main__":
     if target_filters:
         print(f"Generating Real Estate Bot audio only for files matching: {target_filters}")
     else:
-        print("Generating JMS Real Estate Bot Gujarati Flow Audio Assets via Azure Speech...")
+        print("Generating JMS Real Estate Bot Gujarati Flow Audio Assets via Sarvam AI...")
 
     assets = [
         ("real_estate_step1_greeting.raw", "હલો, નમસ્તે જી! હું જેએમએસ રિયલ એસ્ટેટ તરફથી નવ્યા વાત કરું છું. અમે અત્યારે ખૂબ જ સરસ લક્ઝુરિયસ ફ્લેટ્સ વેચી રહ્યા છીએ. તો મને જણાવશો, તમારે કયા પ્રકારનો ફ્લેટ જોઈએ છે, જેમ કે વન બીએચકે કે ટુ બીએચકે?"),

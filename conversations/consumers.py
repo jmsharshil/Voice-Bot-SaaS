@@ -518,6 +518,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
         self.last_dispatched_text = ""
         self.last_dispatch_time = 0.0
+        self.last_activity_time = time.time()
 
         # ── BOT SPEECH TIMING ──────────────────────────────────
         # Timestamps for when bot speech started and ended.
@@ -668,6 +669,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
         self.final_consumer_task = asyncio.create_task(self._final_text_consumer())
         self.keepalive_task = asyncio.create_task(self._keepalive_loop())
+        self.disconnect_timeout_task = asyncio.create_task(self._disconnect_timeout_loop())
 
     # ================= KEEPALIVE =================
 
@@ -683,6 +685,38 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 print(f"❌ Keepalive failed: {e}")
                 break
 
+    # ================= AUTO-DISCONNECT TIMER =================
+
+    def _update_activity_time(self):
+        """Updates the last user or bot activity time."""
+        self.last_activity_time = time.time()
+
+    async def _disconnect_timeout_loop(self):
+        """Continuously checks if the user has been silent for more than 30 seconds."""
+        while self.is_connected:
+            try:
+                await asyncio.sleep(1)
+                if not self.is_connected:
+                    break
+                
+                # If bot is speaking or AI is processing, keep the activity timer fresh
+                if self.is_bot_speaking or self.is_processing:
+                    self.last_activity_time = time.time()
+                    continue
+                
+                elapsed = time.time() - self.last_activity_time
+                if elapsed >= 30.0:
+                    print(f"📴 [TIMEOUT-DISCONNECT]: No recognized user activity for {elapsed:.1f}s. Automatically cutting call.")
+                    await close_conversation(self.conversation)
+                    await self.send(text_data=json.dumps({"event": "stop"}))
+                    self.is_connected = False
+                    await self.close()
+                    break
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"❌ Error in disconnect timeout loop: {e}")
+
     # ================= STT CALLBACKS =================
 
     def _setup_stt_callbacks(self):
@@ -691,6 +725,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 return
             text = evt.result.text.strip() if evt.result.text else ""
             if text:
+                self.loop.call_soon_threadsafe(self._update_activity_time)
                 detected_lang = evt.result.properties.get(
                     speechsdk.PropertyId.SpeechServiceConnection_AutoDetectSourceLanguageResult
                 )
@@ -709,6 +744,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             text = evt.result.text.strip() if evt.result.text else ""
             if not text:
                 return
+
+            self.loop.call_soon_threadsafe(self._update_activity_time)
 
             self.partial_text = ""  # Clear any stale partial VAD text from this turn
 
@@ -827,6 +864,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             print(f"🧹 Drained {drained} stale STT result(s) after bot speech")
         # Clear partial too — Azure was hearing bot audio, not user
         self.partial_text = ""
+        self.last_activity_time = time.time()
 
     def _recognised_during_bot_speech(self, recognised_at: float) -> bool:
         """
@@ -1691,27 +1729,36 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
     def _synthesize_ulaw(self, text: str, language: str = None) -> bytes:
         lang = language or self.language
         if lang == "gu":
-            try:
-                ssml = build_ssml(text, lang)
-                synthesizer = self._get_synthesizer(lang)
-                result = synthesizer.speak_ssml_async(ssml).get()
-                
-                if result.reason == speechsdk.ResultReason.Canceled:
-                    details = result.cancellation_details
-                    print("❌ Azure TTS Canceled:", details.reason, details.error_details)
-                    return b""
-                    
-                pcm = result.audio_data
-                pcm = strip_wav_header(pcm)
-                
-                if len(pcm) % 2 != 0:
-                    pcm = pcm[:-1]
-                    
-                pcm = _amplify_pcm(pcm, gain=0.6)
-                return encode_g711(pcm)
-            except Exception as azure_err:
-                print(f"❌ Azure synthesis failed for Gujarati: {azure_err}")
+            import requests
+            api_key = os.getenv("SARVAM_API_KEY")
+            api_url = "https://api.sarvam.ai/text-to-speech/stream"
+            
+            headers = {
+                "api-subscription-key": api_key,
+                "Content-Type": "application/json"
+            }
+            
+            clean_text = re.sub(r'<[^>]*>', '', text).strip()
+            if not clean_text:
                 return b""
+
+            payload = {
+                "text": clean_text,
+                "target_language_code": "gu-IN",
+                "speaker": "ishita",
+                "model": "bulbul:v3",
+                "pace": 1,
+                "speech_sample_rate": 8000,
+                "output_audio_codec": "mulaw",
+                "enable_preprocessing": True
+            }
+            
+            try:
+                response = requests.post(api_url, headers=headers, json=payload, timeout=15)
+                response.raise_for_status()
+                return response.content
+            except Exception as sarvam_err:
+                print(f"❌ Sarvam synthesis failed for Gujarati: {sarvam_err}. Falling back to ElevenLabs/Azure...")
 
         voice_id = ELEVENLABS_VOICE_MAP.get(lang, ELEVENLABS_VOICE_MAP["en"])
         
@@ -1951,6 +1998,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         print("🔌 DISCONNECTED:", close_code)
         self.is_connected = False
+        if hasattr(self, "disconnect_timeout_task") and self.disconnect_timeout_task:
+            self.disconnect_timeout_task.cancel()
 
         if hasattr(self, "keepalive_task") and self.keepalive_task:
             self.keepalive_task.cancel()
