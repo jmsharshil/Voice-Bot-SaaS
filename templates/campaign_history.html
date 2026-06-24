@@ -1,6 +1,8 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.png' %}">
     <script src="/static/js/auth_helper.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -638,7 +640,6 @@
         </div>
         <img class="header-company-logo" style="height: 32px; max-width: 120px; object-fit: contain; display: none;" alt="Company Logo">
         <span class="header-title">Campaign History</span>
-        <span class="header-sub" id="totalBadge">Loading...</span>
         <div class="header-right">
             <!-- Navigation Tabs -->
             <div class="nav-tabs">

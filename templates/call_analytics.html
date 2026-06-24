@@ -1,7 +1,9 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.png' %}">
     <script src="/static/js/auth_helper.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1126,7 +1128,7 @@
         @media(max-width:768px) {
             .header {
                 display: grid;
-                grid-template-columns: auto 1fr auto auto auto;
+                grid-template-columns: auto 1fr auto auto;
                 align-items: center;
                 gap: 10px 8px;
                 padding: 10px 12px;
@@ -1150,16 +1152,8 @@
             .header-right {
                 display: contents;
             }
-            .live-badge {
-                grid-column: 3;
-                grid-row: 1;
-                justify-self: end;
-                margin: 0 !important;
-                font-size: 10px;
-                padding: 4px 10px;
-            }
             .minutes-badge {
-                grid-column: 4;
+                grid-column: 3;
                 grid-row: 1;
                 justify-self: end;
                 margin-right: 0 !important;
@@ -1167,7 +1161,7 @@
                 padding: 4px 10px;
             }
             .profile-wrap {
-                grid-column: 5;
+                grid-column: 4;
                 grid-row: 1;
                 justify-self: end;
             }
@@ -1279,7 +1273,6 @@
         </div>
         <img class="header-company-logo" style="height: 32px; max-width: 120px; object-fit: contain; display: none;" alt="Company Logo">
         <span class="header-title">Navya Analytics</span>
-        <span class="header-sub">Voice Bot Conversations</span>
         <div class="header-right">
             <!-- Navigation Tabs -->
             <div class="nav-tabs">
@@ -1294,9 +1287,7 @@
                 <a href="/accounts/admin-management/" id="adminBtn" class="nav-action-btn nav-action-btn-info" style="display:none;">⚙️ Add Client</a>
             </div>
 
-            <div class="live-badge" style="margin-left: 4px; margin-right: 4px;">
-                <div class="live-dot"></div>Live
-            </div>
+
 
             <!-- Minutes Badge -->
             <div class="minutes-badge" id="minutesBadge" style="display:none;">
