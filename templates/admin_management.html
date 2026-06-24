@@ -201,6 +201,24 @@
             box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
         }
 
+        select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 14px;
+            padding-right: 32px !important;
+            cursor: pointer;
+        }
+
+        select.form-control:focus {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
         .checkbox-group {
             display: flex;
             flex-direction: column;
@@ -1048,7 +1066,7 @@
                 <div id="adjustQuotaSection" class="form-group" style="display: none;">
                     <label>Adjustment Value</label>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <select id="quotaAdjustSign" class="form-control" style="width: 80px; font-size: 1.1rem; font-weight: bold; flex-shrink: 0; padding: 0.8rem 0.5rem; background: #f8fafc; text-align: center;">
+                        <select id="quotaAdjustSign" class="form-control" style="width: 80px; font-size: 1.1rem; font-weight: bold; flex-shrink: 0; padding: 0.8rem 1.8rem 0.8rem 0.5rem; background-color: #f8fafc; text-align: center;">
                             <option value="+">+</option>
                             <option value="-">-</option>
                         </select>

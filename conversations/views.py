@@ -1259,6 +1259,41 @@ def lead_analysis_detail(request, session_id):
     })
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def update_lead_level(request, session_id):
+    """
+    Updates the lead level for a specific conversation session.
+    """
+    new_level = request.data.get("lead_level")
+    if not new_level or new_level not in ["hot", "warm", "cold", "not_interested"]:
+        return Response({"error": "Invalid or missing lead_level. Must be one of: hot, warm, cold, not_interested"}, status=400)
+
+    try:
+        conversation = Conversation.objects.get(session_id=session_id)
+    except Conversation.DoesNotExist:
+        return Response({"error": "Conversation not found"}, status=404)
+
+    # Scoping check
+    if hasattr(request.user, "profile") and request.user.profile.assigned_agent:
+        if conversation.agent != request.user.profile.assigned_agent:
+            return Response({"error": "Forbidden: You do not have permission to access this lead's data."}, status=403)
+
+    try:
+        lead = LeadAnalysis.objects.get(conversation=conversation)
+    except LeadAnalysis.DoesNotExist:
+        return Response({"error": "Lead analysis not available for this session"}, status=404)
+
+    lead.lead_level = new_level
+    lead.save()
+
+    return Response({
+        "success": True,
+        "lead_level": lead.lead_level,
+        "message": f"Lead level updated to {lead.lead_level} successfully."
+    })
+
+
 # ======================================================
 # TELECOM CDR WEBHOOK (POST — receives call data after call ends)
 # ======================================================

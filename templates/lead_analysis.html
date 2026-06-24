@@ -346,10 +346,17 @@
 
         .filter-select {
             flex: 1;
-            padding: 8px 10px;
+            padding: 8px 28px 8px 10px !important;
             border-radius: 8px;
             border: 1px solid #cbd5e1;
-            background: #fff;
+            background-color: #fff;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 12px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
             font-size: 11px;
             font-weight: 600;
             color: #475569;
@@ -364,6 +371,7 @@
         .filter-select:focus {
             border-color: #4f46e5;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
         }
 
         .list-header {
@@ -1325,6 +1333,50 @@
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
+        select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 15px;
+            padding-right: 36px !important;
+            cursor: pointer;
+        }
+
+        select.form-control:focus {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        }
+
+        .update-lead-select {
+            background-color: #ffffff;
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
+            padding: 4px 28px 4px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            width: 100%;
+            font-family: inherit;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .update-lead-select:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        }
+
         .modal-btn {
             background: linear-gradient(135deg, #4f46e5, #4338ca);
             color: #ffffff;
@@ -2116,7 +2168,7 @@
                     <span id="leadCount" style="margin-left: 6px;">0 leads</span>
                 </div>
                 <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
-                    <select id="filterCallType" onchange="applyAdvancedFilters()" class="filter-select" style="width: auto; padding: 4px 8px; font-size: 11px; height: 28px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; font-weight: 600; color: #475569; border: 1px solid #cbd5e1; outline: none;">
+                    <select id="filterCallType" onchange="applyAdvancedFilters()" class="filter-select" style="width: auto; padding: 4px 24px 4px 8px; font-size: 11px; height: 28px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; font-weight: 600; color: #475569; border: 1px solid #cbd5e1; outline: none;">
                         <option value="">📞 All Calls</option>
                         <option value="INBOUND">📥 Inbound</option>
                         <option value="OUTBOUND">📤 Outbound</option>
@@ -2602,6 +2654,17 @@
         <div class="dc"><div class="dc-label">Interest</div><div class="dc-value">${escHtml(lead.interest_topic || "—")}</div></div>
         <div class="dc"><div class="dc-label">Duration (Sec)</div><div class="dc-value">${lead.actual_duration || "—"}s</div></div>
         <div class="dc"><div class="dc-label">Call Status</div><div class="dc-value" style="color:#fbbf24">${escHtml(lead.disposition || "Waiting CDR...")}</div></div>
+        <div class="dc">
+            <div class="dc-label">Update Status</div>
+            <div class="dc-value" style="margin-top: 4px;">
+                <select id="updateLeadLevelSelect" class="update-lead-select" onchange="updateLeadLevel('${lead.session_id}', this.value)">
+                    <option value="hot" ${lead.lead_level === 'hot' ? 'selected' : ''}>🔥 Hot</option>
+                    <option value="warm" ${lead.lead_level === 'warm' ? 'selected' : ''}>⚡ Warm</option>
+                    <option value="cold" ${lead.lead_level === 'cold' ? 'selected' : ''}>❄️ Cold</option>
+                    <option value="not_interested" ${lead.lead_level === 'not_interested' ? 'selected' : ''}>⏹ Not Interested</option>
+                </select>
+            </div>
+        </div>
         <div class="dc"><div class="dc-label">Bot Line (DID)</div><div class="dc-value" style="font-size:11px; opacity:0.8">${escHtml(lead.bot_number || "—")}</div></div>
         <div class="dc"><div class="dc-label">Analyzed</div><div class="dc-value">${fmtDateTime(lead.analyzed_at)}</div></div>
     `;
@@ -2793,6 +2856,29 @@
                 }
             } catch (e) {
                 console.error("Error auto-refreshing messages:", e);
+            }
+        }
+
+        async function updateLeadLevel(sessionId, newLevel) {
+            try {
+                const res = await fetch(`/api/lead-analysis/update-level/${sessionId}/`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ lead_level: newLevel })
+                });
+                if (res.ok) {
+                    await loadLeads();
+                    const updatedLead = allLeads.find(l => l.session_id === sessionId);
+                    if (updatedLead) {
+                        openLead(updatedLead);
+                    }
+                } else {
+                    const err = await res.json();
+                    alert("Failed to update status: " + (err.error || "Unknown error"));
+                }
+            } catch (e) {
+                console.error("Error updating lead level:", e);
+                alert("Network error updating status.");
             }
         }
 

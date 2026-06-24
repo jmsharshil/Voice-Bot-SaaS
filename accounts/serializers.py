@@ -77,17 +77,8 @@ class UserSerializer(serializers.ModelSerializer):
         company_logo = validated_data.pop('company_logo', None)
         password = validated_data.pop('password', None)
 
-        role_name = validated_data.pop('role_name', None)
-        permissions = validated_data.pop('permissions', None)
-        company_logo = validated_data.pop('company_logo', None)
-        password = validated_data.pop('password', None)
-
         if 'role' in profile_data:
             instance.profile.role = profile_data['role']
-        elif role_name:
-            role, created = Role.objects.get_or_create(name=role_name)
-            instance.profile.role = role
-
         elif role_name:
             role, created = Role.objects.get_or_create(name=role_name)
             instance.profile.role = role
@@ -103,30 +94,13 @@ class UserSerializer(serializers.ModelSerializer):
                     pass
             instance.profile.custom_permissions = permissions
 
-        elif permissions is not None:
-            if isinstance(permissions, str):
-                import json
-                try:
-                    permissions = json.loads(permissions)
-                except Exception:
-                    pass
-            instance.profile.custom_permissions = permissions
-
         if 'assigned_agent' in profile_data:
             instance.profile.assigned_agent = profile_data['assigned_agent']
 
         if company_logo:
             instance.profile.company_logo = company_logo
 
-
-        if company_logo:
-            instance.profile.company_logo = company_logo
-
         instance.profile.save()
-
-        if password:
-            instance.set_password(password)
-
 
         if password:
             instance.set_password(password)

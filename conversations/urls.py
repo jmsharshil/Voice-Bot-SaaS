@@ -3,7 +3,7 @@ from .views import (
     get_conversations, get_conversation_messages, get_campaign_lead_conversation,
     call_analytics_page, call_analytics_data, call_analytics_session,
     call_analytics_per_bot,
-    lead_analysis_page, lead_analysis_data, lead_analysis_detail,
+    lead_analysis_page, lead_analysis_data, lead_analysis_detail, update_lead_level,
     telecom_cdr_webhook, telecom_cdr_list,
     minutes_usage_api,
 )
@@ -27,6 +27,7 @@ urlpatterns = [
     path("lead-analysis/", lead_analysis_page, name="lead-analysis"),
     path("lead-analysis/data/", lead_analysis_data),
     path("lead-analysis/detail/<str:session_id>/", lead_analysis_detail),
+    path("lead-analysis/update-level/<str:session_id>/", update_lead_level),
 
     # Telecom CDR Webhook
     path("webhook/cdr/", telecom_cdr_webhook),
