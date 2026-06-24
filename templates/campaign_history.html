@@ -818,7 +818,10 @@
                 document.getElementById('statCalls').textContent = data.stats.total_calls;
                 document.getElementById('statAnswered').textContent = data.stats.total_answered;
                 document.getElementById('statMissed').textContent = data.stats.total_missed;
-                document.getElementById('totalBadge').textContent = `${data.stats.total_campaigns} campaigns`;
+                const totalBadge = document.getElementById('totalBadge');
+                if (totalBadge) {
+                    totalBadge.textContent = `${data.stats.total_campaigns} campaigns`;
+                }
 
                 const list = document.getElementById('campaignList');
 
