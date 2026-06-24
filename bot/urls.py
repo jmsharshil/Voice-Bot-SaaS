@@ -37,7 +37,7 @@
 #  bot/urls.py
 # ============================================================
 
-from bot.views import mark_answered
+from bot.views import mark_answered, inbound_call_webhook
 from django.urls import path
 from .views import (
     # test / triggers
@@ -110,6 +110,7 @@ urlpatterns = [
     # path("dashboard/call/",                             initiate_call),
     path("trigger-call/", trigger_call),
     path("mark-answered/", mark_answered),
+    path("inbound/", inbound_call_webhook, name="inbound-call-webhook"),
 
     path("upload-call/", upload_call_file),
     # path("upload-call-page/", upload_call_page),

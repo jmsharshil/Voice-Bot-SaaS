@@ -34,6 +34,17 @@ class Conversation(models.Model):
     stream_sid = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     user_number = models.CharField(max_length=20)
 
+    CALL_TYPE_CHOICES = [
+        ("INBOUND", "Inbound"),
+        ("OUTBOUND", "Outbound"),
+    ]
+    call_type = models.CharField(
+        max_length=10,
+        choices=CALL_TYPE_CHOICES,
+        default="OUTBOUND",
+        db_index=True
+    )
+
     started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(null=True, blank=True)
 

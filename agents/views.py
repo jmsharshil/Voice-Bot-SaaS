@@ -213,6 +213,14 @@ class CreateAgentView(APIView):
         else:
             minutes_quota = 5000
 
+        inbound_phone_number = request.data.get("inbound_phone_number", "")
+        if inbound_phone_number:
+            inbound_phone_number = "".join(filter(str.isdigit, str(inbound_phone_number)))
+            if inbound_phone_number.startswith("91") and len(inbound_phone_number) == 12:
+                inbound_phone_number = inbound_phone_number[2:]
+        else:
+            inbound_phone_number = None
+
         try:
             agent = VoiceAgent.objects.create(
                 owner=request.user,
@@ -221,13 +229,17 @@ class CreateAgentView(APIView):
                 name=name,
                 company_name=company_name,
                 minutes_quota=minutes_quota,
+                inbound_phone_number=inbound_phone_number,
             )
         except ValidationError as e:
+            return Response({"error": str(e)}, status=400)
+        except Exception as e:
             return Response({"error": str(e)}, status=400)
 
         return Response({
             "agent_id": str(agent.id),
-            "api_key": str(agent.api_key)
+            "api_key": str(agent.api_key),
+            "inbound_phone_number": agent.inbound_phone_number
         }, status=201)
 
 

@@ -35,6 +35,43 @@ def generate_tts_file(filename, text, lang="hi"):
     
     file_path = os.path.join(target_dir, filename)
 
+    if lang == "hi":
+        import requests
+        api_key = os.getenv("SARVAM_API_KEY")
+        api_url = "https://api.sarvam.ai/text-to-speech/stream"
+        
+        headers = {
+            "api-subscription-key": api_key,
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "text": text,
+            "target_language_code": "hi-IN",
+            "speaker": "shubh",
+            "model": "bulbul:v3",
+            "pace": 1.15,
+            "speech_sample_rate": 8000,
+            "output_audio_codec": "mulaw",
+            "enable_preprocessing": True
+        }
+        
+        try:
+            response = requests.post(api_url, headers=headers, json=payload, timeout=20)
+            response.raise_for_status()
+            
+            audio_data = response.content
+            if not audio_data:
+                print(f"❌ Sarvam returned empty audio for: {filename}")
+                return
+
+            with open(file_path, "wb") as f:
+                f.write(audio_data)
+
+            print(f"[OK] Voice Generated (Sarvam): {file_path}")
+            return
+        except Exception as e:
+            print(f"[FAIL] Failed to generate {filename} via Sarvam: {e}. Falling back to ElevenLabs...")
+
     voice_id = ELEVENLABS_VOICE_MAP.get(lang, ELEVENLABS_VOICE_MAP["en"])
 
     try:
@@ -70,7 +107,7 @@ def generate_tts_file(filename, text, lang="hi"):
         with open(file_path, "wb") as f:
             f.write(ulaw)
 
-        print(f"[OK] Voice Generated: {file_path}")
+        print(f"[OK] Voice Generated (ElevenLabs): {file_path}")
 
     except Exception as e:
         print(f"[FAIL] Failed to generate {filename}: {e}")
@@ -84,7 +121,7 @@ if __name__ == "__main__":
         print("Generating JMS Bank Loan Bot Multilingual Flow Audio Assets via ElevenLabs...")
 
     assets = [
-        ("loan_step1_greeting.raw", "Hello! Namaste... main JMS Bank ki taraf se Naavya bol rahi hoon. Aaj main aapko hamare exclusive loan products ke baare mein batana chahti hoon — home loan, business loan, personal loan aur bahut kuch. Kya aap apne kisi financial goal ke liye loan explore kar rahe hain?", "hi"),
+        ("loan_step1_greeting.raw", "Hello! Namaste... main JMS Bank ki taraf se Rahul bol raha hoon. Aaj main aapko hamare exclusive loan products ke baare mein batana chahta hoon — home loan, business loan, personal loan aur bahut kuch. Kya aap apne kisi financial goal ke liye loan explore kar rahe hain?", "hi"),
         ("loan_step2_discover_type.raw", "Wonderful! JMS Bank mein hum aapki har zaroorat ke liye tailor-made loan solutions offer karte hain — chahe wo dream home ho, apna business grow karna ho, ya koi personal zaroorat. Aap kaunsa loan option explore karna chahenge?", "hi"),
         ("loan_step3_discover_amount.raw", "Great choice! aapko approximately kitne amount ka loan chahiye? Exact figure nahi pata toh koi baat nahi, ek rough idea bhi kaafi hai — hum uske hisaab se best plan suggest kar sakte hain.", "hi"),
         ("loan_step4_closing.raw", "Excellent! Aapki saari details note kar li gayi hain. Hamari expert team bahut jald aapse connect karegi aur aapke liye best loan offer ready karegi. JMS Bank choose karne ke liye bahut bahut shukriya!", "hi"),

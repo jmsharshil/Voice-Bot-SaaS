@@ -1257,7 +1257,7 @@ def trigger_call(request):
                 "to": normalized_phone,
                 "caller_id": "+917969016753",
                 "ref": f"crm-{uuid.uuid4()}",
-                "bot_url": f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
+                "bot_url": f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
             }
 
 
@@ -1293,7 +1293,7 @@ def trigger_call(request):
                     "to": normalized_phone,
                     "caller_id": "+917969016753",
                     "ref": f"crm-{uuid.uuid4()}",
-                    "bot_url": f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
+                    "bot_url": f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
                 }
 
                 response = requests.post(
@@ -1373,7 +1373,7 @@ def upload_call_file(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
+    BOT_URL = f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
@@ -1492,7 +1492,7 @@ _missed_calls = []            # Numbers that timed out (No Answer)
 TELECOM_DIAL_URL = "https://call-route.on-forge.com/api/dial"
 TELECOM_API_KEY = "7a3e957ed459dfebc486ee58d6059928d02c4aab20c9f698bd50e2636f8df1be"
 CALLER_ID = "+917969016753"
-BOT_URL = "wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
+BOT_URL = "wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
 
 def _normalize_phone(phone):
@@ -1741,7 +1741,7 @@ def start_auto_campaign(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
+    BOT_URL = f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/?agent_id={agent_id}"
 
     if _campaign_active:
         with _call_queue_lock:
@@ -2270,4 +2270,100 @@ def download_sample_excel(request):
     )
     response["Content-Disposition"] = "attachment; filename=sample_call_format.xlsx"
     return response
+
+
+from django.views.decorators.csrf import csrf_exempt
+from agents.models import VoiceAgent
+
+@csrf_exempt
+def inbound_call_webhook(request):
+    """
+    Webhook handler for incoming voice calls. Resolves the agent mapped to the dialed number
+    and returns TwiML instructions to stream audio over WebSockets to our Channels consumer.
+    """
+    # 1. Parse dialed number (To) and caller number (From)
+    to_number = request.POST.get("To") or request.GET.get("To") or ""
+    from_number = request.POST.get("From") or request.GET.get("From") or ""
+
+    if not to_number:
+        import json
+        try:
+            body = json.loads(request.body.decode("utf-8"))
+            to_number = body.get("to") or body.get("To") or ""
+            from_number = body.get("from") or body.get("From") or ""
+        except:
+            pass
+
+    def normalize(num):
+        num_str = "".join(filter(str.isdigit, str(num)))
+        if num_str.startswith("91") and len(num_str) == 12:
+            num_str = num_str[2:]
+        if num_str.startswith("0"):
+            num_str = num_str[1:]
+        return num_str
+
+    normalized_to = normalize(to_number)
+    normalized_from = normalize(from_number) or "unknown"
+
+    print(f"📞 Incoming Call Webhook | Dialed (To): {to_number} (Normalized: {normalized_to}) | Caller (From): {from_number} (Normalized: {normalized_from})")
+
+    # 2. Look up the active agent mapped to this incoming number
+    agent = VoiceAgent.objects.filter(inbound_phone_number=normalized_to, is_active=True).first()
+
+    # Fallback to checking with prefix "91" if not found
+    if not agent and not to_number.startswith("91"):
+        normalized_to_with_prefix = "91" + normalized_to
+        agent = VoiceAgent.objects.filter(inbound_phone_number=normalized_to_with_prefix, is_active=True).first()
+
+    # 3. Handle bot matching
+    if agent:
+        # Check if the agent has remaining call credit quota
+        if not has_remaining_minutes(str(agent.id)):
+            print(f"⚠️ Inbound Call Rejected: Agent {agent.name} ({agent.id}) has exceeded call credits.")
+            rejection_twiml = (
+                '<?xml version="1.0" encoding="UTF-8"?>\n'
+                '<Response>\n'
+                '    <Say language="en-IN">Sorry, the service quota has been exceeded for this assistant.</Say>\n'
+                '    <Hangup/>\n'
+                '</Response>'
+            )
+            return HttpResponse(rejection_twiml, content_type="text/xml")
+
+        # Determine language code based on agent industry or default
+        language = "en"
+        if agent.industry and agent.industry.slug in ["reminder-industry", "temp-real-estate"]:
+            language = "gu"
+        elif agent.industry and agent.industry.slug == "automobile":
+            language = "hi"
+
+        # Build secure WebSocket URL dynamically based on the current host header
+        scheme = "wss" if request.is_secure() or request.headers.get("x-forwarded-proto") == "https" else "ws"
+        host = request.get_host()
+        
+        ws_url = f"{scheme}://{host}/ws/voice-bot/?agent_id={agent.id}&language={language}&phone={normalized_from}&call_type=INBOUND"
+        print(f"🚀 Inbound Call Routing: Connected caller {normalized_from} to agent {agent.name} ({agent.id}) via WS: {ws_url}")
+
+        escaped_ws_url = ws_url.replace("&", "&amp;")
+        twiml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<Response>\n'
+            '    <Connect>\n'
+            f'        <Stream url="{escaped_ws_url}" />\n'
+            '    </Connect>\n'
+            '</Response>'
+        )
+        return HttpResponse(twiml, content_type="text/xml")
+
+    else:
+        # Return fallback/rejection TwiML XML
+        print(f"❌ Inbound Call Rejected: No active agent found matching incoming number: {to_number}")
+        fallback_twiml = (
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<Response>\n'
+            '    <Say language="en-IN">Sorry, no assistant is configured for this number.</Say>\n'
+            '    <Hangup/>\n'
+            '</Response>'
+        )
+        return HttpResponse(fallback_twiml, content_type="text/xml")
+
 

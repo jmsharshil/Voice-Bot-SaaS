@@ -172,12 +172,13 @@ _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
 # ================= DATABASE =================
 
 @sync_to_async
-def create_conversation(agent_id, session_id, user_number, campaign_id=None):
+def create_conversation(agent_id, session_id, user_number, campaign_id=None, call_type="OUTBOUND"):
     conv = Conversation.objects.create(
         agent_id=agent_id,
         session_id=session_id,
         user_number=user_number,
-        campaign_id=campaign_id
+        campaign_id=campaign_id,
+        call_type=call_type
     )
     # Create immediate LeadAnalysis record so it shows on dashboard instantly
     LeadAnalysis.objects.create(
@@ -487,8 +488,18 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         params = parse_qs(self.scope["query_string"].decode())
         self.agent_id = params.get("agent_id", [None])[0]
         # Prioritize 'phone' param (outbound auto-dialer) over 'from' header
-        self.user_number = params.get("phone", [None])[0] or params.get("from", ["unknown"])[0]
+        phone_param = params.get("phone", [None])[0] or params.get("from", ["unknown"])[0]
+        if phone_param and phone_param != "unknown":
+            phone_param = phone_param.strip()
+            if phone_param.startswith("+0"):
+                phone_param = phone_param[2:]
+            elif phone_param.startswith("0"):
+                phone_param = phone_param[1:]
+            elif phone_param.startswith("+"):
+                phone_param = phone_param[1:]
+        self.user_number = phone_param
         self.language = params.get("language", ["hi"])[0]
+        self.call_type = params.get("call_type", ["OUTBOUND"])[0].upper()
 
         campaign_id_str = params.get("campaign_id", [None])[0]
         campaign_id = None
@@ -504,7 +515,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
         self.session_id = str(uuid.uuid4())
         self.conversation = await create_conversation(
-            self.agent_id, self.session_id, self.user_number, campaign_id
+            self.agent_id, self.session_id, self.user_number, campaign_id, self.call_type
         )
 
         self.stream_sid = None
@@ -949,14 +960,25 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     # For outbound calls: calledNumber is customer
                     # For inbound calls: callerNumber is customer
                     custom = start_payload.get("customParameters", {})
-                    number = custom.get("calledNumber") or custom.get("callerNumber") or start_payload.get("caller")
+                    
+                    is_inbound = getattr(self, "conversation", None) and getattr(self.conversation, "call_type", "OUTBOUND") == "INBOUND"
+                    if is_inbound:
+                        number = custom.get("callerNumber") or start_payload.get("caller") or custom.get("calledNumber")
+                    else:
+                        number = custom.get("calledNumber") or custom.get("callerNumber") or start_payload.get("caller")
 
                     if number and (self.user_number == "unknown" or not self.user_number):
                         clean_num = str(number).strip()
-                        if clean_num.startswith("+91") and len(clean_num) == 13:
+                        if clean_num.startswith("+0"):
+                            clean_num = clean_num[2:]
+                        elif clean_num.startswith("0"):
+                            clean_num = clean_num[1:]
+                        elif clean_num.startswith("+91") and len(clean_num) == 13:
                             clean_num = clean_num[3:]
                         elif clean_num.startswith("91") and len(clean_num) == 12:
                             clean_num = clean_num[2:]
+                        elif clean_num.startswith("+"):
+                            clean_num = clean_num[1:]
 
                         self.user_number = clean_num
                         await update_user_number(self.conversation, clean_num)
@@ -1728,7 +1750,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
     def _synthesize_ulaw(self, text: str, language: str = None) -> bytes:
         lang = language or self.language
-        if lang == "gu":
+        is_loan_hi = (lang == "hi" and getattr(self, "strategy_key", None) == "loan_strategy")
+        if lang == "gu" or is_loan_hi:
             import requests
             api_key = os.getenv("SARVAM_API_KEY")
             api_url = "https://api.sarvam.ai/text-to-speech/stream"
@@ -1741,13 +1764,16 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             clean_text = re.sub(r'<[^>]*>', '', text).strip()
             if not clean_text:
                 return b""
+            target_lang = "hi-IN" if is_loan_hi else "gu-IN"
+            speaker = "shubh" if is_loan_hi else "ishita"
+            pace = 1.1 if is_loan_hi else 1
 
             payload = {
                 "text": clean_text,
-                "target_language_code": "gu-IN",
-                "speaker": "ishita",
+                "target_language_code": target_lang,
+                "speaker": speaker,
                 "model": "bulbul:v3",
-                "pace": 1,
+                "pace": pace,
                 "speech_sample_rate": 8000,
                 "output_audio_codec": "mulaw",
                 "enable_preprocessing": True
@@ -1758,7 +1784,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 response.raise_for_status()
                 return response.content
             except Exception as sarvam_err:
-                print(f"❌ Sarvam synthesis failed for Gujarati: {sarvam_err}. Falling back to ElevenLabs/Azure...")
+                print(f"❌ Sarvam synthesis failed for {target_lang}: {sarvam_err}. Falling back to ElevenLabs/Azure...")
 
         voice_id = ELEVENLABS_VOICE_MAP.get(lang, ELEVENLABS_VOICE_MAP["en"])
         

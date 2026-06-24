@@ -495,6 +495,29 @@
             color: #a855f7
         }
 
+        .call-type-tag {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .call-type-tag.inbound {
+            background: #e0f2fe;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
+        }
+
+        .call-type-tag.outbound {
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
         /* DETAIL PANEL */
         .detail-panel {
             flex: 1;
@@ -2076,21 +2099,31 @@
                 <select id="filterAgent" onchange="applyAdvancedFilters()" class="filter-select" style="max-width: 110px;">
                     <option value="">🤖 All Bots</option>
                 </select>
-                <select id="filterDate" onchange="applyAdvancedFilters()" class="filter-select">
-                    <option value="">📅 Date Range</option>
-                    <option value="today">Today</option>
-                    <option value="yesterday">Yesterday</option>
-                    <option value="week">Last 7 Days</option>
-                </select>
+                <div style="display: inline-flex; align-items: center; gap: 6px; position: relative;">
+                    <select id="filterDate" onchange="handleDateFilterChange()" class="filter-select">
+                        <option value="">📅 Date Range</option>
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="custom">📅 Custom Date...</option>
+                    </select>
+                    <input type="date" id="customDatePicker" onchange="handleCalendarDateSelect(this.value)" style="position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; border: none; padding: 0; margin: 0; left: 0; bottom: 0;" />
+                </div>
             </div>
-            <div class="list-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                 <div>
                     <span>All Leads</span>
                     <span id="leadCount" style="margin-left: 6px;">0 leads</span>
                 </div>
-                <a href="/bot/export/leads/" class="export-btn" download style="margin-left: auto; text-decoration: none; padding: 6px 12px; font-size: 11.5px; background: #10b981; color: #fff; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #059669; transition: all 0.2s;">
-                    📗 Export
-                </a>
+                <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                    <select id="filterCallType" onchange="applyAdvancedFilters()" class="filter-select" style="width: auto; padding: 4px 8px; font-size: 11px; height: 28px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; font-weight: 600; color: #475569; border: 1px solid #cbd5e1; outline: none;">
+                        <option value="">📞 All Calls</option>
+                        <option value="INBOUND">📥 Inbound</option>
+                        <option value="OUTBOUND">📤 Outbound</option>
+                    </select>
+                    <a href="/bot/export/leads/" class="export-btn" download style="text-decoration: none; padding: 6px 12px; font-size: 11.5px; background: #10b981; color: #fff; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #059669; transition: all 0.2s;">
+                        📗 Export
+                    </a>
+                </div>
             </div>
             <div class="lead-list" id="leadList">
                 <div class="loading">
@@ -2385,17 +2418,26 @@
             if (selAgent) {
                 filtered = filtered.filter(l => l.agent_name === selAgent);
             }
+            const selCallType = document.getElementById("filterCallType")?.value || "";
+            if (selCallType) {
+                filtered = filtered.filter(l => (l.call_type || "OUTBOUND") === selCallType);
+            }
             if (selDate) {
                 const now = new Date();
                 const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
                 const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
-                const weekStart = todayStart - 7 * 24 * 60 * 60 * 1000;
 
                 filtered = filtered.filter(l => {
                     const lTime = new Date(l.analyzed_at || l.call_started_at).getTime();
                     if (selDate === "today") return lTime >= todayStart;
                     if (selDate === "yesterday") return lTime >= yesterdayStart && lTime < todayStart;
-                    if (selDate === "week") return lTime >= weekStart;
+                    if (selDate.startsWith("custom_")) {
+                        const customVal = selDate.substring(7); // Extract "YYYY-MM-DD"
+                        const parts = customVal.split("-");
+                        const customStart = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getTime();
+                        const customEnd = customStart + 24 * 60 * 60 * 1000;
+                        return lTime >= customStart && lTime < customEnd;
+                    }
                     return true;
                 });
             }
@@ -2418,7 +2460,12 @@
                 item.innerHTML = `
             <div class="lead-badge ${lead.lead_level}">${emoji}</div>
             <div class="lead-info">
-                <div class="lead-name">${escHtml(lead.customer_number || lead.user_number || lead.user_name || "Unknown Caller")}</div>
+                <div class="lead-name" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span>${escHtml(lead.customer_number || lead.user_number || lead.user_name || "Unknown Caller")}</span>
+                    <span class="call-type-tag ${(lead.call_type || 'OUTBOUND').toLowerCase()}">
+                        ${lead.call_type === 'INBOUND' ? '📥 Inbound' : '📤 Outbound'}
+                    </span>
+                </div>
                 <div class="lead-topic">${escHtml(lead.interest_topic || "General Interest")} · ${escHtml(lead.agent_name)} · <span style="font-weight:600; opacity:0.8; color:#6366f1;">🌐 ${langLabel}</span></div>
                 <div class="lead-meta">${timeAgo(lead.analyzed_at)} · 👤 ${escHtml(lead.user_name || "No Name")}</div>
             </div>
@@ -2431,6 +2478,60 @@
 
         function applyAdvancedFilters() {
             renderLeads();
+        }
+
+        function handleCalendarDateSelect(val) {
+            if (!val) return;
+            const filterDateSelect = document.getElementById("filterDate");
+            if (!filterDateSelect) return;
+            
+            const parts = val.split("-");
+            const year = parts[0];
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const month = monthNames[parseInt(parts[1]) - 1];
+            const day = parseInt(parts[2]);
+            const formattedDate = `${month} ${day}, ${year}`;
+
+            let customOption = document.querySelector('#filterDate option.temp-custom-option');
+            if (!customOption) {
+                customOption = document.createElement("option");
+                customOption.className = "temp-custom-option";
+                const customTriggerOpt = document.querySelector('#filterDate option[value="custom"]');
+                if (customTriggerOpt) {
+                    filterDateSelect.insertBefore(customOption, customTriggerOpt);
+                } else {
+                    filterDateSelect.appendChild(customOption);
+                }
+            }
+            customOption.value = "custom_" + val;
+            customOption.textContent = "📅 " + formattedDate;
+            filterDateSelect.value = "custom_" + val;
+            filterDateSelect.dataset.currentValue = "custom_" + val;
+
+            applyAdvancedFilters();
+        }
+
+        function handleDateFilterChange() {
+            const select = document.getElementById("filterDate");
+            const picker = document.getElementById("customDatePicker");
+            if (!select) return;
+
+            if (select.value === "custom") {
+                if (picker) {
+                    picker.showPicker ? picker.showPicker() : picker.focus();
+                }
+                select.value = select.dataset.currentValue || "";
+            } else {
+                const tempOpt = document.querySelector('#filterDate option.temp-custom-option');
+                if (tempOpt) {
+                    tempOpt.remove();
+                }
+                if (picker) {
+                    picker.value = "";
+                }
+                select.dataset.currentValue = select.value;
+                applyAdvancedFilters();
+            }
         }
 
         function goBackToList(event) {
@@ -2486,6 +2587,9 @@
             // Tags
             document.getElementById("dhTags").innerHTML = `
         <span class="lead-level-tag ${lead.lead_level}">${LEVEL_EMOJI[lead.lead_level]} ${LEVEL_LABEL[lead.lead_level]}</span>
+        <span class="call-type-tag ${(lead.call_type || 'OUTBOUND').toLowerCase()}" style="margin-left: 6px;">
+            ${lead.call_type === 'INBOUND' ? '📥 Inbound' : '📤 Outbound'}
+        </span>
     `;
 
             // Detail cards

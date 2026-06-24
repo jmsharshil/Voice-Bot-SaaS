@@ -16,10 +16,12 @@ class ConversationSerializer(serializers.ModelSerializer):
 
 class LeadAnalysisSerializer(serializers.ModelSerializer):
     session_id = serializers.CharField(source="conversation.session_id")
-    user_number = serializers.CharField(source="conversation.user_number")
+    user_number = serializers.SerializerMethodField()
     agent_name = serializers.CharField(source="agent.name")
     call_started_at = serializers.DateTimeField(source="conversation.started_at")
     call_ended_at = serializers.DateTimeField(source="conversation.ended_at")
+    call_type = serializers.SerializerMethodField()
+    user_phone = serializers.SerializerMethodField()
     
     customer_number = serializers.SerializerMethodField()
     bot_number = serializers.SerializerMethodField()
@@ -28,13 +30,39 @@ class LeadAnalysisSerializer(serializers.ModelSerializer):
     recording_url = serializers.SerializerMethodField()
     language = serializers.SerializerMethodField()
 
+    def _clean_number(self, num):
+        if not num:
+            return ""
+        num_str = str(num).strip()
+        if num_str.startswith("+0"):
+            num_str = num_str[2:]
+        elif num_str.startswith("0"):
+            num_str = num_str[1:]
+        elif num_str.startswith("+"):
+            num_str = num_str[1:]
+        return num_str
+
+    def get_call_type(self, obj):
+        try:
+            if hasattr(obj.conversation, 'cdr') and obj.conversation.cdr and obj.conversation.cdr.call_type:
+                return obj.conversation.cdr.call_type
+        except:
+            pass
+        return obj.conversation.call_type
+
+    def get_user_number(self, obj):
+        return self._clean_number(obj.conversation.user_number)
+
+    def get_user_phone(self, obj):
+        return self._clean_number(obj.user_phone)
+
     def get_customer_number(self, obj):
         try:
             if hasattr(obj.conversation, 'cdr') and obj.conversation.cdr and obj.conversation.cdr.phone_number:
-                return obj.conversation.cdr.phone_number
+                return self._clean_number(obj.conversation.cdr.phone_number)
         except:
             pass
-        return obj.conversation.user_number
+        return self._clean_number(obj.conversation.user_number)
 
     def get_bot_number(self, obj):
         try:
@@ -79,5 +107,5 @@ class LeadAnalysisSerializer(serializers.ModelSerializer):
             "interest_topic", "summary", "raw_analysis",
             "call_started_at", "call_ended_at", "analyzed_at",
             "customer_number", "bot_number", "actual_duration", 
-            "disposition", "recording_url",
+            "disposition", "recording_url", "call_type",
         ]

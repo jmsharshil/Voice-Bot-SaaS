@@ -864,6 +864,7 @@
                                 <th>Bot Name</th>
                                 <th>Industry & Role</th>
                                 <th>Bot ID</th>
+                                <th>Inbound Number</th>
                                 <th>Minutes (Used/Quota)</th>
                                 <th>Status</th>
                             </tr>
@@ -980,6 +981,10 @@
                 <div class="form-group">
                     <label>Minutes Quota</label>
                     <input type="number" id="agentQuota" class="form-control" value="5000" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Inbound Phone Number (Optional)</label>
+                    <input type="text" id="agentInboundPhone" class="form-control" placeholder="e.g. 919979xxxxx or 9979xxxxx">
                 </div>
                 <button type="submit" class="btn" style="margin-top: 1rem;">Create Bot</button>
             </form>
@@ -1465,6 +1470,9 @@
                                 <code style="background:#f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.85rem;">${agent.id}</code>
                             </td>
                             <td>
+                                <span style="font-family: monospace; font-weight: 500;">${agent.inbound_phone_number || '—'}</span>
+                            </td>
+                            <td>
                                 <span style="font-weight:600; color:var(--text-main);">${agent.used_minutes}</span>
                                 <span style="color:var(--text-muted);">/</span>
                                 <span style="color:var(--text-muted);">${agent.minutes_quota} min</span>
@@ -1814,13 +1822,15 @@
             const industry = document.getElementById('agentIndustry').value;
             const role_template = document.getElementById('agentRoleTemplate').value;
             const minutes_quota = document.getElementById('agentQuota').value;
+            const inbound_phone_number = document.getElementById('agentInboundPhone').value;
 
             const payload = {
                 name,
                 company_name,
                 industry: parseInt(industry),
                 role_template: parseInt(role_template),
-                minutes_quota: parseInt(minutes_quota)
+                minutes_quota: parseInt(minutes_quota),
+                inbound_phone_number: inbound_phone_number
             };
 
             try {

@@ -51,6 +51,13 @@ class VoiceAgent(models.Model):
     company_name = models.CharField(max_length=100, blank=True)
     # ✅ ADD THIS
     summary = models.TextField(blank=True, null=True)
+    inbound_phone_number = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True, 
+        unique=True, 
+        help_text="Twilio/Telnyx DID number (normalized) assigned to this bot"
+    )
 
     api_key = models.UUIDField(default=uuid.uuid4, unique=True)
     is_demo = models.BooleanField(default=False)
