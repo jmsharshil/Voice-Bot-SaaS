@@ -1309,7 +1309,76 @@ def telecom_cdr_webhook(request):
     Matches recording_file_name (minus .wav) to Conversation.session_id.
     No authentication required (as per telecom team agreement).
     """
-    data = request.data
+    raw_data = request.data
+
+    # Normalize Service 2 format to internal schema format
+    if "call" in raw_data:
+        call_data = raw_data["call"]
+        event = raw_data.get("event", "")
+
+        # Ignore non-final events (initiated, ringing, etc.) so we only save CDR on completion
+        is_final = event in ["call.completed", "call.failed"]
+        if not is_final:
+            return Response(
+                {"status": "ignored", "message": f"Non-final event '{event}' ignored"},
+                status=200
+            )
+
+        # Map Service 2 fields to old format keys
+        direction = call_data.get("direction", "outbound")
+        if direction.lower() == "inbound":
+            phone_number = call_data.get("from", "")
+            did = call_data.get("to", "")
+        else:
+            phone_number = call_data.get("to", "")
+            did = call_data.get("from", "")
+
+        status = call_data.get("status", "")
+        if status == "failed":
+            disposition = "FAILED"
+        elif call_data.get("callStatus") == "NO ANSWER":
+            disposition = "NO ANSWER"
+        elif call_data.get("answeredAt") is not None:
+            disposition = "ANSWERED"
+        else:
+            disposition = "NO ANSWER"
+
+        data = {
+            "uniqueid": call_data.get("id"),
+            "phone_number": phone_number,
+            "did": did,
+            "duration": call_data.get("durationSec") or 0,
+            "disposition": disposition,
+            "call_type": direction.upper(),
+            "recording_file_name": call_data.get("recordingUrl") or call_data.get("recording_file_name") or "",
+            # Use outboundQueueId or fallback to 0
+            "call_id": call_data.get("customParameters", {}).get("outboundQueueId") or 0,
+        }
+
+        # Parse and format dates to strings so that they can be parsed by existing date parser code below
+        started_at_str = call_data.get("startedAt")
+        if started_at_str:
+            try:
+                # ISO to "%Y-%m-%d %H:%M:%S"
+                dt_obj = dt.strptime(started_at_str.split(".")[0].replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
+                data["calldate"] = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                data["calldate"] = started_at_str
+        else:
+            data["calldate"] = ""
+
+        answered_at_str = call_data.get("answeredAt")
+        if answered_at_str:
+            try:
+                dt_obj = dt.strptime(answered_at_str.split(".")[0].replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
+                data["answer_time"] = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                data["answer_time"] = answered_at_str
+        else:
+            data["answer_time"] = None
+    else:
+        # Service 1 format
+        data = raw_data
 
     # Validate required fields
     required = ["call_id", "phone_number", "calldate", "did", "uniqueid"]
@@ -1363,8 +1432,32 @@ def telecom_cdr_webhook(request):
                 if conversation:
                     print(f"FALLBACK MATCH: Phone '{clean_phone}' -> Conversation {conversation.id}")
 
+    # 3. SECOND FALLBACK: Match by timestamp window (for Service 2 "unknown" phone numbers)
+    if not conversation:
+        # Find recently started conversations for this agent/queue that are still marked "unknown"
+        # and started around the same time as this call (within 5 minutes).
+        raw_phone = data.get("phone_number", "")
+        if raw_phone and calldate:
+            import datetime
+            time_threshold_start = calldate - datetime.timedelta(minutes=5)
+            time_threshold_end = calldate + datetime.timedelta(minutes=5)
+            
+            # Find a conversation that started in this time window and is "unknown"
+            conversation = Conversation.objects.filter(
+                user_number="unknown",
+                started_at__range=(time_threshold_start, time_threshold_end)
+            ).order_by("-started_at").first()
+            
+            if conversation:
+                print(f"CDR TIMESTAMP MATCH: Linked unmatched 'unknown' Conversation {conversation.id} to phone {raw_phone}")
+
     if conversation:
         matched = True
+        # If the conversation user_number is "unknown" or empty, update it with the actual phone number from the CDR
+        if conversation.user_number == "unknown" or not conversation.user_number:
+            conversation.user_number = data.get("phone_number", "")
+            conversation.save(update_fields=["user_number"])
+            print(f"💾 Updated Conversation {conversation.id} user_number to '{conversation.user_number}' from CDR")
     else:
         print(f"NO MATCH: CDR saved but no matching conversation found.")
 
