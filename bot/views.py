@@ -1238,6 +1238,25 @@ def trigger_call(request):
         if not agent_id:
             return Response({"error": "No agent assigned. Please contact your admin to assign a bot to your account."}, status=400)
 
+        # Resolve DID number from agent_id
+        from agents.models import VoiceAgent
+        try:
+            agent = VoiceAgent.objects.get(id=agent_id)
+            did_number = agent.inbound_phone_number
+            if did_number:
+                did_number = str(did_number).strip()
+                if not did_number.startswith("+"):
+                    if len(did_number) == 10:
+                        did_number = "+91" + did_number
+                    elif len(did_number) == 12 and did_number.startswith("91"):
+                        did_number = "+" + did_number
+                    else:
+                        did_number = "+91" + did_number
+            else:
+                did_number = CALLER_ID
+        except (VoiceAgent.DoesNotExist, ValueError):
+            did_number = CALLER_ID
+
         if not has_remaining_minutes(agent_id):
             return Response({
                 "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
@@ -1261,7 +1280,7 @@ def trigger_call(request):
                         "custom_parameters": json.dumps({"name": "Valued Customer"})
                     }
                 ],
-                "did_number": CALLER_ID,
+                "did_number": did_number,
                 "webhook_url": webhook_url,
                 "country_code": "91",
                 "websocket_url": websocket_url
@@ -1317,7 +1336,7 @@ def trigger_call(request):
                             "custom_parameters": json.dumps({"name": "Valued Customer"})
                         }
                     ],
-                    "did_number": CALLER_ID,
+                    "did_number": did_number,
                     "webhook_url": webhook_url,
                     "country_code": "91",
                     "websocket_url": websocket_url
@@ -1687,6 +1706,26 @@ def dial_next_from_queue():
                     agent_id = parsed_agent
 
         websocket_url, webhook_url = _get_voicelink_urls(normalized, agent_id, campaign_id=_current_campaign_id)
+
+        # Resolve DID number from agent_id
+        from agents.models import VoiceAgent
+        try:
+            agent = VoiceAgent.objects.get(id=agent_id)
+            did_number = agent.inbound_phone_number
+            if did_number:
+                did_number = str(did_number).strip()
+                if not did_number.startswith("+"):
+                    if len(did_number) == 10:
+                        did_number = "+91" + did_number
+                    elif len(did_number) == 12 and did_number.startswith("91"):
+                        did_number = "+" + did_number
+                    else:
+                        did_number = "+91" + did_number
+            else:
+                did_number = CALLER_ID
+        except (VoiceAgent.DoesNotExist, ValueError):
+            did_number = CALLER_ID
+
         payload = {
             "leads": [
                 {
@@ -1694,7 +1733,7 @@ def dial_next_from_queue():
                     "custom_parameters": json.dumps({"name": "Valued Customer"})
                 }
             ],
-            "did_number": CALLER_ID,
+            "did_number": did_number,
             "webhook_url": webhook_url,
             "country_code": "91",
             "websocket_url": websocket_url

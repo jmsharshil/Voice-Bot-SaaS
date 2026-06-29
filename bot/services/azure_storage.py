@@ -61,6 +61,40 @@ class AzureBlobService:
             logger.error(f"Failed to upload to Azure: {e}")
             return None
 
+    def upload_image(self, file_content, filename):
+        """
+        Uploads static image to Azure Blob Storage.
+        file_content: bytes or file-like object
+        filename: string for the filename (including folder/prefix)
+        Returns: Public URL of the uploaded blob
+        """
+        if not settings.USE_AZURE_MEDIA:
+            logger.info("Azure Storage is disabled in settings.")
+            return None
+
+        try:
+            # Ensure container exists
+            try:
+                self.container_client.get_container_properties()
+            except Exception:
+                logger.info(f"Creating container '{self.container_name}'...")
+                self.container_client.create_container()
+
+            blob_client = self.container_client.get_blob_client(filename)
+            blob_client.upload_blob(file_content, overwrite=True)
+            
+            # Construct Public URL
+            if self.custom_domain:
+                media_url = f"https://{self.custom_domain}/{self.container_name}/{filename}"
+            else:
+                media_url = f"https://{self.account_name}.blob.core.windows.net/{self.container_name}/{filename}"
+            logger.info(f"Uploaded image to Azure: {media_url}")
+            return media_url
+
+        except Exception as e:
+            logger.error(f"Failed to upload image to Azure: {e}")
+            return None
+
     def download_and_upload(self, provider_url, phone_number):
         """
         Downloads a file from provider_url and uploads it to Azure.

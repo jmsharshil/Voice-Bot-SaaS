@@ -126,12 +126,17 @@ def login_view(request):
         if user.profile.assigned_agent:
             assigned_agent_id = str(user.profile.assigned_agent.id)
             
-        if user.profile.profile_picture:
+        if user.profile.profile_picture_url:
+            profile_picture_url = user.profile.profile_picture_url
+        elif user.profile.profile_picture:
             profile_picture_url = request.build_absolute_uri(user.profile.profile_picture.url)
 
         resolved_logo = user.profile.get_company_logo()
         if resolved_logo:
-            company_logo_url = request.build_absolute_uri(resolved_logo.url)
+            if isinstance(resolved_logo, str):
+                company_logo_url = resolved_logo
+            else:
+                company_logo_url = request.build_absolute_uri(resolved_logo.url)
     
     # Also default to is_admin=True if django superuser
     if user.is_superuser:
@@ -369,12 +374,17 @@ class CurrentUserView(APIView):
             if user.profile.assigned_agent:
                 assigned_agent_id = str(user.profile.assigned_agent.id)
 
-            if user.profile.profile_picture:
+            if user.profile.profile_picture_url:
+                profile_picture_url = user.profile.profile_picture_url
+            elif user.profile.profile_picture:
                 profile_picture_url = request.build_absolute_uri(user.profile.profile_picture.url)
 
             resolved_logo = user.profile.get_company_logo()
             if resolved_logo:
-                company_logo_url = request.build_absolute_uri(resolved_logo.url)
+                if isinstance(resolved_logo, str):
+                    company_logo_url = resolved_logo
+                else:
+                    company_logo_url = request.build_absolute_uri(resolved_logo.url)
 
         if user.is_superuser:
             permissions['is_admin'] = True
