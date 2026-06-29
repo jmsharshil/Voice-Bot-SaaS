@@ -926,8 +926,17 @@ def get_campaign_lead_conversation(request):
         # Find the conversation. Since we added campaign_id on Conversation model, we can filter by it!
         conversation = Conversation.objects.filter(campaign_id=campaign_id, user_number=phone).order_by("-started_at").first()
         if not conversation:
-            # Fallback to search by user_number alone if campaign_id is not saved on old logs
-            conversation = Conversation.objects.filter(user_number=phone).order_by("-started_at").first()
+            # Fallback to search by user_number but restrict to conversations that started on or after the campaign's started_at timestamp.
+            # This prevents matching old, unrelated conversations from previous campaigns/tests.
+            from bot.models import Campaign
+            campaign = Campaign.objects.filter(id=campaign_id).first()
+            if campaign:
+                conversation = Conversation.objects.filter(
+                    user_number=phone,
+                    started_at__gte=campaign.started_at
+                ).order_by("-started_at").first()
+            else:
+                conversation = Conversation.objects.filter(user_number=phone).order_by("-started_at").first()
 
         if not conversation:
             return Response({"error": "No conversation found for this number"}, status=404)
