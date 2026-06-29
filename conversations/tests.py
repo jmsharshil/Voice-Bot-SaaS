@@ -163,3 +163,104 @@ class CampaignLeadConversationTestCase(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
+from agents.models import AgentRoleTemplate
+
+class SamsungStoreStrategyTestCase(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="testadmin3", password="password")
+        self.industry = Industry.objects.create(name="Retail", slug="retail")
+        self.role_template = AgentRoleTemplate.objects.create(
+            industry=self.industry,
+            role_name="Naavya Samsung Store Advisor",
+            description="Samsung store assistant bot",
+            system_prompt_template="Test prompt",
+            default_tone="polite",
+            default_voice="shubh"
+        )
+        self.agent = VoiceAgent.objects.create(
+            owner=self.user,
+            name="Naavya",
+            company_name="Vtech Samsung Care",
+            industry=self.industry,
+            role_template=self.role_template,
+            minutes_quota=5000
+        )
+
+    def test_samsung_store_greeting_flow(self):
+        from conversations.services.core.dialogue_engine import prepare_streaming, get_agent_tts_language
+        from conversations.models import ConversationSession
+        
+        # Test TTS Language
+        lang = get_agent_tts_language(self.agent.id)
+        self.assertEqual(lang, "gu")
+
+        session_id = "session_samsung_test"
+        
+        # 1. Step 1: Greeting
+        result = prepare_streaming(self.agent, "hello", session_id=session_id)
+        self.assertEqual(result["static_reply"], "[PLAY_AUDIO:samsung_bot/samsung_step1_greeting.raw]")
+        
+        # Verify call phase is set to GREETING_REPLY
+        session = ConversationSession.objects.get(session_id=session_id)
+        self.assertEqual(session.state["call_phase"], "GREETING_REPLY")
+
+        # 2. Step 2: GREETING_REPLY -> ASK_CONSENT (consent request played)
+        result = prepare_streaming(self.agent, "yes", session_id=session_id)
+        self.assertEqual(result["static_reply"], "[PLAY_AUDIO:samsung_bot/samsung_step2_ask_consent.raw]")
+        session.refresh_from_db()
+        self.assertEqual(session.state["call_phase"], "ASK_CONSENT")
+
+        # 3. Step 3: ASK_CONSENT -> ASK_PHONE_INFO (ask phone played)
+        result = prepare_streaming(self.agent, "yes of course", session_id=session_id)
+        self.assertEqual(result["static_reply"], "[PLAY_AUDIO:samsung_bot/samsung_step3_ask_phone.raw]")
+        session.refresh_from_db()
+        self.assertEqual(session.state["call_phase"], "ASK_PHONE_INFO")
+
+        # 4. Step 4: ASK_PHONE_INFO -> ASK_INTEREST (ask product interest played)
+        result = prepare_streaming(self.agent, "iphone 15", session_id=session_id)
+        self.assertEqual(result["static_reply"], "[PLAY_AUDIO:samsung_bot/samsung_step4_ask_interest.raw]")
+        session.refresh_from_db()
+        self.assertEqual(session.state["call_phase"], "ASK_INTEREST")
+
+        # 5. Step 5: ASK_INTEREST -> ASK_ADDRESS (ask store/area played)
+        result = prepare_streaming(self.agent, "interested in watch", session_id=session_id)
+        self.assertEqual(result["static_reply"], "[PLAY_AUDIO:samsung_bot/samsung_step5_ask_address.raw]")
+        session.refresh_from_db()
+        self.assertEqual(session.state["call_phase"], "ASK_ADDRESS")
+
+        # 6. Step 6: ASK_ADDRESS -> CLOSING (thank you and end call)
+        result = prepare_streaming(self.agent, "satellite ahmedabad", session_id=session_id)
+        self.assertEqual(result["static_reply"], "[PLAY_AUDIO:samsung_bot/samsung_step6_closing.raw] [END_CALL]")
+        self.assertTrue(result["auto_disconnect"])
+
+    def test_samsung_store_rejection_at_greeting(self):
+        from conversations.services.core.dialogue_engine import prepare_streaming
+        from conversations.models import ConversationSession
+        session_id = "session_samsung_rej1"
+        
+        # Initial greeting sets GREETING_REPLY
+        prepare_streaming(self.agent, "hello", session_id=session_id)
+        
+        # User rejects
+        result = prepare_streaming(self.agent, "na", session_id=session_id)
+        self.assertEqual(result["static_reply"], "[PLAY_AUDIO:samsung_bot/samsung_rejection.raw] [END_CALL]")
+        self.assertTrue(result["auto_disconnect"])
+
+    def test_samsung_store_rejection_at_consent(self):
+        from conversations.services.core.dialogue_engine import prepare_streaming
+        from conversations.models import ConversationSession
+        session_id = "session_samsung_rej2"
+        
+        # Initial greeting sets GREETING_REPLY
+        prepare_streaming(self.agent, "hello", session_id=session_id)
+        
+        # User accepts greeting -> ASK_CONSENT
+        prepare_streaming(self.agent, "yes", session_id=session_id)
+        
+        # User rejects with "না हाल में बीज़ी हूँ।" (Devnagari script)
+        result = prepare_streaming(self.agent, "ना हाल में बीज़ी हूँ।", session_id=session_id)
+        self.assertEqual(result["static_reply"], "[PLAY_AUDIO:samsung_bot/samsung_rejection.raw] [END_CALL]")
+        self.assertTrue(result["auto_disconnect"])
+
+
+

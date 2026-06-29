@@ -55,6 +55,12 @@ except Exception as e:
     print(f"⚠️ Failed to load TempRealEstateMatcher: {e}")
     TEMP_REAL_ESTATE_MATCHER = None
 
+try:
+    SAMSUNG_MATCHER = AutomobileMatcher("samsung_bot/data/samsung_intents.json")
+except Exception as e:
+    print(f"⚠️ Failed to load SamsungMatcher: {e}")
+    SAMSUNG_MATCHER = None
+
 from elevenlabs import ElevenLabs, VoiceSettings
 
 ELEVENLABS_CLIENT = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
@@ -102,6 +108,14 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "gu_step5_ask_time.raw": "Wonderful! હું note કરી લઉં. Callback માટે તમને કઈ time convenient રહેશે? અને કોઈ specific day હોય તો તે પણ જણાવો.",
     "gu_step7_confirm_testdrive.raw": "Thank you, મેં તમારો time note કરી લીધો. એક વધુ વાત — શું તમે Kia Seltos નું test drive લેવા ઈચ્છો છો? Believe me, એક વાર drive કરો, ત્યારબાદ બીજી કોઈ car જોવાની જ ઈચ્છા ન થાય!",
     "gu_step8_closing.raw": "Thank you so much! અમારી sales team ટૂંક સમયમાં તમારો contact કરશે. તમારો આટલો કિંમતી સમય આપવા બદલ ખૂબ ખૂબ આભાર.",
+ 
+    # SAMSUNG STORE BOT (GUJARATI)
+    "samsung_bot/samsung_step1_greeting.raw": "હલો, હું વીટેક સેમસંગ કેર તરફથી નાવ્યા વાત કરી રહી છું. શું મારી વાત કસ્ટમર જી સાથે થઈ રહી છે?",
+    "samsung_bot/samsung_step2_ask_phone.raw": "બહુ સરસ! અત્યારે આપ કયો ફોન વાપરી રહ્યા છો?",
+    "samsung_bot/samsung_step3_ask_interest.raw": "તો શું આપ નવો સેમસંગ ફોન ખરીદવામાં રસ ધરાવો છો? કે પછી સેમસંગ વોચ, ટેબ્લેટ કે લેપટોપમાં રસ છે?",
+    "samsung_bot/samsung_step4_ask_address.raw": "ખૂબ સરસ! આપનો વિસ્તાર અથવા એડ્રેસ જણાવો, જેથી અમારી નજીકની સ્ટોર ટીમ આપનો સંપર્ક કરી શકે.",
+    "samsung_bot/samsung_step5_closing.raw": "ધન્યવાદ! અમારી નજીકની સ્ટોર ટીમ ટૂંક સમયમાં આપનો સંપર્ક કરશે. આવજો!",
+    "samsung_bot/samsung_rejection.raw": "કોઈ વાંધો નહીં, આપનો કિંમતી સમય આપવા બદલ આભાર! આવજો!",
 
     # HOSPITAL APPOINTMENT SCHEDULER
     "hosp_step1_greeting.raw": "Hello! I am Sophia calling from City Clinic. We received your booking request for tomorrow. Can we confirm your appointment?",
@@ -599,7 +613,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             strategy_key = get_role_strategy(role_name)
             
             # 1. Determine TTS Lang
-            if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy"]:
+            if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy"]:
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
@@ -613,6 +627,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     greeting = "નમસ્તે! હું જે એમ એસ બેંકમાંથી નવ્યા બોલું છું. તમારી ઈ એમ આઈ ની તારીખ નજીક છે, તમે ક્યારે ચુકવણી કરશો?"
                 elif strategy_key == "temp_real_estate_strategy":
                     greeting = "હલો, નમસ્તે જી! હું જે એમ એસ રિયલ એસ્ટેટ તરફથી નવ્યા વાત કરું છું. અમે અત્યારે ખૂબ જ સરસ લોકેશન પર લક્ઝુરિયસ ફ્લેટ્સ વેચી રહ્યા છીએ. તો મને જણાવશો ને, તમારે કયા પ્રકારનો ફ્લેટ જોઈએ છે, જેમ કે વન બીએચકે કે ટુ બીએચકે?"
+                elif strategy_key == "samsung_store_strategy":
+                    greeting = "નમસ્તે! હું નીલ છું. હું VTech Samsung Cafe તરફથી વાત કરી રહ્યો છું. શું મારી વાત Customer જી સાથે થઈ રહી છે?"
                 else:
                     greeting = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
             elif tts_lang == "interview_en":
@@ -627,9 +643,11 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             state["detected_language"] = language
             if strategy_key == "hospital_minimal":
                 state["step"] = "confirm_interest"
-            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy"]:
+            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy"]:
                 if strategy_key == "temp_real_estate_strategy":
                     state["call_phase"] = "collect_flat_type"
+                elif strategy_key == "samsung_store_strategy":
+                    state["call_phase"] = "GREETING_REPLY"
                 else:
                     state["call_phase"] = "interest_confirmation"
             session.state = state
@@ -654,6 +672,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             greeting_file = "reminder_bot/reminder_step1_greeting.raw"
         elif self.strategy_key == "temp_real_estate_strategy":
             greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
+        elif self.strategy_key == "samsung_store_strategy":
+            greeting_file = "samsung_bot/samsung_step1_greeting.raw"
         elif self.strategy_key == "automobile_Naavya":
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         else:
@@ -1232,14 +1252,17 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         is_loan = getattr(self, "strategy_key", None) == "loan_strategy"
         is_reminder = getattr(self, "strategy_key", None) == "reminder_strategy"
         is_temp_real_estate = getattr(self, "strategy_key", None) == "temp_real_estate_strategy"
+        is_samsung_store = getattr(self, "strategy_key", None) == "samsung_store_strategy"
         
-        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER):
+        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER) or (is_samsung_store and SAMSUNG_MATCHER):
             if is_loan:
                 matcher = LOAN_MATCHER
             elif is_reminder:
                 matcher = REMINDER_MATCHER
             elif is_temp_real_estate:
                 matcher = TEMP_REAL_ESTATE_MATCHER
+            elif is_samsung_store:
+                matcher = SAMSUNG_MATCHER
             else:
                 matcher = NAAVYA_MATCHER if is_naavya else AUTOMOBILE_MATCHER
             try:
@@ -1283,6 +1306,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                                 "closing": "CLOSING",
                             }
                             current_phase = phase_map.get(current_phase, "GREETING_REPLY")
+                        elif is_samsung_store:
+                            current_phase = session.state.get("call_phase", "GREETING_REPLY")
                         self.current_phase = current_phase
                 except:
                     pass
@@ -1314,6 +1339,34 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         "score": 1.0,
                         "action": "play_audio",
                         "mp3": "temp_real_estate_bot/real_estate_step5_closing.raw",
+                        "next_phase": "CLOSING"
+                    }
+                elif is_samsung_store and current_phase == "ASK_PHONE_INFO":
+                    # Intercept: User can say anything for phone info. Move to interest phase.
+                    match_result = {
+                        "match_type": "CONTEXTUAL",
+                        "intent": {
+                            "intent_name": "phone_info_answered",
+                            "mp3_file": "samsung_bot/samsung_step4_ask_interest.raw",
+                            "next_phase": "ASK_INTEREST"
+                        },
+                        "score": 1.0,
+                        "action": "play_audio",
+                        "mp3": "samsung_bot/samsung_step4_ask_interest.raw",
+                        "next_phase": "ASK_INTEREST"
+                    }
+                elif is_samsung_store and current_phase == "ASK_ADDRESS":
+                    # Intercept: User can say anything for address. Move to closing.
+                    match_result = {
+                        "match_type": "CONTEXTUAL",
+                        "intent": {
+                            "intent_name": "address_answered",
+                            "mp3_file": "samsung_bot/samsung_step6_closing.raw",
+                            "next_phase": "CLOSING"
+                        },
+                        "score": 1.0,
+                        "action": "play_audio",
+                        "mp3": "samsung_bot/samsung_step6_closing.raw",
                         "next_phase": "CLOSING"
                     }
                 else:
@@ -1357,6 +1410,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                                         "CLOSING": "closing"
                                     }
                                     state["call_phase"] = rev_map.get(next_phase, "collect_flat_type")
+                                elif is_samsung_store:
+                                    state["call_phase"] = next_phase
                                 session.state = state
                                 await sync_to_async(session.save)()
                                 self.current_phase = next_phase
@@ -1802,7 +1857,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             subscription=os.getenv("AZURE_SPEECH_KEY"),
             region=os.getenv("AZURE_SPEECH_REGION")
         )
-        speech_config.speech_synthesis_voice_name = TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
+        voice = TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
+        if lang == "gu" and getattr(self, "strategy_key", None) == "samsung_store_strategy":
+            voice = "gu-IN-NiranjanNeural"
+        speech_config.speech_synthesis_voice_name = voice
         speech_config.set_speech_synthesis_output_format(
             speechsdk.SpeechSynthesisOutputFormat.Raw8Khz16BitMonoPcm
         )
@@ -1828,7 +1886,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 return b""
             target_lang = "hi-IN" if is_loan_hi else "gu-IN"
             speaker = "shubh" if is_loan_hi else "ishita"
-            pace = 1.1 if is_loan_hi else 1
+            if getattr(self, "strategy_key", None) == "samsung_store_strategy":
+                speaker = "shubh"
+            pace = 1.1 if is_loan_hi else (1.15 if getattr(self, "strategy_key", None) == "samsung_store_strategy" else 1)
 
             payload = {
                 "text": clean_text,
@@ -1975,6 +2035,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             greeting_file = "reminder_bot/reminder_step1_greeting.raw"
         elif getattr(self, "strategy_key", None) == "temp_real_estate_strategy":
             greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "samsung_store_strategy":
+            greeting_file = "samsung_bot/samsung_step1_greeting.raw"
         elif getattr(self, "strategy_key", None) == "automobile_Naavya":
             greeting_file = f"Naavya/{lang}_step1_greeting.raw"
         else:

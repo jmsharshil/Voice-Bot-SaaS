@@ -239,6 +239,8 @@ def synthesize_to_base64(text: str, language="en", mode="web") -> str:
     text = text.replace("&", "and").replace("\n", " ")
 
     voice = TTS_VOICE_MAP.get(language, "en-IN-AnanyaNeural")
+    if language == "gu" and ("samsung" in text.lower() or "સેમસંગ" in text or "caf" in text.lower() or "કેર" in text or "વ્હીટેક" in text or "વીટેક" in text):
+        voice = "gu-IN-NiranjanNeural"
 
     speech_config = speechsdk.SpeechConfig(
         subscription=AZURE_SPEECH_KEY,
