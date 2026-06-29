@@ -86,3 +86,80 @@ class MinutesTrackingTestCase(TestCase):
         total_usage = _calculate_bot_usage(self.agent)
         self.assertEqual(total_usage, 4.0)
 
+
+from conversations.views import get_campaign_lead_conversation
+from bot.models import Campaign
+from rest_framework.test import APIRequestFactory, force_authenticate
+
+class CampaignLeadConversationTestCase(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.user = User.objects.create_user(username="testadmin2", password="password")
+        self.industry = Industry.objects.create(name="Automotive", slug="automotive-test")
+        self.agent = VoiceAgent.objects.create(
+            owner=self.user,
+            name="Test Bot 2",
+            industry=self.industry,
+            minutes_quota=5000
+        )
+        # Create campaigns
+        self.campaign_1 = Campaign.objects.create(
+            name="Campaign 1",
+            agent=self.agent,
+            ended_at=timezone.now() - timedelta(days=2) + timedelta(hours=1)
+        )
+        Campaign.objects.filter(id=self.campaign_1.id).update(started_at=timezone.now() - timedelta(days=2))
+        self.campaign_1.refresh_from_db()
+
+        self.campaign_2 = Campaign.objects.create(
+            name="Campaign 2",
+            agent=self.agent,
+            ended_at=None
+        )
+        Campaign.objects.filter(id=self.campaign_2.id).update(started_at=timezone.now())
+        self.campaign_2.refresh_from_db()
+
+        # Create conversations
+        # 1. Answered call in campaign 1 (from 2 days ago)
+        self.conv_1 = Conversation.objects.create(
+            agent=self.agent,
+            campaign_id=self.campaign_1.id,
+            session_id="session_c1_ans",
+            user_number="9104142402",
+            ended_at=self.campaign_1.started_at + timedelta(minutes=6)
+        )
+        Conversation.objects.filter(id=self.conv_1.id).update(started_at=self.campaign_1.started_at + timedelta(minutes=5))
+        self.conv_1.refresh_from_db()
+
+        # 2. Inbound/Manual call (campaign_id is None) from 1 day ago
+        self.conv_manual = Conversation.objects.create(
+            agent=self.agent,
+            campaign_id=None,
+            session_id="session_manual",
+            user_number="9104142402",
+            ended_at=timezone.now() - timedelta(days=1) + timedelta(minutes=2)
+        )
+        Conversation.objects.filter(id=self.conv_manual.id).update(started_at=timezone.now() - timedelta(days=1))
+        self.conv_manual.refresh_from_db()
+
+    def test_get_campaign_lead_conversation_success(self):
+        # Retrieve answered call for campaign 1
+        request = self.factory.get(
+            f"/api/conversations/campaign-lead/?campaign_id={self.campaign_1.id}&phone=9104142402"
+        )
+        force_authenticate(request, user=self.user)
+        response = get_campaign_lead_conversation(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["session_id"], "session_c1_ans")
+
+    def test_get_campaign_lead_conversation_missed_no_fallback_to_other_campaign(self):
+        # Retrieve call for campaign 2 (where they missed call, so self.campaign_2.id has no conversation)
+        request = self.factory.get(
+            f"/api/conversations/campaign-lead/?campaign_id={self.campaign_2.id}&phone=9104142402"
+        )
+        force_authenticate(request, user=self.user)
+        response = get_campaign_lead_conversation(request)
+        # Should return 404 since the user didn't pick up in campaign 2 (we should not fall back to campaign 1 conversation)
+        self.assertEqual(response.status_code, 404)
+
+
