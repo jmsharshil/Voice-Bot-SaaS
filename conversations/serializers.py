@@ -70,7 +70,7 @@ class LeadAnalysisSerializer(serializers.ModelSerializer):
                 return obj.conversation.cdr.did
         except:
             pass
-        return "+917969016753"
+        return "+919484959435"
 
     def get_recording_url(self, obj):
         try:
@@ -104,7 +104,7 @@ class LeadAnalysisSerializer(serializers.ModelSerializer):
         fields = [
             "id", "session_id", "user_number", "agent_name", "language",
             "lead_level", "user_name", "user_email", "user_phone",
-            "interest_topic", "summary", "raw_analysis",
+            "interest_topic", "summary", "raw_analysis","appointment_date",
             "call_started_at", "call_ended_at", "analyzed_at",
             "customer_number", "bot_number", "actual_duration", 
             "disposition", "recording_url", "call_type",

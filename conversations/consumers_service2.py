@@ -958,21 +958,56 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 print(f"📥 WS CONTROL EVENT [{data.get('event')}]: {data}")
 
             if data.get("event") == "start":
-                if "call" in data:
-                    # Service 2 nested call format
-                    call_data = data["call"]
-                    self.stream_sid = call_data.get("id")
-                    print(f"📡 streamSid captured from Service 2 call.id: {self.stream_sid}")
-                    if self.stream_sid:
-                        await save_stream_sid(self.conversation, self.stream_sid)
+                # Support both Service 2 (snake_case, direct to/from in start, or nested call) and Service 1 (camelCase in start)
+                start_payload = data.get("start") or data.get("call") or {}
+                
+                # Extract stream_sid (supports stream_sid, streamSid, id)
+                self.stream_sid = start_payload.get("stream_sid") or start_payload.get("streamSid") or start_payload.get("id")
+                print(f"[WS] streamSid captured: {self.stream_sid}")
+                
+                # Save stream_sid to DB for CDR matching
+                if self.stream_sid:
+                    await save_stream_sid(self.conversation, self.stream_sid)
+                    print(f"[DB] streamSid saved to DB for conversation {self.conversation.id}")
 
-                    direction = call_data.get("direction", "outbound")
-                    if direction.lower() == "inbound":
-                        number = call_data.get("from")
+                try:
+                    # Extract custom parameters (supports custom_parameters, customParameters)
+                    custom = start_payload.get("custom_parameters") or start_payload.get("customParameters") or {}
+                    
+                    # --- AUTO-DETECT INBOUND ---
+                    payload_call_type = (
+                        custom.get("callType") or 
+                        custom.get("call_type") or 
+                        start_payload.get("direction") or 
+                        ""
+                    ).upper()
+                    
+                    if payload_call_type == "INBOUND" or self.call_type == "INBOUND":
+                        self.call_type = "INBOUND"
+                        if self.conversation and self.conversation.call_type != "INBOUND":
+                            self.conversation.call_type = "INBOUND"
+                            await sync_to_async(self.conversation.save)(update_fields=["call_type"])
+                            print(f"[DB] Updated Conversation {self.conversation.id} call_type to 'INBOUND' from start payload")
+
+                    is_inbound = self.call_type == "INBOUND"
+                    
+                    if is_inbound:
+                        number = start_payload.get("from") or custom.get("callerNumber") or custom.get("caller_number") or start_payload.get("caller") or custom.get("calledNumber") or custom.get("called_number")
                     else:
-                        number = call_data.get("to")
+                        number = start_payload.get("to") or custom.get("calledNumber") or custom.get("called_number") or custom.get("callerNumber") or custom.get("caller_number") or start_payload.get("caller")
 
-                    if number and (self.user_number == "unknown" or not self.user_number):
+                    # Check if the currently set user number is actually the bot's own inbound number
+                    is_bot_number = False
+                    if self.user_number and self.user_number != "unknown":
+                        agent = await sync_to_async(lambda: self.conversation.agent)()
+                        inbound_num = getattr(agent, "inbound_phone_number", "")
+                        if inbound_num:
+                            clean_inbound = "".join(filter(str.isdigit, str(inbound_num)))[-10:]
+                            clean_user = "".join(filter(str.isdigit, str(self.user_number)))[-10:]
+                            if clean_inbound and clean_user == clean_inbound:
+                                is_bot_number = True
+
+                    if number and (self.user_number == "unknown" or not self.user_number or is_bot_number):
                         clean_num = str(number).strip()
                         if clean_num.startswith("+0"):
                             clean_num = clean_num[2:]
@@ -987,46 +1022,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
                         self.user_number = clean_num
                         await update_user_number(self.conversation, clean_num)
-                        print(f"💾 Customer number '{clean_num}' extracted from Service 2 start payload")
-                else:
-                    # Service 1 format
-                    start_payload = data.get("start", {})
-                    self.stream_sid = start_payload.get("streamSid")
-                    print(f"📡 streamSid captured: {self.stream_sid}")
-                    # Save stream_sid to DB for CDR matching
-                    if self.stream_sid:
-                        await save_stream_sid(self.conversation, self.stream_sid)
-                        print(f"💾 streamSid saved to DB for conversation {self.conversation.id}")
-
-                    try:
-                        # For outbound calls: calledNumber is customer
-                        # For inbound calls: callerNumber is customer
-                        custom = start_payload.get("customParameters", {})
-                        
-                        is_inbound = getattr(self, "conversation", None) and getattr(self.conversation, "call_type", "OUTBOUND") == "INBOUND"
-                        if is_inbound:
-                            number = custom.get("callerNumber") or start_payload.get("caller") or custom.get("calledNumber")
-                        else:
-                            number = custom.get("calledNumber") or custom.get("callerNumber") or start_payload.get("caller")
-
-                        if number and (self.user_number == "unknown" or not self.user_number):
-                            clean_num = str(number).strip()
-                            if clean_num.startswith("+0"):
-                                clean_num = clean_num[2:]
-                            elif clean_num.startswith("0"):
-                                clean_num = clean_num[1:]
-                            elif clean_num.startswith("+91") and len(clean_num) == 13:
-                                clean_num = clean_num[3:]
-                            elif clean_num.startswith("91") and len(clean_num) == 12:
-                                clean_num = clean_num[2:]
-                            elif clean_num.startswith("+"):
-                                clean_num = clean_num[1:]
-
-                            self.user_number = clean_num
-                            await update_user_number(self.conversation, clean_num)
-                            print(f"💾 Customer number '{clean_num}' extracted from start payload")
-                    except Exception as ex:
-                        print("⚠️ Error extracting caller number from start payload:", ex)
+                        print(f"[DB] Customer number '{clean_num}' extracted from start payload")
+                except Exception as ex:
+                    print("[WARNING] Error extracting caller number from start payload:", ex)
             
             # --- TEST BACKDOOR ---
             elif data.get("event") == "test_text":

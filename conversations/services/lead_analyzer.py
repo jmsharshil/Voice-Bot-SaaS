@@ -12,6 +12,8 @@ from conversations.services.azure_openai_service import generate_response
 LEAD_ANALYSIS_PROMPT = """You are an expert sales lead analyst. Analyze the following phone call conversation 
 between a voice AI bot and a customer. Provide a structured JSON assessment.
 
+REFERENCE CALL DATE: {call_date}
+
 CONVERSATION TRANSCRIPT:
 {transcript}
 
@@ -25,6 +27,7 @@ RULES:
 3. Extract any user details mentioned in the conversation (name, email, phone, etc.).
 4. Identify what product/service the user was interested in.
 5. Write a brief 1-2 line summary of the conversation outcome.
+6. Extract any appointment date, visit date, or day/time of availability/visit mentioned by the user. If the user mentions relative time expressions (such as "tomorrow", "kal", "parso", "2 din baad", "3 days later", "next week", "Monday", etc.), calculate the exact absolute calendar date and day of the week based on the REFERENCE CALL DATE provided above, and return it in a clear human-readable format (e.g., "Saturday, 27 Jun 2026" or "Monday, 29 Jun 2026 at 4:00 PM").
 
 RESPOND WITH ONLY THIS JSON FORMAT — no extra text, no markdown:
 {{
@@ -33,7 +36,8 @@ RESPOND WITH ONLY THIS JSON FORMAT — no extra text, no markdown:
     "user_email": "extracted email or empty string",
     "user_phone": "extracted phone or empty string",
     "interest_topic": "what product/service they were interested in",
-    "summary": "1-2 line summary of the conversation and lead quality"
+    "summary": "1-2 line summary of the conversation and lead quality",
+    "appointment_date": "calculated absolute calendar date and day or empty string"
 }}
 """
 
@@ -66,9 +70,11 @@ def analyze_lead(conversation_id):
             transcript_lines.append(f"{role}: {msg.text}")
         transcript = "\n".join(transcript_lines)
 
+        # Get call date info as anchor for relative date calculations
+        call_date = conversation.started_at.strftime("%A, %d %b %Y") if conversation.started_at else "today"
+ 
         # Send to LLM
-        prompt = LEAD_ANALYSIS_PROMPT.format(transcript=transcript)
-        print(f"📊 LEAD ANALYSIS: Analyzing conversation {conversation.session_id[:12]}...")
+        prompt = LEAD_ANALYSIS_PROMPT.format(transcript=transcript, call_date=call_date)
 
         raw_response = generate_response(prompt, "Analyze this conversation and return JSON.")
 
@@ -100,6 +106,7 @@ def analyze_lead(conversation_id):
                 "user_phone": analysis.get("user_phone", "")[:50],
                 "interest_topic": analysis.get("interest_topic", "")[:255],
                 "summary": analysis.get("summary", ""),
+                "appointment_date": analysis.get("appointment_date", "")[:255],
                 "raw_analysis": analysis,
             }
         )

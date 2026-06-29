@@ -93,7 +93,7 @@ class LeadAnalysis(models.Model):
     interest_topic = models.CharField(max_length=255, blank=True, default="")
     summary = models.TextField(blank=True, default="")
     raw_analysis = models.JSONField(default=dict, blank=True)
-
+    appointment_date = models.CharField(max_length=255, blank=True, default="")
     analyzed_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -1077,7 +1077,7 @@ def upload_call_page(request):
 
 #         payload = {
 #             "to": normalized_phone,
-#             "caller_id": "+917969016753",
+#             "caller_id": "+919484959435",
 #             "ref": f"crm-{uuid.uuid4()}",
 #             "bot_url": "wss://insurancebot-b3aha4cmfnbghza7.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=3db2a820-2745-47b9-aa8b-f42c99f727e4"
 #         }
@@ -1125,7 +1125,7 @@ def upload_call_page(request):
 
 #             payload = {
 #                 "to": normalized_phone,
-#                 "caller_id": "+917969016753",
+#                 "caller_id": "+919484959435",
 #                 "ref": f"crm-{uuid.uuid4()}",
 #                 "bot_url": "wss://insurancebot-b3aha4cmfnbghza7.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id=3db2a820-2745-47b9-aa8b-f42c99f727e4"
 #             }
@@ -1253,22 +1253,42 @@ def trigger_call(request):
 
             print(f"📞 Single Call → {normalized_phone} (Lang: {language}, Agent: {agent_id})")
 
+            websocket_url, webhook_url = _get_voicelink_urls(normalized_phone, agent_id, language)
             payload = {
-                "to": normalized_phone,
-                "caller_id": "+917969016753",
-                "ref": f"crm-{uuid.uuid4()}",
-                "bot_url": f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
+                "leads": [
+                    {
+                        "customer_number": normalized_phone,
+                        "custom_parameters": json.dumps({"name": "Valued Customer"})
+                    }
+                ],
+                "did_number": CALLER_ID,
+                "webhook_url": webhook_url,
+                "country_code": "91",
+                "websocket_url": websocket_url
             }
 
 
-            response = requests.post(
-                "https://call-route.on-forge.com/api/dial",
-                json=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": "7a3e957ed459dfebc486ee58d6059928d02c4aab20c9f698bd50e2636f8df1be",
-                }
-            )
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": f"Bearer {TELECOM_API_KEY}",
+                "x-api-key": TELECOM_API_KEY,
+            }
+            try:
+                response = requests.post(
+                    "https://app.voicelink.co.in/api/v1/add_lead",
+                    json=payload,
+                    headers=headers,
+                    timeout=15
+                )
+                if response.status_code not in [200, 201]:
+                    return Response({
+                        "error": f"Voicelink telephony error ({response.status_code}): {response.text}"
+                    }, status=400)
+            except Exception as e:
+                return Response({
+                    "error": f"Failed to connect to Voicelink telephony service: {str(e)}"
+                }, status=500)
 
             return Response({
                 "type": "single",
@@ -1289,21 +1309,45 @@ def trigger_call(request):
 
                 print(f"📞 Bulk Call → {normalized_phone} (Lang: {language}, Agent: {agent_id})")
 
+                websocket_url, webhook_url = _get_voicelink_urls(normalized_phone, agent_id, language)
                 payload = {
-                    "to": normalized_phone,
-                    "caller_id": "+917969016753",
-                    "ref": f"crm-{uuid.uuid4()}",
-                    "bot_url": f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}&language={language}&phone={normalized_phone}"
+                    "leads": [
+                        {
+                            "customer_number": normalized_phone,
+                            "custom_parameters": json.dumps({"name": "Valued Customer"})
+                        }
+                    ],
+                    "did_number": CALLER_ID,
+                    "webhook_url": webhook_url,
+                    "country_code": "91",
+                    "websocket_url": websocket_url
                 }
 
-                response = requests.post(
-                    "https://call-route.on-forge.com/api/dial",
-                    json=payload,
-                    headers={
-                        "Content-Type": "application/json",
-                        "x-api-key": "7a3e957ed459dfebc486ee58d6059928d02c4aab20c9f698bd50e2636f8df1be",
-                    }
-                )
+                headers = {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": f"Bearer {TELECOM_API_KEY}",
+                    "x-api-key": TELECOM_API_KEY,
+                }
+                try:
+                    response = requests.post(
+                        "https://app.voicelink.co.in/api/v1/add_lead",
+                        json=payload,
+                        headers=headers,
+                        timeout=15
+                    )
+                    if response.status_code not in [200, 201]:
+                        results.append({
+                            "phone": phone,
+                            "error": f"Voicelink error ({response.status_code}): {response.text}"
+                        })
+                        continue
+                except Exception as e:
+                    results.append({
+                        "phone": phone,
+                        "error": f"Connection error: {str(e)}"
+                    })
+                    continue
 
                 results.append({
                     "phone": phone,
@@ -1373,7 +1417,7 @@ def upload_call_file(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
+    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
 
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
@@ -1489,10 +1533,10 @@ _campaign_stats = {
 _missed_calls = []            # Numbers that timed out (No Answer)
 
 # Telecom config
-TELECOM_DIAL_URL = "https://call-route.on-forge.com/api/dial"
-TELECOM_API_KEY = "7a3e957ed459dfebc486ee58d6059928d02c4aab20c9f698bd50e2636f8df1be"
-CALLER_ID = "+917969016753"
-BOT_URL = "wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
+TELECOM_DIAL_URL = "https://app.voicelink.co.in/api/v1/add_lead"
+TELECOM_API_KEY = "729230|7gNpRt1e7KzmxvRkmG5bG9IwJhEQJFXkUri3XtaNfe6bc240"
+CALLER_ID = "+919484959435"
+BOT_URL = "wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
 
 
 def _normalize_phone(phone):
@@ -1503,6 +1547,27 @@ def _normalize_phone(phone):
     elif phone.startswith("91") and len(phone) == 12:
         phone = phone[2:]
     return phone
+
+
+def _get_voicelink_urls(phone, agent_id, language="hi", campaign_id=None):
+    """Derive WebSocket and Webhook URLs from the configured BOT_URL."""
+    import urllib.parse
+    try:
+        parsed = urllib.parse.urlparse(BOT_URL)
+        domain = parsed.netloc
+        ws_scheme = parsed.scheme or "wss"
+    except Exception:
+        domain = "voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
+        ws_scheme = "wss"
+        
+    websocket_url = f"{ws_scheme}://{domain}/ws/voice-bot/service2/?agent_id={agent_id}&language={language}&phone={phone}"
+    if campaign_id:
+        websocket_url += f"&campaign_id={campaign_id}"
+        
+    http_scheme = "https" if ws_scheme == "wss" else "http"
+    webhook_url = f"{http_scheme}://{domain}/api/webhook/cdr/"
+    
+    return websocket_url, webhook_url
 
 
 # ── Campaign State Management ────────────────────────
@@ -1606,29 +1671,60 @@ def dial_next_from_queue():
             _active_calls.add(normalized)
 
         # Dial outside the lock
-        bot_url_full = f"{BOT_URL}&phone={normalized}"
+        agent_id = "default"
         if _current_campaign_id:
-            bot_url_full += f"&campaign_id={_current_campaign_id}"
+            try:
+                curr_camp = Campaign.objects.get(id=_current_campaign_id)
+                agent_id = curr_camp.agent_id
+            except Campaign.DoesNotExist:
+                pass
+        if agent_id == "default" or agent_id == "{agent_id}":
+            import re
+            agent_id_match = re.search(r'agent_id=([^&]+)', BOT_URL)
+            if agent_id_match:
+                parsed_agent = agent_id_match.group(1)
+                if parsed_agent != "{agent_id}":
+                    agent_id = parsed_agent
 
+        websocket_url, webhook_url = _get_voicelink_urls(normalized, agent_id, campaign_id=_current_campaign_id)
         payload = {
-            "to": normalized,
-            "caller_id": CALLER_ID,
-            "ref": f"auto-{uuid.uuid4()}",
-            "bot_url": bot_url_full,
+            "leads": [
+                {
+                    "customer_number": normalized,
+                    "custom_parameters": json.dumps({"name": "Valued Customer"})
+                }
+            ],
+            "did_number": CALLER_ID,
+            "webhook_url": webhook_url,
+            "country_code": "91",
+            "websocket_url": websocket_url
         }
 
         try:
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": f"Bearer {TELECOM_API_KEY}",
+                "x-api-key": TELECOM_API_KEY,
+            }
             resp = requests.post(
                 TELECOM_DIAL_URL,
                 json=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": TELECOM_API_KEY,
-                },
+                headers=headers,
                 timeout=15,
             )
             print(f"📞 AUTO-DIALER: Calling {normalized} → Status {resp.status_code} | Active: {len(_active_calls)} | Queue: {len(_call_queue)}")
             
+            if resp.status_code not in [200, 201]:
+                print(f"❌ AUTO-DIALER: Failed to dial {normalized} (Status {resp.status_code}): {resp.text}")
+                with _call_queue_lock:
+                    _active_calls.discard(normalized)
+                _campaign_stats["completed"] += 1
+                # Trigger next call immediately since this one failed
+                import threading
+                threading.Timer(1.0, dial_next_from_queue).start()
+                continue
+
             # ⏱ WATCHDOG: If call isn't picked up in 60s, force-end it to trigger next
             import threading
             threading.Timer(35.0, on_call_timeout, args=[normalized]).start()
@@ -1639,6 +1735,9 @@ def dial_next_from_queue():
             with _call_queue_lock:
                 _active_calls.discard(normalized)
             _campaign_stats["completed"] += 1
+            # Try next number
+            import threading
+            threading.Timer(1.0, dial_next_from_queue).start()
 
     return calls_triggered
 
@@ -1741,7 +1840,7 @@ def start_auto_campaign(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/?agent_id={agent_id}"
+    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
 
     if _campaign_active:
         with _call_queue_lock:
@@ -2055,7 +2154,7 @@ def export_leads_excel(request):
             if hasattr(lead.conversation, 'cdr') and lead.conversation.cdr:
                 rec_url = lead.conversation.cdr.recording_file_name
                 if rec_url and not rec_url.startswith("http"):
-                    rec_url = f"https://call-route.on-forge.com/api/dial{rec_url}"
+                    rec_url = f"https://app.voicelink.co.in/api/v1/add_lead{rec_url}"
         except:
             pass
 
@@ -2305,7 +2404,7 @@ def inbound_call_webhook(request):
     normalized_to = normalize(to_number)
     normalized_from = normalize(from_number) or "unknown"
 
-    print(f"📞 Incoming Call Webhook | Dialed (To): {to_number} (Normalized: {normalized_to}) | Caller (From): {from_number} (Normalized: {normalized_from})")
+    print(f"[CALL] Incoming Call Webhook | Dialed (To): {to_number} (Normalized: {normalized_to}) | Caller (From): {from_number} (Normalized: {normalized_from})")
 
     # 2. Look up the active agent mapped to this incoming number
     agent = VoiceAgent.objects.filter(inbound_phone_number=normalized_to, is_active=True).first()
@@ -2319,7 +2418,7 @@ def inbound_call_webhook(request):
     if agent:
         # Check if the agent has remaining call credit quota
         if not has_remaining_minutes(str(agent.id)):
-            print(f"⚠️ Inbound Call Rejected: Agent {agent.name} ({agent.id}) has exceeded call credits.")
+            print(f"[WARNING] Inbound Call Rejected: Agent {agent.name} ({agent.id}) has exceeded call credits.")
             rejection_twiml = (
                 '<?xml version="1.0" encoding="UTF-8"?>\n'
                 '<Response>\n'
@@ -2340,8 +2439,8 @@ def inbound_call_webhook(request):
         scheme = "wss" if request.is_secure() or request.headers.get("x-forwarded-proto") == "https" else "ws"
         host = request.get_host()
         
-        ws_url = f"{scheme}://{host}/ws/voice-bot/?agent_id={agent.id}&language={language}&phone={normalized_from}&call_type=INBOUND"
-        print(f"🚀 Inbound Call Routing: Connected caller {normalized_from} to agent {agent.name} ({agent.id}) via WS: {ws_url}")
+        ws_url = f"{scheme}://{host}/ws/voice-bot/service2/?agent_id={agent.id}&language={language}&phone={normalized_from}&call_type=INBOUND"
+        print(f"[WS] Inbound Call Routing: Connected caller {normalized_from} to agent {agent.name} ({agent.id}) via WS: {ws_url}")
 
         escaped_ws_url = ws_url.replace("&", "&amp;")
         twiml = (
@@ -2356,7 +2455,7 @@ def inbound_call_webhook(request):
 
     else:
         # Return fallback/rejection TwiML XML
-        print(f"❌ Inbound Call Rejected: No active agent found matching incoming number: {to_number}")
+        print(f"[ERROR] Inbound Call Rejected: No active agent found matching incoming number: {to_number}")
         fallback_twiml = (
             '<?xml version="1.0" encoding="UTF-8"?>\n'
             '<Response>\n'

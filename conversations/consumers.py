@@ -950,11 +950,11 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             if data.get("event") == "start":
                 start_payload = data.get("start", {})
                 self.stream_sid = start_payload.get("streamSid")
-                print(f"📡 streamSid captured: {self.stream_sid}")
+                print(f"[WS] streamSid captured: {self.stream_sid}")
                 # Save stream_sid to DB for CDR matching
                 if self.stream_sid:
                     await save_stream_sid(self.conversation, self.stream_sid)
-                    print(f"💾 streamSid saved to DB for conversation {self.conversation.id}")
+                    print(f"[DB] streamSid saved to DB for conversation {self.conversation.id}")
 
                 try:
                     # For outbound calls: calledNumber is customer
@@ -967,7 +967,18 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     else:
                         number = custom.get("calledNumber") or custom.get("callerNumber") or start_payload.get("caller")
 
-                    if number and (self.user_number == "unknown" or not self.user_number):
+                    # Check if the currently set user number is actually the bot's own inbound number
+                    is_bot_number = False
+                    if self.user_number and self.user_number != "unknown":
+                        agent = await sync_to_async(lambda: self.conversation.agent)()
+                        inbound_num = getattr(agent, "inbound_phone_number", "")
+                        if inbound_num:
+                            clean_inbound = "".join(filter(str.isdigit, str(inbound_num)))[-10:]
+                            clean_user = "".join(filter(str.isdigit, str(self.user_number)))[-10:]
+                            if clean_inbound and clean_user == clean_inbound:
+                                is_bot_number = True
+
+                    if number and (self.user_number == "unknown" or not self.user_number or is_bot_number):
                         clean_num = str(number).strip()
                         if clean_num.startswith("+0"):
                             clean_num = clean_num[2:]
@@ -982,9 +993,9 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
                         self.user_number = clean_num
                         await update_user_number(self.conversation, clean_num)
-                        print(f"💾 Customer number '{clean_num}' extracted from start payload")
+                        print(f"[DB] Customer number '{clean_num}' extracted from start payload")
                 except Exception as ex:
-                    print("⚠️ Error extracting caller number from start payload:", ex)
+                    print("[WARNING] Error extracting caller number from start payload:", ex)
             
             # --- TEST BACKDOOR ---
             elif data.get("event") == "test_text":

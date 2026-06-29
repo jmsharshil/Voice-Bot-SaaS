@@ -539,7 +539,7 @@
         }
 
         .detail-header {
-            padding: 20px 24px;
+            padding: 14px 20px 10px 20px;
             border-bottom: 1px solid #f1f5f9;
             display: none;
             background: #ffffff
@@ -554,7 +554,7 @@
             display: flex;
             align-items: center;
             gap: 16px;
-            margin-bottom: 16px
+            margin-bottom: 10px
         }
 
         .dh-avatar {
@@ -604,30 +604,31 @@
 
         .detail-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 12px
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px
         }
 
         .dc {
             background: #f8fafc;
             border: 1px solid #f1f5f9;
-            border-radius: 10px;
-            padding: 10px 14px
+            border-radius: 8px;
+            padding: 8px 10px
         }
 
         .dc-label {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 700;
             text-transform: uppercase;
             color: #94a3b8;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             letter-spacing: 0.05em
         }
 
         .dc-value {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            color: #1e293b
+            color: #1e293b;
+            line-height: 1.2
         }
 
         .detail-summary {
@@ -1324,12 +1325,12 @@
             color: #0f172a;
             outline: none;
             transition: all 0.15s;
-            background: #f8fafc;
+            background-color: #f8fafc;
         }
 
         .form-control:focus {
             border-color: #4f46e5;
-            background: #ffffff;
+            background-color: #ffffff;
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
         }
 
@@ -1347,6 +1348,9 @@
 
         select.form-control:focus {
             background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 15px;
         }
 
         .update-lead-select {
@@ -2263,7 +2267,6 @@
             <div id="dmMissedList" style="display:flex; flex-wrap:wrap; gap:4px;"></div>
         </div>
     </div>
-
     <script>
         let allLeads = [];
         let activeFilter = null;
@@ -2652,11 +2655,12 @@
         <div class="dc"><div class="dc-label">Email</div><div class="dc-value">${escHtml(lead.user_email || "—")}</div></div>
         <div class="dc"><div class="dc-label">Customer Phone</div><div class="dc-value" style="color:#22d3ee; font-weight:700">${escHtml(lead.customer_number || lead.user_number || "—")}</div></div>
         <div class="dc"><div class="dc-label">Interest</div><div class="dc-value">${escHtml(lead.interest_topic || "—")}</div></div>
+        <div class="dc"><div class="dc-label">Appointment / Visit Date</div><div class="dc-value" style="color:#a855f7; font-weight:700">${escHtml(lead.appointment_date || "—")}</div></div>
         <div class="dc"><div class="dc-label">Duration (Sec)</div><div class="dc-value">${lead.actual_duration || "—"}s</div></div>
         <div class="dc"><div class="dc-label">Call Status</div><div class="dc-value" style="color:#fbbf24">${escHtml(lead.disposition || "Waiting CDR...")}</div></div>
         <div class="dc">
             <div class="dc-label">Update Status</div>
-            <div class="dc-value" style="margin-top: 4px;">
+            <div class="dc-value" style="margin-top: 2px;">
                 <select id="updateLeadLevelSelect" class="update-lead-select" onchange="updateLeadLevel('${lead.session_id}', this.value)">
                     <option value="hot" ${lead.lead_level === 'hot' ? 'selected' : ''}>🔥 Hot</option>
                     <option value="warm" ${lead.lead_level === 'warm' ? 'selected' : ''}>⚡ Warm</option>
@@ -2671,7 +2675,8 @@
 
             // Recording Player
             const recBox = document.getElementById("recordingBox");
-            recBox.style.padding = "20px 24px";
+            recBox.style.padding = "10px 0 0 0";
+            recBox.style.marginTop = "10px";
             recBox.style.borderTop = "1px solid #f1f5f9";
 
             if (lead.recording_url) {
