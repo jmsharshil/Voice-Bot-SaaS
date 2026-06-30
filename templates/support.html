@@ -1,0 +1,462 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.png' %}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help & Support | AI Sales Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-light: #ede9fe;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --input-bg: #f8fafc;
+            --input-focus: #ffffff;
+            --border: #e2e8f0;
+            --border-focus: #a5b4fc;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --shadow: 0 20px 60px rgba(15, 23, 42, 0.08), 0 4px 16px rgba(15, 23, 42, 0.04);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            background-image:
+                radial-gradient(ellipse at 20% 0%, rgba(99, 102, 241, 0.06) 0px, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(79, 70, 229, 0.05) 0px, transparent 60%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .support-card {
+            width: 100%;
+            max-width: 580px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .support-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+        }
+
+        .card-header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            transition: color 0.2s;
+            align-self: flex-start;
+        }
+
+        .back-btn:hover {
+            color: var(--primary);
+        }
+
+        .brand-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -0.03em;
+            margin-bottom: 0.5rem;
+        }
+
+        .brand-title span {
+            color: var(--primary);
+        }
+
+        .brand-subtitle {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--input-bg);
+            color: var(--text);
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            background: var(--input-focus);
+            box-shadow: 0 0 0 4px var(--primary-light);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-control:disabled {
+            background: #f1f5f9;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* ── File Uploader Styling ── */
+        .file-upload-wrapper {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            background: var(--input-bg);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .file-upload-wrapper:hover {
+            border-color: var(--primary);
+            background: #f5f3ff;
+        }
+
+        .file-upload-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text);
+            text-align: center;
+        }
+
+        .upload-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            text-align: center;
+        }
+
+        .selected-file-badge {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.75rem;
+        }
+
+        /* ── Submit Button ── */
+        .btn-submit {
+            width: 100%;
+            padding: 0.85rem;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 20px -3px rgba(79, 70, 229, 0.4);
+        }
+
+        .btn-submit:active {
+            transform: translateY(1px);
+        }
+
+        /* ── Loader ── */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* ── Alert boxes ── */
+        .alert {
+            display: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="support-card">
+        <a href="/dashboard/" class="back-btn">
+            ← Back to Dashboard
+        </a>
+        <div class="card-header">
+            <h1 class="brand-title" id="pageTitle">🛠️ Help & <span>Support</span></h1>
+            <p class="brand-subtitle">Fill in the details below. Our team will review your ticket and reach out via email.</p>
+        </div>
+
+        <div id="alertSuccess" class="alert alert-success"></div>
+        <div id="alertError" class="alert alert-danger"></div>
+
+        <form id="supportForm" onsubmit="submitSupportRequest(event)">
+            <!-- User details display -->
+            <div class="form-group">
+                <label class="form-label" id="usernameLabel">Your Username</label>
+                <input type="text" id="usernameDisplay" class="form-control" disabled value="Loading...">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" id="emailLabel">Your Email</label>
+                <input type="text" id="emailDisplay" class="form-control" disabled value="Loading...">
+            </div>
+
+            <!-- Issue Description -->
+            <div class="form-group">
+                <label for="issueDescription" class="form-label" id="issueLabel">Describe the Issue *</label>
+                <textarea id="issueDescription" class="form-control" placeholder="Describe what went wrong, steps to reproduce, or any questions..." required></textarea>
+            </div>
+
+            <!-- Image upload (optional) -->
+            <div class="form-group">
+                <label class="form-label" id="uploadLabel">Attach Image (Optional)</label>
+                <div class="file-upload-wrapper">
+                    <span class="upload-icon">📷</span>
+                    <span class="upload-text" id="uploadText">Click or drag image file here</span>
+                    <span class="upload-hint">PNG, JPG, or JPEG</span>
+                    <input type="file" id="issueImage" accept="image/*" class="file-upload-input" onchange="handleFileSelected(event)">
+                    
+                    <div id="fileBadge" class="selected-file-badge">
+                        <span id="badgeFilename">file.png</span>
+                        <span style="cursor: pointer; font-weight: 800; margin-left: 6px;" onclick="clearFileSelection(event)">✕</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="submitBtn" class="btn-submit">
+                <span class="spinner" id="btnSpinner"></span>
+                <span id="btnText">Submit Request</span>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.replace('/accounts/login/');
+        }
+
+        // Fetch User Info on Page Load
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch('/accounts/me/', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error("Session expired. Please log in again.");
+                }
+                return res.json();
+            })
+            .then(data => {
+                document.getElementById('usernameDisplay').value = data.username || "Anonymous";
+                document.getElementById('emailDisplay').value = data.email || "No Email Provided";
+            })
+            .catch(err => {
+                showAlert('alertError', err.message || "Failed to load user info.");
+                localStorage.removeItem('access_token');
+                setTimeout(() => {
+                    window.location.replace('/accounts/login/');
+                }, 2000);
+            });
+        });
+
+        function handleFileSelected(event) {
+            const file = event.target.files[0];
+            const fileBadge = document.getElementById('fileBadge');
+            const badgeFilename = document.getElementById('badgeFilename');
+
+            if (file) {
+                badgeFilename.innerText = file.name;
+                fileBadge.style.display = 'inline-flex';
+            } else {
+                fileBadge.style.display = 'none';
+            }
+        }
+
+        function clearFileSelection(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const fileInput = document.getElementById('issueImage');
+            fileInput.value = '';
+            document.getElementById('fileBadge').style.display = 'none';
+        }
+
+        function showAlert(id, msg) {
+            // Clear existing alerts
+            document.getElementById('alertSuccess').style.display = 'none';
+            document.getElementById('alertError').style.display = 'none';
+
+            const alertBox = document.getElementById(id);
+            alertBox.innerText = msg;
+            alertBox.style.display = 'block';
+        }
+
+        function submitSupportRequest(event) {
+            event.preventDefault();
+
+            const description = document.getElementById('issueDescription').value.trim();
+            const imageInput = document.getElementById('issueImage');
+            const submitBtn = document.getElementById('submitBtn');
+            const spinner = document.getElementById('btnSpinner');
+            const btnText = document.getElementById('btnText');
+
+            if (!description) {
+                showAlert('alertError', "Please write an issue description.");
+                return;
+            }
+
+            // Show Loading UI State
+            submitBtn.disabled = true;
+            spinner.style.display = 'inline-block';
+            btnText.innerText = "Submitting...";
+
+            const formData = new FormData();
+            formData.append('description', description);
+            if (imageInput.files.length > 0) {
+                formData.append('image', imageInput.files[0]);
+            }
+
+            fetch('/accounts/support-api/', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(res => {
+                if (res.status === 200) {
+                    showAlert('alertSuccess', res.body.message || "Support request submitted successfully!");
+                    document.getElementById('supportForm').reset();
+                    document.getElementById('fileBadge').style.display = 'none';
+                    
+                    setTimeout(() => {
+                        window.location.replace('/dashboard/');
+                    }, 3000);
+                } else {
+                    throw new Error(res.body.error || "Failed to submit request.");
+                }
+            })
+            .catch(err => {
+                showAlert('alertError', err.message);
+                // Reset submit button state
+                submitBtn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.innerText = "Submit Request";
+            });
+        }
+    </script>
+</body>
+
+</html>

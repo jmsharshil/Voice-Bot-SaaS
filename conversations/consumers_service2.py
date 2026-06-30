@@ -178,6 +178,15 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "temp_real_estate_bot/real_estate_step3_ask_budget.raw": "ઓકે, એ તો ઘણો જ સરસ એરિયા છે! અને તમારું અંદાજિત બજેટ કેટલું રાખ્યું છે? કોઈ પણ આશરે કિંમત જણાવશો તો પણ ચાલશે.",
     "temp_real_estate_bot/real_estate_step4_ask_name.raw": "જી ચોક્કસ, મેં વિગત નોંધી લીધી છે. તો બસ છેલ્લે તમારી આ જરૂરિયાત રજીસ્ટર કરવા માટે હું તમારું શુભ નામ જાણી શકું? પ્લીઝ તમારું નામ જણાવો ને.",
     "temp_real_estate_bot/real_estate_step5_closing.raw": "જી ખૂબ ખૂબ આભાર! મેં તમારી બધી જ જરૂરિયાતો અહીંયા નોંધી લીધી છે. અમારી સેલ્સ ટીમ ખૂબ જ ટૂંક સમયમાં તમારો સંપર્ક કરશે અને તમને વધુ માહિતી આપશે. તમારો કિંમતી સમય આપવા બદલ ખૂબ આભાર, આવજો!",
+
+    # SAMSUNG STORE BOT
+    "samsung_bot/samsung_step1_greeting.raw": "નમસ્તે! હું નીલ છું. હું VTech Samsung Cafe તરફથી વાત કરી રહ્યો છું. શું મારી વાત Customer જી સાથે થઈ રહી છે?",
+    "samsung_bot/samsung_step2_ask_consent.raw": "નમસ્તે Customer જી. તમે થોડા દિવસ પહેલા Samsung Product માટે ઇન્ટરેસ્ટ દર્શાવ્યો હતો એટલે તમને કોલ કર્યો છે. શું તમારી સાથે 2 મિનિટ વાત થઈ શકે?",
+    "samsung_bot/samsung_step3_ask_phone.raw": "ઓકે. તો શું હું જાણી શકું કે તમે અત્યારે કયો ફોન વાપરી રહ્યા છો?",
+    "samsung_bot/samsung_step4_ask_interest.raw": "ઓકે. તો શું તમે નવો સ્માર્ટફોન લેવાનું વિચારી રહ્યા છો કે પછી બીજી કોઈ Samsung ની Product માં ઇન્ટરેસ્ટ ધરાવો છો જેમ કે Watch, Tablet કે Laptop?",
+    "samsung_bot/samsung_step5_ask_address.raw": "ખૂબ સરસ. મને કહો, તમે કયા એરિયામાં રહો છો જેથી ત્યાંના નજીકના Samsung Store ની ટીમ તમારો સંપર્ક કરી શકે.",
+    "samsung_bot/samsung_step6_closing.raw": "આભાર. નજીકના Samsung Store ની ટીમ ટૂંક સમયમાં તમારો સંપર્ક કરશે. તમારો કિંમતી સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
+    "samsung_bot/samsung_rejection.raw": "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
@@ -1425,6 +1434,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     # 5. Play MP3/Raw Audio instantly
                     mp3_filename = match_result["mp3"]
                     raw_filename = mp3_filename.replace(".mp3", ".raw")
+                    
+                    transcription = _AUDIO_TRANSCRIPTIONS.get(raw_filename, raw_filename)
+                    await save_message(self.conversation, "bot", transcription)
+                    
                     await self._stream_local_audio_file(raw_filename)
 
                     # 6. Auto-disconnect if this was a closing intent

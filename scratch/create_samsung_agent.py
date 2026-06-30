@@ -36,7 +36,7 @@ def setup_samsung():
         print("Role template 'Naavya Samsung Store Advisor' not found. Please run seed_roles first.")
         return
 
-    # Create/Get Samsung agent
+    # Create/Get Samsung agent by spec    # Create/Get Samsung agent
     samsung_agent, created = VoiceAgent.objects.get_or_create(
         name="Naavya Store Bot",
         owner=owner,
@@ -57,8 +57,7 @@ def setup_samsung():
 
     print("\nSamsung Agent Info:")
     print(f"Agent ID: {samsung_agent.id}")
-    print(f"API Key: {samsung_agent.api_key}")
-    print(f"Role: {samsung_agent.role_template.role_name}")
+{samsung_agent.role_template.role_name}")
     print(f"Company: {samsung_agent.company_name}")
 
 if __name__ == "__main__":
