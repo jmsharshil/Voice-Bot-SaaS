@@ -1184,7 +1184,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
     # ================= AI (STREAMING) =================
 
-    async def _stream_local_audio_file(self, filename, save_to_db=True):
+    async def _stream_local_audio_file(self, filename):
         """Read a local .raw audio file and stream it to the WebSocket."""
         filename = filename.replace(".mp3", ".raw")
         
@@ -1202,10 +1202,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     filename = f"{lang_prefix}{filename}"
             
         # Record the bot reply in the database chat logs
-        if save_to_db:
-            transcription = _AUDIO_TRANSCRIPTIONS.get(filename)
-            if transcription:
-                await save_message(self.conversation, "bot", transcription)
+        transcription = _AUDIO_TRANSCRIPTIONS.get(filename)
+        if transcription:
+            await save_message(self.conversation, "bot", transcription)
 
         file_path = os.path.join("mp3_responses", filename)
         if not os.path.exists(file_path):
@@ -1445,14 +1444,6 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                                         "CLOSING": "closing"
                                     }
                                     state["call_phase"] = rev_map.get(next_phase, "collect_flat_type")
-                                elif is_enogic:
-                                    rev_map = {
-                                        "GREETING_REPLY": "interest_confirmation",
-                                        "ASK_ZED_KNOWLEDGE": "ask_zed_knowledge",
-                                        "ASK_PURCHASE_CONFIRMATION": "ask_purchase_confirmation",
-                                        "CLOSING": "closing"
-                                    }
-                                    state["call_phase"] = rev_map.get(next_phase, "interest_confirmation")
                                 elif is_samsung_store:
                                     state["call_phase"] = next_phase
                                 session.state = state
@@ -1468,6 +1459,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     # 5. Play MP3/Raw Audio instantly
                     mp3_filename = match_result["mp3"]
                     raw_filename = mp3_filename.replace(".mp3", ".raw")
+                    
+                    transcription = _AUDIO_TRANSCRIPTIONS.get(raw_filename, raw_filename)
+                    await save_message(self.conversation, "bot", transcription)
                     
                     await self._stream_local_audio_file(raw_filename)
 
@@ -1612,7 +1606,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     except asyncio.CancelledError:
                         pass
                         
-                self.tts_task = asyncio.create_task(self._stream_local_audio_file(audio_filename, save_to_db=False))
+                self.tts_task = asyncio.create_task(self._stream_local_audio_file(audio_filename))
             else:
                 reply_for_user = reply
                 if not skip_output_translation and self.language != "en":
