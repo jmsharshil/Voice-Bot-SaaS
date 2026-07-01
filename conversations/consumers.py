@@ -60,6 +60,8 @@ try:
 except Exception as e:
     print(f"⚠️ Failed to load EnogicMatcher: {e}")
     ENOGIC_MATCHER = None
+
+try:
     SAMSUNG_MATCHER = AutomobileMatcher("samsung_bot/data/samsung_intents.json")
 except Exception as e:
     print(f"⚠️ Failed to load SamsungMatcher: {e}")
@@ -1161,7 +1163,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
     # ================= AI (STREAMING) =================
 
-    async def _stream_local_audio_file(self, filename):
+    async def _stream_local_audio_file(self, filename, save_to_db=True):
         """Read a local .raw audio file and stream it to the WebSocket."""
         filename = filename.replace(".mp3", ".raw")
         
@@ -1179,9 +1181,10 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     filename = f"{lang_prefix}{filename}"
             
         # Record the bot reply in the database chat logs
-        transcription = _AUDIO_TRANSCRIPTIONS.get(filename)
-        if transcription:
-            await save_message(self.conversation, "bot", transcription)
+        if save_to_db:
+            transcription = _AUDIO_TRANSCRIPTIONS.get(filename)
+            if transcription:
+                await save_message(self.conversation, "bot", transcription)
 
         file_path = os.path.join("mp3_responses", filename)
         if not os.path.exists(file_path):
@@ -1248,10 +1251,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         is_enogic = getattr(self, "strategy_key", None) == "enogic_strategy"
         is_samsung_store = getattr(self, "strategy_key", None) == "samsung_store_strategy"
         
-        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER) or (is_enogic and ENOGIC_MATCHER):
-       
-        
-        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER) or (is_samsung_store and SAMSUNG_MATCHER):
+        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER) or (is_enogic and ENOGIC_MATCHER) or (is_samsung_store and SAMSUNG_MATCHER):
             if is_loan:
                 matcher = LOAN_MATCHER
             elif is_reminder:
@@ -1442,9 +1442,6 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     mp3_filename = match_result["mp3"]
                     raw_filename = mp3_filename.replace(".mp3", ".raw")
                     
-                    transcription = _AUDIO_TRANSCRIPTIONS.get(raw_filename, raw_filename)
-                    await save_message(self.conversation, "bot", transcription)
-                    
                     await self._stream_local_audio_file(raw_filename)
 
                     # 6. Auto-disconnect if this was a closing intent
@@ -1580,7 +1577,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     except asyncio.CancelledError:
                         pass
                         
-                self.tts_task = asyncio.create_task(self._stream_local_audio_file(audio_filename))
+                self.tts_task = asyncio.create_task(self._stream_local_audio_file(audio_filename, save_to_db=False))
             else:
                 reply_for_user = reply
                 if not skip_output_translation and self.language != "en":
@@ -1884,12 +1881,11 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             region=os.getenv("AZURE_SPEECH_REGION")
         )
         if getattr(self, "strategy_key", None) == "enogic_strategy":
-            speech_config.speech_synthesis_voice_name = "hi-IN-ArjunNeural"
-        else:
-            speech_config.speech_synthesis_voice_name = TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
-        voice = TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
-        if lang == "gu" and getattr(self, "strategy_key", None) == "samsung_store_strategy":
+            voice = "hi-IN-ArjunNeural"
+        elif lang == "gu" and getattr(self, "strategy_key", None) == "samsung_store_strategy":
             voice = "gu-IN-NiranjanNeural"
+        else:
+            voice = TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
         speech_config.speech_synthesis_voice_name = voice
         speech_config.set_speech_synthesis_output_format(
             speechsdk.SpeechSynthesisOutputFormat.Raw8Khz16BitMonoPcm

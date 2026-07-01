@@ -79,6 +79,8 @@ except ImportError:
     enogic_bot_strategy = None
     enogic_bot_prepare = None
     enogic_bot_finalize = None
+
+try:
     from samsung_bot.strategy import (
         samsung_store_strategy,
         samsung_store_prepare,

@@ -721,6 +721,10 @@ CONVERSATION STYLE:
 - Do NOT ask multiple questions in a single turn.
 """,
             "default_tone": "professional",
+        }
+    ]
+},
+{
     "industry": {"name": "Samsung Store", "slug": "samsung-store"},
     "roles": [
         {
