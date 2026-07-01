@@ -24,7 +24,8 @@ from .views import (
     TeamListView, TeamDetailView, team_management_page,
     forgot_password_view, reset_password_view,
     forgot_password_page, reset_password_page,
-    UploadProfilePictureView, CurrentUserView
+    UploadProfilePictureView, CurrentUserView,
+    support_page, SupportSubmitView
 )
 
 urlpatterns = [
@@ -34,6 +35,7 @@ urlpatterns = [
     path("team-management/", team_management_page, name="team-management"),
     path("forgot-password/", forgot_password_page, name="forgot-password"),
     path("reset-password/", reset_password_page, name="reset-password"),
+    path("support/", support_page, name="support"),
 
     # Auth APIs
     path("register/", RegisterView.as_view(), name="register"),
@@ -41,6 +43,7 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("forgot-password-api/", forgot_password_view, name="forgot-password-api"),
     path("reset-password-api/", reset_password_view, name="reset-password-api"),
+    path("support-api/", SupportSubmitView.as_view(), name="support-api"),
     path("profile/upload-picture/", UploadProfilePictureView.as_view(), name="profile-upload-picture"),
     path("me/", CurrentUserView.as_view(), name="current-user"),
     

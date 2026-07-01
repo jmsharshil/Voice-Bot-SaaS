@@ -69,6 +69,17 @@ except ImportError:
     temp_real_estate_prepare = None
     temp_real_estate_finalize = None
 
+try:
+    from enogic_bot.strategy import (
+        enogic_bot_strategy,
+        enogic_bot_prepare,
+        enogic_bot_finalize,
+    )
+except ImportError:
+    enogic_bot_strategy = None
+    enogic_bot_prepare = None
+    enogic_bot_finalize = None
+
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
 from django.core.cache import cache
@@ -90,6 +101,8 @@ if reminder_bot_strategy:
     STRATEGY_MAP["reminder_strategy"] = reminder_bot_strategy
 if temp_real_estate_strategy:
     STRATEGY_MAP["temp_real_estate_strategy"] = temp_real_estate_strategy
+if enogic_bot_strategy:
+    STRATEGY_MAP["enogic_strategy"] = enogic_bot_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -109,6 +122,8 @@ if reminder_bot_prepare:
     PREPARE_MAP["reminder_strategy"] = reminder_bot_prepare
 if temp_real_estate_prepare:
     PREPARE_MAP["temp_real_estate_strategy"] = temp_real_estate_prepare
+if enogic_bot_prepare:
+    PREPARE_MAP["enogic_strategy"] = enogic_bot_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -127,6 +142,8 @@ if reminder_bot_finalize:
     FINALIZE_MAP["reminder_strategy"] = reminder_bot_finalize
 if temp_real_estate_finalize:
     FINALIZE_MAP["temp_real_estate_strategy"] = temp_real_estate_finalize
+if enogic_bot_finalize:
+    FINALIZE_MAP["enogic_strategy"] = enogic_bot_finalize
 
 
 def _resolve_agent(agent):

@@ -17,7 +17,8 @@ import os
 from datetime import timedelta
 from corsheaders.defaults import default_headers
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -31,10 +32,6 @@ AZURE_ACCOUNT_NAME = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
 AZURE_ACCOUNT_KEY = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
 AZURE_CUSTOM_DOMAIN = os.environ.get('AZURE_STORAGE_CUSTOM_DOMAIN')
 AZURE_MEDIA_CONTAINER = os.environ.get('AZURE_STORAGE_CONTAINER', 'media')
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 WA_SENDER_API_KEY = os.getenv("WA_SENDER_API_KEY")
 WA_SENDER_WEBHOOK_SECRET = os.getenv("WA_SENDER_WEBHOOK_SECRET")

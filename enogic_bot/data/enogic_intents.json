@@ -1,0 +1,709 @@
+{
+    "global_intents": [],
+    "flow_intents": [
+        {
+            "phase": "GREETING_REPLY",
+            "intents": [
+                {
+                    "intent_name": "enogic_has_msme_yes",
+                    "mp3_file": "enogic_bot/enogic_step2_ask_zed_knowledge.raw",
+                    "next_phase": "ASK_ZED_KNOWLEDGE",
+                    "triggers": [
+                        "yes", "haan", "ha", "ji", "ji haan", "haji", "hanji", "ok", "okay", "sure",
+                        "please", "confirm", "yeah", "yep", "yup", "ya", "yaa", "yas",
+                        "yes please", "yes sure", "yes ok", "yes okay",
+                        "definitely", "absolutely", "surely", "ofcourse", "of course", "certainly",
+
+                        "interested", "interested hoon", "main interested hoon", "hum interested hain",
+                        "interested hu", "interested hai", "interested he",
+
+                        "bataiye", "batao", "bata do", "bata dijiye", "bataao",
+                        "want to know", "tell me more", "tell me", "aage batao",
+
+                        "chahiye", "mujhe chahiye", "hame chahiye", "humein chahiye",
+                        "zaroor", "bilkul", "bilkul haan", "bilkul ji",
+
+                        "proceed", "go ahead", "continue", "haan bataiye", "haan batao",
+
+                        "theek hai", "theek h", "thik hai", "thik h",
+                        "sounds good", "looks good", "great", "good",
+                        "why not", "kyun nahi", "kyu nahi",
+
+                        "register karo", "register kar do", "register kijiye",
+                        "certification chahiye", "certification lena hai", "cert chahiye",
+
+                        "karo", "kar do", "kar dijiye", "aage badho",
+                        "ready hoon", "ready hu", "ready hai", "ready",
+
+                        "haan ji", "haan haan", "ha ha", "hmm haan",
+
+                        "i want", "i need", "mujhe chahiye", "mujhe lena hai",
+                        "sign me up", "register me", "enroll me",
+                        "interested in certification", "zed certification chahiye",
+                        "subsidy chahiye", "government benefit chahiye", "benefit chahiye",
+                        "bronze chahiye", "silver chahiye", "gold chahiye",
+
+                        "kya karna hoga", "aage kya", "next step kya hai",
+                        "kar sakte hain", "ho sakta hai", "possible hai",
+                        "try karte hain", "dekh lete hain", "dekh lo",
+
+                        "help chahiye", "help karo", "help kijiye",
+                        "positive", "agree", "agreed", "done", "deal",
+                        "bas karo shuru", "shuru karo", "shuru kar do",
+
+                        "acha", "accha", "achha", "aacha", "achaa",
+                        "hm", "hmm", "hmmm", "hn", "hnn",
+                        "han", "haan na", "bilkul sahi",
+
+                        "correct", "right", "exactly", "precisely",
+                        "true", "sach", "sahi", "sahi hai", "sahi baat",
+
+                        "hai", "hai ji", "hai haan",
+                        "ha ji", "ha haan", "ha bilkul",
+                        "g", "g ji", "g haan",
+                        "jee", "jee haan", "jee zaroor", "jee bilkul",
+                        "jee ji",
+
+                        "ek second", "ek minute", "just a sec",
+                        "batao kya hai", "kya hota hai", "samjhao",
+                        "kya matlab", "matlab kya hai",
+
+                        "ok fine", "fine", "alright", "all right",
+                        "no problem", "koi baat nahi", "no issue", "no prob",
+
+                        "business hai", "haan business hai", "ji business hai",
+                        "mera business hai", "hamare business hai",
+                        "udyog hai", "udyam hai", "haan udyam hai",
+                        "factory hai", "haan factory hai", "workshop hai",
+                        "shop hai", "dukan hai", "company hai",
+                        "firm hai", "enterprise hai",
+
+                        "msme hai", "haan msme hai", "ji msme hai",
+                        "registered hai", "msme registered hai",
+                        "udyam registered", "udyog aadhaar hai",
+
+                        "manufacturing", "service", "production",
+                        "haan manufacturing hai", "haan service hai",
+
+                        "chhota business", "chota business", "small business",
+                        "medium business", "haan chhota udyog hai",
+
+                        "karte hain", "chalate hain", "chalate hai",
+                        "chala rahe hain", "business chala raha hoon",
+                        "business kar raha hoon", "business karte hain",
+
+                        "registration hai", "registration ho gayi hai",
+                        "documents hain", "sab kuch hai",
+
+                        "aur batao", "haan aur batao", "haan please batao",
+                        "sunna chahta hoon", "sunna chahte hain", "sun raha hoon",
+
+                        "haan kya hai", "haan kya hota hai", "ok batao kya hai",
+                        "thoda batao", "thoda samjhao", "explain karo",
+
+                        "pehli baar sun raha hoon", "naya hai mere liye",
+                        "suna nahi hai", "pata nahi kya hai",
+                        "iske baare mein nahi pata", "samjhao na",
+
+                        "kal baat karo", "thoda time do",
+                        "abhi baat karte hain", "haan abhi baat karo",
+
+                        "i agree", "i confirm", "confirmed",
+                        "yes i do", "yes we do", "yes i have",
+                        "yes we have", "yes of course",
+
+                        "sure why not", "yes definitely",
+                        "yep sure", "yep okay", "yeah sure",
+                        "yeah okay", "yeah go ahead",
+
+                        "bol sakte ho", "bol sakte hain", "bolo",
+                        "bolo ji", "haan bolo", "haan bol sakte ho",
+                        "sunenge", "sun lete hain", "batao na",
+                        "sunate hain", "haan sunate hain",
+
+                        "theek theek", "ha theek hai", "ok ok",
+                        "haan haan theek hai", "bilkul theek hai",
+
+                        "main sunta hoon", "main sun raha hoon",
+                        "hum sun rahe hain",
+
+                        "info do", "information do", "jankari do",
+                        "jankari chahiye", "poori jankari do",
+                        "poori baat batao", "puri detail batao",
+
+                        "haan registration karo", "haan register karo",
+                        "chalo shuru karte hain", "shuru karte hain",
+                        "move forward", "aage chalte hain"
+                    ]
+                },
+                {
+                    "intent_name": "enogic_has_msme_no",
+                    "mp3_file": "enogic_bot/enogic_step9_graceful_exit.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        "no", "nahi", "na", "nope", "nah", "nahin", "naa", "nay",
+                        "not interested", "interested nahi", "interested nahi hoon", "not interested at all",
+                        "nahi chahiye", "nahi lena", "nahi leni", "mujhe nahi chahiye",
+                        "no thanks", "no thank you", "thanks but no", "nahi shukriya",
+                        "not now", "abhi nahi", "baad mein", "later", "baad mein dekhunga",
+                        "busy", "busy hoon", "busy hu", "abhi busy hoon",
+                        "cancel", "stop", "never", "kabhi nahi",
+                        "galat number", "wrong number", "wrong num", "wrong no",
+                        "don't want", "nahi chahiye mujhe", "mat karo",
+                        "not looking", "not needed", "zaroorat nahi",
+                        "baad mein call karo", "phir kabhi", "kuch din baad",
+                        "pehle sochna hai", "sochu nga", "sochna hai",
+                        "already hai", "already certified", "certification hai humara",
+                        "pehle se hai", "ho gaya hai", "kar liya hai",
+                        "time nahi", "abhi waqt nahi", "samay nahi",
+                        "disconnect", "line kat do", "band karo", "rakh do",
+                        "please stop calling", "dobara mat karo call", "mat karo",
+                        "not relevant", "relevant nahi", "kaam ka nahi",
+                        "government se contact karo", "directly karo",
+                        "i'll think", "sochtay hain", "sochte hain",
+                        "maybe later", "shayad baad mein", "shayad",
+                        "go away", "leave me alone", "chhoro",
+                        "not applicable", "applicable nahi", "use nahi",
+                        "no need", "zaroorat nahi mujhe", "need nahi",
+                        "already done", "already registered", "registered hai",
+                        "hum kisi aur se karte hain", "aur jagah se karenge",
+                        "wrong person", "galat insaan", "galat hai",
+                        "i don't need this", "yeh nahi chahiye",
+
+                        "nahi hai", "nahi hai ji", "nahi hai business",
+                        "business nahi hai", "koi business nahi",
+                        "udyog nahi", "udyam nahi", "kuch nahi",
+                        "koi cheez nahi", "nothing",
+
+                        "nahi karte", "nahi karta", "nahi karti",
+                        "nahi chalate", "nahi chala rahe",
+                        "job karta hoon", "job karti hoon", "naukri hai meri",
+                        "naukri hai", "main employee hoon",
+
+                        "mera business nahi", "hamare paas business nahi",
+                        "abhi nahi hai", "filhaal nahi",
+
+                        "sirf ghar hai", "ghar se kaam nahi",
+                        "retired", "retired hoon",
+
+                        "chhod diya", "band ho gaya", "band kar diya",
+                        "business band hai", "kaam band hai",
+                        "dukan band hai", "factory band hai",
+
+                        "msme nahi", "msme nahi hai", "registered nahi",
+                        "registration nahi", "documents nahi",
+                        "udyam nahi hai", "udyog aadhaar nahi",
+
+                        "main nahi jaanta", "mujhe nahi pata",
+                        "nahi samjha", "kya bol rahe ho", "samjha nahi",
+
+                        "galat call", "galat jagah", "yahan koi business nahi",
+                        "aap galat number pe hain",
+
+                        "mujhe mat batao", "mujhe nahi sunna",
+                        "please band karo", "band karo call",
+                        "rakho phone", "rakh do", "rakhta hoon",
+
+                        "nahi nahi", "na na", "bilkul nahi",
+                        "kabhi nahi", "hargiz nahi",
+
+                        "koi fayda nahi", "mujhe koi fayda nahi",
+                        "mere liye nahi", "hamare liye nahi",
+
+                        "call mat karo", "dobara call mat karna",
+                        "number remove karo", "list se hatao",
+                        "DND", "dnd hai", "do not disturb",
+                        "do not call", "dont call again",
+
+                        "busy right now", "abhi busy hoon",
+                        "meeting mein hoon", "baad mein",
+                        "thoda baad mein", "kal karo",
+                        "kal call karna", "kal baat karte hain",
+
+                        "i dont have", "dont have business",
+                        "no business", "not a business owner",
+
+                        "small problem hai", "problem hai",
+                        "issue hai", "dikkat hai",
+
+                        "samajh nahi aaya", "phir se batao",
+                        "kya matlab", "kya bol rahe ho",
+                        "sunai nahi diya", "awaaz nahi aai",
+                        "connection problem", "call drop ho raha hai",
+
+                        "hello hello", "sunai de raha hai kya",
+                        "koi hai", "kaun hai",
+
+                        "bye", "goodbye", "alvida", "tata",
+                        "ok bye", "theek hai bye",
+                        "kal milte hain", "baad mein baat karte hain"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "ASK_ZED_KNOWLEDGE",
+            "intents": [
+                {
+                    "intent_name": "enogic_knows_zed_yes",
+                    "mp3_file": "enogic_bot/enogic_step4_ask_purchase_directly.raw",
+                    "next_phase": "ASK_PURCHASE_CONFIRMATION",
+                    "triggers": [
+                        "yes", "haan", "ha", "ji", "ji haan", "haji", "hanji", "ok", "okay", "sure",
+                        "please", "confirm", "yeah", "yep", "yup", "ya", "yaa", "yas",
+                        "yes please", "yes sure", "yes ok", "yes okay",
+                        "definitely", "absolutely", "surely", "ofcourse", "of course", "certainly",
+
+                        "interested", "interested hoon", "main interested hoon", "hum interested hain",
+                        "interested hu", "interested hai", "interested he",
+
+                        "bataiye", "batao", "bata do", "bata dijiye", "bataao",
+                        "want to know", "tell me more", "tell me", "aage batao",
+
+                        "chahiye", "mujhe chahiye", "hame chahiye", "humein chahiye",
+                        "zaroor", "bilkul", "bilkul haan", "bilkul ji",
+
+                        "proceed", "go ahead", "continue", "haan bataiye", "haan batao",
+
+                        "theek hai", "theek h", "thik hai", "thik h",
+                        "sounds good", "looks good", "great", "good",
+                        "why not", "kyun nahi", "kyu nahi",
+
+                        "register karo", "register kar do", "register kijiye",
+                        "certification chahiye", "certification lena hai", "cert chahiye",
+
+                        "karo", "kar do", "kar dijiye", "aage badho",
+                        "ready hoon", "ready hu", "ready hai", "ready",
+
+                        "haan ji", "haan haan", "ha ha", "hmm haan",
+
+                        "i want", "i need", "mujhe chahiye", "mujhe lena hai",
+                        "sign me up", "register me", "enroll me",
+                        "interested in certification", "zed certification chahiye",
+                        "subsidy chahiye", "government benefit chahiye", "benefit chahiye",
+                        "bronze chahiye", "silver chahiye", "gold chahiye",
+
+                        "kya karna hoga", "aage kya", "next step kya hai",
+                        "kar sakte hain", "ho sakta hai", "possible hai",
+                        "try karte hain", "dekh lete hain", "dekh lo",
+
+                        "help chahiye", "help karo", "help kijiye",
+                        "positive", "agree", "agreed", "done", "deal",
+                        "bas karo shuru", "shuru karo", "shuru kar do",
+
+                        "pata hai", "haan pata hai", "ji pata hai",
+                        "jaanta hoon", "jaanti hoon", "jaante hain",
+                        "haan jaanta hoon", "haan jaante hain",
+                        "suna hai", "haan suna hai", "ji suna hai",
+                        "sun rakha hai", "pehle suna tha",
+                        "familiar hoon", "familiar hai",
+                        "jankari hai", "thodi jankari hai", "kuch jankari hai",
+                        "thoda pata hai", "kuch pata hai",
+                        "haan thoda jaanta hoon", "haan thoda pata hai",
+
+                        "zed ke baare mein pata hai", "zed pata hai",
+                        "zed jaanta hoon", "zed suna hai",
+                        "certification ke baare mein pata hai",
+                        "government certification pata hai",
+                        "quality certification pata hai",
+
+                        "suni thi yeh scheme", "scheme pata hai",
+                        "yojana pata hai", "government yojana hai yeh",
+                        "haan sarkari scheme hai",
+
+                        "kisi ne bataya tha", "friend ne bataya tha",
+                        "bank ne bataya tha", "CA ne bataya tha",
+                        "consultant ne bataya tha", "association ne bataya tha",
+                        "industry mein suna tha", "market mein suna tha",
+
+                        "apply karna tha", "apply karna chahta tha",
+                        "apply karna chahte the", "soch raha tha apply karne ka",
+                        "soch raha tha iske baare mein",
+
+                        "subsidy milti hai na isme", "pata hai subsidy milti hai",
+                        "quality improve hoti hai na", "haan quality ke liye hai",
+                        "manufacturing ke liye hai na",
+
+                        "haan yeh government scheme hai",
+                        "government ne launch kiya hai",
+                        "ministry of msme ka hai",
+
+                        "thoda pata hai baaki batao",
+                        "kuch jaanta hoon aur batao",
+                        "haan suna hai detail mein batao",
+
+                        "awareness hai", "haan awareness hai",
+                        "concept samajh aata hai", "concept pata hai",
+
+                        "acha", "accha", "achha",
+                        "hm", "hmm", "hmmm", "hn",
+                        "han", "haan na",
+
+                        "correct", "right", "exactly", "precisely",
+                        "true", "sach", "sahi", "sahi hai",
+
+                        "theek theek", "ha theek hai", "ok ok",
+                        "haan haan theek hai",
+
+                        "main sunta hoon", "main sun raha hoon",
+                        "hum sun rahe hain",
+
+                        "g", "g ji", "g haan",
+                        "jee", "jee haan", "jee zaroor", "jee bilkul",
+
+                        "chalo batao", "haan chalo", "ok proceed karo",
+                        "aage karo", "next karo", "next step batao"
+                    ]
+                },
+                {
+                    "intent_name": "enogic_knows_zed_no",
+                    "mp3_file": "enogic_bot/enogic_step3_explain_and_ask_purchase.raw",
+                    "next_phase": "ASK_PURCHASE_CONFIRMATION",
+                    "triggers": [
+                        "no", "nahi", "na", "nope", "nah", "nahin", "naa", "nay",
+                        "not interested", "interested nahi", "interested nahi hoon", "not interested at all",
+                        "nahi chahiye", "nahi lena", "nahi leni", "mujhe nahi chahiye",
+                        "no thanks", "no thank you", "thanks but no", "nahi shukriya",
+                        "not now", "abhi nahi", "baad mein", "later", "baad mein dekhunga",
+                        "busy", "busy hoon", "busy hu", "abhi busy hoon",
+                        "cancel", "stop", "never", "kabhi nahi",
+                        "galat number", "wrong number", "wrong num", "wrong no",
+                        "don't want", "nahi chahiye mujhe", "mat karo",
+                        "not looking", "not needed", "zaroorat nahi",
+                        "baad mein call karo", "phir kabhi", "kuch din baad",
+                        "pehle sochna hai", "sochu nga", "sochna hai",
+                        "already hai", "already certified", "certification hai humara",
+                        "pehle se hai", "ho gaya hai", "kar liya hai",
+                        "time nahi", "abhi waqt nahi", "samay nahi",
+                        "disconnect", "line kat do", "band karo", "rakh do",
+                        "please stop calling", "dobara mat karo call", "mat karo",
+                        "not relevant", "relevant nahi", "kaam ka nahi",
+                        "government se contact karo", "directly karo",
+                        "i'll think", "sochtay hain", "sochte hain",
+                        "maybe later", "shayad baad mein", "shayad",
+                        "go away", "leave me alone", "chhoro",
+                        "not applicable", "applicable nahi", "use nahi",
+                        "no need", "zaroorat nahi mujhe", "need nahi",
+                        "already done", "already registered", "registered hai",
+                        "hum kisi aur se karte hain", "aur jagah se karenge",
+                        "wrong person", "galat insaan", "galat hai",
+                        "i don't need this", "yeh nahi chahiye",
+
+                        "nahi pata", "nahi pata ji", "pata nahi",
+                        "nahi jaanta", "nahi jaanti", "nahi jaante",
+                        "kya hota hai", "kya hai yeh", "yeh kya hai",
+                        "samjha nahi", "samajh nahi aaya",
+                        "kuch nahi pata", "bilkul nahi pata",
+
+                        "pehli baar sun raha hoon", "pehli baar suna",
+                        "pehli baar suni", "pehle nahi suna",
+                        "pehle kuch nahi suna", "kabhi nahi suna",
+                        "aaj pehli baar suna", "pahle nahi pata tha",
+
+                        "kya hai zed", "zed kya hai", "yeh zed kya hota hai",
+                        "zed matlab kya", "zed ka matlab kya",
+                        "zed full form kya hai", "full form kya hai",
+
+                        "certification kya hai", "kya certification hai",
+                        "aise certification ke baare mein nahi pata",
+                        "is certification ke baare mein nahi suna",
+
+                        "nahi suna kabhi", "pehle nahi suna tha yeh naam",
+                        "yeh scheme nahi pata", "scheme ke baare mein nahi pata",
+                        "koi scheme nahi pata mujhe",
+
+                        "curious hoon", "janana chahta hoon", "janana chahte hain",
+                        "samjhao mujhe", "explain karo", "batao kya hota hai",
+                        "thoda detail mein batao",
+
+                        "naya lag raha hai", "pehle nahi suna",
+                        "interesting lagta hai batao", "batao kya fayda hai",
+
+                        "zero", "zero pata hai", "zero knowledge",
+                        "no idea", "no clue", "idea nahi",
+                        "clue nahi", "pata nahi kya hota hai",
+
+                        "unfamiliar", "aware nahi", "awareness nahi",
+                        "aware nahi hoon", "koi idea nahi",
+
+                        "hmm kya hai yeh", "arre kya hai bhai",
+                        "bhai kya hai yeh", "yaar kya hai",
+                        "matlab kya", "kya matlab hai iska",
+
+                        "please batao", "haan please batao",
+                        "suno batao", "batao na", "samjhao na",
+                        "acha batao", "acha samjhao",
+
+                        "never heard", "first time hearing",
+                        "not aware", "no knowledge about this",
+                        "don't know", "dont know", "i dont know",
+                        "i have no idea", "what is this",
+
+                        "huh", "kya", "kya bola", "kya bole",
+                        "phir se batao", "dobara bolo",
+                        "sunaai nahi diya", "thoda louder",
+                        "network problem", "call drop",
+
+                        "zed nahi suna", "pahle nahi suna tha",
+                        "pata hi nahi tha", "mujhe idea nahi tha"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "ASK_PURCHASE_CONFIRMATION",
+            "intents": [
+                {
+                    "intent_name": "enogic_purchase_yes",
+                    "mp3_file": "enogic_bot/enogic_step8_closing.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        "yes", "haan", "ha", "ji", "ji haan", "haji", "hanji", "ok", "okay", "sure",
+                        "please", "confirm", "yeah", "yep", "yup", "ya", "yaa", "yas",
+                        "yes please", "yes sure", "yes ok", "yes okay",
+                        "definitely", "absolutely", "surely", "ofcourse", "of course", "certainly",
+
+                        "interested", "interested hoon", "main interested hoon", "hum interested hain",
+                        "interested hu", "interested hai", "interested he",
+
+                        "bataiye", "batao", "bata do", "bata dijiye", "bataao",
+                        "want to know", "tell me more", "tell me", "aage batao",
+
+                        "chahiye", "mujhe chahiye", "hame chahiye", "humein chahiye",
+                        "zaroor", "bilkul", "bilkul haan", "bilkul ji",
+
+                        "proceed", "go ahead", "continue", "haan bataiye", "haan batao",
+
+                        "theek hai", "theek h", "thik hai", "thik h",
+                        "sounds good", "looks good", "great", "good",
+                        "why not", "kyun nahi", "kyu nahi",
+
+                        "register karo", "register kar do", "register kijiye",
+                        "certification chahiye", "certification lena hai", "cert chahiye",
+
+                        "karo", "kar do", "kar dijiye", "aage badho",
+                        "ready hoon", "ready hu", "ready hai", "ready",
+
+                        "haan ji", "haan haan", "ha ha", "hmm haan",
+
+                        "i want", "i need", "mujhe chahiye", "mujhe lena hai",
+                        "sign me up", "register me", "enroll me",
+                        "interested in certification", "zed certification chahiye",
+                        "subsidy chahiye", "government benefit chahiye", "benefit chahiye",
+                        "bronze chahiye", "silver chahiye", "gold chahiye",
+
+                        "kya karna hoga", "aage kya", "next step kya hai",
+                        "kar sakte hain", "ho sakta hai", "possible hai",
+                        "try karte hain", "dekh lete hain", "dekh lo",
+
+                        "help chahiye", "help karo", "help kijiye",
+                        "positive", "agree", "agreed", "done", "deal",
+                        "bas karo shuru", "shuru karo", "shuru kar do",
+
+                        "purchase karna hai", "purchase karenge", "kharidna hai",
+                        "kharidenge", "lena hai", "lenge",
+                        "le lenge", "le lete hain", "le lo",
+
+                        "enroll karna hai", "enroll karenge",
+                        "apply karna hai", "apply karenge",
+                        "apply karte hain", "apply kar do",
+
+                        "registration karo", "registration karni hai",
+                        "registration karenge", "registration karana hai",
+
+                        "price kya hai", "kitna cost hai", "kitne mein milega",
+                        "kitna lagega", "fees kya hai", "charges kya hain",
+                        "cost kya hai", "rate kya hai",
+                        "sab theek hai cost bhi batao", "batao cost kya hai",
+
+                        "subsidy milegi", "subsidy mil jayegi",
+                        "government degi", "sarkaar degi",
+                        "kitni subsidy milegi", "subsidy kitni hai",
+
+                        "documents kya chahiye", "kya kya chahiye",
+                        "kya kya documents chahiye",
+                        "process kya hai", "kya process hai",
+                        "kaise hoga", "kaise karte hain",
+                        "step by step batao", "steps batao",
+
+                        "kitna time lagega", "kab tak milega",
+                        "certification kab milega", "jaldi milega kya",
+                        "time frame kya hai",
+
+                        "online hoga", "offline hoga",
+                        "ghar pe hoga", "kahan jana padega",
+                        "visit karna padega kya",
+
+                        "consultant aayega", "aap aayenge",
+                        "koi aayega kya help ke liye",
+
+                        "bronze level", "silver level", "gold level",
+                        "kaunsa level best hai", "bronze ya silver",
+                        "kaunsa lena chahiye", "suggest karo",
+                        "recommendation do",
+
+                        "accha toh shuru karte hain",
+                        "chalo shuru karte hain", "haan shuru karo",
+                        "aage badhte hain", "chalo proceed karte hain",
+
+                        "mujhe lena hai yeh", "haan yeh lena chahta hoon",
+                        "haan yeh lena chahte hain",
+                        "haan yeh lena chahungi", "leni hai mujhe",
+
+                        "interesting hai lena chahta hoon",
+                        "fayda hua toh le lenge", "theek hai le lete hain",
+                        "soch ke bata raha hoon haan",
+
+                        "family ne bhi kaha tha", "partner ne bhi kaha tha",
+                        "CA bhi bol raha tha",
+                        "industry association ne bhi bataya tha",
+
+                        "competition mein aage rehna hai",
+                        "quality improve karni hai",
+                        "export karna hai isliye chahiye",
+                        "tender bharna hai isliye chahiye",
+                        "government contract chahiye",
+                        "bank loan ke liye chahiye",
+                        "rating badhani hai",
+
+                        "yes finalize", "finalize karo", "done karo",
+                        "book karo", "booking karo",
+
+                        "add karo list mein", "note karo mera naam",
+                        "mera naam note karo",
+
+                        "callback chahiye", "call back karo",
+                        "call karein aap", "team ko bhejo",
+                        "consultant bhejo", "expert bhejo",
+
+                        "whatsapp karo", "whatsapp pe details do",
+                        "email karo", "email pe bhejo",
+                        "link bhejo", "form bhejo",
+
+                        "acha", "accha", "achha",
+                        "hm", "hmm", "hmmm",
+                        "han", "g", "g ji",
+                        "jee", "jee haan", "jee zaroor",
+
+                        "theek theek", "ok ok",
+                        "haan haan theek hai", "bilkul theek hai",
+
+                        "correct", "right", "exactly",
+                        "true", "sach", "sahi hai",
+
+                        "chal jata hoon iske saath",
+                        "theek hai bhai kar do",
+                        "haan bhai le lete hain"
+                    ]
+                },
+                {
+                    "intent_name": "enogic_purchase_no",
+                    "mp3_file": "enogic_bot/enogic_step9_graceful_exit.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        "no", "nahi", "na", "nope", "nah", "nahin", "naa", "nay",
+                        "not interested", "interested nahi", "interested nahi hoon", "not interested at all",
+                        "nahi chahiye", "nahi lena", "nahi leni", "mujhe nahi chahiye",
+                        "no thanks", "no thank you", "thanks but no", "nahi shukriya",
+                        "not now", "abhi nahi", "baad mein", "later", "baad mein dekhunga",
+                        "busy", "busy hoon", "busy hu", "abhi busy hoon",
+                        "cancel", "stop", "never", "kabhi nahi",
+                        "galat number", "wrong number", "wrong num", "wrong no",
+                        "don't want", "nahi chahiye mujhe", "mat karo",
+                        "not looking", "not needed", "zaroorat nahi",
+                        "baad mein call karo", "phir kabhi", "kuch din baad",
+                        "pehle sochna hai", "sochu nga", "sochna hai",
+                        "already hai", "already certified", "certification hai humara",
+                        "pehle se hai", "ho gaya hai", "kar liya hai",
+                        "time nahi", "abhi waqt nahi", "samay nahi",
+                        "disconnect", "line kat do", "band karo", "rakh do",
+                        "please stop calling", "dobara mat karo call", "mat karo",
+                        "not relevant", "relevant nahi", "kaam ka nahi",
+                        "government se contact karo", "directly karo",
+                        "i'll think", "sochtay hain", "sochte hain",
+                        "maybe later", "shayad baad mein", "shayad",
+                        "go away", "leave me alone", "chhoro",
+                        "not applicable", "applicable nahi", "use nahi",
+                        "no need", "zaroorat nahi mujhe", "need nahi",
+                        "already done", "already registered", "registered hai",
+                        "hum kisi aur se karte hain", "aur jagah se karenge",
+                        "wrong person", "galat insaan", "galat hai",
+                        "i don't need this", "yeh nahi chahiye",
+
+                        "purchase nahi karna", "nahi kharidna",
+                        "nahi lena abhi", "abhi nahi lena",
+                        "nahi karenge", "nahi karunga", "nahi karungi",
+
+                        "mehenga lagta hai", "bahut mehenga hai",
+                        "afford nahi kar sakta", "afford nahi hoga",
+                        "budget nahi hai", "paisa nahi hai",
+                        "investment nahi kar sakta",
+                        "abhi capital nahi hai",
+
+                        "baad mein sochenge", "pehle sochna hai",
+                        "ghar pe baat karni hai", "partner se poochhna hai",
+                        "partner se baat karni hai", "CA se poochhunga",
+                        "accountant se poochunga", "family se baat karni hai",
+
+                        "abhi decide nahi kar sakta", "abhi decide nahi kiya",
+                        "time chahiye sochne ka", "thoda time do",
+                        "kuch din mein batata hoon",
+
+                        "pehle kuch aur kaam hai", "busy season hai",
+                        "abhi bohot kaam hai", "baad mein free hoonga",
+
+                        "bahut zyada kaam hai abhi", "load hai bohot",
+
+                        "samajh nahi aaya poora", "phir se samjhao",
+                        "zyada samjha nahi",
+
+                        "convince nahi hua", "fayda samajh nahi aaya",
+                        "clearly nahi pata",
+
+                        "suspicious lagta hai", "fraud lagta hai",
+                        "genuine hai kya", "real hai kya",
+                        "verify karna hai", "pahle verify karenge",
+                        "website dekh ke bataunga",
+
+                        "online padh ke batata hoon", "research kar ke bataunga",
+                        "pahle thoda research karna hai",
+
+                        "kisi aur se poochhunga", "expert se poochhna hai",
+                        "dusre consultant se baat karni hai",
+
+                        "soch ke call karo", "baad mein call karna",
+                        "kal call karna", "week mein call karna",
+                        "next month call karna",
+
+                        "DND", "dnd hai mera", "do not call",
+                        "number remove karo", "list se hatao mera naam",
+                        "dobara mat call karna",
+
+                        "bye", "goodbye", "alvida", "tata",
+                        "ok bye", "theek hai bye",
+                        "band karo", "rakho phone",
+
+                        "hello hello", "sunai de raha hai kya",
+                        "connection nahi hai", "awaaz nahi aa rahi",
+                        "network nahi hai",
+
+                        "nahi bhai", "nahi yaar", "bhai nahi",
+                        "yaar nahi chahiye", "chhodo yaar",
+
+                        "abhi tension hai", "tension mein hoon",
+                        "problem chal rahi hai", "mushkil waqt hai",
+
+                        "business chal nahi raha", "loss mein hain",
+                        "abhi bohot mushkil hai", "hard time chal raha hai",
+
+                        "government pe trust nahi", "sarkaar pe vishwas nahi",
+                        "pehle se bahut schemes aayi hain kuch nahi hua",
+
+                        "pehle kisi aur scheme mein phans chuka hoon",
+                        "aise schemes se dar lagta hai"
+                    ]
+                }
+            ]
+        }
+    ]
+}

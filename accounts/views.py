@@ -641,3 +641,57 @@ def forgot_password_page(request):
 
 def reset_password_page(request):
     return render(request, "reset_password.html")
+
+def support_page(request):
+    return render(request, "support.html")
+
+from django.core.mail import EmailMessage
+from django.conf import settings
+
+class SupportSubmitView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request):
+        description = request.data.get("description", "").strip()
+        if not description:
+            return Response({"error": "Issue description is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        username = user.username
+        email = user.email or "No Email Provided"
+
+        subject = f"[SUPPORT ISSUE] raised by {username}"
+        body = (
+            f"Dear Team,\n\n"
+            f"A new support issue has been submitted by user '{username}' ({email}).\n\n"
+            f"--- Issue Description ---\n"
+            f"{description}\n\n"
+            f"Best regards,\n"
+            f"AI SalesBot Support Notification"
+        )
+
+        recipient_list = ["testing251299@gmail.com"]
+
+        try:
+            email_msg = EmailMessage(
+                subject=subject,
+                body=body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=recipient_list,
+            )
+
+            # Check if an optional image file is uploaded
+            image_file = request.FILES.get("image")
+            if image_file:
+                # Attach the image
+                email_msg.attach(image_file.name, image_file.read(), image_file.content_type)
+
+            email_msg.send(fail_silently=False)
+            return Response({"message": "Your support request has been submitted successfully."}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to send support email: {e}")
+            return Response({"error": f"Failed to submit support request: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

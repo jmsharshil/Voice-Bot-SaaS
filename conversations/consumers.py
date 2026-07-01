@@ -55,6 +55,12 @@ except Exception as e:
     print(f"⚠️ Failed to load TempRealEstateMatcher: {e}")
     TEMP_REAL_ESTATE_MATCHER = None
 
+try:
+    ENOGIC_MATCHER = AutomobileMatcher("enogic_bot/data/enogic_intents.json")
+except Exception as e:
+    print(f"⚠️ Failed to load EnogicMatcher: {e}")
+    ENOGIC_MATCHER = None
+
 from elevenlabs import ElevenLabs, VoiceSettings
 
 ELEVENLABS_CLIENT = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
@@ -164,6 +170,16 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "temp_real_estate_bot/real_estate_step3_ask_budget.raw": "ઓકે, એ તો ઘણો જ સરસ એરિયા છે! અને તમારું અંદાજિત બજેટ કેટલું રાખ્યું છે? કોઈ પણ આશરે કિંમત જણાવશો તો પણ ચાલશે.",
     "temp_real_estate_bot/real_estate_step4_ask_name.raw": "જી ચોક્કસ, મેં વિગત નોંધી લીધી છે. તો બસ છેલ્લે તમારી આ જરૂરિયાત રજીસ્ટર કરવા માટે હું તમારું શુભ નામ જાણી શકું? પ્લીઝ તમારું નામ જણાવો ને.",
     "temp_real_estate_bot/real_estate_step5_closing.raw": "જી ખૂબ ખૂબ આભાર! મેં તમારી બધી જ જરૂરિયાતો અહીંયા નોંધી લીધી છે. અમારી સેલ્સ ટીમ ખૂબ જ ટૂંક સમયમાં તમારો સંપર્ક કરશે અને તમને વધુ માહિતી આપશે. તમારો કિંમતી સમય આપવા બદલ ખૂબ આભાર, આવજો!",
+
+    # ENOGIC MSME ZED CERTIFICATION BOT
+    "enogic_bot/enogic_step1_greeting.raw": "Hello! Namaste... main ENOGIC COMMERCIAL TRADE PRIVATE LIMITED se Shubham bol raha hoon. Kya aapka MSME business hai?",
+    "enogic_bot/enogic_step2_ask_zed_knowledge.raw": "Acha, kya aapko ZED certification ke baare mein pata hai?",
+    "enogic_bot/enogic_step3_explain_and_ask_purchase.raw": "ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Saath hi MSMEs ko government subsidies aur benefits bhi milte hain. Toh kya aap apne business ke liye ZED certification purchase karna chahenge?",
+    "enogic_bot/enogic_step4_ask_purchase_directly.raw": "Bahut accha! Toh kya aap apne business ke liye ZED certification purchase karna chahenge?",
+    "enogic_bot/enogic_step8_closing.raw": "Great! Hamari expert consulting team bahut jald aapse contact karegi. Thank you so much!",
+    "enogic_bot/enogic_step9_graceful_exit.raw": "Bilkul theek hai, koi baat nahi. Agar aapko aage kabhi bhi ZED Certification ya compliance support ki zaroorat ho, toh Enogic hamesha aapke liye ready hai. Apna time dene ke liye shukriya!",
+    "enogic_bot/enogic_step3_cert_intro.raw": "Wonderful! ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Sath hi MSMEs ko government subsidies aur benefits bhi milte hain. Main is inquiry ko register karne ke liye aapki details note kar leti hoon. Sabse pehle, aapka shubh naam kya hai?",
+    "enogic_bot/enogic_step6_ask_business.raw": "Aapke business ka naam kya hai?",
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
@@ -419,11 +435,15 @@ def _inject_english_lang_tags(text: str) -> str:
     return ''.join(result)
 
 
-def build_ssml(text: str, language: str) -> str:
-    voice = TTS_VOICE_MAP.get(language, TTS_VOICE_MAP["en"])
+def build_ssml(text: str, language: str, voice_name: str = None) -> str:
+    voice = voice_name or TTS_VOICE_MAP.get(language, TTS_VOICE_MAP["en"])
     style = SSML_STYLE_MAP.get(language)
     prosody = SSML_PROSODY_MAP.get(language, SSML_PROSODY_MAP["en"])
     lang_tag = {"en": "en-IN", "hi": "hi-IN", "gu": "gu-IN"}.get(language, "en-IN")
+
+    if voice in ["hi-IN-ArjunNeural", "hi-IN-AaravNeural"]:
+        prosody = {"rate": "20%", "pitch": "0%", "volume": "0%"}
+        lang_tag = "hi-IN"
 
     if language == "gu":
         text = text.replace('&', '&amp;')
@@ -627,7 +647,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             state["detected_language"] = language
             if strategy_key == "hospital_minimal":
                 state["step"] = "confirm_interest"
-            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy"]:
+            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "enogic_strategy"]:
                 if strategy_key == "temp_real_estate_strategy":
                     state["call_phase"] = "collect_flat_type"
                 else:
@@ -654,6 +674,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             greeting_file = "reminder_bot/reminder_step1_greeting.raw"
         elif self.strategy_key == "temp_real_estate_strategy":
             greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
+        elif self.strategy_key == "enogic_strategy":
+            greeting_file = "enogic_bot/enogic_step1_greeting.raw"
         elif self.strategy_key == "automobile_Naavya":
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         else:
@@ -1197,14 +1219,17 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         is_loan = getattr(self, "strategy_key", None) == "loan_strategy"
         is_reminder = getattr(self, "strategy_key", None) == "reminder_strategy"
         is_temp_real_estate = getattr(self, "strategy_key", None) == "temp_real_estate_strategy"
+        is_enogic = getattr(self, "strategy_key", None) == "enogic_strategy"
         
-        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER):
+        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER) or (is_enogic and ENOGIC_MATCHER):
             if is_loan:
                 matcher = LOAN_MATCHER
             elif is_reminder:
                 matcher = REMINDER_MATCHER
             elif is_temp_real_estate:
                 matcher = TEMP_REAL_ESTATE_MATCHER
+            elif is_enogic:
+                matcher = ENOGIC_MATCHER
             else:
                 matcher = NAAVYA_MATCHER if is_naavya else AUTOMOBILE_MATCHER
             try:
@@ -1245,6 +1270,15 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                                 "collect_area": "ASK_AREA",
                                 "collect_budget": "ASK_BUDGET",
                                 "collect_name": "ASK_NAME",
+                                "closing": "CLOSING",
+                            }
+                            current_phase = phase_map.get(current_phase, "GREETING_REPLY")
+                        elif is_enogic:
+                            current_phase = session.state.get("call_phase", "interest_confirmation")
+                            phase_map = {
+                                "interest_confirmation": "GREETING_REPLY",
+                                "ask_zed_knowledge": "ASK_ZED_KNOWLEDGE",
+                                "ask_purchase_confirmation": "ASK_PURCHASE_CONFIRMATION",
                                 "closing": "CLOSING",
                             }
                             current_phase = phase_map.get(current_phase, "GREETING_REPLY")
@@ -1322,6 +1356,14 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                                         "CLOSING": "closing"
                                     }
                                     state["call_phase"] = rev_map.get(next_phase, "collect_flat_type")
+                                elif is_enogic:
+                                    rev_map = {
+                                        "GREETING_REPLY": "interest_confirmation",
+                                        "ASK_ZED_KNOWLEDGE": "ask_zed_knowledge",
+                                        "ASK_PURCHASE_CONFIRMATION": "ask_purchase_confirmation",
+                                        "CLOSING": "closing"
+                                    }
+                                    state["call_phase"] = rev_map.get(next_phase, "interest_confirmation")
                                 session.state = state
                                 await sync_to_async(session.save)()
                                 self.current_phase = next_phase
@@ -1438,8 +1480,30 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 print(f"🎯 [PLAY_AUDIO TAG DETECTED IN STATIC REPLY]: {audio_filename}")
                 
                 # Retrieve translation/transcription to log to DB
-                transcription = _AUDIO_TRANSCRIPTIONS.get(audio_filename, reply)
-                await save_message(self.conversation, "bot", transcription)
+                prefixed_audio_filename = audio_filename
+                lang_prefix = f"{self.language}_"
+                if "/" in prefixed_audio_filename:
+                    folder, name = prefixed_audio_filename.split("/", 1)
+                    if not name.startswith(lang_prefix):
+                        prefixed_audio_filename = f"{folder}/{lang_prefix}{name}"
+                else:
+                    if not prefixed_audio_filename.startswith(lang_prefix):
+                        prefixed_audio_filename = f"{lang_prefix}{prefixed_audio_filename}"
+
+                transcription = _AUDIO_TRANSCRIPTIONS.get(prefixed_audio_filename)
+                if not transcription:
+                    transcription = _AUDIO_TRANSCRIPTIONS.get(audio_filename)
+                if not transcription:
+                    # Clean up reply (strip tags) as fallback
+                    clean_reply = re.sub(r'\[\s*PLAY_AUDIO:[^\]]*\]', '', reply, flags=re.I).strip()
+                    clean_reply = re.sub(r'PLAY_AUDIO:\s*[a-zA-Z0-9_\-\./]*(?:\.raw)?', '', clean_reply, flags=re.I).strip()
+                    for t in ["[BOOKING_CONFIRMED]", "[NOT_INTERESTED]", "[LEAD_COMPLETE]", "[END_CALL]"]:
+                        clean_reply = clean_reply.replace(t, "")
+                    clean_reply = clean_reply.replace("[", "").replace("]", "").strip()
+                    transcription = clean_reply
+
+                if transcription:
+                    await save_message(self.conversation, "bot", transcription)
                 
                 if self.tts_task and not self.tts_task.done():
                     self.tts_task.cancel()
@@ -1665,7 +1729,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         # phase's pre-recorded audio question to snap the call back on-track.
         # NOTE: _stream_local_audio_file prepends self.language automatically,
         #       so pass bare filenames (no lang prefix) here.
-        if not prep_result.get("auto_disconnect"):
+        if not prep_result.get("auto_disconnect") and not prep_result.get("skip_flow_followup"):
             _phase_audio = None
             if play_override_audio:
                 _phase_audio = play_override_audio
@@ -1751,7 +1815,10 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             subscription=os.getenv("AZURE_SPEECH_KEY"),
             region=os.getenv("AZURE_SPEECH_REGION")
         )
-        speech_config.speech_synthesis_voice_name = TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
+        if getattr(self, "strategy_key", None) == "enogic_strategy":
+            speech_config.speech_synthesis_voice_name = "hi-IN-ArjunNeural"
+        else:
+            speech_config.speech_synthesis_voice_name = TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
         speech_config.set_speech_synthesis_output_format(
             speechsdk.SpeechSynthesisOutputFormat.Raw8Khz16BitMonoPcm
         )
@@ -1761,6 +1828,31 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
     def _synthesize_ulaw(self, text: str, language: str = None) -> bytes:
         lang = language or self.language
+        is_enogic = (getattr(self, "strategy_key", None) == "enogic_strategy")
+        if is_enogic:
+            # Enogic Voice Bot must strictly use hi-IN-ArjunNeural voice on Azure
+            try:
+                ssml = build_ssml(text, lang, voice_name="hi-IN-ArjunNeural")
+                synthesizer = self._get_synthesizer(lang)
+                result = synthesizer.speak_ssml_async(ssml).get()
+                if result.reason == speechsdk.ResultReason.Canceled:
+                    details = result.cancellation_details
+                    print("❌ Azure TTS Canceled for Enogic:", details.reason, details.error_details)
+                    return b""
+                    
+                pcm = result.audio_data
+                pcm = strip_wav_header(pcm)
+                
+                if len(pcm) % 2 != 0:
+                    pcm = pcm[:-1]
+                    
+                # Swara voice gain adjustment
+                pcm = _amplify_pcm(pcm, gain=1.2)
+                return encode_g711(pcm)
+            except Exception as azure_err:
+                print(f"❌ Azure synthesis failed for Enogic: {azure_err}")
+                return b""
+
         is_loan_hi = (lang == "hi" and getattr(self, "strategy_key", None) == "loan_strategy")
         if lang == "gu" or is_loan_hi:
             import requests
