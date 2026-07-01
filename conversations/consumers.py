@@ -1182,7 +1182,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             
         # Record the bot reply in the database chat logs
         if save_to_db:
-            transcription = _AUDIO_TRANSCRIPTIONS.get(filename)
+            basename = filename.split("/")[-1]
+            transcription = _AUDIO_TRANSCRIPTIONS.get(basename)
             if transcription:
                 await save_message(self.conversation, "bot", transcription)
 

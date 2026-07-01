@@ -1184,7 +1184,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
     # ================= AI (STREAMING) =================
 
-    async def _stream_local_audio_file(self, filename):
+    async def _stream_local_audio_file(self, filename, save_to_db=True):
         """Read a local .raw audio file and stream it to the WebSocket."""
         filename = filename.replace(".mp3", ".raw")
         
@@ -1202,9 +1202,11 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     filename = f"{lang_prefix}{filename}"
             
         # Record the bot reply in the database chat logs
-        transcription = _AUDIO_TRANSCRIPTIONS.get(filename)
-        if transcription:
-            await save_message(self.conversation, "bot", transcription)
+        if save_to_db:
+            basename = filename.split("/")[-1]
+            transcription = _AUDIO_TRANSCRIPTIONS.get(basename)
+            if transcription:
+                await save_message(self.conversation, "bot", transcription)
 
         file_path = os.path.join("mp3_responses", filename)
         if not os.path.exists(file_path):
@@ -1460,9 +1462,6 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     mp3_filename = match_result["mp3"]
                     raw_filename = mp3_filename.replace(".mp3", ".raw")
                     
-                    transcription = _AUDIO_TRANSCRIPTIONS.get(raw_filename, raw_filename)
-                    await save_message(self.conversation, "bot", transcription)
-                    
                     await self._stream_local_audio_file(raw_filename)
 
                     # 6. Auto-disconnect if this was a closing intent
@@ -1606,7 +1605,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     except asyncio.CancelledError:
                         pass
                         
-                self.tts_task = asyncio.create_task(self._stream_local_audio_file(audio_filename))
+                self.tts_task = asyncio.create_task(self._stream_local_audio_file(audio_filename, save_to_db=False))
             else:
                 reply_for_user = reply
                 if not skip_output_translation and self.language != "en":
