@@ -79,6 +79,15 @@ except ImportError:
     enogic_bot_strategy = None
     enogic_bot_prepare = None
     enogic_bot_finalize = None
+    from samsung_bot.strategy import (
+        samsung_store_strategy,
+        samsung_store_prepare,
+        samsung_store_finalize,
+    )
+except ImportError:
+    samsung_store_strategy = None
+    samsung_store_prepare = None
+    samsung_store_finalize = None
 
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
@@ -103,6 +112,8 @@ if temp_real_estate_strategy:
     STRATEGY_MAP["temp_real_estate_strategy"] = temp_real_estate_strategy
 if enogic_bot_strategy:
     STRATEGY_MAP["enogic_strategy"] = enogic_bot_strategy
+if samsung_store_strategy:
+    STRATEGY_MAP["samsung_store_strategy"] = samsung_store_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -124,6 +135,8 @@ if temp_real_estate_prepare:
     PREPARE_MAP["temp_real_estate_strategy"] = temp_real_estate_prepare
 if enogic_bot_prepare:
     PREPARE_MAP["enogic_strategy"] = enogic_bot_prepare
+if samsung_store_prepare:
+    PREPARE_MAP["samsung_store_strategy"] = samsung_store_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -144,6 +157,8 @@ if temp_real_estate_finalize:
     FINALIZE_MAP["temp_real_estate_strategy"] = temp_real_estate_finalize
 if enogic_bot_finalize:
     FINALIZE_MAP["enogic_strategy"] = enogic_bot_finalize
+if samsung_store_finalize:
+    FINALIZE_MAP["samsung_store_strategy"] = samsung_store_finalize
 
 
 def _resolve_agent(agent):
@@ -198,7 +213,7 @@ def process_message(agent, message, session_id=None):
     if not reply:
         reply = "I'm sorry, I didn't catch that. Could you please rephrase?"
 
-    print("⏱ Total Message Time:", time.time() - start_time)
+    print("[TIME] Total Message Time:", time.time() - start_time)
     return reply, session_id
 
 
@@ -232,14 +247,14 @@ def prepare_streaming(agent, message, session_id=None, **kwargs):
         reply = strategy_fn(agent, message, session, **kwargs)
         if not reply:
             reply = "I'm sorry, I didn't catch that. Could you please rephrase?"
-        print("⏱ Prepare Time (fallback):", round(time.time() - start_time, 3), "s")
+        print("[TIME] Prepare Time (fallback):", round(time.time() - start_time, 3), "s")
         return {"static_reply": reply, "session_id": session_id}
 
     # ⚡ NAME COLLECTION: If we asked for the user's name last turn, capture it and disconnect
     state = session.state or {}
     if state.get("name_collection_pending"):
         user_name = message.strip()
-        print(f"📝 USER NAME COLLECTED: {user_name}")
+        print(f"[NAME] USER NAME COLLECTED: {user_name}")
         
         # Save name to session state
         state["user_name"] = user_name
@@ -259,7 +274,7 @@ def prepare_streaming(agent, message, session_id=None, **kwargs):
         }
         farewell = farewells.get(detected_lang, farewells["hi"])
 
-        print("⏱ Prepare Time:", round(time.time() - start_time, 3), "s")
+        print("[TIME] Prepare Time:", round(time.time() - start_time, 3), "s")
         return {
             "static_reply": farewell,
             "auto_disconnect": True,
@@ -295,13 +310,13 @@ def prepare_streaming(agent, message, session_id=None, **kwargs):
             "If the user is NOT confirming (asking a different question, declining, etc.), "
             "do NOT add the tag — just respond normally."
         )
-        print(f"📋 Booking was offered last turn — LLM will detect confirmation")
+        print(f"[BOOKING] Booking was offered last turn — LLM will detect confirmation")
         # Clear the flag (one-shot check)
         state.pop("booking_offered", None)
         from conversations.services.core.strategies import save_session
         save_session(session, state)
 
-    print("⏱ Prepare Time:", round(time.time() - start_time, 3), "s")
+    print("[TIME] Prepare Time:", round(time.time() - start_time, 3), "s")
     return result
 
 
@@ -328,9 +343,9 @@ def finalize_streaming(response, prep_result):
             # SAFETY CHECK: If the bot response contains a question mark '?', it is asking a question.
             # We must NOT auto-disconnect because the user needs to answer the question!
             if "?" in response:
-                print(f"⚠️ Ignored {tag} because the reply contains a question mark '?' and expects an answer from the user.")
+                print(f"[WARN] Ignored {tag} because the reply contains a question mark '?' and expects an answer from the user.")
                 continue
-            print(f"📴 {tag} found (strategy={strategy_key}) — auto_disconnect")
+            print(f"[DISCONNECT] {tag} found (strategy={strategy_key}) — auto_disconnect")
             prep_result["auto_disconnect"] = True
             # Skip name collection only for explicit non-interest
             if tag in ["[NOT_INTERESTED]", "[END_CALL]"]:
@@ -346,7 +361,7 @@ def finalize_streaming(response, prep_result):
             state["booking_offered"] = True
             from conversations.services.core.strategies import save_session
             save_session(session, state)
-            print(f"📋 BOOKING OFFERED detected (strategy={strategy_key}) — waiting for user confirmation")
+            print(f"[BOOKING] BOOKING OFFERED detected (strategy={strategy_key}) — waiting for user confirmation")
 
 
 
@@ -404,13 +419,13 @@ def get_agent_tts_language(agent_id):
         agent = VoiceAgent.objects.get(id=agent_id)
         role_name = agent.role_template.role_name if agent.role_template else ""
         strategy_key = get_role_strategy(role_name)
-        print(f"🔍 Agent role_name: {role_name} | strategy_key: {strategy_key}")
+        print(f"[LOOKUP] Agent role_name: {role_name} | strategy_key: {strategy_key}")
 
-        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy"]:
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy"]:
             return "gu"           # Gujarati, Dhwani voice
         elif strategy_key == "interview_bot":
             return "interview_en" # English only, no translation
         return "en"               # All others — Hinglish
     except Exception as e:
-        print(f"❌ get_agent_tts_language error: {e}")
+        print(f"[ERROR] get_agent_tts_language error: {e}")
         return "en"
