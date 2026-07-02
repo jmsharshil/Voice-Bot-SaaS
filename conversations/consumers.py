@@ -38,50 +38,6 @@ from django.utils import timezone
 
 from agents.models import VoiceAgent
 from conversations.models import Conversation, Message, LeadAnalysis
-from automobile_matcher import AutomobileMatcher
-
-# --- GLOBAL MATCHER (Loaded once at startup) ---
-try:
-    AUTOMOBILE_MATCHER = AutomobileMatcher("automobile_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load AutomobileMatcher: {e}")
-    AUTOMOBILE_MATCHER = None
-
-try:
-    NAAVYA_MATCHER = AutomobileMatcher("automobile_bot/data/Naavya_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load NaavyaMatcher: {e}")
-    NAAVYA_MATCHER = None
-
-try:
-    LOAN_MATCHER = AutomobileMatcher("loan_bot/data/loan_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load LoanMatcher: {e}")
-    LOAN_MATCHER = None
-
-try:
-    REMINDER_MATCHER = AutomobileMatcher("reminder_bot/data/reminder_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load ReminderMatcher: {e}")
-    REMINDER_MATCHER = None
-
-try:
-    TEMP_REAL_ESTATE_MATCHER = AutomobileMatcher("temp_real_estate_bot/data/real_estate_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load TempRealEstateMatcher: {e}")
-    TEMP_REAL_ESTATE_MATCHER = None
-
-try:
-    ENOGIC_MATCHER = AutomobileMatcher("enogic_bot/data/enogic_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load EnogicMatcher: {e}")
-    ENOGIC_MATCHER = None
-
-try:
-    SAMSUNG_MATCHER = AutomobileMatcher("samsung_bot/data/samsung_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load SamsungMatcher: {e}")
-    SAMSUNG_MATCHER = None
 
 from elevenlabs import ElevenLabs, VoiceSettings
 

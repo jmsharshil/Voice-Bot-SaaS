@@ -6,6 +6,8 @@ import os
 import sys
 import codecs
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 # Prevent Windows console encoding errors with emojis/non-ASCII chars
 if sys.stdout.encoding != 'utf-8':
     sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'replace')

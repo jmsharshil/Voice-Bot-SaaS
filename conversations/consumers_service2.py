@@ -37,48 +37,18 @@ from agents.models import VoiceAgent
 from conversations.models import Conversation, Message, LeadAnalysis
 from automobile_matcher import AutomobileMatcher
 
-# --- GLOBAL MATCHER (Loaded once at startup) ---
-try:
-    AUTOMOBILE_MATCHER = AutomobileMatcher("automobile_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load AutomobileMatcher: {e}")
-    AUTOMOBILE_MATCHER = None
+# --- LAZY MATCHER LOADERS ---
+_MATCHERS = {}
 
-try:
-    NAAVYA_MATCHER = AutomobileMatcher("automobile_bot/data/Naavya_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load NaavyaMatcher: {e}")
-    NAAVYA_MATCHER = None
-
-try:
-    LOAN_MATCHER = AutomobileMatcher("loan_bot/data/loan_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load LoanMatcher: {e}")
-    LOAN_MATCHER = None
-
-try:
-    REMINDER_MATCHER = AutomobileMatcher("reminder_bot/data/reminder_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load ReminderMatcher: {e}")
-    REMINDER_MATCHER = None
-
-try:
-    TEMP_REAL_ESTATE_MATCHER = AutomobileMatcher("temp_real_estate_bot/data/real_estate_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load TempRealEstateMatcher: {e}")
-    TEMP_REAL_ESTATE_MATCHER = None
-
-try:
-    ENOGIC_MATCHER = AutomobileMatcher("enogic_bot/data/enogic_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load EnogicMatcher: {e}")
-    ENOGIC_MATCHER = None
-
-try:
-    SAMSUNG_MATCHER = AutomobileMatcher("samsung_bot/data/samsung_intents.json")
-except Exception as e:
-    print(f"⚠️ Failed to load SamsungMatcher: {e}")
-    SAMSUNG_MATCHER = None
+def get_matcher(name: str, intents_file: str) -> AutomobileMatcher:
+    if name not in _MATCHERS:
+        try:
+            print(f"🚀 [LAZY-LOAD]: Loading and embedding {name} from {intents_file}...")
+            _MATCHERS[name] = AutomobileMatcher(intents_file)
+        except Exception as e:
+            print(f"⚠️ Failed to load {name} ({intents_file}): {e}")
+            _MATCHERS[name] = None
+    return _MATCHERS[name]
 
 from elevenlabs import ElevenLabs, VoiceSettings
 
@@ -1349,19 +1319,24 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         is_enogic = getattr(self, "strategy_key", None) == "enogic_strategy"
         is_samsung_store = getattr(self, "strategy_key", None) == "samsung_store_strategy"
         
-        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER) or (is_enogic and ENOGIC_MATCHER) or (is_samsung_store and SAMSUNG_MATCHER):
-            if is_loan:
-                matcher = LOAN_MATCHER
-            elif is_reminder:
-                matcher = REMINDER_MATCHER
-            elif is_temp_real_estate:
-                matcher = TEMP_REAL_ESTATE_MATCHER
-            elif is_enogic:
-                matcher = ENOGIC_MATCHER
-            elif is_samsung_store:
-                matcher = SAMSUNG_MATCHER
-            else:
-                matcher = NAAVYA_MATCHER if is_naavya else AUTOMOBILE_MATCHER
+        # Determine Matcher lazily
+        matcher = None
+        if is_automobile:
+            matcher = get_matcher("AUTOMOBILE_MATCHER", "automobile_intents.json")
+        elif is_naavya:
+            matcher = get_matcher("NAAVYA_MATCHER", "automobile_bot/data/Naavya_intents.json")
+        elif is_loan:
+            matcher = get_matcher("LOAN_MATCHER", "loan_bot/data/loan_intents.json")
+        elif is_reminder:
+            matcher = get_matcher("REMINDER_MATCHER", "reminder_bot/data/reminder_intents.json")
+        elif is_temp_real_estate:
+            matcher = get_matcher("TEMP_REAL_ESTATE_MATCHER", "temp_real_estate_bot/data/real_estate_intents.json")
+        elif is_enogic:
+            matcher = get_matcher("ENOGIC_MATCHER", "enogic_bot/data/enogic_intents.json")
+        elif is_samsung_store:
+            matcher = get_matcher("SAMSUNG_MATCHER", "samsung_bot/data/samsung_intents.json")
+
+        if matcher:
             try:
                 # 1. Initialize/Load current phase (Safe attribute check)
                 current_phase = "GREETING_REPLY"
