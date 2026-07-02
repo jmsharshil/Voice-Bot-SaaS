@@ -26,7 +26,7 @@ AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 
-
+# Azure Blob Storage settings are configured dynamically below.
 
 WA_SENDER_API_KEY = os.getenv("WA_SENDER_API_KEY")
 WA_SENDER_WEBHOOK_SECRET = os.getenv("WA_SENDER_WEBHOOK_SECRET")
@@ -248,10 +248,9 @@ STATICFILES_DIRS = [
        # os.path.join(BASE_DIR, 'bot', 'static'),
 ]
 
-
 # ✅ Azure Storage & Media Configuration
 USE_AZURE_MEDIA = os.environ.get("USE_AZURE_MEDIA", "0") in ("1", "true", "True") or os.environ.get("USE_AZURE_STORAGE", "False") == "True"
- 
+
 if USE_AZURE_MEDIA:
     AZURE_ACCOUNT_NAME = os.environ.get("AZURE_STORAGE_ACCOUNT_NAME") or os.environ.get("AZURE_ACCOUNT_NAME")
     AZURE_ACCOUNT_KEY  = os.environ.get("AZURE_STORAGE_ACCOUNT_KEY") or os.environ.get("AZURE_ACCOUNT_KEY")
@@ -267,7 +266,6 @@ if USE_AZURE_MEDIA:
     # AZURE_URL_EXPIRATION_SECS = int(os.environ.get("AZURE_URL_EXPIRATION_SECS", 3600))
     AZURE_URL_EXPIRATION_SECS = None
     AZURE_OVERWRITE_FILES = False
- 
     # ✅ New-style Django 4.2/5.x storage config
     STORAGES = {
         "default": {
@@ -277,19 +275,17 @@ if USE_AZURE_MEDIA:
             "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
         },
     }
- 
     WHITENOISE_USE_FINDERS = True
     MEDIA_URL = f"https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/"
 else:
     MEDIA_URL  = "/media/"
     MEDIA_ROOT = os.path.join(BASE_DIR, "media")
-   
+    
     AZURE_ACCOUNT_NAME = None
     AZURE_ACCOUNT_KEY = None
     AZURE_CONTAINER = "media"
     AZURE_MEDIA_CONTAINER = "media"
     AZURE_CUSTOM_DOMAIN = None
- 
     STORAGES = {
         "default": {
             "BACKEND": "django.core.files.storage.FileSystemStorage",

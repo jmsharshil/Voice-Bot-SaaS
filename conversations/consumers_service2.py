@@ -1,6 +1,3 @@
-        
-
-
 from urllib.parse import parse_qs
 import audioop
 from asgiref.sync import sync_to_async
@@ -202,7 +199,15 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "temp_real_estate_bot/real_estate_step4_ask_name.raw": "જી ચોક્કસ, મેં વિગત નોંધી લીધી છે. તો બસ છેલ્લે તમારી આ જરૂરિયાત રજીસ્ટર કરવા માટે હું તમારું શુભ નામ જાણી શકું? પ્લીઝ તમારું નામ જણાવો ને.",
     "temp_real_estate_bot/real_estate_step5_closing.raw": "જી ખૂબ ખૂબ આભાર! મેં તમારી બધી જ જરૂરિયાતો અહીંયા નોંધી લીધી છે. અમારી સેલ્સ ટીમ ખૂબ જ ટૂંક સમયમાં તમારો સંપર્ક કરશે અને તમને વધુ માહિતી આપશે. તમારો કિંમતી સમય આપવા બદલ ખૂબ આભાર, આવજો!",
 
-
+    # ENOGIC MSME ZED CERTIFICATION BOT
+    "enogic_bot/enogic_step1_greeting.raw": "Hello! Namaste... main ENOGIC COMMERCIAL TRADE PRIVATE LIMITED se Shubham bol raha hoon. Kya aapka MSME business hai?",
+    "enogic_bot/enogic_step2_ask_zed_knowledge.raw": "Acha, kya aapko ZED certification ke baare mein pata hai?",
+    "enogic_bot/enogic_step3_explain_and_ask_purchase.raw": "ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Saath hi MSMEs ko government subsidies aur benefits bhi milte hain. Toh kya aap apne business ke liye ZED certification purchase karna chahenge?",
+    "enogic_bot/enogic_step4_ask_purchase_directly.raw": "Bahut accha! Toh kya aap apne business ke liye ZED certification purchase karna chahenge?",
+    "enogic_bot/enogic_step8_closing.raw": "Great! Hamari expert consulting team bahut jald aapse contact karegi. Thank you so much!",
+    "enogic_bot/enogic_step9_graceful_exit.raw": "Bilkul theek hai, koi baat nahi. Agar aapko aage kabhi bhi ZED Certification ya compliance support ki zaroorat ho, toh Enogic hamesha aapke liye ready hai. Apna time dene ke liye shukriya!",
+    "enogic_bot/enogic_step3_cert_intro.raw": "Wonderful! ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Sath hi MSMEs ko government subsidies aur benefits bhi milte hain. Main is inquiry ko register karne ke liye aapki details note kar leti hoon. Sabse pehle, aapka shubh naam kya hai?",
+    "enogic_bot/enogic_step6_ask_business.raw": "Aapke business ka naam kya hai?",
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
@@ -1269,7 +1274,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         # Record the bot reply in the database chat logs
         if save_to_db:
             basename = filename.split("/")[-1]
-            transcription = _AUDIO_TRANSCRIPTIONS.get(basename)
+            transcription = _AUDIO_TRANSCRIPTIONS.get(filename) or _AUDIO_TRANSCRIPTIONS.get(basename)
             if transcription:
                 await save_message(self.conversation, "bot", transcription)
 
