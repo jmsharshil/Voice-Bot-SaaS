@@ -66,7 +66,7 @@ ELEVENLABS_VOICE_MAP = {
 
 _AUDIO_TRANSCRIPTIONS: dict = {
     # HINDI
-    "hi_step1_greeting.raw": "Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge!",
+    "hi_step1_greeting.raw": "Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge! Kya aap abhi baat kar sakte hain?",
     "hi_step2_confirm_interest.raw": "Aapne Kia Seltos mein interest show kiya tha... Ahmedabad se? Kya main sahi samajh rahi hoon?",
     "hi_step2_end_call.raw": "Koi baat nahi, aapka bahut bahut shukriya ki aapne call receive ki. Jab bhi koi zaroorat ho, hum hamesha aapki seva mein taiyaar hain. Aapka din bahut achha bita karein. Take care. Namaste!",
     "hi_step3_ask_timeline.raw": "Thank you! Waise bhi, Kia Seltos ek bahut hi shandar car hai — aapne sach mein bahut achhi car choose ki hai. Aap car is mahine lene ka plan kar rahe hain?... ya agle mahine?",
@@ -170,7 +170,7 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "temp_real_estate_bot/real_estate_step5_closing.raw": "જી ખૂબ ખૂબ આભાર! મેં તમારી બધી જ જરૂરિયાતો અહીંયા નોંધી લીધી છે. અમારી સેલ્સ ટીમ ખૂબ જ ટૂંક સમયમાં તમારો સંપર્ક કરશે અને તમને વધુ માહિતી આપશે. તમારો કિંમતી સમય આપવા બદલ ખૂબ આભાર, આવજો!",
 
     # ENOGIC MSME ZED CERTIFICATION BOT
-    "enogic_bot/enogic_step1_greeting.raw": "Hello! Namaste... main ENOGIC COMMERCIAL TRADE PRIVATE LIMITED se Shubham bol raha hoon. Kya aapka MSME business hai?",
+    "enogic_bot/enogic_step1_greeting.raw": "Hello! Namaste... main Shubham bol raha hoon. Kya aapka MSME business hai?",
     "enogic_bot/enogic_step2_ask_zed_knowledge.raw": "Acha, kya aapko ZED certification ke baare mein pata hai?",
     "enogic_bot/enogic_step3_explain_and_ask_purchase.raw": "ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Saath hi MSMEs ko government subsidies aur benefits bhi milte hain. Toh kya aap apne business ke liye ZED certification purchase karna chahenge?",
     "enogic_bot/enogic_step4_ask_purchase_directly.raw": "Bahut accha! Toh kya aap apne business ke liye ZED certification purchase karna chahenge?",
@@ -1384,6 +1384,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                                 "interest_confirmation": "GREETING_REPLY",
                                 "ask_zed_knowledge": "ASK_ZED_KNOWLEDGE",
                                 "ask_purchase_confirmation": "ASK_PURCHASE_CONFIRMATION",
+                                "ask_purchase_confirmation_direct": "ASK_PURCHASE_CONFIRMATION_DIRECT",
+                                "ask_purchase_confirmation_explained": "ASK_PURCHASE_CONFIRMATION_EXPLAINED",
                                 "closing": "CLOSING",
                             }
                             current_phase = phase_map.get(current_phase, "GREETING_REPLY")
@@ -1466,6 +1468,16 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                                     state["call_phase"] = rev_map.get(next_phase, "collect_flat_type")
                                 elif is_samsung_store:
                                     state["call_phase"] = next_phase
+                                elif is_enogic:
+                                    rev_map = {
+                                        "GREETING_REPLY": "interest_confirmation",
+                                        "ASK_ZED_KNOWLEDGE": "ask_zed_knowledge",
+                                        "ASK_PURCHASE_CONFIRMATION": "ask_purchase_confirmation",
+                                        "ASK_PURCHASE_CONFIRMATION_DIRECT": "ask_purchase_confirmation_direct",
+                                        "ASK_PURCHASE_CONFIRMATION_EXPLAINED": "ask_purchase_confirmation_explained",
+                                        "CLOSING": "closing"
+                                    }
+                                    state["call_phase"] = rev_map.get(next_phase, "interest_confirmation")
                                 session.state = state
                                 await sync_to_async(session.save)()
                                 self.current_phase = next_phase

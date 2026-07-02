@@ -11,18 +11,19 @@ logger = logging.getLogger("SamsungBotStrategy")
 MAX_MESSAGE_LENGTH = 1000
 MAX_TURNS = 10
 
-# Load and embed Samsung intents matcher once at server startup
-# This completely eliminates loading latency and terminal progress bars during active calls.
-try:
-    from automobile_matcher import AutomobileMatcher
-    logger.info("Pre-loading Samsung Store intents matcher at server startup...")
-    SAMSUNG_MATCHER = AutomobileMatcher("samsung_bot/data/samsung_intents.json")
-    logger.info("Samsung Store intents matcher loaded successfully at startup.")
-except Exception as e:
-    logger.error(f"Failed to initialize global SAMSUNG_MATCHER at startup: {e}")
-    SAMSUNG_MATCHER = None
+SAMSUNG_MATCHER = None
 
 def get_samsung_matcher():
+    global SAMSUNG_MATCHER
+    if SAMSUNG_MATCHER is None:
+        try:
+            from automobile_matcher import AutomobileMatcher
+            logger.info("Lazy-loading Samsung Store intents matcher...")
+            SAMSUNG_MATCHER = AutomobileMatcher("samsung_bot/data/samsung_intents.json")
+            logger.info("Samsung Store intents matcher loaded successfully.")
+        except Exception as e:
+            logger.error(f"Failed to initialize global SAMSUNG_MATCHER: {e}")
+            SAMSUNG_MATCHER = None
     return SAMSUNG_MATCHER
 
 def _samsung_sanitise(message: str) -> str:

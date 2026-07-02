@@ -38,6 +38,20 @@ from django.utils import timezone
 
 from agents.models import VoiceAgent
 from conversations.models import Conversation, Message, LeadAnalysis
+from automobile_matcher import AutomobileMatcher
+
+# --- LAZY MATCHER LOADERS ---
+_MATCHERS = {}
+
+def get_matcher(name: str, intents_file: str) -> AutomobileMatcher:
+    if name not in _MATCHERS:
+        try:
+            print(f"🚀 [LAZY-LOAD]: Loading and embedding {name} from {intents_file}...")
+            _MATCHERS[name] = AutomobileMatcher(intents_file)
+        except Exception as e:
+            print(f"⚠️ Failed to load {name} ({intents_file}): {e}")
+            _MATCHERS[name] = None
+    return _MATCHERS[name]
 
 from elevenlabs import ElevenLabs, VoiceSettings
 
@@ -55,7 +69,7 @@ ELEVENLABS_VOICE_MAP = {
 
 _AUDIO_TRANSCRIPTIONS: dict = {
     # HINDI
-    "hi_step1_greeting.raw": "Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge!",
+    "hi_step1_greeting.raw": "Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge! Kya aap abhi baat kar sakte hain?",
     "hi_step2_confirm_interest.raw": "Aapne Kia Seltos mein interest show kiya tha... Ahmedabad se? Kya main sahi samajh rahi hoon?",
     "hi_step2_end_call.raw": "Koi baat nahi, aapka bahut bahut shukriya ki aapne call receive ki. Jab bhi koi zaroorat ho, hum hamesha aapki seva mein taiyaar hain. Aapka din bahut achha bita karein. Take care. Namaste!",
     "hi_step3_ask_timeline.raw": "Thank you! Waise bhi, Kia Seltos ek bahut hi shandar car hai — aapne sach mein bahut achhi car choose ki hai. Aap car is mahine lene ka plan kar rahe hain?... ya agle mahine?",
@@ -159,7 +173,7 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "temp_real_estate_bot/real_estate_step5_closing.raw": "જી ખૂબ ખૂબ આભાર! મેં તમારી બધી જ જરૂરિયાતો અહીંયા નોંધી લીધી છે. અમારી સેલ્સ ટીમ ખૂબ જ ટૂંક સમયમાં તમારો સંપર્ક કરશે અને તમને વધુ માહિતી આપશે. તમારો કિંમતી સમય આપવા બદલ ખૂબ આભાર, આવજો!",
 
     # ENOGIC MSME ZED CERTIFICATION BOT
-    "enogic_bot/enogic_step1_greeting.raw": "Hello! Namaste... main ENOGIC COMMERCIAL TRADE PRIVATE LIMITED se Shubham bol raha hoon. Kya aapka MSME business hai?",
+    "enogic_bot/enogic_step1_greeting.raw": "Hello! Namaste... main Shubham bol raha hoon. Kya aapka MSME business hai?",
     "enogic_bot/enogic_step2_ask_zed_knowledge.raw": "Acha, kya aapko ZED certification ke baare mein pata hai?",
     "enogic_bot/enogic_step3_explain_and_ask_purchase.raw": "ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Saath hi MSMEs ko government subsidies aur benefits bhi milte hain. Toh kya aap apne business ke liye ZED certification purchase karna chahenge?",
     "enogic_bot/enogic_step4_ask_purchase_directly.raw": "Bahut accha! Toh kya aap apne business ke liye ZED certification purchase karna chahenge?",
@@ -1273,19 +1287,24 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         is_enogic = getattr(self, "strategy_key", None) == "enogic_strategy"
         is_samsung_store = getattr(self, "strategy_key", None) == "samsung_store_strategy"
         
-        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER) or (is_enogic and ENOGIC_MATCHER) or (is_samsung_store and SAMSUNG_MATCHER):
-            if is_loan:
-                matcher = LOAN_MATCHER
-            elif is_reminder:
-                matcher = REMINDER_MATCHER
-            elif is_temp_real_estate:
-                matcher = TEMP_REAL_ESTATE_MATCHER
-            elif is_enogic:
-                matcher = ENOGIC_MATCHER
-            elif is_samsung_store:
-                matcher = SAMSUNG_MATCHER
-            else:
-                matcher = NAAVYA_MATCHER if is_naavya else AUTOMOBILE_MATCHER
+        # Determine Matcher lazily
+        matcher = None
+        if is_automobile:
+            matcher = get_matcher("AUTOMOBILE_MATCHER", "automobile_intents.json")
+        elif is_naavya:
+            matcher = get_matcher("NAAVYA_MATCHER", "automobile_bot/data/Naavya_intents.json")
+        elif is_loan:
+            matcher = get_matcher("LOAN_MATCHER", "loan_bot/data/loan_intents.json")
+        elif is_reminder:
+            matcher = get_matcher("REMINDER_MATCHER", "reminder_bot/data/reminder_intents.json")
+        elif is_temp_real_estate:
+            matcher = get_matcher("TEMP_REAL_ESTATE_MATCHER", "temp_real_estate_bot/data/real_estate_intents.json")
+        elif is_enogic:
+            matcher = get_matcher("ENOGIC_MATCHER", "enogic_bot/data/enogic_intents.json")
+        elif is_samsung_store:
+            matcher = get_matcher("SAMSUNG_MATCHER", "samsung_bot/data/samsung_intents.json")
+
+        if matcher:
             try:
                 # 1. Initialize/Load current phase (Safe attribute check)
                 current_phase = "GREETING_REPLY"
@@ -1333,6 +1352,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                                 "interest_confirmation": "GREETING_REPLY",
                                 "ask_zed_knowledge": "ASK_ZED_KNOWLEDGE",
                                 "ask_purchase_confirmation": "ASK_PURCHASE_CONFIRMATION",
+                                "ask_purchase_confirmation_direct": "ASK_PURCHASE_CONFIRMATION_DIRECT",
+                                "ask_purchase_confirmation_explained": "ASK_PURCHASE_CONFIRMATION_EXPLAINED",
                                 "closing": "CLOSING",
                             }
                             current_phase = phase_map.get(current_phase, "GREETING_REPLY")
@@ -1418,6 +1439,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                                         "GREETING_REPLY": "interest_confirmation",
                                         "ASK_ZED_KNOWLEDGE": "ask_zed_knowledge",
                                         "ASK_PURCHASE_CONFIRMATION": "ask_purchase_confirmation",
+                                        "ASK_PURCHASE_CONFIRMATION_DIRECT": "ask_purchase_confirmation_direct",
+                                        "ASK_PURCHASE_CONFIRMATION_EXPLAINED": "ask_purchase_confirmation_explained",
                                         "CLOSING": "closing"
                                     }
                                     state["call_phase"] = rev_map.get(next_phase, "interest_confirmation")
