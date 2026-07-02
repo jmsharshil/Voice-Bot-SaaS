@@ -3,8 +3,8 @@
 import logging
 import re
 from typing import Dict, Any
-from .prompts import SAMSUNG_SYSTEM_PROMPT, get_samsung_lang_instruction
-from conversations.services.core.strategies import save_session, build_history_text, is_farewell
+from .prompts import SAMSUNG_SYSTEM_PROMPT
+from conversations.services.core.strategies import save_session, is_farewell
 
 logger = logging.getLogger("SamsungBotStrategy")
 

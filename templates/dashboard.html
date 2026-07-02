@@ -1312,7 +1312,7 @@ setInterval(async () => {
         document.getElementById("totalConversations").innerText= data.total_conversations;
         document.getElementById("totalRenewal").innerText      = data.total_outbound  || 0;
     } catch (e) {}
-}, 3000);
+}, 10000);
 
 /* ── INIT ─────────────────────────────────────────── */
 window.onload = loadDashboard;

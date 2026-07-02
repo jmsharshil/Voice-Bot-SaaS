@@ -17,7 +17,8 @@ import os
 from datetime import timedelta
 from corsheaders.defaults import default_headers
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -25,16 +26,7 @@ AZURE_OPENAI_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 
-# Azure Blob Storage Settings
-USE_AZURE_MEDIA = os.environ.get('USE_AZURE_STORAGE', 'True') == 'True'
-AZURE_ACCOUNT_NAME = os.environ.get('AZURE_STORAGE_ACCOUNT_NAME')
-AZURE_ACCOUNT_KEY = os.environ.get('AZURE_STORAGE_ACCOUNT_KEY')
-AZURE_CUSTOM_DOMAIN = os.environ.get('AZURE_STORAGE_CUSTOM_DOMAIN')
-AZURE_MEDIA_CONTAINER = os.environ.get('AZURE_STORAGE_CONTAINER', 'media')
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 WA_SENDER_API_KEY = os.getenv("WA_SENDER_API_KEY")
 WA_SENDER_WEBHOOK_SECRET = os.getenv("WA_SENDER_WEBHOOK_SECRET")
@@ -256,14 +248,56 @@ STATICFILES_DIRS = [
        # os.path.join(BASE_DIR, 'bot', 'static'),
 ]
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# ✅ Azure Storage & Media Configuration
+USE_AZURE_MEDIA = os.environ.get("USE_AZURE_MEDIA", "0") in ("1", "true", "True") or os.environ.get("USE_AZURE_STORAGE", "False") == "True"
+ 
+if USE_AZURE_MEDIA:
+    AZURE_ACCOUNT_NAME = os.environ.get("AZURE_STORAGE_ACCOUNT_NAME") or os.environ.get("AZURE_ACCOUNT_NAME")
+    AZURE_ACCOUNT_KEY  = os.environ.get("AZURE_STORAGE_ACCOUNT_KEY") or os.environ.get("AZURE_ACCOUNT_KEY")
+    AZURE_CONTAINER    = os.environ.get("AZURE_STORAGE_CONTAINER") or os.environ.get("AZURE_MEDIA_CONTAINER", "media")
+    AZURE_MEDIA_CONTAINER = AZURE_CONTAINER
+    AZURE_ACCOUNT_URL  = f"https://{AZURE_ACCOUNT_NAME}.blob.core.windows.net"
+    AZURE_CUSTOM_DOMAIN = os.environ.get(
+        "AZURE_STORAGE_CUSTOM_DOMAIN"
+    ) or os.environ.get(
+        "AZURE_CUSTOM_DOMAIN",
+        f"{AZURE_ACCOUNT_NAME}.blob.core.windows.net",
+    )
+    # AZURE_URL_EXPIRATION_SECS = int(os.environ.get("AZURE_URL_EXPIRATION_SECS", 3600))
+    AZURE_URL_EXPIRATION_SECS = None
+    AZURE_OVERWRITE_FILES = False
+ 
+    # ✅ New-style Django 4.2/5.x storage config
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.azure_storage.AzureStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        },
+    }
+ 
+    WHITENOISE_USE_FINDERS = True
+    MEDIA_URL = f"https://{AZURE_CUSTOM_DOMAIN}/{AZURE_CONTAINER}/"
+else:
+    MEDIA_URL  = "/media/"
+    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+   
+    AZURE_ACCOUNT_NAME = None
+    AZURE_ACCOUNT_KEY = None
+    AZURE_CONTAINER = "media"
+    AZURE_MEDIA_CONTAINER = "media"
+    AZURE_CUSTOM_DOMAIN = None
+ 
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+        },
+    }
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=3),

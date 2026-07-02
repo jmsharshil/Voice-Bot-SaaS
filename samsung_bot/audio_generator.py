@@ -21,9 +21,7 @@ AUDIO_ASSETS = {
     "samsung_step4_ask_interest.raw": "Okay. તો શું તમે નવો smartphone લેવાનું વિચારી રહ્યા છો કે પછી બીજી કોઈ Samsung ની Product માં interest ધરાવો છો જેમ કે Watch, Tablet કે Laptop?",
     "samsung_step5_ask_address.raw": "ખૂબ સરસ. મને કહો, તમે કયા area માં રહો છો જેથી ત્યાંના નજીકના Samsung Store ની team તમારો સંપર્ક કરી શકે.",
     "samsung_step6_closing.raw": "આભાર. નજીકના Samsung Store ની team ટૂંક સમયમાં તમારો સંપર્ક કરશે. તમારો કિંમતી સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
-    "samsung_rejection.raw": "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
-    "samsung_llm_greeting_static.raw": "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?",
-    "samsung_llm_greeting_body.raw": "હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
+    "samsung_rejection.raw": "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે."
 }
 
 def generate_tts_file(filename, text):

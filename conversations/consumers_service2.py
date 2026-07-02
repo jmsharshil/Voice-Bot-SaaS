@@ -72,6 +72,12 @@ except Exception as e:
     TEMP_REAL_ESTATE_MATCHER = None
 
 try:
+    ENOGIC_MATCHER = AutomobileMatcher("enogic_bot/data/enogic_intents.json")
+except Exception as e:
+    print(f"⚠️ Failed to load EnogicMatcher: {e}")
+    ENOGIC_MATCHER = None
+
+try:
     SAMSUNG_MATCHER = AutomobileMatcher("samsung_bot/data/samsung_intents.json")
 except Exception as e:
     print(f"⚠️ Failed to load SamsungMatcher: {e}")
@@ -126,12 +132,13 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "gu_step8_closing.raw": "Thank you so much! અમારી sales team ટૂંક સમયમાં તમારો contact કરશે. તમારો આટલો કિંમતી સમય આપવા બદલ ખૂબ ખૂબ આભાર.",
  
     # SAMSUNG STORE BOT (GUJARATI)
-    "samsung_bot/samsung_step1_greeting.raw": "હલો, હું વીટેક સેમસંગ કેર તરફથી નાવ્યા વાત કરી રહી છું. શું મારી વાત કસ્ટમર જી સાથે થઈ રહી છે?",
-    "samsung_bot/samsung_step2_ask_phone.raw": "બહુ સરસ! અત્યારે આપ કયો ફોન વાપરી રહ્યા છો?",
-    "samsung_bot/samsung_step3_ask_interest.raw": "તો શું આપ નવો સેમસંગ ફોન ખરીદવામાં રસ ધરાવો છો? કે પછી સેમસંગ વોચ, ટેબ્લેટ કે લેપટોપમાં રસ છે?",
-    "samsung_bot/samsung_step4_ask_address.raw": "ખૂબ સરસ! આપનો વિસ્તાર અથવા એડ્રેસ જણાવો, જેથી અમારી નજીકની સ્ટોર ટીમ આપનો સંપર્ક કરી શકે.",
-    "samsung_bot/samsung_step5_closing.raw": "ધન્યવાદ! અમારી નજીકની સ્ટોર ટીમ ટૂંક સમયમાં આપનો સંપર્ક કરશે. આવજો!",
-    "samsung_bot/samsung_rejection.raw": "કોઈ વાંધો નહીં, આપનો કિંમતી સમય આપવા બદલ આભાર! આવજો!",
+    "samsung_bot/samsung_step1_greeting.raw": "નમસ્તે! હું નાવ્યા છું. હું VTech Samsung Cafe તરફથી વાત કરી રહી છું. શું તમારી સાથે વાત થઈ શકે?",
+    "samsung_bot/samsung_step2_ask_consent.raw": "નમસ્તે. તમે થોડા દિવસ પહેલા Samsung Product માટે interest દર્શાવ્યો હતો એટલે તમને call કર્યો છે. શું તમારી સાથે 2 મિનિટ વાત થઈ શકે?",
+    "samsung_bot/samsung_step3_ask_phone.raw": "Okay. તો શું હું જાણી શકું કે તમે અત્યારે કયો phone વાપરી રહ્યા છો?",
+    "samsung_bot/samsung_step4_ask_interest.raw": "Okay. તો શું તમે નવો smartphone લેવાનું વિચારી રહ્યા છો કે પછી બીજી કોઈ Samsung ની Product માં interest ધરાવો છો જેમ કે Watch, Tablet કે Laptop?",
+    "samsung_bot/samsung_step5_ask_address.raw": "ખૂબ સરસ. મને કહો, તમે કયા area માં રહો છો જેથી ત્યાંના નજીકના Samsung Store ની team તમારો સંપર્ક કરી શકે.",
+    "samsung_bot/samsung_step6_closing.raw": "આભાર. નજીકના Samsung Store ની team ટૂંક સમયમાં તમારો સંપર્ક કરશે. તમારો કિંમતી સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
+    "samsung_bot/samsung_rejection.raw": "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
 
     # HOSPITAL APPOINTMENT SCHEDULER
     "hosp_step1_greeting.raw": "Hello! I am Sophia calling from City Clinic. We received your booking request for tomorrow. Can we confirm your appointment?",
@@ -195,15 +202,7 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "temp_real_estate_bot/real_estate_step4_ask_name.raw": "જી ચોક્કસ, મેં વિગત નોંધી લીધી છે. તો બસ છેલ્લે તમારી આ જરૂરિયાત રજીસ્ટર કરવા માટે હું તમારું શુભ નામ જાણી શકું? પ્લીઝ તમારું નામ જણાવો ને.",
     "temp_real_estate_bot/real_estate_step5_closing.raw": "જી ખૂબ ખૂબ આભાર! મેં તમારી બધી જ જરૂરિયાતો અહીંયા નોંધી લીધી છે. અમારી સેલ્સ ટીમ ખૂબ જ ટૂંક સમયમાં તમારો સંપર્ક કરશે અને તમને વધુ માહિતી આપશે. તમારો કિંમતી સમય આપવા બદલ ખૂબ આભાર, આવજો!",
 
-    "samsung_bot/samsung_step1_greeting.raw": "નમસ્તે! હું નાવ્યા છું. હું VTech Samsung Cafe તરફથી વાત કરી રહી છું. શું મારી વાત Customer જી સાથે થઈ રહી છે?",
-    "samsung_bot/samsung_step2_ask_consent.raw": "નમસ્તે Customer જી. તમે થોડા દિવસ પહેલા Samsung Product માટે interest દર્શાવ્યો હતો એટલે તમને call કર્યો છે. શું તમારી સાથે 2 મિનિટ વાત થઈ શકે?",
-    "samsung_bot/samsung_step3_ask_phone.raw": "Okay. તો શું હું જાણી શકું કે તમે અત્યારે કયો phone વાપરી રહ્યા છો?",
-    "samsung_bot/samsung_step4_ask_interest.raw": "Okay. તો શું તમે નવો smartphone લેવાનું વિચારી રહ્યા છો કે પછી બીજી કોઈ Samsung ની Product માં interest ધરાવો છો જેમ કે Watch, Tablet કે Laptop?",
-    "samsung_bot/samsung_step5_ask_address.raw": "ખૂબ સરસ. મને કહો, તમે કયા area માં રહો છો જેથી ત્યાંના નજીકના Samsung Store ની team તમારો સંપર્ક કરી શકે.",
-    "samsung_bot/samsung_step6_closing.raw": "આભાર. નજીકના Samsung Store ની team ટૂંક સમયમાં તમારો સંપર્ક કરશે. તમારો કિંમતી સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
-    "samsung_bot/samsung_rejection.raw": "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
-    "samsung_bot/samsung_llm_greeting_static.raw": "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?",
-    "samsung_bot/samsung_llm_greeting_body.raw": "હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
+
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
@@ -459,11 +458,15 @@ def _inject_english_lang_tags(text: str) -> str:
     return ''.join(result)
 
 
-def build_ssml(text: str, language: str) -> str:
-    voice = TTS_VOICE_MAP.get(language, TTS_VOICE_MAP["en"])
+def build_ssml(text: str, language: str, voice_name: str = None) -> str:
+    voice = voice_name or TTS_VOICE_MAP.get(language, TTS_VOICE_MAP["en"])
     style = SSML_STYLE_MAP.get(language)
     prosody = SSML_PROSODY_MAP.get(language, SSML_PROSODY_MAP["en"])
     lang_tag = {"en": "en-IN", "hi": "hi-IN", "gu": "gu-IN"}.get(language, "en-IN")
+
+    if voice in ["hi-IN-ArjunNeural", "hi-IN-AaravNeural"]:
+        prosody = {"rate": "20%", "pitch": "0%", "volume": "0%"}
+        lang_tag = "hi-IN"
 
     if language == "gu":
         text = text.replace('&', '&amp;')
@@ -705,7 +708,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 state["customer_name"] = customer_name
             if strategy_key == "hospital_minimal":
                 state["step"] = "confirm_interest"
-            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy"]:
+            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy"]:
                 if strategy_key == "temp_real_estate_strategy":
                     state["call_phase"] = "collect_flat_type"
                 elif strategy_key == "samsung_store_strategy":
@@ -740,6 +743,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
         elif self.strategy_key == "samsung_store_strategy":
             greeting_file = "samsung_bot/samsung_step1_greeting.raw"
+        elif self.strategy_key == "enogic_strategy":
+            greeting_file = "enogic_bot/enogic_step1_greeting.raw"
         elif self.strategy_key == "automobile_Naavya":
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         else:
@@ -1240,7 +1245,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
     # ================= AI (STREAMING) =================
 
-    async def _stream_local_audio_file(self, filename):
+    async def _stream_local_audio_file(self, filename, save_to_db=True):
         """Read a local .raw audio file and stream it to the WebSocket."""
         filename = filename.replace(".mp3", ".raw")
         
@@ -1262,9 +1267,11 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     filename = f"{lang_prefix}{filename}"
             
         # Record the bot reply in the database chat logs
-        transcription = _AUDIO_TRANSCRIPTIONS.get(filename)
-        if transcription:
-            await save_message(self.conversation, "bot", transcription)
+        if save_to_db:
+            basename = filename.split("/")[-1]
+            transcription = _AUDIO_TRANSCRIPTIONS.get(basename)
+            if transcription:
+                await save_message(self.conversation, "bot", transcription)
 
         file_path = os.path.join("mp3_responses", filename)
         if not os.path.exists(file_path):
@@ -1334,15 +1341,18 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         is_loan = getattr(self, "strategy_key", None) == "loan_strategy"
         is_reminder = getattr(self, "strategy_key", None) == "reminder_strategy"
         is_temp_real_estate = getattr(self, "strategy_key", None) == "temp_real_estate_strategy"
+        is_enogic = getattr(self, "strategy_key", None) == "enogic_strategy"
         is_samsung_store = getattr(self, "strategy_key", None) == "samsung_store_strategy"
         
-        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER) or (is_samsung_store and SAMSUNG_MATCHER):
+        if (is_automobile and AUTOMOBILE_MATCHER) or (is_naavya and NAAVYA_MATCHER) or (is_loan and LOAN_MATCHER) or (is_reminder and REMINDER_MATCHER) or (is_temp_real_estate and TEMP_REAL_ESTATE_MATCHER) or (is_enogic and ENOGIC_MATCHER) or (is_samsung_store and SAMSUNG_MATCHER):
             if is_loan:
                 matcher = LOAN_MATCHER
             elif is_reminder:
                 matcher = REMINDER_MATCHER
             elif is_temp_real_estate:
                 matcher = TEMP_REAL_ESTATE_MATCHER
+            elif is_enogic:
+                matcher = ENOGIC_MATCHER
             elif is_samsung_store:
                 matcher = SAMSUNG_MATCHER
             else:
@@ -1385,6 +1395,15 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                                 "collect_area": "ASK_AREA",
                                 "collect_budget": "ASK_BUDGET",
                                 "collect_name": "ASK_NAME",
+                                "closing": "CLOSING",
+                            }
+                            current_phase = phase_map.get(current_phase, "GREETING_REPLY")
+                        elif is_enogic:
+                            current_phase = session.state.get("call_phase", "interest_confirmation")
+                            phase_map = {
+                                "interest_confirmation": "GREETING_REPLY",
+                                "ask_zed_knowledge": "ASK_ZED_KNOWLEDGE",
+                                "ask_purchase_confirmation": "ASK_PURCHASE_CONFIRMATION",
                                 "closing": "CLOSING",
                             }
                             current_phase = phase_map.get(current_phase, "GREETING_REPLY")
@@ -1480,9 +1499,6 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     # 5. Play MP3/Raw Audio instantly
                     mp3_filename = match_result["mp3"]
                     raw_filename = mp3_filename.replace(".mp3", ".raw")
-                    
-                    transcription = _AUDIO_TRANSCRIPTIONS.get(raw_filename, raw_filename)
-                    await save_message(self.conversation, "bot", transcription)
                     
                     await self._stream_local_audio_file(raw_filename)
 
@@ -1595,8 +1611,30 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 print(f"🎯 [PLAY_AUDIO TAG DETECTED IN STATIC REPLY]: {audio_filename}")
                 
                 # Retrieve translation/transcription to log to DB
-                transcription = _AUDIO_TRANSCRIPTIONS.get(audio_filename, reply)
-                await save_message(self.conversation, "bot", transcription)
+                prefixed_audio_filename = audio_filename
+                lang_prefix = f"{self.language}_"
+                if "/" in prefixed_audio_filename:
+                    folder, name = prefixed_audio_filename.split("/", 1)
+                    if not name.startswith(lang_prefix):
+                        prefixed_audio_filename = f"{folder}/{lang_prefix}{name}"
+                else:
+                    if not prefixed_audio_filename.startswith(lang_prefix):
+                        prefixed_audio_filename = f"{lang_prefix}{prefixed_audio_filename}"
+
+                transcription = _AUDIO_TRANSCRIPTIONS.get(prefixed_audio_filename)
+                if not transcription:
+                    transcription = _AUDIO_TRANSCRIPTIONS.get(audio_filename)
+                if not transcription:
+                    # Clean up reply (strip tags) as fallback
+                    clean_reply = re.sub(r'\[\s*PLAY_AUDIO:[^\]]*\]', '', reply, flags=re.I).strip()
+                    clean_reply = re.sub(r'PLAY_AUDIO:\s*[a-zA-Z0-9_\-\./]*(?:\.raw)?', '', clean_reply, flags=re.I).strip()
+                    for t in ["[BOOKING_CONFIRMED]", "[NOT_INTERESTED]", "[LEAD_COMPLETE]", "[END_CALL]"]:
+                        clean_reply = clean_reply.replace(t, "")
+                    clean_reply = clean_reply.replace("[", "").replace("]", "").strip()
+                    transcription = clean_reply
+
+                if transcription:
+                    await save_message(self.conversation, "bot", transcription)
                 
                 if self.tts_task and not self.tts_task.done():
                     self.tts_task.cancel()
@@ -1605,7 +1643,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     except asyncio.CancelledError:
                         pass
                         
-                self.tts_task = asyncio.create_task(self._stream_local_audio_file(audio_filename))
+                self.tts_task = asyncio.create_task(self._stream_local_audio_file(audio_filename, save_to_db=False))
             else:
                 reply_for_user = reply
                 if not skip_output_translation and self.language != "en":
@@ -1828,7 +1866,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         # phase's pre-recorded audio question to snap the call back on-track.
         # NOTE: _stream_local_audio_file prepends self.language automatically,
         #       so pass bare filenames (no lang prefix) here.
-        if not prep_result.get("auto_disconnect"):
+        if not prep_result.get("auto_disconnect") and not prep_result.get("skip_flow_followup"):
             _phase_audio = None
             if play_override_audio:
                 _phase_audio = play_override_audio
@@ -1919,8 +1957,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             region=os.getenv("AZURE_SPEECH_REGION")
         )
         voice = TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
-        if lang == "gu" and getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"]:
-            voice = "gu-IN-DhwaniNeural"
+        if lang == "gu" and getattr(self, "strategy_key", None) == "samsung_store_strategy":
+            voice = "gu-IN-NiranjanNeural"
         speech_config.speech_synthesis_voice_name = voice
         speech_config.set_speech_synthesis_output_format(
             speechsdk.SpeechSynthesisOutputFormat.Raw8Khz16BitMonoPcm
@@ -1931,6 +1969,31 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
     def _synthesize_ulaw(self, text: str, language: str = None) -> bytes:
         lang = language or self.language
+        is_enogic = (getattr(self, "strategy_key", None) == "enogic_strategy")
+        if is_enogic:
+            # Enogic Voice Bot must strictly use hi-IN-ArjunNeural voice on Azure
+            try:
+                ssml = build_ssml(text, lang, voice_name="hi-IN-ArjunNeural")
+                synthesizer = self._get_synthesizer(lang)
+                result = synthesizer.speak_ssml_async(ssml).get()
+                if result.reason == speechsdk.ResultReason.Canceled:
+                    details = result.cancellation_details
+                    print("❌ Azure TTS Canceled for Enogic:", details.reason, details.error_details)
+                    return b""
+                    
+                pcm = result.audio_data
+                pcm = strip_wav_header(pcm)
+                
+                if len(pcm) % 2 != 0:
+                    pcm = pcm[:-1]
+                    
+                # Swara voice gain adjustment
+                pcm = _amplify_pcm(pcm, gain=1.2)
+                return encode_g711(pcm)
+            except Exception as azure_err:
+                print(f"❌ Azure synthesis failed for Enogic: {azure_err}")
+                return b""
+
         is_loan_hi = (lang == "hi" and getattr(self, "strategy_key", None) == "loan_strategy")
         if lang == "gu" or is_loan_hi:
             import requests
@@ -2116,32 +2179,31 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         import os
         lang = tts_language or self.language
         
-        if not skip_local_cache:
-            if getattr(self, "strategy_key", None) == "hospital_minimal":
-                greeting_file = "hosp_step1_greeting.raw"
-            elif getattr(self, "strategy_key", None) == "loan_strategy":
-                greeting_file = "loan_bot/loan_step1_greeting.raw"
-            elif getattr(self, "strategy_key", None) == "reminder_strategy":
-                greeting_file = "reminder_bot/reminder_step1_greeting.raw"
-            elif getattr(self, "strategy_key", None) == "temp_real_estate_strategy":
-                greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
-            elif getattr(self, "strategy_key", None) == "samsung_store_strategy":
-                greeting_file = "samsung_bot/samsung_step1_greeting.raw"
-            elif getattr(self, "strategy_key", None) == "automobile_Naavya":
-                greeting_file = f"Naavya/{lang}_step1_greeting.raw"
-            else:
-                greeting_file = f"{lang}_step1_greeting.raw"
-                
-            local_greeting = os.path.join("mp3_responses", greeting_file)
-            if os.path.exists(local_greeting):
-                print(f"🚀 INSTANT GREETING: Found local file {local_greeting}")
-                with open(local_greeting, "rb") as f:
-                    ulaw_bytes = f.read()
-                pcm_bytes = audioop.ulaw2lin(ulaw_bytes, 2)
-                alaw_bytes = audioop.lin2alaw(pcm_bytes, 2)
-                _GREETING_AUDIO_CACHE[f"{self.agent_id}_{lang}"] = alaw_bytes
-                await self._stream_cached_greeting(alaw_bytes)
-                return
+        if getattr(self, "strategy_key", None) == "hospital_minimal":
+            greeting_file = "hosp_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "loan_strategy":
+            greeting_file = "loan_bot/loan_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "reminder_strategy":
+            greeting_file = "reminder_bot/reminder_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "temp_real_estate_strategy":
+            greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "samsung_store_strategy":
+            greeting_file = "samsung_bot/samsung_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "automobile_Naavya":
+            greeting_file = f"Naavya/{lang}_step1_greeting.raw"
+        else:
+            greeting_file = f"{lang}_step1_greeting.raw"
+            
+        local_greeting = os.path.join("mp3_responses", greeting_file)
+        if not skip_local_cache and os.path.exists(local_greeting):
+            print(f"🚀 INSTANT GREETING: Found local file {local_greeting}")
+            with open(local_greeting, "rb") as f:
+                ulaw_bytes = f.read()
+            pcm_bytes = audioop.ulaw2lin(ulaw_bytes, 2)
+            alaw_bytes = audioop.lin2alaw(pcm_bytes, 2)
+            _GREETING_AUDIO_CACHE[f"{self.agent_id}_{lang}"] = alaw_bytes
+            await self._stream_cached_greeting(alaw_bytes)
+            return
 
         loop = asyncio.get_event_loop()
         try:

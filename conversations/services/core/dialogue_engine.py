@@ -70,6 +70,17 @@ except ImportError:
     temp_real_estate_finalize = None
 
 try:
+    from enogic_bot.strategy import (
+        enogic_bot_strategy,
+        enogic_bot_prepare,
+        enogic_bot_finalize,
+    )
+except ImportError:
+    enogic_bot_strategy = None
+    enogic_bot_prepare = None
+    enogic_bot_finalize = None
+
+try:
     from samsung_bot.strategy import (
         samsung_store_strategy,
         samsung_store_prepare,
@@ -112,6 +123,8 @@ if reminder_bot_strategy:
     STRATEGY_MAP["reminder_strategy"] = reminder_bot_strategy
 if temp_real_estate_strategy:
     STRATEGY_MAP["temp_real_estate_strategy"] = temp_real_estate_strategy
+if enogic_bot_strategy:
+    STRATEGY_MAP["enogic_strategy"] = enogic_bot_strategy
 if samsung_store_strategy:
     STRATEGY_MAP["samsung_store_strategy"] = samsung_store_strategy
 if samsung_llm_strategy:
@@ -135,6 +148,8 @@ if reminder_bot_prepare:
     PREPARE_MAP["reminder_strategy"] = reminder_bot_prepare
 if temp_real_estate_prepare:
     PREPARE_MAP["temp_real_estate_strategy"] = temp_real_estate_prepare
+if enogic_bot_prepare:
+    PREPARE_MAP["enogic_strategy"] = enogic_bot_prepare
 if samsung_store_prepare:
     PREPARE_MAP["samsung_store_strategy"] = samsung_store_prepare
 if samsung_llm_prepare:
@@ -157,6 +172,8 @@ if reminder_bot_finalize:
     FINALIZE_MAP["reminder_strategy"] = reminder_bot_finalize
 if temp_real_estate_finalize:
     FINALIZE_MAP["temp_real_estate_strategy"] = temp_real_estate_finalize
+if enogic_bot_finalize:
+    FINALIZE_MAP["enogic_strategy"] = enogic_bot_finalize
 if samsung_store_finalize:
     FINALIZE_MAP["samsung_store_strategy"] = samsung_store_finalize
 if samsung_llm_finalize:

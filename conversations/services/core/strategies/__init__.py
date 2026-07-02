@@ -7169,33 +7169,17 @@ IMPORTANT: You MUST include [END_CALL] in your reply!"""
                     f"VALID EXAMPLE: 'Koi baat nahi sir, main aapko baad mein call karti hoon. Aapse baad mein baat hogi. Thank you! [END_CALL]'\n"
                 )
             else:
-                # The user asked a product/factual/specs/price question.
-                # LLM should answer the question, and select the most appropriate audio follow-up file to play next.
+                # The user asked an off-topic or product/factual/price question.
+                # LLM should answer the question, and then ask the current phase's question to transition them back.
                 system_prompt += (
                     f"\n\n"
-                    f"🚨 OVERRIDE — PRODUCT QUESTION ANSWERING RULE 🚨\n"
-                    f"The user asked a factual/product/price/mileage/specs question mid-call.\n"
+                    f"🚨 OVERRIDE — CONVERSATION FLOW REDIRECTION 🚨\n"
+                    f"The user asked an off-topic or product/factual/price/mileage/specs question.\n"
                     f"YOUR TASK:\n"
-                    f"  1. Answer their question in ONE short factual sentence.\n"
-                    f"  2. Append the exact audio tag corresponding to the next logical step to transition the user back to the flow:\n"
-                    f"     - If current phase is CONFIRM_INTEREST: They confirmed interest by asking a question. Transition to purchase timeline. Tag: [PLAY_AUDIO: step3_ask_timeline.raw]\n"
-                    f"     - If current phase is ASK_TIMELINE: Transition to callback request. Tag: [PLAY_AUDIO: step4_ask_callback.raw]\n"
-                    f"     - If current phase is CONFIRM_CALLBACK: Transition to callback request. Tag: [PLAY_AUDIO: step4_ask_callback.raw]\n"
-                    f"     - If current phase is ASK_CALLBACK_TIME: Transition to callback time. Tag: [PLAY_AUDIO: step5_ask_time.raw]\n"
-                    f"     - If current phase is CONFIRM_TESTDRIVE: Transition to test drive. Tag: [PLAY_AUDIO: step7_confirm_testdrive.raw]\n"
-                    f"     - Otherwise: Re-ask the current phase question. Tag: [PLAY_AUDIO: " + {
-                        "CONFIRM_INTEREST": "step2_confirm_interest.raw",
-                        "ASK_TIMELINE": "step3_ask_timeline.raw",
-                        "CONFIRM_CALLBACK": "step4_ask_callback.raw",
-                        "ASK_CALLBACK_TIME": "step5_ask_time.raw",
-                        "CONFIRM_TESTDRIVE": "step7_confirm_testdrive.raw",
-                    }.get(mp3_phase, "step2_confirm_interest.raw") + "]\n"
-                    f"  3. STRICTLY BANNED IN YOUR RESPONSE:\n"
-                    f"     ❌ Do NOT ask the follow-up question in your text response. ONLY append the [PLAY_AUDIO: ...] tag at the very end.\n"
-                    f"     ❌ Your text response must contain ZERO question marks (?).\n"
-                    f"     ❌ Do NOT add any extra transition words like 'waise' or 'by the way'.\n"
-                    f"\n"
-                    f"VALID EXAMPLE: 'Seltos petrol mein 16-17 kmpl aur diesel mein 21 kmpl tak ka mileage deti hai. [PLAY_AUDIO: step3_ask_timeline.raw]'\n"
+                    f"  1. Answer their question naturally and politely in one or two short sentences.\n"
+                    f"  2. Immediately after answering, ask this exact question to get the conversation back on track: '{current_question}'\n"
+                    f"  3. Do NOT append any [PLAY_AUDIO: ...] tags.\n"
+                    f"  4. Do NOT ask any other questions."
                 )
 
 
@@ -7219,6 +7203,7 @@ IMPORTANT: You MUST include [END_CALL] in your reply!"""
         "skip_output_translation": True,
         "translate_input_to": "original",
         "tts_language": tts_lang,
+        "skip_flow_followup": True if mp3_phase else False,
     }
 
 
