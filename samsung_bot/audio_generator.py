@@ -15,13 +15,15 @@ AZURE_SPEECH_REGION = os.getenv("AZURE_SPEECH_REGION")
 
 # Text segments to synthesize in Gujarati
 AUDIO_ASSETS = {
-    "samsung_step1_greeting.raw": "નમસ્તે! હું નીલ છું. હું VTech Samsung Cafe તરફથી વાત કરી રહ્યો છું. શું મારી વાત Customer જી સાથે થઈ રહી છે?",
-    "samsung_step2_ask_consent.raw": "નમસ્તે Customer જી. તમે થોડા દિવસ પહેલા Samsung Product માટે ઇન્ટરેસ્ટ દર્શાવ્યો હતો એટલે તમને કોલ કર્યો છે. શું તમારી સાથે 2 મિનિટ વાત થઈ શકે?",
-    "samsung_step3_ask_phone.raw": "ઓકે. તો શું હું જાણી શકું કે તમે અત્યારે કયો ફોન વાપરી રહ્યા છો?",
-    "samsung_step4_ask_interest.raw": "ઓકે. તો શું તમે નવો સ્માર્ટફોન લેવાનું વિચારી રહ્યા છો કે પછી બીજી કોઈ Samsung ની Product માં ઇન્ટરેસ્ટ ધરાવો છો જેમ કે Watch, Tablet કે Laptop?",
-    "samsung_step5_ask_address.raw": "ખૂબ સરસ. મને કહો, તમે કયા એરિયામાં રહો છો જેથી ત્યાંના નજીકના Samsung Store ની ટીમ તમારો સંપર્ક કરી શકે.",
-    "samsung_step6_closing.raw": "આભાર. નજીકના Samsung Store ની ટીમ ટૂંક સમયમાં તમારો સંપર્ક કરશે. તમારો કિંમતી સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
-    "samsung_rejection.raw": "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે."
+    "samsung_step1_greeting.raw": "નમસ્તે! હું નાવ્યા છું. હું VTech Samsung Cafe તરફથી વાત કરી રહી છું. શું તમારી સાથે વાત થઈ શકે?",
+    "samsung_step2_ask_consent.raw": "નમસ્તે. તમે થોડા દિવસ પહેલા Samsung Product માટે interest દર્શાવ્યો હતો એટલે તમને call કર્યો છે. શું તમારી સાથે 2 મિનિટ વાત થઈ શકે?",
+    "samsung_step3_ask_phone.raw": "Okay. તો શું હું જાણી શકું કે તમે અત્યારે કયો phone વાપરી રહ્યા છો?",
+    "samsung_step4_ask_interest.raw": "Okay. તો શું તમે નવો smartphone લેવાનું વિચારી રહ્યા છો કે પછી બીજી કોઈ Samsung ની Product માં interest ધરાવો છો જેમ કે Watch, Tablet કે Laptop?",
+    "samsung_step5_ask_address.raw": "ખૂબ સરસ. મને કહો, તમે કયા area માં રહો છો જેથી ત્યાંના નજીકના Samsung Store ની team તમારો સંપર્ક કરી શકે.",
+    "samsung_step6_closing.raw": "આભાર. નજીકના Samsung Store ની team ટૂંક સમયમાં તમારો સંપર્ક કરશે. તમારો કિંમતી સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
+    "samsung_rejection.raw": "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે.",
+    "samsung_llm_greeting_static.raw": "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?",
+    "samsung_llm_greeting_body.raw": "હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
 }
 
 def generate_tts_file(filename, text):
@@ -41,12 +43,13 @@ def generate_tts_file(filename, text):
             payload = {
                 "text": text,
                 "target_language_code": "gu-IN",
-                "speaker": "shubh",
+                "speaker": "ishita",
                 "model": "bulbul:v3",
-                "pace": 1.15,
+                "pace": 1.05,
+                "temperature": 0.75,
                 "speech_sample_rate": 8000,
                 "output_audio_codec": "mulaw",
-                "enable_preprocessing": True
+                "enable_preprocessing": False
             }
             response = requests.post(api_url, headers=headers, json=payload, timeout=20)
             response.raise_for_status()
@@ -54,17 +57,17 @@ def generate_tts_file(filename, text):
             if audio_data:
                 with open(file_path, "wb") as f:
                     f.write(audio_data)
-                print(f"[OK] Voice Generated (Sarvam - Shubh): {file_path}")
+                print(f"[OK] Voice Generated (Sarvam - {payload['speaker']}): {file_path}")
                 return
         except Exception as e:
             print(f"[WARN] Failed to generate {filename} via Sarvam: {e}. Trying Azure...")
 
-    # Method 2: Azure Speech Service (Male Gujarati: gu-IN-NiranjanNeural)
+    # Method 2: Azure Speech Service (Female Gujarati: gu-IN-DhwaniNeural)
     if AZURE_SPEECH_KEY and AZURE_SPEECH_REGION:
         try:
             import azure.cognitiveservices.speech as speechsdk
             speech_config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_SPEECH_REGION)
-            speech_config.speech_synthesis_voice_name = "gu-IN-NiranjanNeural"
+            speech_config.speech_synthesis_voice_name = "gu-IN-DhwaniNeural"
             speech_config.set_speech_synthesis_output_format(speechsdk.SpeechSynthesisOutputFormat.Raw8Khz16BitMonoPcm)
             
             synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
@@ -74,7 +77,7 @@ def generate_tts_file(filename, text):
                 ulaw = audioop.lin2ulaw(pcm, 2)
                 with open(file_path, "wb") as f:
                     f.write(ulaw)
-                print(f"[OK] Voice Generated (Azure - gu-IN-NiranjanNeural): {file_path}")
+                print(f"[OK] Voice Generated (Azure - gu-IN-DhwaniNeural): {file_path}")
                 return
             else:
                 print(f"[WARN] Azure synthesis result: {result.reason}")

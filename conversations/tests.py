@@ -185,6 +185,22 @@ class SamsungStoreStrategyTestCase(TestCase):
             role_template=self.role_template,
             minutes_quota=5000
         )
+        self.llm_role = AgentRoleTemplate.objects.create(
+            industry=self.industry,
+            role_name="Naavya Samsung LLM Advisor",
+            description="Samsung LLM Bot",
+            system_prompt_template="Test prompt",
+            default_tone="polite",
+            default_voice="shubh"
+        )
+        self.llm_agent = VoiceAgent.objects.create(
+            owner=self.user,
+            name="Neel",
+            company_name="Vtech Samsung Cafe",
+            industry=self.industry,
+            role_template=self.llm_role,
+            minutes_quota=5000
+        )
 
     def test_samsung_store_greeting_flow(self):
         from conversations.services.core.dialogue_engine import prepare_streaming, get_agent_tts_language
@@ -262,5 +278,34 @@ class SamsungStoreStrategyTestCase(TestCase):
         self.assertEqual(result["static_reply"], "[PLAY_AUDIO:samsung_bot/samsung_rejection.raw] [END_CALL]")
         self.assertTrue(result["auto_disconnect"])
 
+    def test_samsung_llm_flow(self):
+        from conversations.services.core.dialogue_engine import prepare_streaming, get_agent_tts_language, finalize_streaming
+        from conversations.models import ConversationSession
 
+        # Test TTS Language
+        lang = get_agent_tts_language(self.llm_agent.id)
+        self.assertEqual(lang, "gu")
 
+        session_id = "session_samsung_llm_test"
+
+        # 1. Step 1: Greeting
+        result = prepare_streaming(self.llm_agent, "hello", session_id=session_id)
+        self.assertIn("નમસ્તે", result["static_reply"])
+        self.assertIn("હું નીલ છું", result["static_reply"])
+
+        session = ConversationSession.objects.get(session_id=session_id)
+        self.assertEqual(session.state["call_phase"], "ASK_CONSENT")
+
+        # 2. Step 2: GREETING_REPLY / ASK_CONSENT -> LLM fallback
+        result = prepare_streaming(self.llm_agent, "હા ચોક્કસ વાત કરો", session_id=session_id)
+        self.assertNotIn("static_reply", result)
+        self.assertIn("system_prompt", result)
+        self.assertEqual(result["user_message"], "હા ચોક્કસ વાત કરો")
+
+        # Finalize the response with mock LLM reply
+        mock_reply = "સરસ. તો તમે અત્યારે કયો મોબાઈલ વાપરી રહ્યા છો?"
+        finalize_streaming(mock_reply, result)
+
+        session.refresh_from_db()
+        self.assertEqual(session.state["call_phase"], "LLM_CONVERSATION")
+        self.assertIn("Agent: સરસ. તો તમે અત્યારે કયો મોબાઈલ વાપરી રહ્યા છો?", session.state["conversation_history"])

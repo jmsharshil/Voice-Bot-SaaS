@@ -29,6 +29,7 @@ ROLE_STRATEGY_MAP = {
     "JMS Loan Reminder Advisor": "reminder_strategy",
     "Naavya JMS Real Estate Advisor": "temp_real_estate_strategy",
     "Naavya Samsung Store Advisor": "samsung_store_strategy",
+    "Naavya Samsung LLM Advisor": "samsung_llm_strategy",
 }
 
 

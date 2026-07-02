@@ -80,6 +80,17 @@ except ImportError:
     samsung_store_prepare = None
     samsung_store_finalize = None
 
+try:
+    from samsung_llm_bot.strategy import (
+        samsung_llm_strategy,
+        samsung_llm_prepare,
+        samsung_llm_finalize,
+    )
+except ImportError:
+    samsung_llm_strategy = None
+    samsung_llm_prepare = None
+    samsung_llm_finalize = None
+
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
 from django.core.cache import cache
@@ -103,6 +114,8 @@ if temp_real_estate_strategy:
     STRATEGY_MAP["temp_real_estate_strategy"] = temp_real_estate_strategy
 if samsung_store_strategy:
     STRATEGY_MAP["samsung_store_strategy"] = samsung_store_strategy
+if samsung_llm_strategy:
+    STRATEGY_MAP["samsung_llm_strategy"] = samsung_llm_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -124,6 +137,8 @@ if temp_real_estate_prepare:
     PREPARE_MAP["temp_real_estate_strategy"] = temp_real_estate_prepare
 if samsung_store_prepare:
     PREPARE_MAP["samsung_store_strategy"] = samsung_store_prepare
+if samsung_llm_prepare:
+    PREPARE_MAP["samsung_llm_strategy"] = samsung_llm_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -144,6 +159,8 @@ if temp_real_estate_finalize:
     FINALIZE_MAP["temp_real_estate_strategy"] = temp_real_estate_finalize
 if samsung_store_finalize:
     FINALIZE_MAP["samsung_store_strategy"] = samsung_store_finalize
+if samsung_llm_finalize:
+    FINALIZE_MAP["samsung_llm_strategy"] = samsung_llm_finalize
 
 
 def _resolve_agent(agent):
@@ -406,7 +423,7 @@ def get_agent_tts_language(agent_id):
         strategy_key = get_role_strategy(role_name)
         print(f"[LOOKUP] Agent role_name: {role_name} | strategy_key: {strategy_key}")
 
-        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy"]:
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy"]:
             return "gu"           # Gujarati, Dhwani voice
         elif strategy_key == "interview_bot":
             return "interview_en" # English only, no translation
