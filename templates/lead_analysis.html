@@ -2843,7 +2843,7 @@
                         summaryTextEl.textContent = data.lead.summary;
                     }
 
-                    // Update duration card and call status card
+                    // Update duration card, call status card, bot line (DID), and other fields
                     const detailCards = document.getElementById("detailCards");
                     if (detailCards) {
                         const cards = detailCards.querySelectorAll(".dc");
@@ -2857,7 +2857,60 @@
                                 const val = card.querySelector(".dc-value");
                                 if (val) val.textContent = data.lead.disposition || "Waiting CDR...";
                             }
+                            if (lbl && lbl.textContent === "Bot Line (DID)") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.bot_number || "—";
+                            }
+                            if (lbl && lbl.textContent === "Name") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.user_name || "—";
+                            }
+                            if (lbl && lbl.textContent === "Email") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.user_email || "—";
+                            }
+                            if (lbl && lbl.textContent === "Interest") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.interest_topic || "—";
+                            }
+                            if (lbl && lbl.textContent === "Appointment / Visit Date") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.appointment_date || "—";
+                            }
                         });
+                    }
+
+                    // Update Recording Player Box
+                    const recBox = document.getElementById("recordingBox");
+                    if (recBox) {
+                        const hasAudioEl = recBox.querySelector("audio") !== null;
+                        if (data.lead.recording_url) {
+                            if (!hasAudioEl) {
+                                recBox.innerHTML = `
+                                    <div class="ds-label" style="color: #4f46e5; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                        <span style="animation: pulse 2s infinite;">🎵</span> Call Recording
+                                    </div>
+                                    <audio controls style="width: 100%; height: 40px; border-radius: 8px; background: #f8fafc;">
+                                        <source src="${data.lead.recording_url}" type="audio/wav">
+                                        Your browser does not support audio.
+                                    </audio>
+                                `;
+                            } else {
+                                const sourceEl = recBox.querySelector("source");
+                                if (sourceEl && sourceEl.getAttribute("src") !== data.lead.recording_url) {
+                                    sourceEl.setAttribute("src", data.lead.recording_url);
+                                    recBox.querySelector("audio").load();
+                                }
+                            }
+                        } else {
+                            if (hasAudioEl || recBox.innerHTML.trim() === "" || recBox.querySelector("span")?.textContent !== "⏳") {
+                                recBox.innerHTML = `
+                                    <div style="padding: 12px; background: #f1f5f9; border-radius: 10px; color: #64748b; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                                        <span>⏳</span> Recording not available yet (Waiting for telecom data...)
+                                    </div>
+                                `;
+                            }
+                        }
                     }
                 }
             } catch (e) {
@@ -2888,9 +2941,9 @@
             }
         }
 
-        setInterval(loadLeads, 5000);
-        setInterval(pollCampaign, 3000);
-        setInterval(refreshActiveLeadMessages, 2000);
+        setInterval(loadLeads, 10000);
+        setInterval(pollCampaign, 10000);
+        setInterval(refreshActiveLeadMessages, 10000);
 
         /* ── Quick Call Modal Functions ── */
         let agentsLoadedForQuickCall = false;

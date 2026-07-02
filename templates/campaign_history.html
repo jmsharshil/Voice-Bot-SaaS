@@ -775,15 +775,16 @@
         const token = localStorage.getItem('access_token');
         const headers = { 'Authorization': `Bearer ${token}` };
         let _refreshInterval = null;
-        let _currentRefreshRate = null; // 'fast' (3s) or 'slow' (10s)
+        let _currentRefreshRate = null; // 'fast' (10s) or 'slow' (20s)
         let _activeConversation = null; // { campaignId, phone }
         let _conversationInterval = null;
+        let _isFirstLoad = true;
 
         function startAutoRefresh(rate) {
             if (_currentRefreshRate === rate) return;
             if (_refreshInterval) clearInterval(_refreshInterval);
             
-            const ms = rate === 'fast' ? 3000 : 10000;
+            const ms = rate === 'fast' ? 10000 : 20000;
             _refreshInterval = setInterval(loadCampaigns, ms);
             _currentRefreshRate = rate;
 
@@ -864,8 +865,10 @@
                             <button class="btn-ctrl btn-stop" onclick="stopCampaign(${c.id})">⏹ Stop</button>
                         </div>` : '';
 
+                    const animStyle = _isFirstLoad ? `style="animation-delay:${i*0.05}s"` : `style="animation:none;"`;
+
                     return `
-                    <div class="campaign-card" style="animation-delay:${i*0.05}s">
+                    <div class="campaign-card" ${animStyle}>
                         <div class="campaign-header">
                             <div>
                                 <span class="campaign-name">${c.name || 'Untitled Campaign'}</span>
@@ -941,6 +944,8 @@
                 } else {
                     startAutoRefresh('slow');
                 }
+
+                _isFirstLoad = false;
 
             } catch (err) {
                 console.error('Failed to load campaigns:', err);

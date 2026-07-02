@@ -21,6 +21,7 @@ daphne==4.2.1
 distro==1.9.0
 Django==4.2.28
 django-cors-headers==4.9.0
+django-storages==1.14.4
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 elevenlabs==2.50.0
