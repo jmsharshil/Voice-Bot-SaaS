@@ -22,6 +22,38 @@ from channels.auth import AuthMiddlewareStack
 
 django_asgi_app = get_asgi_application()
 
+# Mute noisy network/HTTP loggers globally at startup
+import logging
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("huggingface_hub").setLevel(logging.WARNING)
+logging.getLogger("transformers").setLevel(logging.WARNING)
+logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+
+# Load and cache all intent matchers in a background thread to prevent Azure startup timeouts
+def prewarm_matchers_in_background():
+    import time
+    time.sleep(2)  # Give Daphne a moment to bind and start listening
+    try:
+        from conversations.consumers import get_matcher as get_matcher_1
+        from conversations.consumers_service2 import get_matcher as get_matcher_2
+        
+        print("🚀 [STARTUP-BG]: Background pre-loading and embedding all intent matchers...")
+        for get_m in [get_matcher_1, get_matcher_2]:
+            get_m("AUTOMOBILE_MATCHER", "automobile_intents.json")
+            get_m("NAAVYA_MATCHER", "automobile_bot/data/Naavya_intents.json")
+            get_m("LOAN_MATCHER", "loan_bot/data/loan_intents.json")
+            get_m("REMINDER_MATCHER", "reminder_bot/data/reminder_intents.json")
+            get_m("TEMP_REAL_ESTATE_MATCHER", "temp_real_estate_bot/data/real_estate_intents.json")
+            get_m("ENOGIC_MATCHER", "enogic_bot/data/enogic_intents.json")
+            get_m("SAMSUNG_MATCHER", "samsung_bot/data/samsung_intents.json")
+        print("✅ [STARTUP-BG]: All intent matchers successfully pre-loaded and embedded in memory!")
+    except Exception as e:
+        print(f"⚠️ [STARTUP-BG WARNING]: Failed to pre-load matchers: {e}")
+
+import threading
+threading.Thread(target=prewarm_matchers_in_background, daemon=True).start()
+
 import conversations.routing  # import AFTER Django setup
 
 from channels.generic.websocket import WebsocketConsumer

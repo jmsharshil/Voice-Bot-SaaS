@@ -1,6 +1,3 @@
-        
-
-
 from urllib.parse import parse_qs
 import audioop
 from asgiref.sync import sync_to_async
@@ -1439,6 +1436,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                                         "GREETING_REPLY": "interest_confirmation",
                                         "ASK_ZED_KNOWLEDGE": "ask_zed_knowledge",
                                         "ASK_PURCHASE_CONFIRMATION": "ask_purchase_confirmation",
+                                        "ASK_PURCHASE_CONFIRMATION_DIRECT": "ask_purchase_confirmation_direct",
+                                        "ASK_PURCHASE_CONFIRMATION_EXPLAINED": "ask_purchase_confirmation_explained",
                                         "ASK_PURCHASE_CONFIRMATION_DIRECT": "ask_purchase_confirmation_direct",
                                         "ASK_PURCHASE_CONFIRMATION_EXPLAINED": "ask_purchase_confirmation_explained",
                                         "CLOSING": "closing"

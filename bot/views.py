@@ -2299,6 +2299,194 @@ def export_leads_excel(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
+
+@api_view(["GET"])
+def export_campaign_excel(request, campaign_id):
+    """
+    Exports all LeadAnalysis data, tries count, and conversation logs for a
+    particular campaign (including all its retry attempts) to an Excel file.
+    """
+    from conversations.models import Conversation, LeadAnalysis, Message
+    from bot.models import Campaign
+    from django.shortcuts import get_object_or_404
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from rest_framework_simplejwt.tokens import AccessToken
+    from django.contrib.auth.models import User
+    import pandas as pd
+    import io
+    import json
+    import datetime
+
+    # Authenticate via query param if accessed from a standard browser download link
+    token = request.query_params.get("token")
+    if token:
+        try:
+            access_token = AccessToken(token)
+            user_id = access_token["user_id"]
+            request.user = User.objects.get(id=user_id)
+        except Exception as e:
+            print(f"Token validation failed in export: {e}")
+
+    if not request.user or not request.user.is_authenticated:
+        return Response({"error": "Authentication required"}, status=401)
+
+    # Fetch the campaign
+    campaign = get_object_or_404(Campaign, id=campaign_id)
+    
+    # Trace back to find the root parent campaign
+    root_campaign = campaign
+    while root_campaign.parent_campaign is not None:
+        root_campaign = root_campaign.parent_campaign
+
+    # Check permission on root campaign
+    if not _is_campaign_visible_to_user(root_campaign, request.user):
+        return Response({"error": "You do not have permission to export this campaign."}, status=403)
+
+    # Find the campaign group (root campaign + all sub-campaign retries)
+    campaigns = [root_campaign] + list(root_campaign.sub_campaigns.all().order_by("started_at"))
+    campaign_ids = [c.id for c in campaigns]
+
+    phone_list = json.loads(root_campaign.phone_list) if root_campaign.phone_list else []
+    
+    is_super = request.user.is_superuser or not hasattr(request.user, "profile") or not request.user.profile.assigned_agent
+
+    data = []
+    for phone in phone_list:
+        clean_phone = _normalize_phone(phone)
+        
+        # Trace attempts and answer status across runs
+        attempts = 0
+        answered_attempt = None
+        disposition = "Missed (No Answer)"
+        
+        for c in campaigns:
+            c_phones = json.loads(c.phone_list) if c.phone_list else []
+            c_phones_norm = [_normalize_phone(p) for p in c_phones]
+            
+            if clean_phone in c_phones_norm:
+                attempts += 1
+                c_missed = json.loads(c.missed_calls) if c.missed_calls else []
+                c_missed_norm = [_normalize_phone(p) for p in c_missed]
+                
+                if clean_phone not in c_missed_norm:
+                    # Answered in this run!
+                    disposition = "Answered"
+                    answered_attempt = attempts
+                    break # Subsequent retries won't call this number
+        
+        # Fetch the Conversation matching this phone number and any of our campaign IDs
+        # (Match using the last 10 digits to be safe with different formats)
+        conv = Conversation.objects.filter(
+            campaign_id__in=campaign_ids,
+            user_number__icontains=clean_phone[-10:] if len(clean_phone) >= 10 else clean_phone
+        ).order_by("-started_at").first()
+        
+        lead = None
+        transcript = "—"
+        rec_url = "—"
+        lead_level_display = "MISSED (No Answer)"
+        email = "—"
+        summary = "The call was not picked up by the customer."
+        topic = "Campaign Missed Call"
+        analyzed_time_str = "—"
+        
+        if conv:
+            # Transcript
+            msgs = Message.objects.filter(conversation=conv).order_by('created_at')
+            if msgs.exists():
+                transcript_parts = []
+                for m in msgs:
+                    role = "Bot" if m.role == "bot" else "User"
+                    transcript_parts.append(f"[{role}]: {m.text}")
+                transcript = "\n".join(transcript_parts)
+            
+            # Recording URL
+            try:
+                if hasattr(conv, 'cdr') and conv.cdr:
+                    rec_url = conv.cdr.recording_file_name
+                    if rec_url and not rec_url.startswith("http"):
+                        rec_url = f"https://app.voicelink.co.in/api/v1/add_lead{rec_url}"
+            except Exception:
+                pass
+            
+            # Lead Analysis
+            try:
+                lead = LeadAnalysis.objects.filter(conversation=conv).first()
+                if lead:
+                    lead_level_display = lead.get_lead_level_display()
+                    email = lead.user_email or "—"
+                    summary = lead.summary or "—"
+                    topic = lead.interest_topic or "—"
+                    
+                    ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+                    analyzed_at_local = lead.analyzed_at.astimezone(ist_tz)
+                    analyzed_time_str = analyzed_at_local.strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                pass
+        
+        # If there was no LeadAnalysis, but the call was answered, update status info
+        if disposition == "Answered":
+            if lead_level_display == "MISSED (No Answer)":
+                lead_level_display = "Answered (No details)"
+            if summary == "The call was not picked up by the customer.":
+                summary = "Call was answered but no analysis was generated."
+            if topic == "Campaign Missed Call":
+                topic = "—"
+            if analyzed_time_str == "—" and conv:
+                ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+                started_local = conv.started_at.astimezone(ist_tz)
+                analyzed_time_str = started_local.strftime("%Y-%m-%d %H:%M")
+        
+        picked_up_str = f"Attempt {answered_attempt}" if answered_attempt else "Never"
+        
+        row = {
+            "Campaign Name": root_campaign.name or f"Campaign #{root_campaign.id}",
+            "Phone Number": phone,
+            "Status": disposition,
+            "Total Attempts": attempts,
+            "Picked Up On Attempt": picked_up_str,
+            "Call Time (IST)": analyzed_time_str,
+            "Interest Level": lead_level_display,
+            "Recording Link": rec_url,
+            "AI Summary": summary,
+            "Full Transcript": transcript,
+        }
+        
+        if is_super:
+            row["Topic"] = topic
+            
+        data.append(row)
+
+    if not data:
+        columns = ["Campaign Name", "Phone Number", "Status", "Total Attempts", "Picked Up On Attempt", "Call Time (IST)", "Interest Level", "Recording Link", "AI Summary", "Full Transcript"]
+        if is_super:
+            columns.append("Topic")
+        df = pd.DataFrame(columns=columns)
+    else:
+        df = pd.DataFrame(data)
+
+    # Create Excel in memory
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Campaign Report')
+        
+        # Auto-adjust column widths
+        worksheet = writer.sheets['Campaign Report']
+        for idx, col in enumerate(df.columns):
+            max_len = max(df[col].astype(str).map(len).max() if not df[col].empty else 10, len(col)) + 2
+            worksheet.column_dimensions[chr(65 + idx)].width = min(max_len, 60)
+
+    output.seek(0)
+    
+    filename = f"Campaign_{root_campaign.id}_Report_{timezone.now().strftime('%Y%m%d_%H%M')}.xlsx"
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
 # Initialize campaign state from DB lazily when needed
 _state_loaded = False
 
@@ -2307,6 +2495,96 @@ def _ensure_state_loaded():
     if not _state_loaded:
         _load_campaign_state()
         _state_loaded = True
+
+
+def trigger_retry_sub_campaign_if_needed(parent_campaign):
+    """
+    Spawns a deferred sub-campaign retry if the main campaign finishes and has missed calls,
+    and hasn't exceeded the max retry attempts. All retry campaigns link directly to the root campaign.
+    """
+    from django.conf import settings
+    max_retries = getattr(settings, "AUTO_CAMPAIGN_MAX_RETRIES", 5)
+    retry_delay = getattr(settings, "AUTO_CAMPAIGN_RETRY_DELAY", 300)
+
+    if parent_campaign.retry_count >= max_retries:
+        print(f"AUTO-DIALER: Campaign #{parent_campaign.id} reached max retry limit ({max_retries}). Not retrying.")
+        return
+
+    missed_list = json.loads(parent_campaign.missed_calls) if parent_campaign.missed_calls else []
+    if not missed_list:
+        print(f"AUTO-DIALER: Campaign #{parent_campaign.id} has no missed calls. No retry needed.")
+        return
+
+    # Trace back to find the root parent campaign
+    root_campaign = parent_campaign
+    while root_campaign.parent_campaign is not None:
+        root_campaign = root_campaign.parent_campaign
+
+    print(f"AUTO-DIALER: Campaign #{parent_campaign.id} has {len(missed_list)} missed calls. Scheduling Retry #{parent_campaign.retry_count + 1} in {retry_delay} seconds...")
+
+    try:
+        retry_camp = Campaign.objects.create(
+            name=f"Retry {parent_campaign.retry_count + 1} — {root_campaign.name}",
+            phone_list=json.dumps(missed_list),
+            total_count=len(missed_list),
+            is_active=False,
+            created_by=parent_campaign.created_by,
+            agent=parent_campaign.agent,
+            parent_campaign=root_campaign,
+            retry_count=parent_campaign.retry_count + 1,
+        )
+    except Exception as e:
+        print(f"WARNING: Failed to create retry Campaign record: {e}")
+        return
+
+    def run_retry():
+        global _campaign_active, _campaign_paused, _current_campaign_id, _call_queue, _active_calls, _answered_calls, _missed_calls, BOT_URL
+        
+        if _campaign_active:
+            print(f"⏳ AUTO-DIALER: Retry campaign #{retry_camp.id} is waiting because another campaign is running. Checking again in 15s...")
+            import threading
+            threading.Timer(15.0, run_retry).start()
+            return
+
+        print(f"🔥 AUTO-DIALER: Auto-triggering retry campaign #{retry_camp.id} (Parent #{parent_campaign.id})")
+        
+        agent_id = str(retry_camp.agent.id) if retry_camp.agent else "default"
+        import urllib.parse
+        try:
+            parsed = urllib.parse.urlparse(BOT_URL)
+            domain = parsed.netloc
+            ws_scheme = parsed.scheme or "wss"
+        except Exception:
+            domain = "voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
+            ws_scheme = "wss"
+            
+        BOT_URL = f"{ws_scheme}://{domain}/ws/voice-bot/service2/?agent_id={agent_id}"
+
+        with _call_queue_lock:
+            _call_queue.clear()
+            _active_calls.clear()
+            _answered_calls.clear()
+            _missed_calls.clear()
+            
+            _call_queue.extend(missed_list)
+            _campaign_active = True
+            _campaign_paused = False
+            _current_campaign_id = retry_camp.id
+            
+            _campaign_stats["total"] = len(missed_list)
+            _campaign_stats["completed"] = 0
+            _campaign_stats["started_at"] = timezone.now().isoformat()
+            
+            retry_camp.is_active = True
+            retry_camp.started_at = timezone.now()
+            retry_camp.save()
+            
+            _save_campaign_state()
+            
+        dial_next_from_queue()
+
+    import threading
+    threading.Timer(float(retry_delay), run_retry).start()
 
 
 def _finalize_campaign():
@@ -2323,6 +2601,9 @@ def _finalize_campaign():
         campaign.missed_calls = json.dumps(_missed_calls)
         campaign.save()
         print(f"AUTO-DIALER: Campaign #{campaign.id} finalized. Answered: {campaign.answered_count}, Missed: {len(_missed_calls)}")
+        
+        # Trigger retry sub-campaign if needed
+        trigger_retry_sub_campaign_if_needed(campaign)
     except Exception as e:
         print(f"WARNING: Failed to finalize Campaign record: {e}")
     finally:
@@ -2340,19 +2621,21 @@ def campaign_history_page(request):
 @api_view(["GET"])
 def campaign_history_data(request):
     """Returns all past campaigns with stats for the admin dashboard."""
-    campaigns = Campaign.objects.all().order_by("-started_at")
+    campaigns = Campaign.objects.filter(parent_campaign__isnull=True).order_by("-started_at")
     campaigns = [c for c in campaigns if _is_campaign_visible_to_user(c, request.user)]
 
-    data = []
-    for c in campaigns:
+    def serialize_campaign(c):
         missed_list = json.loads(c.missed_calls) if c.missed_calls else []
         phone_list = json.loads(c.phone_list) if c.phone_list else []
         
         duration_seconds = None
         if c.ended_at and c.started_at:
             duration_seconds = int((c.ended_at - c.started_at).total_seconds())
+            
+        sub_camps = c.sub_campaigns.all().order_by("started_at")
+        sub_serialized = [serialize_campaign(sub) for sub in sub_camps]
         
-        data.append({
+        return {
             "id": c.id,
             "name": c.name,
             "total_count": c.total_count,
@@ -2367,13 +2650,28 @@ def campaign_history_data(request):
             "duration_seconds": duration_seconds,
             "created_by": c.created_by.username if c.created_by else None,
             "bot_name": c.agent.name if c.agent else None,
-        })
+            "retry_count": c.retry_count,
+            "sub_campaigns": sub_serialized,
+        }
+
+    data = []
+    for c in campaigns:
+        data.append(serialize_campaign(c))
     
-    # Summary stats
-    total_campaigns = len(data)
-    total_calls = sum(d["total_count"] for d in data)
-    total_answered = sum(d["answered_count"] for d in data)
-    total_missed = sum(d["missed_count"] for d in data)
+    # Summary stats (calculated over all visible campaigns including sub-campaigns)
+    all_campaigns = Campaign.objects.all()
+    all_visible = [c for c in all_campaigns if _is_campaign_visible_to_user(c, request.user)]
+    
+    total_campaigns = len(all_visible)
+    total_calls = 0
+    total_answered = 0
+    total_missed = 0
+    
+    for c in all_visible:
+        missed_list = json.loads(c.missed_calls) if c.missed_calls else []
+        total_calls += c.total_count
+        total_answered += c.answered_count
+        total_missed += len(missed_list)
     
     return Response({
         "stats": {

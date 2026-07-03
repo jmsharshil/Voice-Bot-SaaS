@@ -54,6 +54,7 @@ from .views import (
     pause_auto_campaign,
     resume_auto_campaign,
     export_leads_excel,
+    export_campaign_excel,
     campaign_history_page,
     campaign_history_data,
     download_sample_excel,
@@ -117,6 +118,7 @@ urlpatterns = [
     path("dashboard/", upload_call_page),
 
     path("export/leads/", export_leads_excel),
+    path("export/campaign/<int:campaign_id>/", export_campaign_excel),
     path("download-sample/", download_sample_excel),
     
     # Auto-dialer campaign

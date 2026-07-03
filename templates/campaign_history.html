@@ -254,6 +254,8 @@
         .phone-list.open { display:block }
         .phone-chip { display:inline-block; background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:2px 8px; margin:2px; font-size:11px; font-weight:500 }
         .phone-chip.missed { background:#fef2f2; border-color:#fecaca; color:#dc2626 }
+        .phone-chip.final-missed { background:#fff1f2; border-color:#fda4af; color:#e11d48; font-weight:700; border-width:1.5px; box-shadow:0 1px 2px rgba(225,29,72,0.1) }
+        .phone-chip.final-missed:hover { border-color:#e11d48 !important; background:#ffe4e6 !important; color:#be123c !important }
 
         .empty-state { text-align:center; padding:80px 32px; color:#94a3b8 }
         .empty-state h2 { font-size:20px; font-weight:700; margin-bottom:8px; color:#64748b }
@@ -437,6 +439,15 @@
         .btn-resume:hover { background: #bbf7d0 }
         .btn-stop { background: #fde8e8; color: #c53030; border-color: #fecaca }
         .btn-stop:hover { background: #fecaca }
+        .btn-export { background: #e0f2fe; color: #0284c7; border-color: #bae6fd }
+        .btn-export:hover { background: #bae6fd }
+        .btn-export:disabled {
+            background: #f1f5f9 !important;
+            color: #94a3b8 !important;
+            border-color: #cbd5e1 !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+        }
 
         /* Auto-Refresh Toggle Switch Style */
         .switch {
@@ -865,6 +876,14 @@
                             <button class="btn-ctrl btn-stop" onclick="stopCampaign(${c.id})">⏹ Stop</button>
                         </div>` : '';
                     
+                    // Locked state: if either parent or sub-campaign is active
+                    const isLocked = c.is_active || (c.sub_campaigns && c.sub_campaigns.some(sub => sub.is_active));
+                    const exportBtnHtml = `
+                        <button class="btn-ctrl btn-export" onclick="exportCampaignExcel(${c.id})" ${isLocked ? 'disabled title="Export is locked while campaign dialing is in progress"' : ''} style="font-size: 10px; padding: 4px 8px;">
+                            📥 Export Excel
+                        </button>
+                    `;
+                    
                     const animStyle = _isFirstLoad ? `style="animation-delay:${i*0.05}s"` : `style="animation: none;"`;
 
                     return `
@@ -874,9 +893,12 @@
                                 <span class="campaign-name">${c.name || 'Untitled Campaign'}</span>
                                 <span class="campaign-id">#${c.id}</span>
                             </div>
-                            <span class="campaign-badge ${c.is_active ? 'badge-active' : 'badge-completed'}">
-                                ${c.is_active ? 'Active' : 'Completed'}
-                            </span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="campaign-badge ${c.is_active ? 'badge-active' : 'badge-completed'}">
+                                    ${c.is_active ? 'Active' : 'Completed'}
+                                </span>
+                                ${exportBtnHtml}
+                            </div>
                         </div>
 
                         <div class="campaign-stats">
@@ -922,6 +944,100 @@
                         ${c.missed_list.length ? `<button class="phone-toggle" onclick="togglePhones(this, 'missed', ${c.id})" style="color:#ef4444">View Missed Numbers (${c.missed_list.length})</button><div class="phone-list" id="phone-list-missed-${c.id}">${missedChips}</div>` : ''}
 
                         ${controlsHtml}
+
+                        ${(() => {
+                            if (!c.sub_campaigns || !c.sub_campaigns.length) return '';
+                            return `
+                            <div class="sub-campaigns-section" style="margin-top: 16px; padding-top: 16px; border-top: 1.5px solid #f1f5f9;">
+                                <h4 style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                    🔄 Auto-Retries (${c.sub_campaigns.length})
+                                </h4>
+                                <div style="display: flex; flex-direction: column; gap: 16px; padding-left: 16px; border-left: 2px solid #e2e8f0; margin-left: 8px;">
+                                    ${c.sub_campaigns.map(sub => {
+                                        const subStartDate = sub.started_at ? new Date(sub.started_at) : null;
+                                        const subEndDate = sub.ended_at ? new Date(sub.ended_at) : null;
+                                        const subDuration = sub.duration_seconds
+                                            ? (sub.duration_seconds >= 3600
+                                                ? `${Math.floor(sub.duration_seconds/3600)}h ${Math.floor((sub.duration_seconds%3600)/60)}m`
+                                                : `${Math.floor(sub.duration_seconds/60)}m ${sub.duration_seconds%60}s`)
+                                            : (sub.is_active ? 'In Progress' : '—');
+                                        
+                                        const subAnsweredPct = sub.total_count ? Math.round((sub.answered_count / sub.total_count) * 100) : 0;
+                                        const subMissedPct = sub.total_count ? Math.round((sub.missed_count / sub.total_count) * 100) : 0;
+                                        
+                                        const isFinalCampaign = sub.retry_count === 5;
+                                        const subPhoneChips = sub.phone_list.map(p => {
+                                            const isMissed = sub.missed_list.includes(p);
+                                            const isFinalMissed = isMissed && isFinalCampaign;
+                                            return `<span class="phone-chip ${isFinalMissed ? 'final-missed' : (isMissed ? 'missed' : '')}" onclick="openConversation(${sub.id}, '${p}', event)">${p}${isFinalMissed ? ' (Still Missed ⚠️)' : (isMissed ? ' (Missed)' : '')}</span>`;
+                                        }).join('');
+                                        
+                                        const subMissedChips = sub.missed_list.map(p => {
+                                            const isFinalMissed = isFinalCampaign;
+                                            return `<span class="phone-chip ${isFinalMissed ? 'final-missed' : 'missed'}" onclick="openConversation(${sub.id}, '${p}', event)">${p}${isFinalMissed ? ' (Still Missed ⚠️)' : ''}</span>`;
+                                        }).join('');
+
+                                        const subControlsHtml = sub.is_active ? `
+                                            <div class="campaign-controls" id="controls-${sub.id}" style="margin-top: 8px; border-top: none; padding-top: 0;">
+                                                <button class="btn-ctrl btn-pause" onclick="pauseCampaign(${sub.id})" id="pauseBtn-${sub.id}">⏸ Pause</button>
+                                                <button class="btn-ctrl btn-resume" onclick="resumeCampaign(${sub.id})" id="resumeBtn-${sub.id}" style="display:none">▶ Resume</button>
+                                                <button class="btn-ctrl btn-stop" onclick="stopCampaign(${sub.id})">⏹ Stop</button>
+                                            </div>` : '';
+
+                                        return `
+                                            <div class="sub-campaign-item" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+                                                <div class="campaign-header" style="margin-bottom: 12px;">
+                                                    <div>
+                                                        <span class="campaign-name" style="font-size: 13px; color: #334155;">Retry Attempt #${sub.retry_count} (${sub.name || 'Untitled'})</span>
+                                                        <span class="campaign-id">#${sub.id}</span>
+                                                    </div>
+                                                    <span class="campaign-badge ${sub.is_active ? 'badge-active' : 'badge-completed'}" style="font-size: 10px; padding: 2px 8px;">
+                                                        ${sub.is_active ? 'Active' : 'Completed'}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div class="campaign-stats" style="grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px;">
+                                                    <div class="stat-item">
+                                                        <div class="stat-label" style="font-size: 9px;">Total</div>
+                                                        <div class="stat-value" style="font-size: 15px;">${sub.total_count}</div>
+                                                    </div>
+                                                    <div class="stat-item">
+                                                        <div class="stat-label" style="font-size: 9px;">Completed</div>
+                                                        <div class="stat-value" style="font-size: 15px;">${sub.completed_count}</div>
+                                                    </div>
+                                                    <div class="stat-item">
+                                                        <div class="stat-label" style="font-size: 9px;">Answered</div>
+                                                        <div class="stat-value answered" style="font-size: 15px;">${sub.answered_count}</div>
+                                                    </div>
+                                                    <div class="stat-item">
+                                                        <div class="stat-label" style="font-size: 9px;">Missed</div>
+                                                        <div class="stat-value missed" style="font-size: 15px;">${sub.missed_count}</div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="progress-bar" style="height: 4px; margin: 8px 0;">
+                                                    <div class="progress-fill progress-answered" style="width:${subAnsweredPct}%"></div>
+                                                </div>
+                                                <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-bottom:8px">
+                                                    <span>Answered ${subAnsweredPct}%</span>
+                                                    <span>Missed ${subMissedPct}%</span>
+                                                </div>
+                                                
+                                                <div class="campaign-time" style="padding-top: 8px; font-size: 11px; flex-wrap: wrap; gap: 8px 16px;">
+                                                    <div class="time-item" style="font-size: 11px; margin-bottom: 0;"><strong>Started:</strong> ${fmtDate(subStartDate)} at ${fmtTime(subStartDate)}</div>
+                                                    <div class="time-item" style="font-size: 11px; margin-bottom: 0;"><strong>Ended:</strong> ${subEndDate ? fmtDate(subEndDate) + ' at ' + fmtTime(subEndDate) : (sub.is_active ? 'Running...' : '—')}</div>
+                                                </div>
+                                                
+                                                ${sub.phone_list.length ? `<button class="phone-toggle" onclick="togglePhones(this, 'all', ${sub.id})" style="font-size:11px;">View All Numbers (${sub.phone_list.length})</button><div class="phone-list" id="phone-list-all-${sub.id}">${subPhoneChips}</div>` : ''}
+                                                ${sub.missed_list.length ? `<button class="phone-toggle" onclick="togglePhones(this, 'missed', ${sub.id})" style="color:#ef4444;font-size:11px;">View Missed Numbers (${sub.missed_list.length})</button><div class="phone-list" id="phone-list-missed-${sub.id}">${subMissedChips}</div>` : ''}
+                                                
+                                                ${subControlsHtml}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>`;
+                        })()}
                     </div>`;
                 }).join('');
 
@@ -1002,6 +1118,11 @@
                 });
                 loadCampaigns();
             } catch (e) { console.error('Stop failed:', e); }
+        }
+
+        function exportCampaignExcel(campaignId) {
+            const token = localStorage.getItem('access_token');
+            window.open(`/bot/export/campaign/${campaignId}/?token=${token}`, '_blank');
         }
 
         // ── Conversation Drawer ────────────────────────────────
