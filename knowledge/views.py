@@ -88,7 +88,7 @@ class KnowledgeUploadView(APIView):
         knowledge = serializer.save(agent=agent)
 
         # Extract text
-        extracted = extract_text(knowledge.file.path)
+        extracted = extract_text(knowledge.file)
         knowledge.extracted_text = extracted
         knowledge.save()
 
