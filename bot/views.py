@@ -2309,6 +2309,96 @@ def _ensure_state_loaded():
         _state_loaded = True
 
 
+def trigger_retry_sub_campaign_if_needed(parent_campaign):
+    """
+    Spawns a deferred sub-campaign retry if the main campaign finishes and has missed calls,
+    and hasn't exceeded the max retry attempts. All retry campaigns link directly to the root campaign.
+    """
+    from django.conf import settings
+    max_retries = getattr(settings, "AUTO_CAMPAIGN_MAX_RETRIES", 5)
+    retry_delay = getattr(settings, "AUTO_CAMPAIGN_RETRY_DELAY", 300)
+
+    if parent_campaign.retry_count >= max_retries:
+        print(f"AUTO-DIALER: Campaign #{parent_campaign.id} reached max retry limit ({max_retries}). Not retrying.")
+        return
+
+    missed_list = json.loads(parent_campaign.missed_calls) if parent_campaign.missed_calls else []
+    if not missed_list:
+        print(f"AUTO-DIALER: Campaign #{parent_campaign.id} has no missed calls. No retry needed.")
+        return
+
+    # Trace back to find the root parent campaign
+    root_campaign = parent_campaign
+    while root_campaign.parent_campaign is not None:
+        root_campaign = root_campaign.parent_campaign
+
+    print(f"AUTO-DIALER: Campaign #{parent_campaign.id} has {len(missed_list)} missed calls. Scheduling Retry #{parent_campaign.retry_count + 1} in {retry_delay} seconds...")
+
+    try:
+        retry_camp = Campaign.objects.create(
+            name=f"Retry {parent_campaign.retry_count + 1} — {root_campaign.name}",
+            phone_list=json.dumps(missed_list),
+            total_count=len(missed_list),
+            is_active=False,
+            created_by=parent_campaign.created_by,
+            agent=parent_campaign.agent,
+            parent_campaign=root_campaign,
+            retry_count=parent_campaign.retry_count + 1,
+        )
+    except Exception as e:
+        print(f"WARNING: Failed to create retry Campaign record: {e}")
+        return
+
+    def run_retry():
+        global _campaign_active, _campaign_paused, _current_campaign_id, _call_queue, _active_calls, _answered_calls, _missed_calls, BOT_URL
+        
+        if _campaign_active:
+            print(f"⏳ AUTO-DIALER: Retry campaign #{retry_camp.id} is waiting because another campaign is running. Checking again in 15s...")
+            import threading
+            threading.Timer(15.0, run_retry).start()
+            return
+
+        print(f"🔥 AUTO-DIALER: Auto-triggering retry campaign #{retry_camp.id} (Parent #{parent_campaign.id})")
+        
+        agent_id = str(retry_camp.agent.id) if retry_camp.agent else "default"
+        import urllib.parse
+        try:
+            parsed = urllib.parse.urlparse(BOT_URL)
+            domain = parsed.netloc
+            ws_scheme = parsed.scheme or "wss"
+        except Exception:
+            domain = "voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
+            ws_scheme = "wss"
+            
+        BOT_URL = f"{ws_scheme}://{domain}/ws/voice-bot/service2/?agent_id={agent_id}"
+
+        with _call_queue_lock:
+            _call_queue.clear()
+            _active_calls.clear()
+            _answered_calls.clear()
+            _missed_calls.clear()
+            
+            _call_queue.extend(missed_list)
+            _campaign_active = True
+            _campaign_paused = False
+            _current_campaign_id = retry_camp.id
+            
+            _campaign_stats["total"] = len(missed_list)
+            _campaign_stats["completed"] = 0
+            _campaign_stats["started_at"] = timezone.now().isoformat()
+            
+            retry_camp.is_active = True
+            retry_camp.started_at = timezone.now()
+            retry_camp.save()
+            
+            _save_campaign_state()
+            
+        dial_next_from_queue()
+
+    import threading
+    threading.Timer(float(retry_delay), run_retry).start()
+
+
 def _finalize_campaign():
     """Close the active Campaign history record with final stats."""
     global _current_campaign_id
@@ -2323,6 +2413,9 @@ def _finalize_campaign():
         campaign.missed_calls = json.dumps(_missed_calls)
         campaign.save()
         print(f"AUTO-DIALER: Campaign #{campaign.id} finalized. Answered: {campaign.answered_count}, Missed: {len(_missed_calls)}")
+        
+        # Trigger retry sub-campaign if needed
+        trigger_retry_sub_campaign_if_needed(campaign)
     except Exception as e:
         print(f"WARNING: Failed to finalize Campaign record: {e}")
     finally:
@@ -2340,19 +2433,21 @@ def campaign_history_page(request):
 @api_view(["GET"])
 def campaign_history_data(request):
     """Returns all past campaigns with stats for the admin dashboard."""
-    campaigns = Campaign.objects.all().order_by("-started_at")
+    campaigns = Campaign.objects.filter(parent_campaign__isnull=True).order_by("-started_at")
     campaigns = [c for c in campaigns if _is_campaign_visible_to_user(c, request.user)]
 
-    data = []
-    for c in campaigns:
+    def serialize_campaign(c):
         missed_list = json.loads(c.missed_calls) if c.missed_calls else []
         phone_list = json.loads(c.phone_list) if c.phone_list else []
         
         duration_seconds = None
         if c.ended_at and c.started_at:
             duration_seconds = int((c.ended_at - c.started_at).total_seconds())
+            
+        sub_camps = c.sub_campaigns.all().order_by("started_at")
+        sub_serialized = [serialize_campaign(sub) for sub in sub_camps]
         
-        data.append({
+        return {
             "id": c.id,
             "name": c.name,
             "total_count": c.total_count,
@@ -2367,13 +2462,28 @@ def campaign_history_data(request):
             "duration_seconds": duration_seconds,
             "created_by": c.created_by.username if c.created_by else None,
             "bot_name": c.agent.name if c.agent else None,
-        })
+            "retry_count": c.retry_count,
+            "sub_campaigns": sub_serialized,
+        }
+
+    data = []
+    for c in campaigns:
+        data.append(serialize_campaign(c))
     
-    # Summary stats
-    total_campaigns = len(data)
-    total_calls = sum(d["total_count"] for d in data)
-    total_answered = sum(d["answered_count"] for d in data)
-    total_missed = sum(d["missed_count"] for d in data)
+    # Summary stats (calculated over all visible campaigns including sub-campaigns)
+    all_campaigns = Campaign.objects.all()
+    all_visible = [c for c in all_campaigns if _is_campaign_visible_to_user(c, request.user)]
+    
+    total_campaigns = len(all_visible)
+    total_calls = 0
+    total_answered = 0
+    total_missed = 0
+    
+    for c in all_visible:
+        missed_list = json.loads(c.missed_calls) if c.missed_calls else []
+        total_calls += c.total_count
+        total_answered += c.answered_count
+        total_missed += len(missed_list)
     
     return Response({
         "stats": {
