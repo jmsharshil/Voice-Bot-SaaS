@@ -883,6 +883,13 @@
                             📥 Export Excel
                         </button>
                     `;
+
+                    // Check if campaign was suspended due to daily time limits
+                    const hoursSuspendedBanner = c.suspended_due_to_hours ? `
+                        <div style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; font-size: 12px; font-weight: 600; margin-top: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                            ⏰ Daily calling window closed. The remaining calls in this campaign queue are scheduled to automatically resume tomorrow at 09:30 AM.
+                        </div>
+                    ` : '';
                     
                     const animStyle = _isFirstLoad ? `style="animation-delay:${i*0.05}s"` : `style="animation: none;"`;
 
@@ -931,6 +938,8 @@
                             <span>Answered ${answeredPct}%</span>
                             <span>Missed ${missedPct}%</span>
                         </div>
+
+                        ${hoursSuspendedBanner}
 
                         <div class="campaign-time">
                             ${c.created_by ? `<div class="time-item"><strong>Triggered By:</strong> ${c.created_by}</div>` : ''}

@@ -179,8 +179,10 @@ class CampaignStatus(models.Model):
     total_count     = models.IntegerField(default=0)
     completed_count = models.IntegerField(default=0)
     missed_calls    = models.TextField(default="[]")  # JSON string of phone numbers
-    is_active       = models.BooleanField(default=False)
-    started_at      = models.DateTimeField(null=True, blank=True)
+    is_active              = models.BooleanField(default=False)
+    started_at             = models.DateTimeField(null=True, blank=True)
+    suspended_due_to_hours = models.BooleanField(default=False)
+    remaining_queue        = models.TextField(default="[]")
 
     class Meta:
         verbose_name_plural = "Campaign Statuses"
@@ -221,7 +223,9 @@ class Campaign(models.Model):
         blank=True,
         related_name="sub_campaigns"
     )
-    retry_count     = models.IntegerField(default=0)
+    retry_count            = models.IntegerField(default=0)
+    suspended_due_to_hours = models.BooleanField(default=False)
+    remaining_queue        = models.TextField(default="[]")
 
     class Meta:
         ordering = ["-started_at"]

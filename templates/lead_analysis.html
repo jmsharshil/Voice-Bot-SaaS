@@ -2248,6 +2248,10 @@
             </div>
         </div>
 
+        <div id="dmSuspendedBanner" style="background:#fef3c7; color:#d97706; border-radius:8px; padding:8px; font-size:10px; font-weight:600; margin-bottom:12px; display:none; border: 1px solid #fde68a;">
+            ⏰ Outbound hours closed. Campaign will auto-resume tomorrow at 09:30 AM.
+        </div>
+
         <div
             style="height:6px; background:rgba(255,255,255,0.1); border-radius:10px; margin-bottom:12px; overflow:hidden;">
             <div id="dmProgressFill" style="height:100%; width:0%; background:#4f46e5; transition:width 0.5s;"></div>
@@ -2769,17 +2773,27 @@
 
                 const indicator = document.getElementById("dmIndicator");
                 const title = document.getElementById("dmTitle");
+                const suspendedBanner = document.getElementById("dmSuspendedBanner");
 
-                if (data.active) {
-                    indicator.style.background = "#10b981";
-                    indicator.style.boxShadow = "0 0 8px #10b981";
-                    title.textContent = "Campaign Active";
-                    document.getElementById("dmStatus").textContent = "Running";
+                if (data.suspended_due_to_hours) {
+                    indicator.style.background = "#d97706";
+                    indicator.style.boxShadow = "0 0 8px #d97706";
+                    title.textContent = "Campaign Suspended";
+                    document.getElementById("dmStatus").textContent = "Suspended";
+                    if (suspendedBanner) suspendedBanner.style.display = "block";
                 } else {
-                    indicator.style.background = "#94a3b8";
-                    indicator.style.boxShadow = "none";
-                    title.textContent = "Campaign Finished";
-                    document.getElementById("dmStatus").textContent = "Done";
+                    if (suspendedBanner) suspendedBanner.style.display = "none";
+                    if (data.active) {
+                        indicator.style.background = "#10b981";
+                        indicator.style.boxShadow = "0 0 8px #10b981";
+                        title.textContent = "Campaign Active";
+                        document.getElementById("dmStatus").textContent = "Running";
+                    } else {
+                        indicator.style.background = "#94a3b8";
+                        indicator.style.boxShadow = "none";
+                        title.textContent = "Campaign Finished";
+                        document.getElementById("dmStatus").textContent = "Done";
+                    }
                 }
 
                 const pct = data.total > 0 ? (data.completed / data.total) * 100 : 0;

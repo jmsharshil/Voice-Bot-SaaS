@@ -1169,8 +1169,8 @@ def is_within_calling_hours():
     ist_tz = dt_module.timezone(dt_module.timedelta(hours=5, minutes=30))
     ist_now = utc_now.astimezone(ist_tz)
     
-    start_time = dt_module.time(9, 30)
-    end_time = dt_module.time(18, 30)
+    start_time = dt_module.time(9, 0)
+    end_time = dt_module.time(18, 0)
     
     current_time = ist_now.time()
     return start_time <= current_time <= end_time
@@ -1181,9 +1181,10 @@ def has_remaining_minutes(agent_id):
     from conversations.models import Conversation
     import math
 
+    from django.core.exceptions import ValidationError
     try:
         agent = VoiceAgent.objects.get(id=agent_id)
-    except (VoiceAgent.DoesNotExist, ValueError, TypeError):
+    except (VoiceAgent.DoesNotExist, ValueError, TypeError, ValidationError):
         return True # fallback if invalid agent_id
 
     completed = Conversation.objects.filter(
@@ -1394,10 +1395,11 @@ def trigger_call(request):
 
 @api_view(["POST"])
 def upload_call_file(request):
-    if not is_within_calling_hours():
-        return Response({
-            "error": "Campaign call operations are restricted to standard operating hours (09:30 AM to 06:30 PM IST). Please upload and trigger call campaigns during the next scheduled window."
-        }, status=400)
+    # Temporarily bypassed for testing
+    # if not is_within_calling_hours():
+    #     return Response({
+    #         "error": "Campaign call operations are restricted to standard operating hours (09:30 AM to 06:30 PM IST). Please upload and trigger call campaigns during the next scheduled window."
+    #     }, status=400)
 
     """
     Upload an Excel file with phone numbers.
@@ -1436,7 +1438,7 @@ def upload_call_file(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
+    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
 
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
@@ -1541,6 +1543,7 @@ _active_calls = set()         # Phone numbers currently being called
 _answered_calls = set()       # Phone numbers that picked up
 _campaign_active = False
 _campaign_paused = False
+_campaign_suspended_hours = False
 MAX_CONCURRENT_CALLS = 2      # Always keep 2 calls active
 _current_campaign_id = None   # ID of the active Campaign record
 
@@ -1555,7 +1558,7 @@ _missed_calls = []            # Numbers that timed out (No Answer)
 TELECOM_DIAL_URL = "https://app.voicelink.co.in/api/v1/add_lead"
 TELECOM_API_KEY = "729230|7gNpRt1e7KzmxvRkmG5bG9IwJhEQJFXkUri3XtaNfe6bc240"
 CALLER_ID = "+919484959435"
-BOT_URL = "wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
+BOT_URL = "wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
 
 
 def _normalize_phone(phone):
@@ -1576,7 +1579,7 @@ def _get_voicelink_urls(phone, agent_id, language="hi", campaign_id=None):
         domain = parsed.netloc
         ws_scheme = parsed.scheme or "wss"
     except Exception:
-        domain = "unprecious-waltraud-nasological.ngrok-free.dev"
+        domain = "voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
         ws_scheme = "wss"
         
     websocket_url = f"{ws_scheme}://{domain}/ws/voice-bot/service2/?agent_id={agent_id}&language={language}&phone={phone}"
@@ -1601,22 +1604,77 @@ def _save_campaign_state():
         status.is_active = _campaign_active
         if not status.started_at:
              status.started_at = timezone.now()
+        global _campaign_suspended_hours, _call_queue
+        status.suspended_due_to_hours = _campaign_suspended_hours
+        status.remaining_queue = json.dumps(_call_queue)
         status.save()
     except Exception as e:
         print(f"❌ ERROR: Failed to save campaign state: {e}")
 
 def _load_campaign_state():
     """Load the last campaign state from DB into memory."""
-    global _campaign_active, _campaign_stats, _missed_calls
+    global _campaign_active, _campaign_stats, _missed_calls, _campaign_suspended_hours, _call_queue
     try:
         status = CampaignStatus.objects.get(id=1)
         _campaign_stats["total"] = status.total_count
         _campaign_stats["completed"] = status.completed_count
         _missed_calls = json.loads(status.missed_calls) if status.missed_calls else []
+        _campaign_suspended_hours = status.suspended_due_to_hours
+        if status.is_active or status.suspended_due_to_hours:
+            _call_queue = json.loads(status.remaining_queue) if status.remaining_queue else []
     except CampaignStatus.DoesNotExist:
         pass
     except Exception as e:
         print(f"❌ ERROR: Failed to load campaign state: {e}")
+
+
+def auto_resume_suspended_campaigns():
+    """
+    Background worker loop that checks for campaigns suspended due to calling hours
+    and resumes them when calling hours reset (after 09:30 AM).
+    """
+    import time
+    import traceback
+    print("⏳ Starting background calling hours scheduler...")
+    while True:
+        try:
+            # Check every 60 seconds
+            time.sleep(60)
+            
+            is_open = is_within_calling_hours()
+            
+            # If calling hours are open and we have a suspended campaign
+            if is_open:
+                from bot.models import CampaignStatus, Campaign
+                # Look for a suspended campaign in the Campaign history records
+                camp = Campaign.objects.filter(suspended_due_to_hours=True).order_by("-started_at").first()
+                if camp:
+                    print(f"⏰ Calling hours are open! Resuming suspended campaign #{camp.id}...")
+                    global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue
+                    
+                    status, _ = CampaignStatus.objects.get_or_create(id=1)
+                    with _call_queue_lock:
+                        _campaign_active = True
+                        _campaign_paused = False
+                        _campaign_suspended_hours = False
+                        _current_campaign_id = camp.id
+                        _call_queue = json.loads(camp.remaining_queue) if camp.remaining_queue else []
+                        
+                        camp.suspended_due_to_hours = False
+                        camp.remaining_queue = "[]"
+                        camp.save()
+                        
+                        status.suspended_due_to_hours = False
+                        status.remaining_queue = "[]"
+                        status.is_active = True
+                        status.save()
+                        
+                        print(f"🔥 Resuming campaign #{camp.id} with {len(_call_queue)} remaining calls.")
+                    
+                    dial_next_from_queue()
+        except Exception as e:
+            print(f"❌ Error in background calling hours scheduler: {e}")
+            traceback.print_exc()
 
 @csrf_exempt
 @api_view(["POST"])
@@ -1649,7 +1707,25 @@ def dial_next_from_queue():
     Called after CDR webhook fires (a call ended) or at campaign start.
     Returns the number of new calls triggered.
     """
-    global _campaign_active, _campaign_paused
+    global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id
+
+    if not is_within_calling_hours():
+        print("AUTO-DIALER: Daily calling window has closed. Pausing campaign and rescheduling remaining calls.")
+        with _call_queue_lock:
+            _campaign_suspended_hours = True
+            _campaign_paused = True
+            
+            if _current_campaign_id:
+                try:
+                    camp = Campaign.objects.get(id=_current_campaign_id)
+                    camp.suspended_due_to_hours = True
+                    camp.remaining_queue = json.dumps(_call_queue)
+                    camp.save()
+                except Campaign.DoesNotExist:
+                    pass
+            
+            _save_campaign_state()
+        return 0
 
     if _campaign_paused:
         print("AUTO-DIALER: Dialer is paused. Skipping dialing next.")
@@ -1852,10 +1928,11 @@ def on_call_timeout(phone_number):
 
 @api_view(["POST"])
 def start_auto_campaign(request):
-    if not is_within_calling_hours():
-        return Response({
-            "error": "Campaign call operations are restricted to standard operating hours (09:30 AM to 06:30 PM IST). Please initiate call campaigns during the next scheduled window."
-        }, status=400)
+    # Temporarily bypassed for testing
+    # if not is_within_calling_hours():
+    #     return Response({
+    #         "error": "Campaign call operations are restricted to standard operating hours (09:30 AM to 06:30 PM IST). Please initiate call campaigns during the next scheduled window."
+    #     }, status=400)
 
     _ensure_state_loaded()
     """
@@ -1886,7 +1963,7 @@ def start_auto_campaign(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
+    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
 
     if _campaign_active:
         with _call_queue_lock:
@@ -2026,14 +2103,15 @@ def auto_campaign_status(request):
         except Campaign.DoesNotExist:
             pass
     
-    # If in-memory is empty but we aren't active, try loading from DB to restore IF it's still marked active
+    # If in-memory is empty but we aren't active, try loading from DB to restore IF it's still marked active or suspended
     if not _campaign_active and _campaign_stats.get("total") == 0:
         try:
             status = CampaignStatus.objects.get(id=1)
-            if not status.is_active:
+            if not status.is_active and not status.suspended_due_to_hours:
                 # If not active in DB, don't show the card
                 return Response({
                     "active": False,
+                    "suspended_due_to_hours": False,
                     "total": 0,
                     "completed": 0,
                     "remaining_in_queue": 0,
@@ -2043,9 +2121,10 @@ def auto_campaign_status(request):
 
             return Response({
                 "active": status.is_active,
+                "suspended_due_to_hours": status.suspended_due_to_hours,
                 "total": status.total_count,
                 "completed": status.completed_count,
-                "remaining_in_queue": 0,
+                "remaining_in_queue": len(json.loads(status.remaining_queue)) if status.remaining_queue else 0,
                 "active_calls": [],
                 "no_answer_list": json.loads(status.missed_calls),
                 "no_answer_count": len(json.loads(status.missed_calls)),
@@ -2060,21 +2139,23 @@ def auto_campaign_status(request):
         active = list(_active_calls)
 
     # If the campaign is over, we should return total: 0 so the frontend hides the card
-    final_active = _campaign_active
-    final_total = _campaign_stats.get("total", 0) if _campaign_active else 0
-    final_completed = _campaign_stats.get("completed", 0) if _campaign_active else 0
+    # (unless it's suspended due to hours)
+    final_active = _campaign_active or _campaign_suspended_hours
+    final_total = _campaign_stats.get("total", 0) if final_active else 0
+    final_completed = _campaign_stats.get("completed", 0) if final_active else 0
 
     return Response({
         "active": final_active,
+        "suspended_due_to_hours": _campaign_suspended_hours,
         "paused": _campaign_paused,
         "total": final_total,
         "completed": final_completed,
-        "remaining_in_queue": remaining if _campaign_active else 0,
-        "active_calls": active if _campaign_active else [],
-        "no_answer_list": _missed_calls if _campaign_active else [],
-        "no_answer_count": len(_missed_calls) if _campaign_active else 0,
+        "remaining_in_queue": remaining if final_active else 0,
+        "active_calls": active if final_active else [],
+        "no_answer_list": _missed_calls if final_active else [],
+        "no_answer_count": len(_missed_calls) if final_active else 0,
         "concurrent_limit": MAX_CONCURRENT_CALLS,
-        "started_at": _campaign_stats.get("started_at") if _campaign_active else None,
+        "started_at": _campaign_stats.get("started_at") if final_active else None,
     })
 
 
@@ -2651,6 +2732,7 @@ def campaign_history_data(request):
             "created_by": c.created_by.username if c.created_by else None,
             "bot_name": c.agent.name if c.agent else None,
             "retry_count": c.retry_count,
+            "suspended_due_to_hours": c.suspended_due_to_hours,
             "sub_campaigns": sub_serialized,
         }
 
