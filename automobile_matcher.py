@@ -4,8 +4,13 @@ import numpy as np
 from typing import Optional, Dict, List, Tuple
 from sentence_transformers import SentenceTransformer, util
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("AutomobileMatcher")
+# Mute noisy internal loggers
+logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+logging.getLogger("transformers").setLevel(logging.WARNING)
+logging.getLogger("huggingface_hub").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 class AutomobileMatcher:
     _shared_model = None
@@ -29,14 +34,14 @@ class AutomobileMatcher:
             
             # Precompute Global Embeddings
             for intent in self.global_intents:
-                intent['embeddings'] = self.model.encode(intent['triggers'], convert_to_tensor=True)
+                intent['embeddings'] = self.model.encode(intent['triggers'], convert_to_tensor=True, show_progress_bar=False)
 
             # Precompute Flow/Phase Embeddings
             for phase_data in data.get("flow_intents", []):
                 phase_name = phase_data['phase']
                 intents = phase_data['intents']
                 for intent in intents:
-                    intent['embeddings'] = self.model.encode(intent['triggers'], convert_to_tensor=True)
+                    intent['embeddings'] = self.model.encode(intent['triggers'], convert_to_tensor=True, show_progress_bar=False)
                 self.phase_intents[phase_name] = intents
         
         logger.info("Automobile Matcher Data Loaded & Embedded.")
@@ -46,7 +51,7 @@ class AutomobileMatcher:
         1. Check Global Intents (Higher Priority)
         2. Check Current Phase Intents
         """
-        user_embedding = self.model.encode(user_text, convert_to_tensor=True)
+        user_embedding = self.model.encode(user_text, convert_to_tensor=True, show_progress_bar=False)
 
         # 1. GLOBAL CHECK
         best_global = self._get_best_in_list(user_embedding, self.global_intents)

@@ -214,6 +214,14 @@ class Campaign(models.Model):
         blank=True,
         related_name="campaigns"
     )
+    parent_campaign = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sub_campaigns"
+    )
+    retry_count     = models.IntegerField(default=0)
 
     class Meta:
         ordering = ["-started_at"]

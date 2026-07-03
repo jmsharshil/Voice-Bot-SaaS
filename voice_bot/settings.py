@@ -347,3 +347,10 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'testing251299@gmail.com'
 EMAIL_HOST_PASSWORD = 'hqnc uhzo lwch iwss'
 DEFAULT_FROM_EMAIL = 'AI SalesBot <testing251299@gmail.com>'
+
+# =========================
+# AUTO-CAMPAIGN RETRY SETTINGS
+# =========================
+import os
+AUTO_CAMPAIGN_MAX_RETRIES = int(os.getenv("AUTO_CAMPAIGN_MAX_RETRIES", 5))
+AUTO_CAMPAIGN_RETRY_DELAY = int(os.getenv("AUTO_CAMPAIGN_RETRY_DELAY", 300))  # 5 minutes default
