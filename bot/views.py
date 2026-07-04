@@ -2266,6 +2266,59 @@ def export_leads_excel(request):
     else:
         leads = LeadAnalysis.objects.filter(agent=assigned_agent).select_related('conversation', 'agent')
     
+    # Apply query filters if present
+    lead_level = request.query_params.get("lead_level")
+    agent_name = request.query_params.get("agent")
+    call_type = request.query_params.get("call_type")
+    date_filter = request.query_params.get("date_filter")
+
+    include_missed = True
+
+    if lead_level:
+        if lead_level == "missed":
+            leads = leads.none()
+        else:
+            leads = leads.filter(lead_level=lead_level)
+            include_missed = False
+
+    if agent_name:
+        leads = leads.filter(agent__name=agent_name)
+        include_missed = False
+
+    if call_type:
+        leads = leads.filter(conversation__call_type=call_type)
+        if call_type == "INBOUND":
+            include_missed = False
+
+    date_start = None
+    date_end = None
+    if date_filter:
+        import datetime
+        now = timezone.now()
+        ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+        ist_now = now.astimezone(ist_tz)
+        today_start = datetime.datetime(ist_now.year, ist_now.month, ist_now.day, tzinfo=ist_tz)
+        
+        if date_filter == "today":
+            date_start = today_start
+        elif date_filter == "yesterday":
+            date_start = today_start - datetime.timedelta(days=1)
+            date_end = today_start
+        elif date_filter.startswith("custom_"):
+            try:
+                custom_val = date_filter.split("_")[1]
+                parts = [int(p) for p in custom_val.split("-")]
+                date_start = datetime.datetime(parts[0], parts[1], parts[2], tzinfo=ist_tz)
+                date_end = date_start + datetime.timedelta(days=1)
+            except Exception as e:
+                print(f"Error parsing custom date in export: {e}")
+
+        if date_start:
+            if date_end:
+                leads = leads.filter(analyzed_at__gte=date_start, analyzed_at__lt=date_end)
+            else:
+                leads = leads.filter(analyzed_at__gte=date_start)
+
     data = []
     for lead in leads:
         # Fetch and format transcript
@@ -2304,48 +2357,64 @@ def export_leads_excel(request):
             data[-1]["Topic"] = lead.interest_topic or "—"
 
     # 2. Add Missed Calls from the last campaign
-    try:
-        if is_super:
-            status = CampaignStatus.objects.get(id=1)
-            missed_list = json.loads(status.missed_calls) if status.missed_calls else []
-            started_at = status.started_at
-        else:
-            # Get the last campaign run for the scoped agent
-            last_campaign = Campaign.objects.filter(agent=assigned_agent).order_by("-started_at").first()
-            if last_campaign:
-                missed_list = json.loads(last_campaign.missed_calls) if last_campaign.missed_calls else []
-                started_at = last_campaign.started_at
+    if include_missed:
+        try:
+            if is_super:
+                status = CampaignStatus.objects.get(id=1)
+                missed_list = json.loads(status.missed_calls) if status.missed_calls else []
+                started_at = status.started_at
             else:
-                missed_list = []
-                started_at = None
+                # Get the last campaign run for the scoped agent
+                last_campaign = Campaign.objects.filter(agent=assigned_agent).order_by("-started_at").first()
+                if last_campaign:
+                    missed_list = json.loads(last_campaign.missed_calls) if last_campaign.missed_calls else []
+                    started_at = last_campaign.started_at
+                else:
+                    missed_list = []
+                    started_at = None
 
-        import datetime
-        ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
-        for phone in missed_list:
+            import datetime
+            ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+            
+            # Apply date filter to missed calls started_at if date_start/date_end are defined
             if started_at:
-                try:
+                if date_start:
                     started_at_local = started_at.astimezone(ist_tz)
-                    started_str = started_at_local.strftime("%Y-%m-%d %H:%M")
-                except Exception:
-                    started_str = started_at.strftime("%Y-%m-%d %H:%M")
+                    if date_end:
+                        if not (date_start <= started_at_local < date_end):
+                            missed_list = []
+                    else:
+                        if not (started_at_local >= date_start):
+                            missed_list = []
             else:
-                started_str = "—"
+                if date_start:
+                    missed_list = []
 
-            data.append({
-                "Analyzed At": started_str,
-                "Agent": "Auto-Dialer",
-                # "Customer Name": "—",
-                "Phone Number": phone,
-                "Email": "—",
-                "Interest Level": "MISSED (No Answer)",
-                "Recording Link": "—",
-                "AI Summary": "The call was not picked up by the customer.",
-                "Full Transcript": "—"
-            })
-            if include_topic:
-                data[-1]["Topic"] = "Campaign Missed Call"
-    except:
-        pass
+            for phone in missed_list:
+                if started_at:
+                    try:
+                        started_at_local = started_at.astimezone(ist_tz)
+                        started_str = started_at_local.strftime("%Y-%m-%d %H:%M")
+                    except Exception:
+                        started_str = started_at.strftime("%Y-%m-%d %H:%M")
+                else:
+                    started_str = "—"
+
+                data.append({
+                    "Analyzed At": started_str,
+                    "Agent": "Auto-Dialer",
+                    # "Customer Name": "—",
+                    "Phone Number": phone,
+                    "Email": "—",
+                    "Interest Level": "MISSED (No Answer)",
+                    "Recording Link": "—",
+                    "AI Summary": "The call was not picked up by the customer.",
+                    "Full Transcript": "—"
+                })
+                if include_topic:
+                    data[-1]["Topic"] = "Campaign Missed Call"
+        except:
+            pass
     
     if not data:
         # Return empty excel with headers if no leads

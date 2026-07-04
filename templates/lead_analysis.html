@@ -2153,6 +2153,7 @@
                     <option value="warm">🤝 Warm Leads</option>
                     <option value="cold">❄️ Cold Leads</option>
                     <option value="not_interested">🚫 Not Interested</option>
+                    <option value="missed">📞 Missed Calls</option>
                 </select>
                 <select id="filterAgent" onchange="applyAdvancedFilters()" class="filter-select" style="max-width: 110px;">
                     <option value="">🤖 All Bots</option>
@@ -2401,6 +2402,13 @@
             } else {
                 activeFilter = level;
             }
+
+            // Sync dropdown value with the card click
+            const selectEl = document.getElementById("filterLeadLevel");
+            if (selectEl) {
+                selectEl.value = activeFilter || "";
+            }
+
             // Update card active state
             document.querySelectorAll(".card").forEach(c => c.classList.remove("active-filter"));
             if (activeFilter) {
@@ -2468,14 +2476,9 @@
                 });
             }
 
-            // Apply advanced filters
-            const selLeadLevel = document.getElementById("filterLeadLevel")?.value || "";
+            // Apply advanced filters (except lead_level, which is handled by activeFilter)
             const selAgent = document.getElementById("filterAgent")?.value || "";
             const selDate = document.getElementById("filterDate")?.value || "";
-
-            if (selLeadLevel) {
-                filtered = filtered.filter(l => l.lead_level === selLeadLevel);
-            }
             if (selAgent) {
                 filtered = filtered.filter(l => l.agent_name === selAgent);
             }
@@ -2535,9 +2538,59 @@
                 item.onclick = () => openLead(lead);
                 list.appendChild(item);
             });
+            updateExportUrl();
+        }
+
+        function updateExportUrl() {
+            const token = localStorage.getItem('access_token');
+            const exportBtn = document.querySelector('.export-btn');
+            if (!exportBtn || !token) return;
+
+            let url = `/bot/export/leads/?token=${token}`;
+
+            let level = activeFilter || "";
+            const selLeadLevel = document.getElementById("filterLeadLevel")?.value || "";
+            if (!level && selLeadLevel) {
+                level = selLeadLevel;
+            }
+            if (level) {
+                url += `&lead_level=${encodeURIComponent(level)}`;
+            }
+
+            const selAgent = document.getElementById("filterAgent")?.value || "";
+            if (selAgent) {
+                url += `&agent=${encodeURIComponent(selAgent)}`;
+            }
+
+            const selCallType = document.getElementById("filterCallType")?.value || "";
+            if (selCallType) {
+                url += `&call_type=${encodeURIComponent(selCallType)}`;
+            }
+
+            const selDate = document.getElementById("filterDate")?.value || "";
+            if (selDate) {
+                url += `&date_filter=${encodeURIComponent(selDate)}`;
+            }
+
+            exportBtn.href = url;
         }
 
         function applyAdvancedFilters() {
+            const selLeadLevel = document.getElementById("filterLeadLevel")?.value || "";
+            activeFilter = selLeadLevel || null;
+
+            // Update card active state to match
+            document.querySelectorAll(".card").forEach(c => c.classList.remove("active-filter"));
+            if (activeFilter) {
+                const cardMap = {
+                    hot: "cardHot",
+                    warm: "cardWarm",
+                    cold: "cardCold",
+                    not_interested: "cardNot",
+                    missed: "cardMissed"
+                };
+                document.getElementById(cardMap[activeFilter])?.classList.add("active-filter");
+            }
             renderLeads();
         }
 
