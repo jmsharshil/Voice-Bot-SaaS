@@ -1563,12 +1563,16 @@ BOT_URL = "wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net
 
 def _normalize_phone(phone):
     """Normalize phone number — strip +91 prefix if present."""
-    phone = str(phone).strip()
-    if phone.startswith("+91") and len(phone) == 13:
-        phone = phone[3:]
-    elif phone.startswith("91") and len(phone) == 12:
-        phone = phone[2:]
-    return phone
+    phone_str = str(phone).strip()
+    if phone_str.endswith(".0"):
+        phone_str = phone_str[:-2]
+    if "/" in phone_str:
+        phone_str = phone_str.split("/")[0].strip()
+    if phone_str.startswith("+91") and len(phone_str) == 13:
+        phone_str = phone_str[3:]
+    elif phone_str.startswith("91") and len(phone_str) == 12:
+        phone_str = phone_str[2:]
+    return phone_str
 
 
 def _get_voicelink_urls(phone, agent_id, language="hi", campaign_id=None):
@@ -2212,19 +2216,54 @@ def pause_auto_campaign(request):
 @api_view(["POST"])
 def resume_auto_campaign(request):
     """Resumes the current auto-dial campaign."""
-    global _campaign_paused
+    global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue
+    
+    # If there is no active campaign in memory, try to restore the campaign from the DB
     if not _campaign_active:
-        return Response({"error": "No active campaign running"}, status=400)
-
-    if _current_campaign_id:
-        try:
-            curr_camp = Campaign.objects.get(id=_current_campaign_id)
-            if not _is_campaign_visible_to_user(curr_camp, request.user):
+        # Look for any campaign in the DB that is active (is_active=True)
+        camp = Campaign.objects.filter(is_active=True).order_by("-started_at").first()
+        if camp:
+            if not _is_campaign_visible_to_user(camp, request.user):
                 return Response({"error": "You do not have permission to control this campaign."}, status=403)
-        except Campaign.DoesNotExist:
-            pass
+            with _call_queue_lock:
+                _campaign_active = True
+                _campaign_paused = False
+                _campaign_suspended_hours = False
+                _current_campaign_id = camp.id
+                _call_queue = json.loads(camp.remaining_queue) if camp.remaining_queue else []
+                
+                # Update CampaignStatus singleton too
+                status, _ = CampaignStatus.objects.get_or_create(id=1)
+                status.is_active = True
+                status.suspended_due_to_hours = False
+                status.remaining_queue = camp.remaining_queue
+                status.save()
+                
+                camp.suspended_due_to_hours = False
+                camp.save()
+            print(f"AUTO-DIALER: Restored and resumed campaign #{camp.id} from DB with {len(_call_queue)} remaining calls.")
+        else:
+            return Response({"error": "No active campaign running"}, status=400)
+    else:
+        # Campaign is active in memory
+        if _current_campaign_id:
+            try:
+                curr_camp = Campaign.objects.get(id=_current_campaign_id)
+                if not _is_campaign_visible_to_user(curr_camp, request.user):
+                    return Response({"error": "You do not have permission to control this campaign."}, status=403)
+                curr_camp.suspended_due_to_hours = False
+                curr_camp.save()
+            except Campaign.DoesNotExist:
+                pass
+            
+            status, _ = CampaignStatus.objects.get_or_create(id=1)
+            status.suspended_due_to_hours = False
+            status.is_active = True
+            status.save()
 
-    _campaign_paused = False
+        _campaign_paused = False
+        _campaign_suspended_hours = False
+
     print("AUTO-DIALER: Campaign resumed. Dialing next...")
     dial_next_from_queue()
     return Response({"status": "campaign_resumed"})

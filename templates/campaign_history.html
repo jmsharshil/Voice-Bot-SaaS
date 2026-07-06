@@ -871,8 +871,8 @@
                     // Campaign controls for active campaigns
                     const controlsHtml = c.is_active ? `
                         <div class="campaign-controls" id="controls-${c.id}">
-                            <button class="btn-ctrl btn-pause" onclick="pauseCampaign(${c.id})" id="pauseBtn-${c.id}">⏸ Pause</button>
-                            <button class="btn-ctrl btn-resume" onclick="resumeCampaign(${c.id})" id="resumeBtn-${c.id}" style="display:none">▶ Resume</button>
+                            <button class="btn-ctrl btn-pause" onclick="pauseCampaign(${c.id})" id="pauseBtn-${c.id}" ${c.suspended_due_to_hours ? 'style="display:none"' : ''}>⏸ Pause</button>
+                            <button class="btn-ctrl btn-resume" onclick="resumeCampaign(${c.id})" id="resumeBtn-${c.id}" ${c.suspended_due_to_hours ? '' : 'style="display:none"'}>▶ Resume</button>
                             <button class="btn-ctrl btn-stop" onclick="stopCampaign(${c.id})">⏹ Stop</button>
                         </div>` : '';
                     
@@ -988,8 +988,8 @@
 
                                         const subControlsHtml = sub.is_active ? `
                                             <div class="campaign-controls" id="controls-${sub.id}" style="margin-top: 8px; border-top: none; padding-top: 0;">
-                                                <button class="btn-ctrl btn-pause" onclick="pauseCampaign(${sub.id})" id="pauseBtn-${sub.id}">⏸ Pause</button>
-                                                <button class="btn-ctrl btn-resume" onclick="resumeCampaign(${sub.id})" id="resumeBtn-${sub.id}" style="display:none">▶ Resume</button>
+                                                <button class="btn-ctrl btn-pause" onclick="pauseCampaign(${sub.id})" id="pauseBtn-${sub.id}" ${sub.suspended_due_to_hours ? 'style="display:none"' : ''}>⏸ Pause</button>
+                                                <button class="btn-ctrl btn-resume" onclick="resumeCampaign(${sub.id})" id="resumeBtn-${sub.id}" ${sub.suspended_due_to_hours ? '' : 'style="display:none"'}>▶ Resume</button>
                                                 <button class="btn-ctrl btn-stop" onclick="stopCampaign(${sub.id})">⏹ Stop</button>
                                             </div>` : '';
 
