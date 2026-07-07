@@ -30,6 +30,7 @@ from .views import (
     RegenerateAPIKeyView,
     DemoBotResolverAPIView,
     UpdateAgentQuotaView,
+    UpdateAgentConcurrencyView,
 )
 
 urlpatterns = [
@@ -41,4 +42,5 @@ urlpatterns = [
     path("roles/<int:industry_id>/", RoleByIndustryAPIView.as_view()),
     path("demo-bot/", DemoBotResolverAPIView.as_view()),
     path("<uuid:agent_id>/update-quota/", UpdateAgentQuotaView.as_view()),
+    path("<uuid:agent_id>/update-concurrency/", UpdateAgentConcurrencyView.as_view()),
 ]

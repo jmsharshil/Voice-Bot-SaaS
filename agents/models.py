@@ -63,6 +63,7 @@ class VoiceAgent(models.Model):
     is_demo = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     minutes_quota = models.IntegerField(default=5000, help_text="Total allocated call minutes for this bot")
+    max_concurrent_calls = models.IntegerField(default=2, help_text="Maximum concurrent calls for campaigns using this bot.")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

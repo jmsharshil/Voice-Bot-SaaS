@@ -886,6 +886,7 @@
                                 <th>Bot ID</th>
                                 <th>Inbound Number</th>
                                 <th>Minutes (Used/Quota)</th>
+                                <th>Max Concurrency</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
@@ -1001,6 +1002,10 @@
                 <div class="form-group">
                     <label>Minutes Quota</label>
                     <input type="number" id="agentQuota" class="form-control" value="5000" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Max Concurrent Calls</label>
+                    <input type="number" id="agentMaxConcurrency" class="form-control" value="2" min="1" required>
                 </div>
                 <div class="form-group">
                     <label>Inbound Phone Number (Optional)</label>
@@ -1499,6 +1504,10 @@
                                 <button class="action-btn" style="padding:0.15rem 0.45rem; font-size:0.75rem; margin-left:6px; background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="openQuotaModal('${agent.id}', ${agent.minutes_quota}, '${agent.name}', ${agent.used_minutes})">✏️ Edit</button>
                             </td>
                             <td>
+                                <span style="font-weight:600; color:var(--text-main);">${agent.max_concurrent_calls || 2} calls</span>
+                                <button class="action-btn" style="padding:0.15rem 0.45rem; font-size:0.75rem; margin-left:6px; background:#f1f5f9; color:#475569; border-color:#cbd5e1;" onclick="changeConcurrencyLimit('${agent.id}', ${agent.max_concurrent_calls || 2}, '${agent.name}')">✏️ Edit</button>
+                            </td>
+                            <td>
                                 <span class="badge ${agent.is_active ? 'admin' : ''}" style="cursor: pointer; font-size:0.8rem; padding:0.3rem 0.6rem;" onclick="toggleAgentActive('${agent.id}')">
                                      ${agent.is_active ? 'Active' : 'Inactive'}
                                 </span>
@@ -1534,6 +1543,36 @@
                 }
             } catch (e) {
                 console.error(e);
+            }
+        }
+
+        async function changeConcurrencyLimit(agentId, currentLimit, agentName) {
+            const val = prompt(`Change Max Concurrent Calls for bot "${agentName}":`, currentLimit);
+            if (val === null) return;
+            const limit = parseInt(val);
+            if (isNaN(limit) || limit <= 0) {
+                alert("Please enter a valid positive integer.");
+                return;
+            }
+            try {
+                const res = await fetch(`${AGENT_API_BASE}/${agentId}/update-concurrency/`, {
+                    method: 'PATCH',
+                    headers: {
+                        ...headers,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ max_concurrent_calls: limit })
+                });
+                if (res.ok) {
+                    showAlert('agentTableAlert', 'Concurrency limit updated successfully.', 'success');
+                    fetchAgents();
+                } else {
+                    const data = await res.json();
+                    showAlert('agentTableAlert', 'Failed to update concurrency: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showAlert('agentTableAlert', 'Network error updating concurrency limit.', 'error');
             }
         }
 
@@ -1842,6 +1881,7 @@
             const industry = document.getElementById('agentIndustry').value;
             const role_template = document.getElementById('agentRoleTemplate').value;
             const minutes_quota = document.getElementById('agentQuota').value;
+            const max_concurrent_calls = document.getElementById('agentMaxConcurrency').value;
             const inbound_phone_number = document.getElementById('agentInboundPhone').value;
 
             const payload = {
@@ -1850,6 +1890,7 @@
                 industry: parseInt(industry),
                 role_template: parseInt(role_template),
                 minutes_quota: parseInt(minutes_quota),
+                max_concurrent_calls: parseInt(max_concurrent_calls),
                 inbound_phone_number: inbound_phone_number
             };
 

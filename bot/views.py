@@ -1271,14 +1271,34 @@ def trigger_call(request):
             if str(phone).startswith("91") and len(str(phone)) == 12:
                 normalized_phone = str(phone)[2:]
 
-            print(f"📞 Single Call → {normalized_phone} (Lang: {language}, Agent: {agent_id})")
+            name = request.data.get("name") or "Customer"
+            name = str(name).strip()
+            if not name or name.lower() == "nan":
+                name = "Customer"
+ 
+            from bot.models import Customer
+            Customer.objects.update_or_create(
+                phone=normalized_phone,
+                defaults={"name": name, "source": "outbound"}
+            )
+ 
+            # Trigger background pre-synthesis of greeting!
+            import threading
+            threading.Thread(
+                target=pre_synthesize_greeting,
+                args=(agent_id, normalized_phone, name, language),
+                daemon=True
+            ).start()
+ 
+            print(f"📞 Single Call → {normalized_phone} (Name: {name}, Lang: {language}, Agent: {agent_id})")
+ 
 
             websocket_url, webhook_url = _get_voicelink_urls(normalized_phone, agent_id, language)
             payload = {
                 "leads": [
                     {
                         "customer_number": normalized_phone,
-                        "custom_parameters": json.dumps({"name": "Valued Customer"})
+                        "custom_parameters": json.dumps({"name": name})
                     }
                 ],
                 "did_number": did_number,
@@ -1438,7 +1458,7 @@ def upload_call_file(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
+    BOT_URL = f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
 
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
@@ -1469,13 +1489,31 @@ def upload_call_file(request):
     if not phone_col and len(df.columns) > 0:
         phone_col = df.columns[0]
 
+    # Find the name column case-insensitively
+    name_col = None
+    for col in df.columns:
+        c_clean = str(col).strip().lower()
+        if c_clean in ["name", "customer name", "customer_name", "first name", "first_name"]:
+            name_col = col
+            break
+ 
+    from bot.models import Customer
     phones = []
     if phone_col is not None:
         for _, row in df.iterrows():
             phone = str(row.get(phone_col) or "").strip()
             if not phone:
                 continue
-            phones.append(_normalize_phone(phone))
+            normalized = _normalize_phone(phone)
+            if normalized:
+                phones.append(normalized)
+                cust_name = str(row.get(name_col) or "Customer").strip() if name_col else "Customer"
+                if not cust_name or cust_name.lower() == "nan":
+                    cust_name = "Customer"
+                Customer.objects.update_or_create(
+                    phone=normalized,
+                    defaults={"name": cust_name, "source": "outbound"}
+                )
 
     phones = [p for p in phones if p]
 
@@ -1511,20 +1549,24 @@ def upload_call_file(request):
         )
         global _current_campaign_id
         _current_campaign_id = campaign_obj.id
-        print(f"🚀 AUTO-DIALER (file upload): Campaign #{campaign_obj.id} started with {len(phones)} numbers (max {MAX_CONCURRENT_CALLS} concurrent)")
+        from agents.models import VoiceAgent
+        agent_obj = VoiceAgent.objects.filter(id=agent_id).first()
+        concurrency_limit = agent_obj.max_concurrent_calls if agent_obj else 2
+        print(f"🚀 AUTO-DIALER (file upload): Campaign #{campaign_obj.id} started with {len(phones)} numbers (max {concurrency_limit} concurrent)")
     except Exception as e:
         _current_campaign_id = None
+        concurrency_limit = 2
         print(f"WARNING: Failed to create Campaign record: {e}")
 
-    # Dial first 2 numbers
+    # Dial first numbers
     dial_next_from_queue()
 
     return Response({
         "status": "campaign_started",
         "total": len(phones),
-        "concurrent_calls": MAX_CONCURRENT_CALLS,
+        "concurrent_calls": concurrency_limit,
         "campaign_id": _current_campaign_id,
-        "message": f"First {min(MAX_CONCURRENT_CALLS, len(phones))} calls triggered. Remaining will auto-dial as each call ends.",
+        "message": f"First {min(concurrency_limit, len(phones))} calls triggered. Remaining will auto-dial as each call ends.",
     })
 
 
@@ -1558,7 +1600,7 @@ _missed_calls = []            # Numbers that timed out (No Answer)
 TELECOM_DIAL_URL = "https://app.voicelink.co.in/api/v1/add_lead"
 TELECOM_API_KEY = "729230|7gNpRt1e7KzmxvRkmG5bG9IwJhEQJFXkUri3XtaNfe6bc240"
 CALLER_ID = "+919484959435"
-BOT_URL = "wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
+BOT_URL = "wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
 
 
 def _normalize_phone(phone):
@@ -1583,7 +1625,7 @@ def _get_voicelink_urls(phone, agent_id, language="hi", campaign_id=None):
         domain = parsed.netloc
         ws_scheme = parsed.scheme or "wss"
     except Exception:
-        domain = "voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
+        domain = "unprecious-waltraud-nasological.ngrok-free.dev"
         ws_scheme = "wss"
         
     websocket_url = f"{ws_scheme}://{domain}/ws/voice-bot/service2/?agent_id={agent_id}&language={language}&phone={phone}"
@@ -1605,6 +1647,7 @@ def _save_campaign_state():
         status.total_count = _campaign_stats.get("total", 0)
         status.completed_count = _campaign_stats.get("completed", 0)
         status.missed_calls = json.dumps(_missed_calls)
+        status.answered_calls = json.dumps(list(_answered_calls))
         status.is_active = _campaign_active
         if not status.started_at:
              status.started_at = timezone.now()
@@ -1612,17 +1655,31 @@ def _save_campaign_state():
         status.suspended_due_to_hours = _campaign_suspended_hours
         status.remaining_queue = json.dumps(_call_queue)
         status.save()
+        
+        # Also sync to Campaign history record if active
+        if _current_campaign_id:
+            try:
+                campaign = Campaign.objects.get(id=_current_campaign_id)
+                campaign.completed_count = _campaign_stats.get("completed", 0)
+                campaign.answered_count = max(0, campaign.completed_count - len(_missed_calls))
+                campaign.missed_calls = json.dumps(_missed_calls)
+                campaign.answered_calls = json.dumps(list(_answered_calls))
+                campaign.remaining_queue = json.dumps(_call_queue)
+                campaign.save()
+            except Exception as ex:
+                print(f"WARNING: Failed to sync campaign history record during save state: {ex}")
     except Exception as e:
         print(f"❌ ERROR: Failed to save campaign state: {e}")
 
 def _load_campaign_state():
     """Load the last campaign state from DB into memory."""
-    global _campaign_active, _campaign_stats, _missed_calls, _campaign_suspended_hours, _call_queue
+    global _campaign_active, _campaign_stats, _missed_calls, _answered_calls, _campaign_suspended_hours, _call_queue
     try:
         status = CampaignStatus.objects.get(id=1)
         _campaign_stats["total"] = status.total_count
         _campaign_stats["completed"] = status.completed_count
         _missed_calls = json.loads(status.missed_calls) if status.missed_calls else []
+        _answered_calls = set(json.loads(status.answered_calls)) if hasattr(status, 'answered_calls') and status.answered_calls else set()
         _campaign_suspended_hours = status.suspended_due_to_hours
         if status.is_active or status.suspended_due_to_hours:
             _call_queue = json.loads(status.remaining_queue) if status.remaining_queue else []
@@ -1651,10 +1708,10 @@ def auto_resume_suspended_campaigns():
             if is_open:
                 from bot.models import CampaignStatus, Campaign
                 # Look for a suspended campaign in the Campaign history records
-                camp = Campaign.objects.filter(suspended_due_to_hours=True).order_by("-started_at").first()
+                camp = Campaign.objects.filter(is_active=True, suspended_due_to_hours=True).order_by("-started_at").first()
                 if camp:
                     print(f"⏰ Calling hours are open! Resuming suspended campaign #{camp.id}...")
-                    global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue
+                    global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue, _answered_calls
                     
                     status, _ = CampaignStatus.objects.get_or_create(id=1)
                     with _call_queue_lock:
@@ -1663,6 +1720,7 @@ def auto_resume_suspended_campaigns():
                         _campaign_suspended_hours = False
                         _current_campaign_id = camp.id
                         _call_queue = json.loads(camp.remaining_queue) if camp.remaining_queue else []
+                        _answered_calls = set(json.loads(camp.answered_calls)) if hasattr(camp, 'answered_calls') and camp.answered_calls else set()
                         
                         camp.suspended_due_to_hours = False
                         camp.remaining_queue = "[]"
@@ -1670,6 +1728,7 @@ def auto_resume_suspended_campaigns():
                         
                         status.suspended_due_to_hours = False
                         status.remaining_queue = "[]"
+                        status.answered_calls = camp.answered_calls
                         status.is_active = True
                         status.save()
                         
@@ -1750,9 +1809,20 @@ def dial_next_from_queue():
                 print("AUTO-DIALER: Campaign stopped because all minutes quota is exhausted.")
                 break
 
+        # Fetch dynamic concurrency limit for this campaign's agent
+        concurrency_limit = 2
+        if _current_campaign_id:
+            try:
+                from bot.models import Campaign
+                camp = Campaign.objects.select_related('agent').get(id=_current_campaign_id)
+                if camp.agent:
+                    concurrency_limit = camp.agent.max_concurrent_calls
+            except Exception as e:
+                print(f"Error fetching campaign concurrency limit: {e}")
+
         with _call_queue_lock:
             # Check if we have room for more calls
-            if len(_active_calls) >= MAX_CONCURRENT_CALLS:
+            if len(_active_calls) >= concurrency_limit:
                 break
 
             # Check if queue has numbers left
@@ -1787,6 +1857,20 @@ def dial_next_from_queue():
 
         websocket_url, webhook_url = _get_voicelink_urls(normalized, agent_id, campaign_id=_current_campaign_id)
 
+        # Retrieve customer name from database Customer model
+        from bot.models import Customer
+        clean_phone = "".join(filter(str.isdigit, str(normalized)))[-10:]
+        cust = Customer.objects.filter(phone__endswith=clean_phone).first()
+        cust_name = cust.name if (cust and cust.name and cust.name.lower() != "user") else "Customer"
+ 
+        # Trigger background pre-synthesis of greeting!
+        import threading
+        threading.Thread(
+            target=pre_synthesize_greeting,
+            args=(agent_id, normalized, cust_name, "hi"),  # Default to Hindi for Aaisha bot
+            daemon=True
+        ).start()
+
         # Resolve DID number from agent_id
         from agents.models import VoiceAgent
         try:
@@ -1810,7 +1894,7 @@ def dial_next_from_queue():
             "leads": [
                 {
                     "customer_number": normalized,
-                    "custom_parameters": json.dumps({"name": "Valued Customer"})
+                    "custom_parameters": json.dumps({"name": cust_name})
                 }
             ],
             "did_number": did_number,
@@ -1882,14 +1966,42 @@ def on_call_ended(phone_number):
                 break
         
         if to_remove:
-            # If the call was never answered, it is a missed call
-            if to_remove not in _answered_calls:
+            # If the call was never answered, it is a missed call.
+            # We check both the in-memory _answered_calls set and the database Conversations.
+            was_answered = False
+            for ans in _answered_calls:
+                ans_clean = "".join(filter(str.isdigit, str(ans)))[-10:]
+                if ans_clean == clean_phone:
+                    was_answered = True
+                    break
+                   
+            if not was_answered:
+                try:
+                    from conversations.models import Conversation
+                    import datetime
+                    from django.utils import timezone
+                   
+                    filters = {
+                        "user_number__icontains": clean_phone,
+                    }
+                    if _current_campaign_id:
+                        filters["campaign_id"] = _current_campaign_id
+                    else:
+                        filters["started_at__gte"] = timezone.now() - datetime.timedelta(minutes=30)
+                       
+                    was_answered = Conversation.objects.filter(**filters).exists()
+                except Exception as e:
+                    print(f"⚠️ Error checking conversation in DB: {e}")
+                   
+            if not was_answered:
                 if to_remove not in _missed_calls:
                     _missed_calls.append(to_remove)
+                   
             _active_calls.discard(to_remove)
             _answered_calls.discard(to_remove) # Cleanup
             _campaign_stats["completed"] += 1
             found = True
+ 
 
     if not found:
         # Already handled or not part of this campaign
@@ -1911,9 +2023,36 @@ def on_call_timeout(phone_number):
     Called after 35s if the call hasn't ended naturally.
     If it's still in _active_calls AND NOT in _answered_calls, we assume 'No Answer'.
     """
+    clean_phone = "".join(filter(str.isdigit, str(phone_number)))[-10:]
+ 
     with _call_queue_lock:
         # If the call was already answered, don't mark as missed!
-        if phone_number in _answered_calls:
+        was_answered = False
+        for ans in _answered_calls:
+            ans_clean = "".join(filter(str.isdigit, str(ans)))[-10:]
+            if ans_clean == clean_phone:
+                was_answered = True
+                break
+               
+        if not was_answered:
+            try:
+                from conversations.models import Conversation
+                import datetime
+                from django.utils import timezone
+               
+                filters = {
+                    "user_number__icontains": clean_phone,
+                }
+                if _current_campaign_id:
+                    filters["campaign_id"] = _current_campaign_id
+                else:
+                    filters["started_at__gte"] = timezone.now() - datetime.timedelta(minutes=30)
+                   
+                was_answered = Conversation.objects.filter(**filters).exists()
+            except Exception as e:
+                print(f"⚠️ Error checking conversation in DB during timeout: {e}")
+ 
+        if was_answered:
             print(f"✅ AUTO-DIALER: Call was answered by {phone_number}, ignoring timeout.")
             return
 
@@ -1967,7 +2106,7 @@ def start_auto_campaign(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
+    BOT_URL = f"wss://unprecious-waltraud-nasological.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
 
     if _campaign_active:
         with _call_queue_lock:
@@ -2001,9 +2140,32 @@ def start_auto_campaign(request):
             if not phone_col and len(df.columns) > 0:
                 phone_col = df.columns[0]
             
+            # Find the name column case-insensitively
+            name_col = None
+            for col in df.columns:
+                c_clean = str(col).strip().lower()
+                if c_clean in ["name", "customer name", "customer_name", "first name", "first_name"]:
+                    name_col = col
+                    break
+ 
+            from bot.models import Customer
+            
             phones = []
             if phone_col is not None:
-                phones = [str(row.get(phone_col, "")).strip() for _, row in df.iterrows() if row.get(phone_col)]
+               for _, row in df.iterrows():
+                    phone = str(row.get(phone_col) or "").strip()
+                    if not phone:
+                        continue
+                    normalized = _normalize_phone(phone)
+                    if normalized:
+                        phones.append(normalized)
+                        cust_name = str(row.get(name_col) or "Customer").strip() if name_col else "Customer"
+                        if not cust_name or cust_name.lower() == "nan":
+                            cust_name = "Customer"
+                        Customer.objects.update_or_create(
+                            phone=normalized,
+                            defaults={"name": cust_name, "source": "outbound"}
+                        )
         except Exception as e:
             return Response({"error": f"Failed to read Excel file: {e}"}, status=400)
 
@@ -2044,20 +2206,24 @@ def start_auto_campaign(request):
             agent_id=agent_id,
         )
         _current_campaign_id = campaign_obj.id
-        print(f"AUTO-DIALER: Campaign #{campaign_obj.id} started with {len(phones)} numbers (max {MAX_CONCURRENT_CALLS} concurrent)")
+        from agents.models import VoiceAgent
+        agent_obj = VoiceAgent.objects.filter(id=agent_id).first()
+        concurrency_limit = agent_obj.max_concurrent_calls if agent_obj else 2
+        print(f"AUTO-DIALER: Campaign #{campaign_obj.id} started with {len(phones)} numbers (max {concurrency_limit} concurrent)")
     except Exception as e:
         _current_campaign_id = None
+        concurrency_limit = 2
         print(f"WARNING: Failed to create Campaign record: {e}")
 
-    # Dial the first 2 numbers
+    # Dial the first numbers
     dial_next_from_queue()
 
     return Response({
         "status": "campaign_started",
         "total_numbers": len(phones),
-        "concurrent_calls": MAX_CONCURRENT_CALLS,
+        "concurrent_calls": concurrency_limit,
         "campaign_id": _current_campaign_id,
-        "message": f"First {min(MAX_CONCURRENT_CALLS, len(phones))} calls triggered. Remaining calls auto-dial as each call ends.",
+        "message": f"First {min(concurrency_limit, len(phones))} calls triggered. Remaining calls auto-dial as each call ends.",
     })
 
 
@@ -2123,6 +2289,15 @@ def auto_campaign_status(request):
                     "no_answer_count": 0,
                 })
 
+            # Resolve dynamic concurrency limit
+            camp_limit = 2
+            try:
+                last_camp = Campaign.objects.filter(is_active=True).order_by("-started_at").first()
+                if last_camp and last_camp.agent:
+                    camp_limit = last_camp.agent.max_concurrent_calls
+            except:
+                pass
+
             return Response({
                 "active": status.is_active,
                 "suspended_due_to_hours": status.suspended_due_to_hours,
@@ -2132,9 +2307,20 @@ def auto_campaign_status(request):
                 "active_calls": [],
                 "no_answer_list": json.loads(status.missed_calls),
                 "no_answer_count": len(json.loads(status.missed_calls)),
-                "concurrent_limit": MAX_CONCURRENT_CALLS,
+                "concurrent_limit": camp_limit,
                 "started_at": status.started_at.isoformat() if status.started_at else None,
             })
+        except:
+            pass
+
+    # Resolve dynamic concurrency limit for current campaign
+    camp_limit = 2
+    if _current_campaign_id:
+        try:
+            from bot.models import Campaign
+            camp = Campaign.objects.select_related('agent').get(id=_current_campaign_id)
+            if camp.agent:
+                camp_limit = camp.agent.max_concurrent_calls
         except:
             pass
 
@@ -2158,7 +2344,7 @@ def auto_campaign_status(request):
         "active_calls": active if final_active else [],
         "no_answer_list": _missed_calls if final_active else [],
         "no_answer_count": len(_missed_calls) if final_active else 0,
-        "concurrent_limit": MAX_CONCURRENT_CALLS,
+        "concurrent_limit": camp_limit,
         "started_at": _campaign_stats.get("started_at") if final_active else None,
     })
 
@@ -2216,7 +2402,7 @@ def pause_auto_campaign(request):
 @api_view(["POST"])
 def resume_auto_campaign(request):
     """Resumes the current auto-dial campaign."""
-    global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue
+    global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue, _answered_calls
     
     # If there is no active campaign in memory, try to restore the campaign from the DB
     if not _campaign_active:
@@ -2231,12 +2417,14 @@ def resume_auto_campaign(request):
                 _campaign_suspended_hours = False
                 _current_campaign_id = camp.id
                 _call_queue = json.loads(camp.remaining_queue) if camp.remaining_queue else []
+                _answered_calls = set(json.loads(camp.answered_calls)) if hasattr(camp, 'answered_calls') and camp.answered_calls else set()
                 
                 # Update CampaignStatus singleton too
                 status, _ = CampaignStatus.objects.get_or_create(id=1)
                 status.is_active = True
                 status.suspended_due_to_hours = False
                 status.remaining_queue = camp.remaining_queue
+                status.answered_calls = camp.answered_calls
                 status.save()
                 
                 camp.suspended_due_to_hours = False
@@ -2744,7 +2932,7 @@ def trigger_retry_sub_campaign_if_needed(parent_campaign):
             domain = parsed.netloc
             ws_scheme = parsed.scheme or "wss"
         except Exception:
-            domain = "voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
+            domain = "unprecious-waltraud-nasological.ngrok-free.dev"
             ws_scheme = "wss"
             
         BOT_URL = f"{ws_scheme}://{domain}/ws/voice-bot/service2/?agent_id={agent_id}"
@@ -2784,10 +2972,12 @@ def _finalize_campaign():
     try:
         campaign = Campaign.objects.get(id=_current_campaign_id)
         campaign.is_active = False
+        campaign.suspended_due_to_hours = False
         campaign.ended_at = timezone.now()
         campaign.completed_count = _campaign_stats.get("completed", 0)
-        campaign.answered_count = _campaign_stats.get("completed", 0) - len(_missed_calls)
+        campaign.answered_count = max(0, campaign.completed_count - len(_missed_calls))
         campaign.missed_calls = json.dumps(_missed_calls)
+        campaign.answered_calls = json.dumps(list(_answered_calls))
         campaign.save()
         print(f"AUTO-DIALER: Campaign #{campaign.id} finalized. Answered: {campaign.answered_count}, Missed: {len(_missed_calls)}")
         
@@ -3000,3 +3190,77 @@ def inbound_call_webhook(request):
         return HttpResponse(fallback_twiml, content_type="text/xml")
 
 
+def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
+    try:
+        import os
+        import json
+        import audioop
+        import numpy as np
+        from elevenlabs import ElevenLabs, VoiceSettings
+       
+        # Clean phone to 10 digits
+        clean_phone = "".join(filter(str.isdigit, str(phone)))[-10:]
+        if not clean_phone:
+            return
+           
+        file_path = os.path.join("mp3_responses", f"pre_synthesized_{agent_id}_{clean_phone}.raw")
+        if os.path.exists(file_path):
+            print(f"🎯 [PRE-SYNTHESIS]: Cached greeting already exists for {clean_phone}")
+            return
+           
+        # Determine language code & greeting text
+        if language == "gu":
+            text = f"નમસ્તે! હું આઈશા બોલું છું, વેસ્ટકોસ્ટ કિયા તરફથી. આશા છે કે તમે મજામાં હશો! શું મારી વાત {name} સાથે થઈ રહી છે?"
+        elif language == "en":
+            text = f"Hello! I am Aaisha from Westcoast Kia. Hope you are doing well! Am I speaking with {name}?"
+        else:
+            text = f"Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge! Kya meri baat {name} se ho rahi hai?"
+ 
+        api_key = os.getenv("ELEVENLABS_API_KEY")
+        if not api_key:
+            print("❌ [PRE-SYNTHESIS]: ELEVENLABS_API_KEY is missing. Cannot pre-synthesize.")
+            return
+           
+        client = ElevenLabs(api_key=api_key)
+        voice_id = "aSFxChEgBmCyExpaDqHd" # Kanika (same voice as consumers.py)
+       
+        print(f"🎙️ [PRE-SYNTHESIS START]: Synthesizing for name '{name}' and phone '{clean_phone}' using ElevenLabs...")
+        audio_generator = client.text_to_speech.convert(
+            voice_id=voice_id,
+            text=text,
+            model_id="eleven_multilingual_v2",
+            output_format="pcm_8000",
+            voice_settings=VoiceSettings(
+                stability=0.55,
+                similarity_boost=0.75,
+                style=0.00,
+                use_speaker_boost=False,
+                speed=1.00
+            )
+        )
+       
+        pcm = b""
+        for chunk in audio_generator:
+            if chunk:
+                pcm += chunk
+               
+        if pcm:
+            if len(pcm) % 2 != 0:
+                pcm = pcm[:-1]
+               
+            # Gain amplification
+            data = np.frombuffer(pcm, dtype=np.int16)
+            data = (data * 0.6).clip(-32768, 32767).astype(np.int16)
+            ulaw = audioop.lin2ulaw(data.tobytes(), 2)
+           
+            # Save raw file atomically via temp file to avoid race condition
+            temp_file_path = file_path + ".tmp"
+            os.makedirs(os.path.dirname(temp_file_path), exist_ok=True)
+            with open(temp_file_path, "wb") as f:
+                f.write(ulaw)
+            os.replace(temp_file_path, file_path)
+            print(f"💾 [PRE-SYNTHESIS SUCCESS]: Pre-synthesized dynamic greeting saved: {file_path} ({len(ulaw)} bytes)")
+        else:
+            print("❌ [PRE-SYNTHESIS]: Empty audio returned from ElevenLabs.")
+    except Exception as e:
+        print(f"❌ [PRE-SYNTHESIS ERROR]: {e}")

@@ -213,6 +213,15 @@ class CreateAgentView(APIView):
         else:
             minutes_quota = 5000
 
+        max_concurrent_calls = request.data.get("max_concurrent_calls")
+        if max_concurrent_calls is not None:
+            try:
+                max_concurrent_calls = int(max_concurrent_calls)
+            except ValueError:
+                return Response({"error": "max_concurrent_calls must be an integer"}, status=400)
+        else:
+            max_concurrent_calls = 2
+
         inbound_phone_number = request.data.get("inbound_phone_number", "")
         if inbound_phone_number:
             inbound_phone_number = "".join(filter(str.isdigit, str(inbound_phone_number)))
@@ -229,6 +238,7 @@ class CreateAgentView(APIView):
                 name=name,
                 company_name=company_name,
                 minutes_quota=minutes_quota,
+                max_concurrent_calls=max_concurrent_calls,
                 inbound_phone_number=inbound_phone_number,
             )
         except ValidationError as e:
@@ -299,6 +309,7 @@ class ListUserAgentsView(APIView):
                 "role_name": a.role_template.role_name if a.role_template else "",
                 "minutes_quota": a.minutes_quota,
                 "used_minutes": calculate_usage(a),
+                "max_concurrent_calls": a.max_concurrent_calls,
             }
             for a in agents
         ])
@@ -467,4 +478,45 @@ class UpdateAgentQuotaView(APIView):
         return Response({
             "agent_id": str(agent.id),
             "minutes_quota": agent.minutes_quota
+        })
+
+
+class UpdateAgentConcurrencyView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, agent_id):
+        is_admin = False
+        if request.user.is_superuser:
+            is_admin = True
+        elif hasattr(request.user, 'profile') and request.user.profile.role:
+            perms = request.user.profile.role.permissions
+            if perms.get('is_admin', False):
+                is_admin = True
+        if hasattr(request.user, 'profile') and request.user.profile.custom_permissions:
+            if request.user.profile.custom_permissions.get('is_admin', False):
+                is_admin = True
+
+        if not is_admin:
+            return Response({"error": "Only administrators can update concurrent call limits."}, status=403)
+
+        agent = VoiceAgent.objects.filter(id=agent_id).first()
+        if not agent:
+            return Response({"error": "Agent not found"}, status=404)
+
+        limit = request.data.get("max_concurrent_calls")
+        if limit is None:
+            return Response({"error": "max_concurrent_calls is required"}, status=400)
+
+        try:
+            limit = int(limit)
+            if limit <= 0:
+                raise ValueError
+        except ValueError:
+            return Response({"error": "max_concurrent_calls must be a positive integer"}, status=400)
+
+        agent.max_concurrent_calls = limit
+        agent.save()
+        return Response({
+            "agent_id": str(agent.id),
+            "max_concurrent_calls": agent.max_concurrent_calls
         })

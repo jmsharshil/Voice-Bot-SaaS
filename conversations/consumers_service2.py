@@ -635,6 +635,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             company = agent.company_name or "our company"
             role_name = agent.role_template.role_name if agent.role_template else ""
             strategy_key = get_role_strategy(role_name)
+            is_aaisha = agent.name and agent.name.lower() in ["aaisha", "aisha"]
             
             customer_name = None
             if user_number and user_number != "unknown":
@@ -654,7 +655,16 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 
             # 2. Get Opening Message
             summary_txt = agent.summary.strip().rstrip(".") if agent.summary else ""
-            if tts_lang == "gu":
+            if strategy_key == "automobile" and is_aaisha:
+                name_part = customer_name if customer_name else "aapse"
+                if language == "gu":
+                    greeting = f"હેલો! શું મારી વાત {name_part} સાથે થઈ રહી છે?"
+                elif language == "en":
+                    name_part = customer_name if customer_name else "you"
+                    greeting = f"Hello! Am I speaking with {name_part}?"
+                else:
+                    greeting = f"Hello! Kya meri baat {name_part} se ho rahi hai?"
+            elif tts_lang == "gu":
                 if strategy_key == "reminder_strategy":
                     greeting = "નમસ્તે! હું જે એમ એસ બેંકમાંથી નવ્યા બોલું છું. તમારી ઈ એમ આઈ ની તારીખ નજીક છે, તમે ક્યારે ચુકવણી કરશો?"
                 elif strategy_key == "temp_real_estate_strategy":
@@ -679,6 +689,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             state = session.state or {}
             state["intro_shown"] = True
             state["detected_language"] = language
+            state["current_phase"] = "GREETING_REPLY"
             if customer_name:
                 state["customer_name"] = customer_name
             if strategy_key == "hospital_minimal":
@@ -695,7 +706,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             session.state = state
             session.save()
             
-            return tts_lang, greeting, strategy_key, customer_name
+            return tts_lang, greeting, strategy_key, customer_name, is_aaisha
 
         # Kick off DB fetch and TTS cache-check IN PARALLEL
         db_task = asyncio.create_task(get_initial_call_data(self.agent_id, self.session_id, self.language, self.user_number))
@@ -703,7 +714,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         # While DB is running, check if we already have cached audio for this agent
         cached_audio = _GREETING_AUDIO_CACHE.get(f"{self.agent_id}_{self.language}")
 
-        self.agent_tts_lang, greeting, self.strategy_key, customer_name = await db_task
+        self.agent_tts_lang, greeting, self.strategy_key, customer_name, is_aaisha = await db_task
         if self.strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"]:
             self.SILENCE_TRIGGER_SEC = 1.4  # Give customer extra time to respond
 
@@ -725,7 +736,11 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         else:
             greeting_file = f"{self.language}_step1_greeting.raw"
             
-        is_dynamic_greeting = (self.strategy_key == "samsung_store_strategy" and customer_name is not None) or (self.strategy_key == "samsung_llm_strategy")
+        is_dynamic_greeting = (
+            (self.strategy_key == "samsung_store_strategy" and customer_name is not None)
+            or (self.strategy_key == "samsung_llm_strategy")
+            or (self.strategy_key == "automobile" and is_aaisha and customer_name is not None)
+        )
         
         greeting_text = greeting
         if not is_dynamic_greeting:
@@ -735,7 +750,24 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         await save_message(self.conversation, "bot", greeting_text)
 
         local_greeting_path = os.path.join("mp3_responses", greeting_file)
-        if is_dynamic_greeting:
+        # Check if pre-synthesized dynamic greeting exists
+        clean_phone = "".join(filter(str.isdigit, str(self.user_number)))[-10:] if self.user_number else ""
+        pre_synthesized_path = os.path.join("mp3_responses", f"pre_synthesized_{self.agent_id}_{clean_phone}.raw")
+       
+        if pre_synthesized_path and os.path.exists(pre_synthesized_path):
+            print(f"🚀 INSTANT DYNAMIC GREETING: Found pre-synthesized file {pre_synthesized_path}")
+            with open(pre_synthesized_path, "rb") as f:
+                ulaw_bytes = f.read()
+            pcm_bytes = audioop.ulaw2lin(ulaw_bytes, 2)
+            alaw_bytes = audioop.lin2alaw(pcm_bytes, 2)
+            self.tts_task = asyncio.create_task(self._stream_cached_greeting(alaw_bytes))
+           
+            # Clean up the file to keep disk space clean
+            try:
+                os.remove(pre_synthesized_path)
+            except Exception:
+                pass
+        elif is_dynamic_greeting:
             # Dynamic synthesis on-the-fly (skip caching to prevent leak)
             tts_task_lang = "gu" if self.agent_tts_lang == "gu" else None
             self.tts_task = asyncio.create_task(self._synthesize_and_cache_greeting(greeting, tts_task_lang, skip_local_cache=True))
@@ -2430,6 +2462,14 @@ def prewarm_sarvam_cache_at_startup():
         
         api_key = os.getenv("SARVAM_API_KEY")
         if not api_key:
+            return
+
+         # Check connectivity to api.sarvam.ai before starting loop
+        try:
+            import socket
+            socket.create_connection(("api.sarvam.ai", 443), timeout=2.0)
+        except Exception:
+            print("⚠️ [PREWARM]: api.sarvam.ai is not reachable. Skipping cache pre-warming to prevent timeout warning loops.")
             return
             
         print("🔥 [PREWARM]: Asynchronously pre-warming Sarvam TTS cache for common Samsung LLM phrases...")

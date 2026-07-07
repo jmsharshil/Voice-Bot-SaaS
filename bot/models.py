@@ -179,6 +179,7 @@ class CampaignStatus(models.Model):
     total_count     = models.IntegerField(default=0)
     completed_count = models.IntegerField(default=0)
     missed_calls    = models.TextField(default="[]")  # JSON string of phone numbers
+    answered_calls  = models.TextField(default="[]")  # JSON string of phone numbers
     is_active              = models.BooleanField(default=False)
     started_at             = models.DateTimeField(null=True, blank=True)
     suspended_due_to_hours = models.BooleanField(default=False)
@@ -199,6 +200,7 @@ class Campaign(models.Model):
     completed_count = models.IntegerField(default=0)
     answered_count  = models.IntegerField(default=0)
     missed_calls    = models.TextField(default="[]")    # JSON array of no-answer phones
+    answered_calls  = models.TextField(default="[]")    # JSON array of answered phones
     is_active       = models.BooleanField(default=True)
     started_at      = models.DateTimeField(auto_now_add=True)
     ended_at        = models.DateTimeField(null=True, blank=True)

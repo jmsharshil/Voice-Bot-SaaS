@@ -31,6 +31,7 @@ class CreateAgentSerializer(serializers.ModelSerializer):
             "role_template",
             "name",
             "company_name",
+            "max_concurrent_calls",
         ]
 
     def validate(self, data):
