@@ -1981,15 +1981,20 @@ def on_call_ended(phone_number):
                     import datetime
                     from django.utils import timezone
                    
-                    filters = {
-                        "user_number__icontains": clean_phone,
-                    }
+                    start_time = timezone.now() - datetime.timedelta(minutes=30)
                     if _current_campaign_id:
-                        filters["campaign_id"] = _current_campaign_id
-                    else:
-                        filters["started_at__gte"] = timezone.now() - datetime.timedelta(minutes=30)
-                       
-                    was_answered = Conversation.objects.filter(**filters).exists()
+                        try:
+                            from bot.models import Campaign
+                            camp_obj = Campaign.objects.get(id=_current_campaign_id)
+                            if camp_obj.started_at:
+                                start_time = camp_obj.started_at
+                        except Exception:
+                            pass
+                           
+                    was_answered = Conversation.objects.filter(
+                        user_number__icontains=clean_phone,
+                        started_at__gte=start_time
+                    ).exists()
                 except Exception as e:
                     print(f"⚠️ Error checking conversation in DB: {e}")
                    
@@ -2040,15 +2045,20 @@ def on_call_timeout(phone_number):
                 import datetime
                 from django.utils import timezone
                
-                filters = {
-                    "user_number__icontains": clean_phone,
-                }
+                start_time = timezone.now() - datetime.timedelta(minutes=30)
                 if _current_campaign_id:
-                    filters["campaign_id"] = _current_campaign_id
-                else:
-                    filters["started_at__gte"] = timezone.now() - datetime.timedelta(minutes=30)
-                   
-                was_answered = Conversation.objects.filter(**filters).exists()
+                    try:
+                        from bot.models import Campaign
+                        camp_obj = Campaign.objects.get(id=_current_campaign_id)
+                        if camp_obj.started_at:
+                            start_time = camp_obj.started_at
+                    except Exception:
+                        pass
+                       
+                was_answered = Conversation.objects.filter(
+                    user_number__icontains=clean_phone,
+                    started_at__gte=start_time
+                ).exists()
             except Exception as e:
                 print(f"⚠️ Error checking conversation in DB during timeout: {e}")
  

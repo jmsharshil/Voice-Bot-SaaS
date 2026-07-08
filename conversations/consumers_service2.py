@@ -205,11 +205,12 @@ def create_conversation(agent_id, session_id, user_number, campaign_id=None, cal
     # Notify dialer that the call was answered
     if user_number:
         try:
-            from bot.views import _answered_calls, _call_queue_lock, _normalize_phone
+            from bot.views import _answered_calls, _call_queue_lock, _normalize_phone, _save_campaign_state
             clean_phone = _normalize_phone(user_number)
             with _call_queue_lock:
                 _answered_calls.add(clean_phone)
             print(f"📞 AUTO-DIALER: Marked {clean_phone} as answered in campaign state.")
+            _save_campaign_state()
         except Exception as e:
             print(f"WARNING: Failed to mark phone as answered: {e}")
 
