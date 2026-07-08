@@ -1458,7 +1458,7 @@ def upload_call_file(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://unpreciousvoicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net-waltraud-nasological.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
+    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
 
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
@@ -1600,7 +1600,7 @@ _missed_calls = []            # Numbers that timed out (No Answer)
 TELECOM_DIAL_URL = "https://app.voicelink.co.in/api/v1/add_lead"
 TELECOM_API_KEY = "729230|7gNpRt1e7KzmxvRkmG5bG9IwJhEQJFXkUri3XtaNfe6bc240"
 CALLER_ID = "+919484959435"
-BOT_URL = "wss://unpreciousvoicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net-waltraud-nasological.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
+BOT_URL = "wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
 
 
 def _normalize_phone(phone):
@@ -1625,7 +1625,7 @@ def _get_voicelink_urls(phone, agent_id, language="hi", campaign_id=None):
         domain = parsed.netloc
         ws_scheme = parsed.scheme or "wss"
     except Exception:
-        domain = "unpreciousvoicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net-waltraud-nasological.ngrok-free.dev"
+        domain = "voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
         ws_scheme = "wss"
         
     websocket_url = f"{ws_scheme}://{domain}/ws/voice-bot/service2/?agent_id={agent_id}&language={language}&phone={phone}"
@@ -2106,7 +2106,7 @@ def start_auto_campaign(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://unpreciousvoicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net-waltraud-nasological.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
+    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
 
     if _campaign_active:
         with _call_queue_lock:
@@ -2932,7 +2932,7 @@ def trigger_retry_sub_campaign_if_needed(parent_campaign):
             domain = parsed.netloc
             ws_scheme = parsed.scheme or "wss"
         except Exception:
-            domain = "unpreciousvoicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net-waltraud-nasological.ngrok-free.dev"
+            domain = "voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
             ws_scheme = "wss"
             
         BOT_URL = f"{ws_scheme}://{domain}/ws/voice-bot/service2/?agent_id={agent_id}"
