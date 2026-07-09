@@ -219,7 +219,7 @@
         /* STAT CARDS */
         .cards {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
             padding: 24px 32px
         }
@@ -2130,11 +2130,7 @@
             <div class="card-value" id="statNot">—</div>
             <div class="card-sub">Declined</div>
         </div>
-        <div class="card" onclick="filterByLevel('missed')" id="cardMissed">
-            <div class="card-label">📞 Missed Calls</div>
-            <div class="card-value" id="statMissed">0</div>
-            <div class="card-sub">No Answer</div>
-        </div>
+
     </div>
 
     <!-- MAIN -->
@@ -2153,7 +2149,7 @@
                     <option value="warm">🤝 Warm Leads</option>
                     <option value="cold">❄️ Cold Leads</option>
                     <option value="not_interested">🚫 Not Interested</option>
-                    <option value="missed">📞 Missed Calls</option>
+
                 </select>
                 <select id="filterAgent" onchange="applyAdvancedFilters()" class="filter-select" style="max-width: 110px;">
                     <option value="">🤖 All Bots</option>
@@ -2416,8 +2412,7 @@
                     hot: "cardHot",
                     warm: "cardWarm",
                     cold: "cardCold",
-                    not_interested: "cardNot",
-                    missed: "cardMissed"
+                    not_interested: "cardNot"
                 };
                 document.getElementById(cardMap[activeFilter])?.classList.add("active-filter");
             }
@@ -2434,23 +2429,7 @@
         function renderLeads() {
             let filtered = allLeads;
             if (activeFilter) {
-                if (activeFilter === 'missed') {
-                    // Generate mock leads for missed calls
-                    filtered = missedNumbers.map(num => ({
-                        session_id: "missed-" + num,
-                        user_name: "Unpicked Call",
-                        user_number: num,
-                        customer_number: num,
-                        lead_level: "missed",
-                        agent_name: "Auto Dialer",
-                        interest_topic: "No Answer / Busy",
-                        analyzed_at: new Date().toISOString(),
-                        is_missed_mock: true,
-                        language: "en"
-                    }));
-                } else {
-                    filtered = filtered.filter(l => l.lead_level === activeFilter);
-                }
+                filtered = filtered.filter(l => l.lead_level === activeFilter);
             }
             if (searchQuery) {
                 const queryDigits = searchQuery.replace(/\D/g, "");
@@ -2586,8 +2565,7 @@
                     hot: "cardHot",
                     warm: "cardWarm",
                     cold: "cardCold",
-                    not_interested: "cardNot",
-                    missed: "cardMissed"
+                    not_interested: "cardNot"
                 };
                 document.getElementById(cardMap[activeFilter])?.classList.add("active-filter");
             }
@@ -2856,10 +2834,6 @@
 
                 // NEW: Update main dashboard stat card and list
                 missedNumbers = data.no_answer_list || [];
-                animateCount("statMissed", data.no_answer_count || 0);
-                if (activeFilter === 'missed') {
-                    renderLeads();
-                }
 
                 const activeBox = document.getElementById("dmActiveBox");
                 const activeList = document.getElementById("dmActiveList");
