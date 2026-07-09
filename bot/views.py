@@ -3205,9 +3205,11 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
         import os
         import json
         import audioop
-        import numpy as np
+        import re
+        import requests
         from elevenlabs import ElevenLabs, VoiceSettings
-       
+        import azure.cognitiveservices.speech as speechsdk
+        
         # Clean phone to 10 digits
         clean_phone = "".join(filter(str.isdigit, str(phone)))[-10:]
         if not clean_phone:
@@ -3217,60 +3219,226 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
         if os.path.exists(file_path):
             print(f"🎯 [PRE-SYNTHESIS]: Cached greeting already exists for {clean_phone}")
             return
-           
-        # Determine language code & greeting text
-        if language == "gu":
-            text = f"નમસ્તે! હું આઈશા બોલું છું, વેસ્ટકોસ્ટ કિયા તરફથી. આશા છે કે તમે મજામાં હશો! શું મારી વાત {name} સાથે થઈ રહી છે?"
-        elif language == "en":
-            text = f"Hello! I am Aaisha from Westcoast Kia. Hope you are doing well! Am I speaking with {name}?"
-        else:
-            text = f"Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge! Kya meri baat {name} se ho rahi hai?"
- 
-        api_key = os.getenv("ELEVENLABS_API_KEY")
-        if not api_key:
-            print("❌ [PRE-SYNTHESIS]: ELEVENLABS_API_KEY is missing. Cannot pre-synthesize.")
+
+        from agents.models import VoiceAgent
+        from conversations.services.core.behavior_router import get_role_strategy
+        from conversations.consumers import strip_wav_header, encode_g711, _amplify_pcm, build_ssml, TTS_VOICE_MAP
+        
+        try:
+            agent = VoiceAgent.objects.select_related('role_template').get(id=agent_id)
+        except VoiceAgent.DoesNotExist:
+            print(f"❌ [PRE-SYNTHESIS]: Agent {agent_id} not found.")
             return
-           
-        client = ElevenLabs(api_key=api_key)
-        voice_id = "aSFxChEgBmCyExpaDqHd" # Kanika (same voice as consumers.py)
-       
-        print(f"🎙️ [PRE-SYNTHESIS START]: Synthesizing for name '{name}' and phone '{clean_phone}' using ElevenLabs...")
-        audio_generator = client.text_to_speech.convert(
-            voice_id=voice_id,
-            text=text,
-            model_id="eleven_multilingual_v2",
-            output_format="pcm_8000",
-            voice_settings=VoiceSettings(
-                stability=0.55,
-                similarity_boost=0.75,
-                style=0.00,
-                use_speaker_boost=False,
-                speed=1.00
-            )
+
+        role_name = agent.role_template.role_name if agent.role_template else ""
+        strategy_key = get_role_strategy(role_name)
+        company = agent.company_name or "our company"
+        summary_txt = agent.summary.strip().rstrip(".") if agent.summary else ""
+        is_aaisha = agent.name and agent.name.lower() in ["aaisha", "aisha"]
+        default_voice = agent.role_template.default_voice if agent.role_template else ""
+
+        # Determine language code & greeting text
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy"]:
+            tts_lang = "gu"
+        elif strategy_key == "interview_bot":
+            tts_lang = "interview_en"
+        else:
+            tts_lang = language  # or "en" / "hi"
+
+        # Determine the greeting text exactly like consumers.py
+        if strategy_key == "automobile" and is_aaisha:
+            name_part = name if name else "aapse"
+            if tts_lang == "gu":
+                text = f"હેલો! શું મારી વાત {name_part} સાથે થઈ રહી છે?"
+            elif tts_lang == "en" or tts_lang == "interview_en":
+                name_part = name if name else "you"
+                text = f"Hello! Am I speaking with {name_part}?"
+            else:
+                text = f"Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge! Kya meri baat {name_part} se ho rahi hai?"
+        elif tts_lang == "gu":
+            if strategy_key == "reminder_strategy":
+                text = "નમસ્તે! હું જે એમ એસ બેંકમાંથી નવ્યા બોલું છું. તમારી ઈ એમ આઈ ની તારીખ નજીક છે, તમે ક્યારે ચુકવણી કરશો?"
+            elif strategy_key == "temp_real_estate_strategy":
+                text = "હલો, નમસ્તે જી! હું જે એમ એસ રિયલ એસ્ટેટ તરફથી નવ્યા વાત કરું છું. અમે અત્યારે ખૂબ જ સરસ લોકેશન પર લક્ઝુરિયસ ફ્લેટ્સ વેચી રહ્યા છીએ. તો મને જણાવશો ને, તમારે કયા પ્રકારનો ફ્લેટ જોઈએ છે, જેમ કે વન બીએચકે કે ટુ બીએચકે?"
+            elif strategy_key == "samsung_store_strategy":
+                name_part = name if name else "Customer જી"
+                text = f"નમસ્તે! હું નાવ્યા છું. હું VTech Samsung Cafe તરફથી વાત કરી રહી છું. શું મારી વાત {name_part} સાથે થઈ રહી છે?"
+            elif strategy_key == "samsung_llm_strategy":
+                if name:
+                    text = f"નમસ્તે {name} જી! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
+                else:
+                    text = "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
+            else:
+                text = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
+        elif tts_lang == "interview_en":
+            text = f"Hello, I am {agent.name}."
+        else:
+            text = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. kya aap abhi baat kar sakte hain?"
+
+        # Resolve static greeting mapping if not dynamic
+        is_dynamic_greeting = (
+            (strategy_key == "samsung_store_strategy" and name is not None)
+            or (strategy_key == "samsung_llm_strategy")
+            or (strategy_key == "automobile" and is_aaisha and name is not None)
+            or (not is_aaisha and strategy_key not in [
+                "hospital_minimal", "loan_strategy", "reminder_strategy",
+                "temp_real_estate_strategy", "samsung_store_strategy",
+                "enogic_strategy", "automobile_Naavya"
+            ])
         )
-       
-        pcm = b""
-        for chunk in audio_generator:
-            if chunk:
-                pcm += chunk
-               
-        if pcm:
-            if len(pcm) % 2 != 0:
-                pcm = pcm[:-1]
-               
-            # Gain amplification
-            data = np.frombuffer(pcm, dtype=np.int16)
-            data = (data * 0.6).clip(-32768, 32767).astype(np.int16)
-            ulaw = audioop.lin2ulaw(data.tobytes(), 2)
-           
+        if not is_dynamic_greeting:
+            if strategy_key == "hospital_minimal":
+                greeting_file = "hosp_step1_greeting.raw"
+            elif strategy_key == "loan_strategy":
+                greeting_file = "loan_bot/loan_step1_greeting.raw"
+            elif strategy_key == "reminder_strategy":
+                greeting_file = "reminder_bot/reminder_step1_greeting.raw"
+            elif strategy_key == "temp_real_estate_strategy":
+                greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
+            elif strategy_key == "enogic_strategy":
+                greeting_file = "enogic_bot/enogic_step1_greeting.raw"
+            elif strategy_key == "samsung_store_strategy":
+                greeting_file = "samsung_bot/samsung_step1_greeting.raw"
+            elif strategy_key == "automobile_Naavya":
+                greeting_file = f"Naavya/{language}_step1_greeting.raw"
+            else:
+                greeting_file = f"{language}_step1_greeting.raw"
+
+            from conversations.consumers import _AUDIO_TRANSCRIPTIONS
+            text = _AUDIO_TRANSCRIPTIONS.get(greeting_file, text)
+
+        ulaw_bytes = b""
+
+        # 1. Try Sarvam AI if language is gu or hi-IN loan strategy
+        is_loan_hi = (tts_lang == "hi" and strategy_key == "loan_strategy")
+        if tts_lang == "gu" or is_loan_hi:
+            api_key = os.getenv("SARVAM_API_KEY")
+            if api_key:
+                api_url = "https://api.sarvam.ai/text-to-speech/stream"
+                headers = {
+                    "api-subscription-key": api_key,
+                    "Content-Type": "application/json"
+                }
+                target_lang = "hi-IN" if is_loan_hi else "gu-IN"
+                speaker = "shubh" if is_loan_hi else "ishita"
+                if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"]:
+                    speaker = "ishita"
+                pace = 1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"] else 1)
+                temp = 0.75 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"] else None
+                
+                payload = {
+                    "text": text,
+                    "target_language_code": target_lang,
+                    "speaker": speaker,
+                    "model": "bulbul:v3",
+                    "pace": pace,
+                    "speech_sample_rate": 8000,
+                    "output_audio_codec": "mulaw",
+                    "enable_preprocessing": False
+                }
+                if temp is not None:
+                    payload["temperature"] = temp
+                
+                try:
+                    print(f"🎙️ [PRE-SYNTHESIS SARVAM]: Synthesizing greeting with speaker '{speaker}'")
+                    response = requests.post(api_url, headers=headers, json=payload, timeout=15)
+                    response.raise_for_status()
+                    ulaw_bytes = response.content
+                except Exception as sarvam_err:
+                    print(f"❌ [PRE-SYNTHESIS] Sarvam failed: {sarvam_err}")
+
+        # 2. Try Azure or ElevenLabs fallback
+        if not ulaw_bytes:
+            use_azure = False
+            voice_name = default_voice
+            if strategy_key == "enogic_strategy":
+                use_azure = True
+                voice_name = "hi-IN-ArjunNeural"
+
+            if use_azure:
+                try:
+                    speech_config = speechsdk.SpeechConfig(
+                        subscription=os.getenv("AZURE_SPEECH_KEY"),
+                        region=os.getenv("AZURE_SPEECH_REGION")
+                    )
+                    speech_config.speech_synthesis_voice_name = voice_name
+                    speech_config.set_speech_synthesis_output_format(
+                        speechsdk.SpeechSynthesisOutputFormat.Raw8Khz16BitMonoPcm
+                    )
+                    synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
+                    
+                    lang_code = "gu" if tts_lang == "gu" else ("en" if tts_lang == "interview_en" else tts_lang)
+                    ssml = build_ssml(text, lang_code, voice_name=voice_name)
+                    result = synthesizer.speak_ssml_async(ssml).get()
+                    
+                    if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+                        pcm = result.audio_data
+                        pcm = strip_wav_header(pcm)
+                        if len(pcm) % 2 != 0:
+                            pcm = pcm[:-1]
+                        
+                        gain = 1.2 if strategy_key == "enogic_strategy" else 1.8
+                        pcm = _amplify_pcm(pcm, gain=gain)
+                        ulaw_bytes = encode_g711(pcm)
+                        print(f"🎙️ [PRE-SYNTHESIS AZURE]: Synthesized greeting using voice '{voice_name}'")
+                    else:
+                        print(f"❌ [PRE-SYNTHESIS AZURE] failed, reason: {result.reason}")
+                except Exception as azure_err:
+                    print(f"❌ [PRE-SYNTHESIS AZURE] failed: {azure_err}")
+
+            # 3. ElevenLabs fallback
+            if not ulaw_bytes:
+                api_key = os.getenv("ELEVENLABS_API_KEY")
+                if api_key:
+                    client = ElevenLabs(api_key=api_key)
+                    
+                    # Resolve voice_id like consumers.py
+                    voice_name_lower = default_voice.lower() if default_voice else ""
+                    male_identifiers = ["prabhat", "arjun", "aarav", "niranjan", "madhur", "arvind", "kashyap", "adam"]
+                    if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"] or any(m_id in voice_name_lower for m_id in male_identifiers):
+                        voice_id = "pNInz6obpgq9S3JwcM8g"  # Adam
+                    else:
+                        if len(default_voice) >= 15 and not default_voice.endswith("Neural"):
+                            voice_id = default_voice
+                        else:
+                            voice_id = "aSFxChEgBmCyExpaDqHd"  # Kanika
+                    
+                    print(f"🎙️ [PRE-SYNTHESIS ELEVENLABS]: Synthesizing greeting using voice '{voice_id}'")
+                    clean_text = re.sub(r'<[^>]*>', '', text).strip()
+                    audio_generator = client.text_to_speech.convert(
+                        voice_id=voice_id,
+                        text=clean_text,
+                        model_id="eleven_multilingual_v2",
+                        output_format="pcm_8000",
+                        voice_settings=VoiceSettings(
+                            stability=0.55,
+                            similarity_boost=0.75,
+                            style=0.00,
+                            use_speaker_boost=False,
+                            speed=1.00
+                        )
+                    )
+                    
+                    pcm = b""
+                    for chunk in audio_generator:
+                        if chunk:
+                            pcm += chunk
+                            
+                    if pcm:
+                        if len(pcm) % 2 != 0:
+                            pcm = pcm[:-1]
+                        pcm = _amplify_pcm(pcm, gain=1.8)
+                        ulaw_bytes = encode_g711(pcm)
+
+        if ulaw_bytes:
             # Save raw file atomically via temp file to avoid race condition
             temp_file_path = file_path + ".tmp"
             os.makedirs(os.path.dirname(temp_file_path), exist_ok=True)
             with open(temp_file_path, "wb") as f:
-                f.write(ulaw)
+                f.write(ulaw_bytes)
             os.replace(temp_file_path, file_path)
-            print(f"💾 [PRE-SYNTHESIS SUCCESS]: Pre-synthesized dynamic greeting saved: {file_path} ({len(ulaw)} bytes)")
+            print(f"💾 [PRE-SYNTHESIS SUCCESS]: Pre-synthesized dynamic greeting saved: {file_path} ({len(ulaw_bytes)} bytes)")
         else:
-            print("❌ [PRE-SYNTHESIS]: Empty audio returned from ElevenLabs.")
+            print("❌ [PRE-SYNTHESIS]: Failed to generate any greeting audio.")
     except Exception as e:
         print(f"❌ [PRE-SYNTHESIS ERROR]: {e}")

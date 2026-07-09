@@ -664,7 +664,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     name_part = customer_name if customer_name else "you"
                     greeting = f"Hello! Am I speaking with {name_part}?"
                 else:
-                    greeting = f"Hello! Kya meri baat {name_part} se ho rahi hai?"
+                    greeting = f"Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge! Kya meri baat {name_part} se ho rahi hai?"
             elif tts_lang == "gu":
                 if strategy_key == "reminder_strategy":
                     greeting = "નમસ્તે! હું જે એમ એસ બેંકમાંથી નવ્યા બોલું છું. તમારી ઈ એમ આઈ ની તારીખ નજીક છે, તમે ક્યારે ચુકવણી કરશો?"
@@ -707,7 +707,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             session.state = state
             session.save()
             
-            return tts_lang, greeting, strategy_key, customer_name, is_aaisha
+            return tts_lang, greeting, strategy_key, customer_name, is_aaisha, agent.role_template.default_voice if agent.role_template else ""
 
         # Kick off DB fetch and TTS cache-check IN PARALLEL
         db_task = asyncio.create_task(get_initial_call_data(self.agent_id, self.session_id, self.language, self.user_number))
@@ -715,7 +715,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         # While DB is running, check if we already have cached audio for this agent
         cached_audio = _GREETING_AUDIO_CACHE.get(f"{self.agent_id}_{self.language}")
 
-        self.agent_tts_lang, greeting, self.strategy_key, customer_name, is_aaisha = await db_task
+        self.agent_tts_lang, greeting, self.strategy_key, customer_name, is_aaisha, self.default_voice = await db_task
         if self.strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"]:
             self.SILENCE_TRIGGER_SEC = 1.4  # Give customer extra time to respond
 
@@ -741,6 +741,11 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             (self.strategy_key == "samsung_store_strategy" and customer_name is not None)
             or (self.strategy_key == "samsung_llm_strategy")
             or (self.strategy_key == "automobile" and is_aaisha and customer_name is not None)
+            or (not is_aaisha and self.strategy_key not in [
+                "hospital_minimal", "loan_strategy", "reminder_strategy",
+                "temp_real_estate_strategy", "samsung_store_strategy",
+                "enogic_strategy", "automobile_Naavya"
+            ])
         )
         
         greeting_text = greeting
@@ -1931,15 +1936,16 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             subscription=os.getenv("AZURE_SPEECH_KEY"),
             region=os.getenv("AZURE_SPEECH_REGION")
         )
-        voice = TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
         if lang == "gu" and getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"]:
             voice = "gu-IN-DhwaniNeural"
         if getattr(self, "strategy_key", None) == "enogic_strategy":
             voice = "hi-IN-ArjunNeural"
         elif lang == "gu" and getattr(self, "strategy_key", None) == "samsung_store_strategy":
             voice = "gu-IN-NiranjanNeural"
+        elif lang == "gu" and getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"]:
+            voice = "gu-IN-DhwaniNeural"
         else:
-            voice = TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
+            voice = getattr(self, "default_voice", None) or TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
         speech_config.speech_synthesis_voice_name = voice
         speech_config.set_speech_synthesis_output_format(
             speechsdk.SpeechSynthesisOutputFormat.Raw8Khz16BitMonoPcm
@@ -2033,7 +2039,9 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     return b""  # Strictly use Sarvam only, do not fall back to ElevenLabs/Azure
                 print("Falling back to ElevenLabs/Azure...")
 
-        if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"]:
+        voice_name_lower = getattr(self, "default_voice", "").lower()
+        male_identifiers = ["prabhat", "arjun", "aarav", "niranjan", "madhur", "arvind", "kashyap", "adam"]
+        if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"] or any(m_id in voice_name_lower for m_id in male_identifiers):
             voice_id = "pNInz6obpgq9S3JwcM8g"  # Adam (Male) - high emotional expressiveness
         else:
             voice_id = ELEVENLABS_VOICE_MAP.get(lang, ELEVENLABS_VOICE_MAP["en"])
@@ -2075,7 +2083,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
         # Fallback to Azure Speech SDK
         try:
-            ssml = build_ssml(text, lang)
+            ssml = build_ssml(text, lang, voice_name=getattr(self, "default_voice", None))
             synthesizer = self._get_synthesizer(lang)
             result = synthesizer.speak_ssml_async(ssml).get()
             

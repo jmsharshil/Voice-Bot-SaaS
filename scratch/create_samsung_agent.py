@@ -57,7 +57,7 @@ def setup_samsung():
 
     print("\nSamsung Agent Info:")
     print(f"Agent ID: {samsung_agent.id}")
-{samsung_agent.role_template.role_name}")
+    print(f"Role: {samsung_agent.role_template.role_name}")
     print(f"Company: {samsung_agent.company_name}")
 
 if __name__ == "__main__":
