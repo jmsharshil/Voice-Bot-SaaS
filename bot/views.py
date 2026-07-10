@@ -3238,7 +3238,7 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
         default_voice = agent.role_template.default_voice if agent.role_template else ""
 
         # Determine language code & greeting text
-        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy"]:
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
             tts_lang = "gu"
         elif strategy_key == "interview_bot":
             tts_lang = "interview_en"
@@ -3268,6 +3268,8 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                     text = f"નમસ્તે {name} જી! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
                 else:
                     text = "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
+            elif strategy_key == "fold8_prereserve_strategy":
+                text = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?"
             else:
                 text = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
         elif tts_lang == "interview_en":
@@ -3278,12 +3280,12 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
         # Resolve static greeting mapping if not dynamic
         is_dynamic_greeting = (
             (strategy_key == "samsung_store_strategy" and name is not None)
-            or (strategy_key == "samsung_llm_strategy")
+            or (strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"])
             or (strategy_key == "automobile" and is_aaisha and name is not None)
             or (not is_aaisha and strategy_key not in [
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
-                "enogic_strategy", "automobile_Naavya"
+                "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy"
             ])
         )
         if not is_dynamic_greeting:
@@ -3321,10 +3323,10 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                 }
                 target_lang = "hi-IN" if is_loan_hi else "gu-IN"
                 speaker = "shubh" if is_loan_hi else "ishita"
-                if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"]:
+                if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     speaker = "ishita"
-                pace = 1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"] else 1)
-                temp = 0.75 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"] else None
+                pace = 1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1)
+                temp = 0.50 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
                 
                 payload = {
                     "text": text,
@@ -3395,7 +3397,7 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                     # Resolve voice_id like consumers.py
                     voice_name_lower = default_voice.lower() if default_voice else ""
                     male_identifiers = ["prabhat", "arjun", "aarav", "niranjan", "madhur", "arvind", "kashyap", "adam"]
-                    if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"] or any(m_id in voice_name_lower for m_id in male_identifiers):
+                    if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] or any(m_id in voice_name_lower for m_id in male_identifiers):
                         voice_id = "pNInz6obpgq9S3JwcM8g"  # Adam
                     else:
                         if len(default_voice) >= 15 and not default_voice.endswith("Neural"):

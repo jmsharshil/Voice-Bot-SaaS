@@ -31,6 +31,7 @@ ROLE_STRATEGY_MAP = {
     "Enogic ZED Advisor": "enogic_strategy",
     "Naavya Samsung Store Advisor": "samsung_store_strategy",
     "Naavya Samsung LLM Advisor": "samsung_llm_strategy",
+    "Galaxy Z Fold8 Pre-Reserve Advisor": "fold8_prereserve_strategy",
 }
 
 

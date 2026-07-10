@@ -102,6 +102,17 @@ except ImportError:
     samsung_llm_prepare = None
     samsung_llm_finalize = None
 
+try:
+    from fold8_bot.strategy import (
+        fold8_prereserve_strategy,
+        fold8_prereserve_prepare,
+        fold8_prereserve_finalize,
+    )
+except ImportError:
+    fold8_prereserve_strategy = None
+    fold8_prereserve_prepare = None
+    fold8_prereserve_finalize = None
+
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
 from django.core.cache import cache
@@ -129,6 +140,8 @@ if samsung_store_strategy:
     STRATEGY_MAP["samsung_store_strategy"] = samsung_store_strategy
 if samsung_llm_strategy:
     STRATEGY_MAP["samsung_llm_strategy"] = samsung_llm_strategy
+if fold8_prereserve_strategy:
+    STRATEGY_MAP["fold8_prereserve_strategy"] = fold8_prereserve_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -154,6 +167,8 @@ if samsung_store_prepare:
     PREPARE_MAP["samsung_store_strategy"] = samsung_store_prepare
 if samsung_llm_prepare:
     PREPARE_MAP["samsung_llm_strategy"] = samsung_llm_prepare
+if fold8_prereserve_prepare:
+    PREPARE_MAP["fold8_prereserve_strategy"] = fold8_prereserve_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -178,6 +193,8 @@ if samsung_store_finalize:
     FINALIZE_MAP["samsung_store_strategy"] = samsung_store_finalize
 if samsung_llm_finalize:
     FINALIZE_MAP["samsung_llm_strategy"] = samsung_llm_finalize
+if fold8_prereserve_finalize:
+    FINALIZE_MAP["fold8_prereserve_strategy"] = fold8_prereserve_finalize
 
 
 def _resolve_agent(agent):

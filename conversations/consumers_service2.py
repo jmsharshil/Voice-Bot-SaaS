@@ -178,6 +178,24 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "enogic_bot/enogic_step9_graceful_exit.raw": "Bilkul theek hai, koi baat nahi. Agar aapko aage kabhi bhi ZED Certification ya compliance support ki zaroorat ho, toh Enogic hamesha aapke liye ready hai. Apna time dene ke liye shukriya!",
     "enogic_bot/enogic_step3_cert_intro.raw": "Wonderful! ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Sath hi MSMEs ko government subsidies aur benefits bhi milte hain. Main is inquiry ko register karne ke liye aapki details note kar leti hoon. Sabse pehle, aapka shubh naam kya hai?",
     "enogic_bot/enogic_step6_ask_business.raw": "Aapke business ka naam kya hai?",
+
+    # GALAXY Z FOLD 8 BOT (SARVAM FEMALE VOICE)
+    "fold8_bot/fold8_step2_launch_info.raw": "અરે વાહ! બાવીસ જુલાઈએ સેમસંગની અનપેક્ડ ઈવેન્ટમાં નવો ગેલેક્સી ઝેડ ફોલ્ડ આઠ અને ફ્લિપ આઠ લોન્ચ થવાનો છે. શું તમે આ નવો ફોન જોવા માટે ઉત્સુક છો?",
+    "fold8_bot/fold8_step3_pitch_reservation.raw": "જી બિલકુલ! માત્ર નવસો નવાણું રૂપિયા આપીને તમે પ્રી-રિઝર્વ કરાવી શકો છો, જે પૂરેપૂરા રિફંડેબલ છે. સાથે જ તમને બે હજાર સાતસો નવાણું રૂપિયાનું વાઉચર પણ મળશે. તો શું આપણે તમારો સ્લોટ બુક કરીએ?",
+    "fold8_bot/fold8_objection_explanation.raw": "અચ્છા, હું તમને સમજાવું. આ માત્ર એક એડવાન્સ સ્લોટ બુકિંગ છે. જો લોન્ચ પછી તમને ફોન ના ગમે, તો તમારા આ નવસો નવાણું રૂપિયા સો ટકા પાછા મળી જશે. એટલે આમાં કોઈ જોખમ નથી. તો શું આપણે સ્લોટ બુક કરીએ?",
+    "fold8_bot/fold8_step4_ask_area.raw": "ચોક્કસ! તમે અમદાવાદમાં કયા એરિયામાં રહો છો, જેથી હું નજીકનો સ્ટોર શોધી શકું?",
+    "fold8_bot/fold8_step6_ask_name.raw": "જી ચોક્કસ. પ્રી-રિઝર્વેશન માટે શું હું તમારું પૂરું નામ જાણી શકું?",
+    "fold8_bot/fold8_step7_ask_phone.raw": "બરાબર. અને આ જ નંબર પર સ્ટોરની ટીમ તમારો સંપર્ક કરે અને બધી વિગત મોકલે, એ યોગ્ય રહેશે કે બીજો કોઈ નંબર આપવો છે?",
+    "fold8_bot/fold8_step8_ask_time.raw": "જી ચોક્કસ. સ્ટોરની ટીમ તમને કયા સમયે કોલ કરે તો અનુકૂળ રહેશે - સવારે, બપોરે કે સાંજે?",
+    "fold8_bot/fold8_step9_closing.raw": "બરાબર છે. તો અમારી સ્ટોરની ટીમ તમારો સંપર્ક કરશે. આપનો કિંમતી સમય આપવા બદલ ખૂબ ખૂબ આભાર! આવજો!",
+    "fold8_bot/fold8_rejection.raw": "કોઈ વાંધો નહીં, આપનો સમય આપવા બદલ ખૂબ ખૂબ આભાર! ધ્યાન રાખજો.",
+    "fold8_bot/fold8_store_vijay.raw": "બરાબર છે. તમારા માટે વિજય ક્રોસ રોડ સ્ટોર સૌથી નજીક રહેશે. તો શું આ લોકેશન અનુકૂળ રહેશે?",
+    "fold8_bot/fold8_store_bodakdev.raw": "બરાબર છે. તમારા માટે બોડકદેવ સ્ટોર સૌથી નજીક રહેશે. તો શું આ લોકેશન અનુકૂળ રહેશે?",
+    "fold8_bot/fold8_store_palladium.raw": "બરાબર છે. તમારા માટે પેલેડિયમ મોલ સ્ટોર સૌથી નજીક રહેશે. તો શું આ લોકેશન અનુકૂળ રહેશે?",
+    "fold8_bot/fold8_store_paldi.raw": "બરાબર છે. તમારા માટે પાલડી સ્ટોર સૌથી નજીક રહેશે. તો શું આ લોકેશન અનુકૂળ રહેશે?",
+    "fold8_bot/fold8_store_isanpur.raw": "બરાબર છે. તમારા માટે ઈસનપુર સ્ટોર સૌથી નજીક રહેશે. તો શું આ લોકેશન અનુકૂળ રહેશે?",
+    "fold8_bot/fold8_store_naroda.raw": "બરાબર છે. તમારા માટે ન્યૂ નરોડા સ્ટોર સૌથી નજીક રહેશે. તો શું આ લોકેશન અનુકૂળ રહેશે?",
+    "fold8_bot/fold8_area_not_found.raw": "બરાબર છે. અમારા સ્ટોર ટીમમાંથી એક પ્રતિનિધિ નજીકના સ્ટોરની વિગત સાથે તમારો સંપર્ક કરશે. પ્રી-રિઝર્વેશન માટે શું હું તમારું પૂરું નામ જાણી શકું?",
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes
@@ -600,7 +618,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 return None
 
         strategy_key = await get_agent_strategy(self.agent_id)
-        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy"]:
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
             self.language = "gu"
 
         # ── STT SETUP ──────────────────────────────────────────
@@ -647,7 +665,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         customer_name = cust.name
 
             # 1. Determine TTS Lang
-            if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy"]:
+            if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
@@ -678,6 +696,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         greeting = f"નમસ્તે {customer_name} જી! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
                     else:
                         greeting = "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
+                elif strategy_key == "fold8_prereserve_strategy":
+                    greeting = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?"
                 else:
                     greeting = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
             elif tts_lang == "interview_en":
@@ -716,7 +736,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         cached_audio = _GREETING_AUDIO_CACHE.get(f"{self.agent_id}_{self.language}")
 
         self.agent_tts_lang, greeting, self.strategy_key, customer_name, is_aaisha, self.default_voice = await db_task
-        if self.strategy_key in ["samsung_store_strategy", "samsung_llm_strategy"]:
+        if self.strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
             self.SILENCE_TRIGGER_SEC = 1.4  # Give customer extra time to respond
 
         # Determine greeting audio path
@@ -739,12 +759,12 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             
         is_dynamic_greeting = (
             (self.strategy_key == "samsung_store_strategy" and customer_name is not None)
-            or (self.strategy_key == "samsung_llm_strategy")
+            or (self.strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"])
             or (self.strategy_key == "automobile" and is_aaisha and customer_name is not None)
             or (not is_aaisha and self.strategy_key not in [
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
-                "enogic_strategy", "automobile_Naavya"
+                "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy"
             ])
         )
         
@@ -1183,7 +1203,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     self.speech_active = False
                     self.silence_start_time = None
 
-                    is_samsung = (getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"])
+                    is_samsung = (getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"])
                     if (
                         not is_samsung
                         and not self.is_bot_speaking
@@ -1356,6 +1376,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         is_temp_real_estate = getattr(self, "strategy_key", None) == "temp_real_estate_strategy"
         is_enogic = getattr(self, "strategy_key", None) == "enogic_strategy"
         is_samsung_store = getattr(self, "strategy_key", None) == "samsung_store_strategy"
+        is_fold8 = getattr(self, "strategy_key", None) == "fold8_prereserve_strategy"
         
         # Determine Matcher lazily
         matcher = None
@@ -1373,6 +1394,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             matcher = get_matcher("ENOGIC_MATCHER", "enogic_bot/data/enogic_intents.json")
         elif is_samsung_store:
             matcher = get_matcher("SAMSUNG_MATCHER", "samsung_bot/data/samsung_intents.json")
+        elif is_fold8:
+            matcher = get_matcher("FOLD8_MATCHER", "fold8_intents.json")
 
         if matcher:
             try:
@@ -1429,6 +1452,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                             current_phase = phase_map.get(current_phase, "GREETING_REPLY")
                         elif is_samsung_store:
                             current_phase = session.state.get("call_phase", "GREETING_REPLY")
+                        elif is_fold8:
+                            current_phase = session.state.get("call_phase", "ASK_CONSENT")
                         self.current_phase = current_phase
                 except:
                     pass
@@ -1506,6 +1531,19 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                                     state["call_phase"] = rev_map.get(next_phase, "collect_flat_type")
                                 elif is_samsung_store:
                                     state["call_phase"] = next_phase
+                                elif is_fold8:
+                                    rev_map = {
+                                        "ASK_CONSENT": "ASK_CONSENT",
+                                        "LAUNCH_INFO_PITCHED": "LAUNCH_INFO_PITCHED",
+                                        "RESERVATION_PITCHED": "RESERVATION_PITCHED",
+                                        "ASK_AREA": "ASK_AREA",
+                                        "STORE_CONFIRMED": "STORE_CONFIRMED",
+                                        "ASK_NAME": "ASK_NAME",
+                                        "ASK_PHONE": "ASK_PHONE",
+                                        "ASK_TIME": "ASK_TIME",
+                                        "CLOSING": "CLOSING"
+                                    }
+                                    state["call_phase"] = rev_map.get(next_phase, "ASK_CONSENT")
                                 elif is_enogic:
                                     rev_map = {
                                         "GREETING_REPLY": "interest_confirmation",
@@ -1562,7 +1600,12 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             await save_message(self.conversation, "user", text)
 
             if self.agent_tts_lang == "gu":
-                farewell = "આપનો ખૂબ ખૂબ આભાર! જ્યારે પણ મિલકત વિશે કોઈ પ્રશ્ન હોય, અમે હંમેશા ઉપલબ્ધ છીએ. ધ્યાન રાખજો!"
+                if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
+                    farewell = "આપનો ખૂબ ખૂબ આભાર! સેમસંગ સ્ટોર તરફથી ટૂંક સમયમાં આપનો સંપર્ક કરવામાં આવશે. ધ્યાન રાખજો!"
+                elif getattr(self, "strategy_key", None) == "reminder_strategy":
+                    farewell = "આપનો ખૂબ ખૂબ આભાર! તમારો દિવસ શુભ રહે."
+                else:
+                    farewell = "આપનો ખૂબ ખૂબ આભાર! જ્યારે પણ મિલકત વિશે કોઈ પ્રશ્ન હોય, અમે હંમેશા ઉપલબ્ધ છીએ. ધ્યાન રાખજો!"
             elif self.agent_tts_lang == "interview_en":
                 farewell = "Thank you for your time. All the best for your preparation!"
             else:
@@ -1987,8 +2030,14 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             region=os.getenv("AZURE_SPEECH_REGION")
         )
        
-        if lang == "gu" and getattr(self, "strategy_key", None) == "samsung_store_strategy":
+        if lang == "gu" and getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
+            voice = "gu-IN-DhwaniNeural"
+        if getattr(self, "strategy_key", None) == "enogic_strategy":
+            voice = "hi-IN-ArjunNeural"
+        elif lang == "gu" and getattr(self, "strategy_key", None) == "samsung_store_strategy":
             voice = "gu-IN-NiranjanNeural"
+        elif lang == "gu" and getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
+            voice = "gu-IN-DhwaniNeural"
         else:
             voice = getattr(self, "default_voice", None) or TTS_VOICE_MAP.get(lang, TTS_VOICE_MAP["en"])
         speech_config.speech_synthesis_voice_name = voice
@@ -2042,10 +2091,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 return b""
             target_lang = "hi-IN" if is_loan_hi else "gu-IN"
             speaker = "shubh" if is_loan_hi else "ishita"
-            if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"]:
+            if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                 speaker = "ishita"
-            pace = 1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"] else 1)
-            temp = 0.75 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"] else None
+            pace = 1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1)
+            temp = 0.50 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
 
             # Normalise clean_text for cache key (lowercase, strip punctuation)
             norm_text = re.sub(r'[.,\/#!$%\^&\*;:{}=\-_`~()।!?]', '', clean_text).lower().strip()
@@ -2083,13 +2132,13 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 return alaw_bytes
             except Exception as sarvam_err:
                 print(f"❌ Sarvam synthesis failed for {target_lang}: {sarvam_err}.")
-                if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"]:
+                if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     return b""  # Strictly use Sarvam only, do not fall back to ElevenLabs/Azure
                 print("Falling back to ElevenLabs/Azure...")
 
         voice_name_lower = getattr(self, "default_voice", "").lower()
         male_identifiers = ["prabhat", "arjun", "aarav", "niranjan", "madhur", "arvind", "kashyap", "adam"]
-        if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy"] or any(m_id in voice_name_lower for m_id in male_identifiers):
+        if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] or any(m_id in voice_name_lower for m_id in male_identifiers):
             voice_id = "pNInz6obpgq9S3JwcM8g"  # Adam (Male) - high emotional expressiveness
         else:
             voice_id = ELEVENLABS_VOICE_MAP.get(lang, ELEVENLABS_VOICE_MAP["en"])
@@ -2507,15 +2556,17 @@ def prewarm_sarvam_cache_at_startup():
             "સારું.",
             "ઠીક છે.",
             "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?",
-            "હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
+            "હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?",
+            "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?",
+            "નમસ્તે! હું નીલ છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?"
         ]
         
         for text in phrases:
             clean_text = text.strip()
             target_lang = "gu-IN"
             speaker = "ishita"
-            pace = 1.05
-            temp = 0.75
+            pace = 1.0
+            temp = 0.50
             
             norm_text = re.sub(r'[.,\/#!$%\^&\*;:{}=\-_`~()।!?]', '', clean_text).lower().strip()
             cache_key = (norm_text, target_lang, speaker, pace, temp)
