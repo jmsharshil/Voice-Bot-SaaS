@@ -2327,7 +2327,6 @@ def auto_campaign_status(request):
     camp_limit = 2
     if _current_campaign_id:
         try:
-            from bot.models import Campaign
             camp = Campaign.objects.select_related('agent').get(id=_current_campaign_id)
             if camp.agent:
                 camp_limit = camp.agent.max_concurrent_calls
