@@ -45,13 +45,13 @@ class CallingHoursAndQuotaTestCase(TestCase):
             with patch('django.utils.timezone.now', return_value=time_start):
                 self.assertTrue(is_within_calling_hours())
 
-            # 3. 12:30 PM UTC = 6:00 PM IST (Exactly end)
-            time_end = datetime.datetime(2026, 6, 15, 12, 30, tzinfo=datetime.timezone.utc)
+            # 3. 3:30 PM UTC = 9:00 PM IST (Exactly end)
+            time_end = datetime.datetime(2026, 6, 15, 15, 30, tzinfo=datetime.timezone.utc)
             with patch('django.utils.timezone.now', return_value=time_end):
                 self.assertTrue(is_within_calling_hours())
 
-            # 4. 12:31 PM UTC = 6:01 PM IST (Outside hours)
-            time_outside_end = datetime.datetime(2026, 6, 15, 12, 31, tzinfo=datetime.timezone.utc)
+            # 4. 3:31 PM UTC = 9:01 PM IST (Outside hours)
+            time_outside_end = datetime.datetime(2026, 6, 15, 15, 31, tzinfo=datetime.timezone.utc)
             with patch('django.utils.timezone.now', return_value=time_outside_end):
                 self.assertFalse(is_within_calling_hours())
 
