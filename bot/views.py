@@ -1169,7 +1169,7 @@ def is_within_calling_hours():
     ist_tz = dt_module.timezone(dt_module.timedelta(hours=5, minutes=30))
     ist_now = utc_now.astimezone(ist_tz)
     
-    start_time = dt_module.time(9, 0)
+    start_time = dt_module.time(9, 30)
     end_time = dt_module.time(18, 0)
     
     current_time = ist_now.time()
@@ -1208,7 +1208,7 @@ def has_remaining_minutes(agent_id):
 def trigger_call(request):
     if not is_within_calling_hours():
         return Response({
-            "error": "Call operations are restricted to standard operating hours (09:30 AM to 06:30 PM IST). Please initiate call requests during the next scheduled window."
+            "error": "Call operations are restricted to standard operating hours (09:30 AM to 06:00 PM IST). Please initiate call requests during the next scheduled window."
         }, status=400)
 
     try:
@@ -1418,7 +1418,7 @@ def upload_call_file(request):
     # Temporarily bypassed for testing
     # if not is_within_calling_hours():
     #     return Response({
-    #         "error": "Campaign call operations are restricted to standard operating hours (09:30 AM to 06:30 PM IST). Please upload and trigger call campaigns during the next scheduled window."
+    #         "error": "Campaign call operations are restricted to standard operating hours (09:30 AM to 06:00 PM IST). Please upload and trigger call campaigns during the next scheduled window."
     #     }, status=400)
 
     """
@@ -2084,7 +2084,7 @@ def start_auto_campaign(request):
     # Temporarily bypassed for testing
     # if not is_within_calling_hours():
     #     return Response({
-    #         "error": "Campaign call operations are restricted to standard operating hours (09:30 AM to 06:30 PM IST). Please initiate call campaigns during the next scheduled window."
+    #         "error": "Campaign call operations are restricted to standard operating hours (09:30 AM to 06:00 PM IST). Please initiate call campaigns during the next scheduled window."
     #     }, status=400)
 
     _ensure_state_loaded()
@@ -2327,7 +2327,6 @@ def auto_campaign_status(request):
     camp_limit = 2
     if _current_campaign_id:
         try:
-            from bot.models import Campaign
             camp = Campaign.objects.select_related('agent').get(id=_current_campaign_id)
             if camp.agent:
                 camp_limit = camp.agent.max_concurrent_calls
