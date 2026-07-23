@@ -1533,7 +1533,6 @@ def upload_call_file(request):
     _campaign_stats["completed"] = 0
     _campaign_stats["started_at"] = timezone.now().isoformat()
     _missed_calls.clear()
-    _save_campaign_state()
 
     # Create a Campaign history record
     # campaign_name = file.name
@@ -1557,6 +1556,8 @@ def upload_call_file(request):
         _current_campaign_id = None
         concurrency_limit = 2
         print(f"WARNING: Failed to create Campaign record: {e}")
+
+    _save_campaign_state()
 
     # Dial first numbers
     dial_next_from_queue()
@@ -1718,24 +1719,26 @@ def auto_resume_suspended_campaigns():
                     print(f"⏰ Calling hours are open! Resuming suspended campaign #{camp.id}...")
                     global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue, _answered_calls
                     
-                    status, _ = CampaignStatus.objects.get_or_create(id=1)
-                    with _call_queue_lock:
-                        _campaign_active = True
-                        _campaign_paused = False
-                        _campaign_suspended_hours = False
-                        _current_campaign_id = camp.id
-                        _call_queue = json.loads(camp.remaining_queue) if camp.remaining_queue else []
-                        _answered_calls = set(json.loads(camp.answered_calls)) if hasattr(camp, 'answered_calls') and camp.answered_calls else set()
-                        
-                        camp.suspended_due_to_hours = False
-                        camp.remaining_queue = "[]"
-                        camp.save()
-                        
-                        status.suspended_due_to_hours = False
-                        status.remaining_queue = "[]"
-                        status.answered_calls = camp.answered_calls
-                        status.is_active = True
-                        status.save()
+                    from django.db import transaction
+                    with transaction.atomic():
+                        status, _ = CampaignStatus.objects.select_for_update().get_or_create(id=1)
+                        with _call_queue_lock:
+                            _campaign_active = True
+                            _campaign_paused = False
+                            _campaign_suspended_hours = False
+                            _current_campaign_id = camp.id
+                            _call_queue = json.loads(camp.remaining_queue) if camp.remaining_queue else []
+                            _answered_calls = set(json.loads(camp.answered_calls)) if hasattr(camp, 'answered_calls') and camp.answered_calls else set()
+                            
+                            camp.suspended_due_to_hours = False
+                            camp.remaining_queue = "[]"
+                            camp.save()
+                            
+                            status.suspended_due_to_hours = False
+                            status.remaining_queue = "[]"
+                            status.answered_calls = camp.answered_calls
+                            status.is_active = True
+                            status.save()
                         
                         print(f"🔥 Resuming campaign #{camp.id} with {len(_call_queue)} remaining calls.")
                     
@@ -2049,6 +2052,7 @@ def on_call_ended(phone_number):
                 break
         
         if to_remove:
+            print(f"🕵️ DEBUG: on_call_ended targeting {to_remove} (clean: {clean_phone}) | answered_calls in DB: {list(_answered_calls)}")
             # If the call was never answered, it is a missed call.
             # We check both the in-memory _answered_calls set and the database Conversations.
             was_answered = False
@@ -2148,6 +2152,7 @@ def on_call_timeout(phone_number):
         _campaign_stats["completed"] = status.completed_count
 
         # If the call was already answered, don't mark as missed!
+        print(f"🕵️ DEBUG: on_call_timeout for {phone_number} (clean: {clean_phone}) | answered_calls in DB: {list(_answered_calls)} | active_calls in DB: {list(_active_calls)}")
         was_answered = False
         for ans in _answered_calls:
             ans_clean = "".join(filter(str.isdigit, str(ans)))[-10:]
@@ -2328,9 +2333,7 @@ def start_auto_campaign(request):
     _campaign_stats["total"] = len(phones)
     _campaign_stats["completed"] = 0
     _campaign_stats["started_at"] = timezone.now().isoformat()
-
     _missed_calls.clear()
-    _save_campaign_state() # Persist new campaign
 
     # Create a Campaign history record
     try:
@@ -2351,6 +2354,8 @@ def start_auto_campaign(request):
         _current_campaign_id = None
         concurrency_limit = 2
         print(f"WARNING: Failed to create Campaign record: {e}")
+
+    _save_campaign_state() # Persist new campaign
 
     # Dial the first numbers
     dial_next_from_queue()
@@ -2435,19 +2440,38 @@ def auto_campaign_status(request):
             except:
                 pass
 
+            active_list = json.loads(status.active_calls) if getattr(status, 'active_calls', None) else []
+            active_details = []
+            import datetime
+            from django.utils import timezone
+            from conversations.models import Conversation
+            for p in active_list:
+                conv = Conversation.objects.filter(
+                    user_number__icontains=p[-10:],
+                    started_at__gte=timezone.now() - datetime.timedelta(minutes=15)
+                ).order_by("-started_at").first()
+                stream_sid = conv.stream_sid if conv else None
+                active_details.append({
+                    "phone": p,
+                    "stream_sid": stream_sid,
+                    "is_connected": bool(stream_sid)
+                })
+
             return Response({
                 "active": status.is_active,
                 "suspended_due_to_hours": status.suspended_due_to_hours,
                 "total": status.total_count,
                 "completed": status.completed_count,
                 "remaining_in_queue": len(json.loads(status.remaining_queue)) if status.remaining_queue else 0,
-                "active_calls": [],
+                "active_calls": active_list,
+                "active_calls_detail": active_details,
                 "no_answer_list": json.loads(status.missed_calls),
                 "no_answer_count": len(json.loads(status.missed_calls)),
                 "concurrent_limit": camp_limit,
                 "started_at": status.started_at.isoformat() if status.started_at else None,
             })
-        except:
+        except Exception as e:
+            print(f"Error in fallback auto_campaign_status: {e}")
             pass
 
     # Resolve dynamic concurrency limit for current campaign
@@ -2470,6 +2494,22 @@ def auto_campaign_status(request):
     final_total = _campaign_stats.get("total", 0) if final_active else 0
     final_completed = _campaign_stats.get("completed", 0) if final_active else 0
 
+    active_details = []
+    import datetime
+    from django.utils import timezone
+    from conversations.models import Conversation
+    for p in active:
+        conv = Conversation.objects.filter(
+            user_number__icontains=p[-10:],
+            started_at__gte=timezone.now() - datetime.timedelta(minutes=15)
+        ).order_by("-started_at").first()
+        stream_sid = conv.stream_sid if conv else None
+        active_details.append({
+            "phone": p,
+            "stream_sid": stream_sid,
+            "is_connected": bool(stream_sid)
+        })
+
     return Response({
         "active": final_active,
         "suspended_due_to_hours": _campaign_suspended_hours,
@@ -2478,6 +2518,7 @@ def auto_campaign_status(request):
         "completed": final_completed,
         "remaining_in_queue": remaining if final_active else 0,
         "active_calls": active if final_active else [],
+        "active_calls_detail": active_details if final_active else [],
         "no_answer_list": _missed_calls if final_active else [],
         "no_answer_count": len(_missed_calls) if final_active else 0,
         "concurrent_limit": camp_limit,
@@ -3152,11 +3193,13 @@ def _finalize_campaign():
         print(f"WARNING: Failed to finalize Campaign record: {e}")
     finally:
         try:
-            status, _ = CampaignStatus.objects.get_or_create(id=1)
-            status.is_active = False
-            status.is_paused = False
-            status.active_calls = "[]"
-            status.save()
+            from django.db import transaction
+            with transaction.atomic():
+                status, _ = CampaignStatus.objects.select_for_update().get_or_create(id=1)
+                status.is_active = False
+                status.is_paused = False
+                status.active_calls = "[]"
+                status.save()
         except Exception as ex:
             print(f"WARNING: Failed to reset CampaignStatus: {ex}")
         _current_campaign_id = None

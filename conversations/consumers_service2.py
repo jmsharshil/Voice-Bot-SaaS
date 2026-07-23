@@ -223,12 +223,29 @@ def create_conversation(agent_id, session_id, user_number, campaign_id=None, cal
     # Notify dialer that the call was answered
     if user_number:
         try:
-            from bot.views import _answered_calls, _call_queue_lock, _normalize_phone, _save_campaign_state
+            from bot.models import CampaignStatus, Campaign
+            from bot.views import _normalize_phone
+            from django.db import transaction
+            import json
+
             clean_phone = _normalize_phone(user_number)
-            with _call_queue_lock:
-                _answered_calls.add(clean_phone)
-            print(f"📞 AUTO-DIALER: Marked {clean_phone} as answered in campaign state.")
-            _save_campaign_state()
+            with transaction.atomic():
+                status, created = CampaignStatus.objects.select_for_update().get_or_create(id=1)
+                answered_calls = json.loads(status.answered_calls) if status.answered_calls else []
+                if clean_phone not in answered_calls:
+                    answered_calls.append(clean_phone)
+                    status.answered_calls = json.dumps(answered_calls)
+                    status.save()
+
+                    # Also sync to Campaign history record if active
+                    if getattr(status, 'current_campaign_id', None):
+                        try:
+                            campaign = Campaign.objects.get(id=status.current_campaign_id)
+                            campaign.answered_calls = status.answered_calls
+                            campaign.save()
+                        except Exception as ex:
+                            print(f"WARNING: Failed to sync campaign history: {ex}")
+            print(f"📞 AUTO-DIALER: Marked {clean_phone} as answered in CampaignStatus.")
         except Exception as e:
             print(f"WARNING: Failed to mark phone as answered: {e}")
 
@@ -1157,6 +1174,37 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         self.user_number = clean_num
                         await update_user_number(self.conversation, clean_num)
                         print(f"[DB] Customer number '{clean_num}' extracted from start payload")
+
+                        # 🔄 Mark this actual number as answered in CampaignStatus
+                        try:
+                            from bot.views import _normalize_phone
+                            clean_phone = _normalize_phone(clean_num)
+                            
+                            @sync_to_async
+                            def _mark_answered_db(phone_num):
+                                import json
+                                from django.db import transaction
+                                from bot.models import CampaignStatus, Campaign
+                                
+                                with transaction.atomic():
+                                    status, created = CampaignStatus.objects.select_for_update().get_or_create(id=1)
+                                    answered_calls = json.loads(status.answered_calls) if status.answered_calls else []
+                                    if phone_num not in answered_calls:
+                                        answered_calls.append(phone_num)
+                                        status.answered_calls = json.dumps(answered_calls)
+                                        status.save()
+
+                                        if getattr(status, 'current_campaign_id', None):
+                                            try:
+                                                campaign = Campaign.objects.get(id=status.current_campaign_id)
+                                                campaign.answered_calls = status.answered_calls
+                                                campaign.save()
+                                            except Exception as ex:
+                                                print(f"WARNING: Failed to sync campaign history: {ex}")
+                            await _mark_answered_db(clean_phone)
+                            print(f"📞 AUTO-DIALER (start payload): Marked {clean_phone} as answered in CampaignStatus.")
+                        except Exception as e:
+                            print(f"WARNING: Failed to mark start payload phone as answered: {e}")
                 except Exception as ex:
                     print("[WARNING] Error extracting caller number from start payload:", ex)
             
