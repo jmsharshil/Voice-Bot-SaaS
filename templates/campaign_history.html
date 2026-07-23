@@ -231,6 +231,7 @@
         .campaign-badge { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:.05em }
         .badge-active { background:#dcfce7; color:#16a34a; border:1px solid #bbf7d0 }
         .badge-completed { background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0 }
+        .badge-pending { background:#fef3c7; color:#d97706; border:1px solid #fde68a }
 
         .campaign-stats { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:16px }
         .stat-item { text-align:center }
@@ -899,8 +900,8 @@
                                 <span class="campaign-id">#${c.id}</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <span class="campaign-badge ${c.is_active ? 'badge-active' : 'badge-completed'}">
-                                    ${c.is_active ? 'Active' : 'Completed'}
+                                <span class="campaign-badge ${c.is_active ? 'badge-active' : (c.ended_at ? 'badge-completed' : 'badge-pending')}">
+                                    ${c.is_active ? 'Active' : (c.ended_at ? 'Completed' : 'Pending')}
                                 </span>
                                 ${exportBtnHtml}
                             </div>
@@ -996,8 +997,8 @@
                                                         <span class="campaign-name" style="font-size: 13px; color: #334155;">Retry Attempt #${sub.retry_count} (${sub.name || 'Untitled'})</span>
                                                         <span class="campaign-id">#${sub.id}</span>
                                                     </div>
-                                                    <span class="campaign-badge ${sub.is_active ? 'badge-active' : 'badge-completed'}" style="font-size: 10px; padding: 2px 8px;">
-                                                        ${sub.is_active ? 'Active' : 'Completed'}
+                                                    <span class="campaign-badge ${sub.is_active ? 'badge-active' : (sub.ended_at ? 'badge-completed' : 'badge-pending')}" style="font-size: 10px; padding: 2px 8px;">
+                                                        ${sub.is_active ? 'Active' : (sub.ended_at ? 'Completed' : 'Pending')}
                                                     </span>
                                                 </div>
                                                 
