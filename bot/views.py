@@ -1649,6 +1649,9 @@ def _save_campaign_state():
         status.missed_calls = json.dumps(_missed_calls)
         status.answered_calls = json.dumps(list(_answered_calls))
         status.is_active = _campaign_active
+        status.is_paused = _campaign_paused
+        status.active_calls = json.dumps(list(_active_calls))
+        status.current_campaign_id = _current_campaign_id
         if not status.started_at:
              status.started_at = timezone.now()
         global _campaign_suspended_hours, _call_queue
@@ -1673,18 +1676,20 @@ def _save_campaign_state():
 
 def _load_campaign_state():
     """Load the last campaign state from DB into memory."""
-    global _campaign_active, _campaign_stats, _missed_calls, _answered_calls, _campaign_suspended_hours, _call_queue
+    global _campaign_active, _campaign_paused, _campaign_stats, _missed_calls, _answered_calls, _campaign_suspended_hours, _call_queue, _active_calls, _current_campaign_id
     try:
-        status = CampaignStatus.objects.get(id=1)
+        status, created = CampaignStatus.objects.get_or_create(id=1)
         _campaign_stats["total"] = status.total_count
         _campaign_stats["completed"] = status.completed_count
         _missed_calls = json.loads(status.missed_calls) if status.missed_calls else []
         _answered_calls = set(json.loads(status.answered_calls)) if hasattr(status, 'answered_calls') and status.answered_calls else set()
         _campaign_suspended_hours = status.suspended_due_to_hours
-        if status.is_active or status.suspended_due_to_hours:
+        _campaign_active = status.is_active
+        _campaign_paused = getattr(status, 'is_paused', False)
+        _current_campaign_id = getattr(status, 'current_campaign_id', None)
+        _active_calls = set(json.loads(status.active_calls)) if getattr(status, 'active_calls', None) else set()
+        if _campaign_active or _campaign_suspended_hours:
             _call_queue = json.loads(status.remaining_queue) if status.remaining_queue else []
-    except CampaignStatus.DoesNotExist:
-        pass
     except Exception as e:
         print(f"❌ ERROR: Failed to load campaign state: {e}")
 
@@ -1755,13 +1760,7 @@ def mark_answered(request):
 
 def on_call_completed(phone, success=True):
     """Callback from bot logic when a call actually finishes (hangup)."""
-    with _call_queue_lock:
-        _campaign_stats["completed"] += 1
-        _active_calls.discard(phone)
-        _save_campaign_state() # Persist
-
-    # Dial the next one in line
-    dial_next_from_queue()
+    on_call_ended(phone)
 
 
 def dial_next_from_queue():
@@ -1770,14 +1769,23 @@ def dial_next_from_queue():
     Called after CDR webhook fires (a call ended) or at campaign start.
     Returns the number of new calls triggered.
     """
-    global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id
+    global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue, _active_calls, _answered_calls, _campaign_stats, _missed_calls
 
     if not is_within_calling_hours():
         print("AUTO-DIALER: Daily calling window has closed. Pausing campaign and rescheduling remaining calls.")
-        with _call_queue_lock:
+        with transaction.atomic():
+            try:
+                status = CampaignStatus.objects.select_for_update().get(id=1)
+            except CampaignStatus.DoesNotExist:
+                return 0
             _campaign_suspended_hours = True
             _campaign_paused = True
-            
+            status.is_active = True
+            status.is_paused = True
+            status.suspended_due_to_hours = True
+            status.remaining_queue = json.dumps(_call_queue)
+            status.save()
+
             if _current_campaign_id:
                 try:
                     camp = Campaign.objects.get(id=_current_campaign_id)
@@ -1786,10 +1794,9 @@ def dial_next_from_queue():
                     camp.save()
                 except Campaign.DoesNotExist:
                     pass
-            
-            _save_campaign_state()
         return 0
 
+    # Read pause state from memory (or we will check inside the loop)
     if _campaign_paused:
         print("AUTO-DIALER: Dialer is paused. Skipping dialing next.")
         return 0
@@ -1802,10 +1809,15 @@ def dial_next_from_queue():
         if agent_id_match:
             current_agent_id = agent_id_match.group(1)
             if not has_remaining_minutes(current_agent_id):
-                with _call_queue_lock:
-                    _campaign_active = False
-                    _save_campaign_state()
-                    _finalize_campaign()
+                with transaction.atomic():
+                    try:
+                        status = CampaignStatus.objects.select_for_update().get(id=1)
+                        _campaign_active = False
+                        status.is_active = False
+                        status.save()
+                        _finalize_campaign()
+                    except Exception as ex:
+                        print(f"Error finalizing exhausted campaign: {ex}")
                 print("AUTO-DIALER: Campaign stopped because all minutes quota is exhausted.")
                 break
 
@@ -1820,7 +1832,30 @@ def dial_next_from_queue():
             except Exception as e:
                 print(f"Error fetching campaign concurrency limit: {e}")
 
-        with _call_queue_lock:
+        # Safely check active count, queue and pop inside database transaction
+        phone = None
+        with transaction.atomic():
+            try:
+                status = CampaignStatus.objects.select_for_update().get(id=1)
+            except CampaignStatus.DoesNotExist:
+                break
+
+            # Sync fresh state inside the transaction
+            _campaign_active = status.is_active
+            _campaign_paused = getattr(status, 'is_paused', False)
+            _campaign_suspended_hours = status.suspended_due_to_hours
+            _current_campaign_id = getattr(status, 'current_campaign_id', None)
+            _call_queue = json.loads(status.remaining_queue) if status.remaining_queue else []
+            _active_calls = set(json.loads(status.active_calls)) if getattr(status, 'active_calls', None) else set()
+            _answered_calls = set(json.loads(status.answered_calls)) if hasattr(status, 'answered_calls') and status.answered_calls else set()
+            _missed_calls = json.loads(status.missed_calls) if status.missed_calls else []
+            _campaign_stats["total"] = status.total_count
+            _campaign_stats["completed"] = status.completed_count
+
+            # If stopped or paused, break
+            if not _campaign_active or _campaign_paused:
+                break
+
             # Check if we have room for more calls
             if len(_active_calls) >= concurrency_limit:
                 break
@@ -1830,7 +1865,8 @@ def dial_next_from_queue():
                 # Queue empty — if no active calls either, campaign is done
                 if not _active_calls:
                     _campaign_active = False
-                    _save_campaign_state() # Persist the finished state!
+                    status.is_active = False
+                    status.save()
                     _finalize_campaign()   # Close the Campaign history record
                     print("AUTO-DIALER: Campaign complete - all calls finished.")
                 break
@@ -1838,6 +1874,19 @@ def dial_next_from_queue():
             phone = _call_queue.pop(0)
             normalized = _normalize_phone(phone)
             _active_calls.add(normalized)
+
+            # Persist popped queue and added active call immediately inside locked transaction
+            status.remaining_queue = json.dumps(_call_queue)
+            status.active_calls = json.dumps(list(_active_calls))
+            status.save()
+
+            if _current_campaign_id:
+                try:
+                    campaign = Campaign.objects.get(id=_current_campaign_id)
+                    campaign.remaining_queue = json.dumps(_call_queue)
+                    campaign.save()
+                except Exception as ex:
+                    print(f"WARNING: Failed to sync campaign history record: {ex}")
 
         # Dial outside the lock
         agent_id = "default"
@@ -1920,9 +1969,17 @@ def dial_next_from_queue():
             
             if resp.status_code not in [200, 201]:
                 print(f"❌ AUTO-DIALER: Failed to dial {normalized} (Status {resp.status_code}): {resp.text}")
-                with _call_queue_lock:
-                    _active_calls.discard(normalized)
-                _campaign_stats["completed"] += 1
+                with transaction.atomic():
+                    try:
+                        status = CampaignStatus.objects.select_for_update().get(id=1)
+                        _active_calls = set(json.loads(status.active_calls)) if getattr(status, 'active_calls', None) else set()
+                        _active_calls.discard(normalized)
+                        status.active_calls = json.dumps(list(_active_calls))
+                        status.completed_count += 1
+                        status.save()
+                        _campaign_stats["completed"] = status.completed_count
+                    except Exception as ex:
+                        print(f"Error handling failed dial cleanup: {ex}")
                 # Trigger next call immediately since this one failed
                 import threading
                 threading.Timer(1.0, dial_next_from_queue).start()
@@ -1935,9 +1992,17 @@ def dial_next_from_queue():
             calls_triggered += 1
         except Exception as e:
             print(f"❌ AUTO-DIALER: Failed to dial {normalized} — {e}")
-            with _call_queue_lock:
-                _active_calls.discard(normalized)
-            _campaign_stats["completed"] += 1
+            with transaction.atomic():
+                try:
+                    status = CampaignStatus.objects.select_for_update().get(id=1)
+                    _active_calls = set(json.loads(status.active_calls)) if getattr(status, 'active_calls', None) else set()
+                    _active_calls.discard(normalized)
+                    status.active_calls = json.dumps(list(_active_calls))
+                    status.completed_count += 1
+                    status.save()
+                    _campaign_stats["completed"] = status.completed_count
+                except Exception as ex:
+                    print(f"Error handling exception dial cleanup: {ex}")
             # Try next number
             import threading
             threading.Timer(1.0, dial_next_from_queue).start()
@@ -1956,7 +2021,25 @@ def on_call_ended(phone_number):
     clean_phone = "".join(filter(str.isdigit, str(phone_number)))[-10:]
 
     found = False
-    with _call_queue_lock:
+    with transaction.atomic():
+        try:
+            status = CampaignStatus.objects.select_for_update().get(id=1)
+        except CampaignStatus.DoesNotExist:
+            return
+
+        # Load fresh locked state
+        global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue, _active_calls, _answered_calls, _campaign_stats, _missed_calls
+        _campaign_active = status.is_active
+        _campaign_paused = getattr(status, 'is_paused', False)
+        _campaign_suspended_hours = status.suspended_due_to_hours
+        _current_campaign_id = getattr(status, 'current_campaign_id', None)
+        _call_queue = json.loads(status.remaining_queue) if status.remaining_queue else []
+        _active_calls = set(json.loads(status.active_calls)) if getattr(status, 'active_calls', None) else set()
+        _answered_calls = set(json.loads(status.answered_calls)) if hasattr(status, 'answered_calls') and status.answered_calls else set()
+        _missed_calls = json.loads(status.missed_calls) if status.missed_calls else []
+        _campaign_stats["total"] = status.total_count
+        _campaign_stats["completed"] = status.completed_count
+
         # Remove from active calls (match by last 10 digits)
         to_remove = None
         for active in _active_calls:
@@ -2006,16 +2089,31 @@ def on_call_ended(phone_number):
             _answered_calls.discard(to_remove) # Cleanup
             _campaign_stats["completed"] += 1
             found = True
- 
+
+            # Save state inside the transaction
+            status.completed_count = _campaign_stats["completed"]
+            status.missed_calls = json.dumps(_missed_calls)
+            status.answered_calls = json.dumps(list(_answered_calls))
+            status.active_calls = json.dumps(list(_active_calls))
+            status.save()
+
+            if _current_campaign_id:
+                try:
+                    campaign = Campaign.objects.get(id=_current_campaign_id)
+                    campaign.completed_count = _campaign_stats["completed"]
+                    campaign.answered_count = max(0, campaign.completed_count - len(_missed_calls))
+                    campaign.missed_calls = json.dumps(_missed_calls)
+                    campaign.answered_calls = json.dumps(list(_answered_calls))
+                    campaign.remaining_queue = json.dumps(_call_queue)
+                    campaign.save()
+                except Exception as ex:
+                    print(f"WARNING: Failed to sync campaign history record: {ex}")
 
     if not found:
         # Already handled or not part of this campaign
         return
 
     print(f"🔄 AUTO-DIALER: Call ended ({clean_phone}) | Active: {len(_active_calls)} | Queue: {len(_call_queue)}")
-
-    # Save campaign state
-    _save_campaign_state()
 
     # Fill the empty slot
     if _campaign_active:
@@ -2030,7 +2128,25 @@ def on_call_timeout(phone_number):
     """
     clean_phone = "".join(filter(str.isdigit, str(phone_number)))[-10:]
  
-    with _call_queue_lock:
+    with transaction.atomic():
+        try:
+            status = CampaignStatus.objects.select_for_update().get(id=1)
+        except CampaignStatus.DoesNotExist:
+            return
+
+        # Load fresh locked state
+        global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue, _active_calls, _answered_calls, _campaign_stats, _missed_calls
+        _campaign_active = status.is_active
+        _campaign_paused = getattr(status, 'is_paused', False)
+        _campaign_suspended_hours = status.suspended_due_to_hours
+        _current_campaign_id = getattr(status, 'current_campaign_id', None)
+        _call_queue = json.loads(status.remaining_queue) if status.remaining_queue else []
+        _active_calls = set(json.loads(status.active_calls)) if getattr(status, 'active_calls', None) else set()
+        _answered_calls = set(json.loads(status.answered_calls)) if hasattr(status, 'answered_calls') and status.answered_calls else set()
+        _missed_calls = json.loads(status.missed_calls) if status.missed_calls else []
+        _campaign_stats["total"] = status.total_count
+        _campaign_stats["completed"] = status.completed_count
+
         # If the call was already answered, don't mark as missed!
         was_answered = False
         for ans in _answered_calls:
@@ -2070,7 +2186,18 @@ def on_call_timeout(phone_number):
             print(f"⌛ AUTO-DIALER: Call Timeout ({phone_number}) — No Answer/Busy. Moving to next...")
             if phone_number not in _missed_calls:
                 _missed_calls.append(phone_number)
-            _save_campaign_state() # Persist
+            
+            # Save state inside transaction
+            status.missed_calls = json.dumps(_missed_calls)
+            status.save()
+
+            if _current_campaign_id:
+                try:
+                    campaign = Campaign.objects.get(id=_current_campaign_id)
+                    campaign.missed_calls = json.dumps(_missed_calls)
+                    campaign.save()
+                except Exception as ex:
+                    print(f"WARNING: Failed to sync campaign history record during timeout: {ex}")
         else:
             return
 
@@ -2371,13 +2498,24 @@ def stop_auto_campaign(request):
         except Campaign.DoesNotExist:
             pass
 
-    with _call_queue_lock:
+    with transaction.atomic():
+        try:
+            status = CampaignStatus.objects.select_for_update().get(id=1)
+        except CampaignStatus.DoesNotExist:
+            status = CampaignStatus(id=1)
+        
         remaining = len(_call_queue)
         _call_queue.clear()
         _active_calls.clear()
+        _campaign_active = False
+        _campaign_paused = False
 
-    _campaign_active = False
-    _campaign_paused = False
+        status.is_active = False
+        status.is_paused = False
+        status.remaining_queue = "[]"
+        status.active_calls = "[]"
+        status.save()
+
     _finalize_campaign() # Close the Campaign history record
 
     print(f"AUTO-DIALER: Campaign stopped. {remaining} numbers were still in queue.")
@@ -2391,7 +2529,8 @@ def stop_auto_campaign(request):
 @api_view(["POST"])
 def pause_auto_campaign(request):
     """Pauses the current auto-dial campaign."""
-    global _campaign_paused
+    global _campaign_active, _campaign_paused
+    _ensure_state_loaded()
     if not _campaign_active:
         return Response({"error": "No active campaign running"}, status=400)
 
@@ -2403,7 +2542,16 @@ def pause_auto_campaign(request):
         except Campaign.DoesNotExist:
             pass
 
-    _campaign_paused = True
+    with transaction.atomic():
+        try:
+            status = CampaignStatus.objects.select_for_update().get(id=1)
+        except CampaignStatus.DoesNotExist:
+            return Response({"error": "No active campaign status record found"}, status=400)
+        
+        _campaign_paused = True
+        status.is_paused = True
+        status.save()
+
     print("AUTO-DIALER: Campaign paused.")
     return Response({"status": "campaign_paused"})
 
@@ -2414,13 +2562,19 @@ def resume_auto_campaign(request):
     global _campaign_active, _campaign_paused, _campaign_suspended_hours, _current_campaign_id, _call_queue, _answered_calls
     
     # If there is no active campaign in memory, try to restore the campaign from the DB
+    _ensure_state_loaded()
     if not _campaign_active:
         # Look for any campaign in the DB that is active (is_active=True)
         camp = Campaign.objects.filter(is_active=True).order_by("-started_at").first()
         if camp:
             if not _is_campaign_visible_to_user(camp, request.user):
                 return Response({"error": "You do not have permission to control this campaign."}, status=403)
-            with _call_queue_lock:
+            with transaction.atomic():
+                try:
+                    status = CampaignStatus.objects.select_for_update().get(id=1)
+                except CampaignStatus.DoesNotExist:
+                    status = CampaignStatus(id=1)
+
                 _campaign_active = True
                 _campaign_paused = False
                 _campaign_suspended_hours = False
@@ -2429,8 +2583,8 @@ def resume_auto_campaign(request):
                 _answered_calls = set(json.loads(camp.answered_calls)) if hasattr(camp, 'answered_calls') and camp.answered_calls else set()
                 
                 # Update CampaignStatus singleton too
-                status, _ = CampaignStatus.objects.get_or_create(id=1)
                 status.is_active = True
+                status.is_paused = False
                 status.suspended_due_to_hours = False
                 status.remaining_queue = camp.remaining_queue
                 status.answered_calls = camp.answered_calls
@@ -2453,10 +2607,17 @@ def resume_auto_campaign(request):
             except Campaign.DoesNotExist:
                 pass
             
-            status, _ = CampaignStatus.objects.get_or_create(id=1)
-            status.suspended_due_to_hours = False
-            status.is_active = True
-            status.save()
+            with transaction.atomic():
+                try:
+                    status = CampaignStatus.objects.select_for_update().get(id=1)
+                    _campaign_paused = False
+                    _campaign_suspended_hours = False
+                    status.suspended_due_to_hours = False
+                    status.is_paused = False
+                    status.is_active = True
+                    status.save()
+                except Exception as ex:
+                    print(f"Error saving resumed state: {ex}")
 
         _campaign_paused = False
         _campaign_suspended_hours = False
@@ -2873,14 +3034,9 @@ def export_campaign_excel(request, campaign_id):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
 
-# Initialize campaign state from DB lazily when needed
-_state_loaded = False
-
+# Initialize campaign state from DB when needed
 def _ensure_state_loaded():
-    global _state_loaded
-    if not _state_loaded:
-        _load_campaign_state()
-        _state_loaded = True
+    _load_campaign_state()
 
 
 def trigger_retry_sub_campaign_if_needed(parent_campaign):
@@ -2995,6 +3151,14 @@ def _finalize_campaign():
     except Exception as e:
         print(f"WARNING: Failed to finalize Campaign record: {e}")
     finally:
+        try:
+            status, _ = CampaignStatus.objects.get_or_create(id=1)
+            status.is_active = False
+            status.is_paused = False
+            status.active_calls = "[]"
+            status.save()
+        except Exception as ex:
+            print(f"WARNING: Failed to reset CampaignStatus: {ex}")
         _current_campaign_id = None
 
 

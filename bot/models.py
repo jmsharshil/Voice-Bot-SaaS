@@ -185,6 +185,11 @@ class CampaignStatus(models.Model):
     suspended_due_to_hours = models.BooleanField(default=False)
     remaining_queue        = models.TextField(default="[]")
 
+    # New fields to fully synchronize state across processes
+    active_calls           = models.TextField(default="[]")  # JSON list of phone numbers currently being called
+    current_campaign_id    = models.IntegerField(null=True, blank=True)
+    is_paused              = models.BooleanField(default=False)
+
     class Meta:
         verbose_name_plural = "Campaign Statuses"
 

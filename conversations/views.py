@@ -1561,8 +1561,10 @@ def telecom_cdr_webhook(request):
 
     # 🔄 AUTO-DIALER: Trigger next call if a campaign is active
     try:
-        from bot.views import on_call_ended, _campaign_active
-        if _campaign_active:
+        from bot.models import CampaignStatus
+        status = CampaignStatus.objects.filter(id=1).first()
+        if status and status.is_active:
+            from bot.views import on_call_ended
             on_call_ended(data.get("phone_number", ""))
     except Exception as e:
         print(f"⚠️ AUTO-DIALER trigger error: {e}")

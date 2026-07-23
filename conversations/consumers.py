@@ -2433,8 +2433,10 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 
                 # 🔄 AUTO-DIALER FALLBACK: Trigger next call if campaign is active
                 try:
-                    from bot.views import on_call_ended, _campaign_active
-                    if _campaign_active:
+                    from bot.models import CampaignStatus
+                    status = CampaignStatus.objects.filter(id=1).first()
+                    if status and status.is_active:
+                        from bot.views import on_call_ended
                         print(f"🔄 AUTO-DIALER (disconnect fallback): Triggering next call for {user_phone}")
                         on_call_ended(user_phone)
                 except Exception as e:
