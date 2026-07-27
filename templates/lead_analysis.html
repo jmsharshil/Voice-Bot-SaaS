@@ -1430,6 +1430,22 @@
             color: #dc2626;
             border: 1px solid #fecaca;
         }
+
+        /* Custom scrollbar for dialer monitor missed calls list */
+        #dmMissedList::-webkit-scrollbar {
+            width: 4px;
+        }
+        #dmMissedList::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        #dmMissedList::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+        #dmMissedList::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
     </style>
 </head>
 
@@ -2266,7 +2282,7 @@
 
         <div id="dmMissedBox" style="display:none;">
             <div style="font-size:10px; text-transform:uppercase; color:#f87171; margin-bottom:6px;">No Answer</div>
-            <div id="dmMissedList" style="display:flex; flex-wrap:wrap; gap:4px;"></div>
+            <div id="dmMissedList" style="display:flex; flex-wrap:wrap; gap:4px; max-height:120px; overflow-y:auto; padding-right:4px;"></div>
         </div>
     </div>
     <script>
