@@ -375,7 +375,8 @@ INDUSTRY_VOICE_MAP = {
     "reminder-industry": "gu-IN-DhwaniNeural",
     "temp-real-estate": "gu-IN-DhwaniNeural",
     "enogic-commercial-trade": "hi-IN-ArjunNeural",
-    "samsung-store": "gu-IN-DhwaniNeural"
+    "samsung-store": "gu-IN-DhwaniNeural",
+    "insurance": "gu-IN-DhwaniNeural"
 }
 
 TEMPLATES = [
@@ -867,6 +868,17 @@ Negative Constraints:
 - NEVER repeat or mention the specific location/area name provided by the user in your final closing response.
 """,
             "default_tone": "polite",
+        }
+    ]
+},
+{
+    "industry": {"name": "Insurance", "slug": "insurance"},
+    "roles": [
+        {
+            "role_name": "Carekay Insurance Advisor",
+            "description": "Carekay Insurance Renewal Reminder and Payment Link Advisor",
+            "system_prompt_template": "Warm female insurance renewal advisor.",
+            "default_tone": "warm",
         }
     ]
 }
