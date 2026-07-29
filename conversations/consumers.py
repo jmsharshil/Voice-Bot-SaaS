@@ -179,6 +179,12 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "enogic_bot/enogic_step3_cert_intro.raw": "Wonderful! ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Sath hi MSMEs ko government subsidies aur benefits bhi milte hain. Main is inquiry ko register karne ke liye aapki details note kar leti hoon. Sabse pehle, aapka shubh naam kya hai?",
     "enogic_bot/enogic_step6_ask_business.raw": "Aapke business ka naam kya hai?",
 
+    # CAREKAY INSURANCE RENEWAL BOT (GUJARATI)
+    "carekay_bot/carekay_step1_greeting.raw": "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kay બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?",
+    "carekay_bot/carekay_step2_ask_whatsapp.raw": "આભાર!તમારું નવું પ્રીમિયમ લગભગ ગયા વર્ષ જેટલું જ છે,શું હું તમને WhatsApp પર રિન્યુઅલ અને પેમેન્ટ લિંક મોકલી આપું જેથી તમે તેને ચેક કરી શકો?",
+    "carekay_bot/carekay_step3_closing.raw": "સારું, મેં લિંક મોકલી આપી છે. જો તમને કોઈ પ્રશ્ન હોય તો તમે અમારી ટીમ સાથે વાત કરી શકો છો. તમારો દિવસ શુભ રહે!",
+    "carekay_bot/carekay_rejection.raw": "કોઈ વાંધો નહીં, તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે!",
+
     # GALAXY Z FOLD 8 BOT (SARVAM FEMALE VOICE)
     "fold8_bot/fold8_step2_launch_info.raw": "અરે વાહ! બાવીસ જુલાઈએ સેમસંગની અનપેક્ડ ઈવેન્ટમાં નવો ગેલેક્સી ઝેડ ફોલ્ડ આઠ અને ફ્લિપ આઠ લોન્ચ થવાનો છે. શું તમે આ નવો ફોન જોવા માટે ઉત્સુક છો?",
     "fold8_bot/fold8_step3_pitch_reservation.raw": "જી બિલકુલ! માત્ર નવસો નવાણું રૂપિયા આપીને તમે પ્રી-રિઝર્વ કરાવી શકો છો, જે પૂરેપૂરા રિફંડેબલ છે. સાથે જ તમને બે હજાર સાતસો નવાણું રૂપિયાનું વાઉચર પણ મળશે. તો શું આપણે તમારો સ્લોટ બુક કરીએ?",
@@ -635,7 +641,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 return None
 
         strategy_key = await get_agent_strategy(self.agent_id)
-        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy", "carekay_strategy"]:
             self.language = "gu"
 
         # ── STT SETUP ──────────────────────────────────────────
@@ -682,7 +688,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                         customer_name = cust.name
 
             # 1. Determine TTS Lang
-            if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
+            if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy", "carekay_strategy"]:
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
@@ -715,6 +721,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                         greeting = "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
                 elif strategy_key == "fold8_prereserve_strategy":
                     greeting = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?"
+                elif strategy_key == "carekay_strategy":
+                    greeting = "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kay બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?"
                 else:
                     greeting = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
             elif tts_lang == "interview_en":
@@ -732,13 +740,15 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 state["customer_name"] = customer_name
             if strategy_key == "hospital_minimal":
                 state["step"] = "confirm_interest"
-            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy","enogic_strategy", "fold8_prereserve_strategy"]:
+            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy","enogic_strategy", "fold8_prereserve_strategy", "carekay_strategy"]:
                 if strategy_key == "temp_real_estate_strategy":
                     state["call_phase"] = "collect_flat_type"
                 elif strategy_key == "samsung_store_strategy":
                     state["call_phase"] = "GREETING_REPLY"
                 elif strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     state["call_phase"] = "ASK_CONSENT"
+                elif strategy_key == "carekay_strategy":
+                    state["call_phase"] = "greeting"
                 else:
                     state["call_phase"] = "interest_confirmation"
             session.state = state
@@ -769,6 +779,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             greeting_file = "enogic_bot/enogic_step1_greeting.raw"
         elif self.strategy_key == "samsung_store_strategy":
             greeting_file = "samsung_bot/samsung_step1_greeting.raw"
+        elif self.strategy_key == "carekay_strategy":
+            greeting_file = "carekay_bot/carekay_step1_greeting.raw"
         elif self.strategy_key == "automobile_Naavya":
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         else:
@@ -781,7 +793,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             or (not is_aaisha and self.strategy_key not in [
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
-                "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy"
+                "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
+                "carekay_strategy"
             ])
         )
         
@@ -1389,6 +1402,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         is_enogic = getattr(self, "strategy_key", None) == "enogic_strategy"
         is_samsung_store = getattr(self, "strategy_key", None) == "samsung_store_strategy"
         is_fold8 = getattr(self, "strategy_key", None) == "fold8_prereserve_strategy"
+        is_carekay = getattr(self, "strategy_key", None) == "carekay_strategy"
         
         # Determine Matcher lazily
         matcher = None
@@ -1408,6 +1422,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             matcher = get_matcher("SAMSUNG_MATCHER", "samsung_bot/data/samsung_intents.json")
         elif is_fold8:
             matcher = get_matcher("FOLD8_MATCHER", "fold8_intents.json")
+        elif is_carekay:
+            matcher = get_matcher("CAREKAY_MATCHER", "carekay_bot/data/carekay_intents.json")
 
         if matcher:
             try:
@@ -1466,6 +1482,14 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                             current_phase = session.state.get("call_phase", "GREETING_REPLY")
                         elif is_fold8:
                             current_phase = session.state.get("call_phase", "ASK_CONSENT")
+                        elif is_carekay:
+                            current_phase = session.state.get("call_phase", "greeting")
+                            phase_map = {
+                                "greeting": "GREETING_REPLY",
+                                "ask_whatsapp": "ASK_WHATSAPP",
+                                "closing": "CLOSING"
+                            }
+                            current_phase = phase_map.get(current_phase, "GREETING_REPLY")
                         self.current_phase = current_phase
                 except:
                     pass
@@ -1568,6 +1592,13 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                                         "CLOSING": "CLOSING"
                                     }
                                     state["call_phase"] = rev_map.get(next_phase, "ASK_CONSENT")
+                                elif is_carekay:
+                                    rev_map = {
+                                        "GREETING_REPLY": "greeting",
+                                        "ASK_WHATSAPP": "ask_whatsapp",
+                                        "CLOSING": "closing"
+                                    }
+                                    state["call_phase"] = rev_map.get(next_phase, "greeting")
                                 session.state = state
                                 await sync_to_async(session.save)()
                                 self.current_phase = next_phase
@@ -2031,6 +2062,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             voice = "gu-IN-DhwaniNeural"
         if getattr(self, "strategy_key", None) == "enogic_strategy":
             voice = "hi-IN-ArjunNeural"
+        elif getattr(self, "strategy_key", None) == "carekay_strategy":
+            voice = "gu-IN-DhwaniNeural"
         elif lang == "gu" and getattr(self, "strategy_key", None) == "samsung_store_strategy":
             voice = "gu-IN-NiranjanNeural"
         elif lang == "gu" and getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
@@ -2128,6 +2161,23 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 print(f"❌ Sarvam synthesis failed for {target_lang}: {sarvam_err}.")
                 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     return b""  # Strictly use Sarvam only, do not fall back to ElevenLabs/Azure
+                if getattr(self, "strategy_key", None) == "carekay_strategy":
+                    try:
+                        print("🔄 Falling back to Azure Speech (gu-IN-DhwaniNeural) for Carekay...")
+                        ssml = build_ssml(text, lang, voice_name="gu-IN-DhwaniNeural")
+                        synthesizer = self._get_synthesizer(lang)
+                        result = synthesizer.speak_ssml_async(ssml).get()
+                        if result.reason != speechsdk.ResultReason.SynthesizingAudioCompleted:
+                            return b""
+                        pcm = result.audio_data
+                        pcm = strip_wav_header(pcm)
+                        if len(pcm) % 2 != 0:
+                            pcm = pcm[:-1]
+                        pcm = _amplify_pcm(pcm, gain=2.0)
+                        return audioop.lin2ulaw(pcm, 2)
+                    except Exception as azure_err:
+                        print(f"❌ Azure fallback synthesis failed for Carekay: {azure_err}")
+                        return b""
                 print("Falling back to ElevenLabs/Azure...")
 
         voice_name_lower = getattr(self, "default_voice", "").lower()
@@ -2213,9 +2263,14 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
         start_time = loop.time()
         for idx, i in enumerate(range(0, len(ulaw), 160)):
-            if not self.is_bot_speaking:
+            if not self.is_bot_speaking and len(ulaw) - i >= 3200:
                 print("🛑 TTS stopped mid-stream")
                 return
+
+            # Early release of bot_speaking state for the last 400ms (3200 bytes)
+            # to allow natural barge-in overlap at the end of utterances
+            if len(ulaw) - i < 3200:
+                self.is_bot_speaking = False
 
             chunk = ulaw[i:i + 160].ljust(160, b'\x7f')
             await self._send_media_frame(chunk)
@@ -2265,6 +2320,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
             elif getattr(self, "strategy_key", None) == "samsung_store_strategy":
                 greeting_file = "samsung_bot/samsung_step1_greeting.raw"
+            elif getattr(self, "strategy_key", None) == "carekay_strategy":
+                greeting_file = "carekay_bot/carekay_step1_greeting.raw"
             elif getattr(self, "strategy_key", None) == "automobile_Naavya":
                 greeting_file = f"Naavya/{lang}_step1_greeting.raw"
             else:

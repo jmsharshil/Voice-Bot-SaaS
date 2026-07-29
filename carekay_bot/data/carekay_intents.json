@@ -1,0 +1,56 @@
+{
+    "global_intents": [],
+    "flow_intents": [
+        {
+            "phase": "GREETING_REPLY",
+            "intents": [
+                {
+                    "intent_name": "interest_denied",
+                    "mp3_file": "carekay_bot/carekay_rejection.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        "no", "nope", "nah", "not now", "cancel", "stop", "busy", "not free", "call later",
+                        "nahi", "na", "abhi nahi", "baad mein", "wrong number", "busy hoon", "meeting",
+                        "નથી", "ના", "નહીં", "નથી લેવી", "નથી ચૂકવવી", "વ્યસ્ત છું", "પછી", "ના ભાઈ", "ના જી", "ખોટો નંબર", "ખોટો ફોન",
+                        "નથી જોઈતું", "નથી કરવું", "વાત નથી કરવી", "અત્યારે નહીં", "પછી વાત કરીએ", "કામમાં છું", "ફોન કાપો"
+                    ]
+                },
+                {
+                    "intent_name": "interest_confirmed",
+                    "mp3_file": "carekay_bot/carekay_step2_ask_whatsapp.raw",
+                    "next_phase": "ASK_WHATSAPP",
+                    "triggers": [
+                        "yes", "sure", "yeah", "ok", "okay", "tell", "go ahead",
+                        "haan", "boliye", "kahiye", "haan bolo", "bolo",
+                        "હા", "હા બોલો", "બોલો", "કેમ છો", "હા કહો", "હાજી", "ચોક્કસ", "કહો", "હા બોલો ને"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "ASK_WHATSAPP",
+            "intents": [
+                {
+                    "intent_name": "send_link_denied",
+                    "mp3_file": "carekay_bot/carekay_rejection.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        "no", "nope", "nah", "don't send", "dont send", "no thanks",
+                        "nahi", "na", "mat bhejo", "bhejne ki zaroorat nahi",
+                        "ના", "નહીં", "નથી જોઈતી", "નથી મોકલવું", "ના મોકલશો", "રહેવા દો", "ના ભાઈ", "ના જી"
+                    ]
+                },
+                {
+                    "intent_name": "send_link_confirmed",
+                    "mp3_file": "carekay_bot/carekay_step3_closing.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        "yes", "send", "sure", "yeah", "ok", "okay", "send it", "do it",
+                        "haan", "bhejo", "bhej do", "haan bhej do",
+                        "હા", "મોકલો", "મોકલી દો", "ભલે", "ભલે મોકલી દો", "હા મોકલો", "હા મોકલી દો", "ચોક્કસ મોકલો"
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -113,6 +113,17 @@ except ImportError:
     fold8_prereserve_prepare = None
     fold8_prereserve_finalize = None
 
+try:
+    from carekay_bot.strategy import (
+        carekay_strategy,
+        carekay_prepare,
+        carekay_finalize,
+    )
+except ImportError:
+    carekay_strategy = None
+    carekay_prepare = None
+    carekay_finalize = None
+
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
 from django.core.cache import cache
@@ -142,6 +153,8 @@ if samsung_llm_strategy:
     STRATEGY_MAP["samsung_llm_strategy"] = samsung_llm_strategy
 if fold8_prereserve_strategy:
     STRATEGY_MAP["fold8_prereserve_strategy"] = fold8_prereserve_strategy
+if carekay_strategy:
+    STRATEGY_MAP["carekay_strategy"] = carekay_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -169,6 +182,8 @@ if samsung_llm_prepare:
     PREPARE_MAP["samsung_llm_strategy"] = samsung_llm_prepare
 if fold8_prereserve_prepare:
     PREPARE_MAP["fold8_prereserve_strategy"] = fold8_prereserve_prepare
+if carekay_prepare:
+    PREPARE_MAP["carekay_strategy"] = carekay_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -195,6 +210,8 @@ if samsung_llm_finalize:
     FINALIZE_MAP["samsung_llm_strategy"] = samsung_llm_finalize
 if fold8_prereserve_finalize:
     FINALIZE_MAP["fold8_prereserve_strategy"] = fold8_prereserve_finalize
+if carekay_finalize:
+    FINALIZE_MAP["carekay_strategy"] = carekay_finalize
 
 
 def _resolve_agent(agent):
@@ -457,7 +474,7 @@ def get_agent_tts_language(agent_id):
         strategy_key = get_role_strategy(role_name)
         print(f"[LOOKUP] Agent role_name: {role_name} | strategy_key: {strategy_key}")
 
-        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy"]:
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "carekay_strategy"]:
             return "gu"           # Gujarati, Dhwani voice
         elif strategy_key == "interview_bot":
             return "interview_en" # English only, no translation
