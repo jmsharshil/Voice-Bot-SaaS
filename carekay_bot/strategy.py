@@ -26,7 +26,7 @@ def carekay_strategy(agent, message, session, **kwargs):
 
     if not state.get("intro_shown"):
         reply = (
-            "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kay બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?"
+            "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kaiy બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?"
         )
         state["intro_shown"] = True
         state["call_phase"] = "greeting"
@@ -79,7 +79,7 @@ def carekay_prepare(agent, message, session, detected_language=None, **kwargs):
 
     # INTRO
     if not state.get("intro_shown"):
-        reply = "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kay બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?"
+        reply = "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kaiy બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?"
         state["intro_shown"] = True
         state["call_phase"] = "greeting"
         state["conversation_history"] = [f"Agent: {reply}"]

@@ -180,7 +180,7 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "enogic_bot/enogic_step6_ask_business.raw": "Aapke business ka naam kya hai?",
 
     # CAREKAY INSURANCE RENEWAL BOT (GUJARATI)
-    "carekay_bot/carekay_step1_greeting.raw": "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kay બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?",
+    "carekay_bot/carekay_step1_greeting.raw": "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kaiy બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?",
     "carekay_bot/carekay_step2_ask_whatsapp.raw": "આભાર!તમારું નવું પ્રીમિયમ લગભગ ગયા વર્ષ જેટલું જ છે,શું હું તમને WhatsApp પર રિન્યુઅલ અને પેમેન્ટ લિંક મોકલી આપું જેથી તમે તેને ચેક કરી શકો?",
     "carekay_bot/carekay_step3_closing.raw": "સારું, મેં લિંક મોકલી આપી છે. જો તમને કોઈ પ્રશ્ન હોય તો તમે અમારી ટીમ સાથે વાત કરી શકો છો. તમારો દિવસ શુભ રહે!",
     "carekay_bot/carekay_rejection.raw": "કોઈ વાંધો નહીં, તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે!",
@@ -722,7 +722,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 elif strategy_key == "fold8_prereserve_strategy":
                     greeting = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?"
                 elif strategy_key == "carekay_strategy":
-                    greeting = "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kay બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?"
+                    greeting = "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kaiy બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?"
                 else:
                     greeting = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
             elif tts_lang == "interview_en":
@@ -1617,7 +1617,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
                     # 6. Auto-disconnect if this was a closing intent
                     if next_phase == "CLOSING" or match_result.get("intent", {}).get("intent_name", "").endswith("closing"):
-                        print("📴 [AUTO-DISCONNECT]: Closing intent played — ending call.")
+                        print("📴 [AUTO-DISCONNECT]: Closing intent played — waiting 3s for buffer and ending call.")
+                        await asyncio.sleep(3.0)
                         await close_conversation(self.conversation)
                         await self.send(text_data=json.dumps({"event": "stop"}))
                         self.is_connected = False
@@ -1779,8 +1780,9 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 )
 
             if prep_result.get("auto_disconnect"):
-                print("📴 AUTO-DISCONNECT (static reply): Booking confirmed by user — ending call")
+                print("📴 AUTO-DISCONNECT (static reply): Booking confirmed by user — waiting 2s for buffer and ending call")
                 await self.tts_task
+                await asyncio.sleep(2.0)
                 await close_conversation(self.conversation)
                 await self.send(text_data=json.dumps({"event": "stop"}))
                 self.is_connected = False

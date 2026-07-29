@@ -45,7 +45,7 @@ def setup_carekay():
 
     # Create/Get Carekay Agent
     agent, created = VoiceAgent.objects.get_or_create(
-        name="Kay",
+        name="Kaiy",
         owner=owner,
         industry=industry,
         role_template=role_template,

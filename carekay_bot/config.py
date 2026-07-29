@@ -5,7 +5,7 @@ class CarekayBotConfig:
     def __init__(
         self,
         company_name: str = "Carecay Insurance",
-        agent_name: str = "Kay",
+        agent_name: str = "Kaiy",
         agent_gender: str = "female",
         supported_languages: List[str] = None,
         intents_file: Optional[str] = None
