@@ -474,7 +474,7 @@ def get_agent_tts_language(agent_id):
         strategy_key = get_role_strategy(role_name)
         print(f"[LOOKUP] Agent role_name: {role_name} | strategy_key: {strategy_key}")
 
-        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "carekay_strategy"]:
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy", "carekay_insurance_strategy", "carekay_strategy"]:
             return "gu"           # Gujarati, Dhwani voice
         elif strategy_key == "interview_bot":
             return "interview_en" # English only, no translation

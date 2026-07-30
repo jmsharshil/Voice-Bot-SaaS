@@ -3444,7 +3444,7 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
         default_voice = agent.role_template.default_voice if agent.role_template else ""
 
         # Determine language code & greeting text
-        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy", "carekay_strategy", "carekay_insurance_strategy"]:
             tts_lang = "gu"
         elif strategy_key == "interview_bot":
             tts_lang = "interview_en"
@@ -3476,6 +3476,8 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                     text = "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
             elif strategy_key == "fold8_prereserve_strategy":
                 text = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?"
+            elif strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
+                text = "હલો, નમસ્તે જી! હું કેરકે ઇન્શ્યોરન્સમાંથી કેય વાત કરું છું. તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે. તો શું તમારી સાથે ૨ મિનિટ વાત થઈ શકે?"
             else:
                 text = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
         elif tts_lang == "interview_en":
@@ -3491,7 +3493,8 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
             or (not is_aaisha and strategy_key not in [
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
-                "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy"
+                "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
+                "carekay_strategy", "carekay_insurance_strategy"
             ])
         )
         if not is_dynamic_greeting:
@@ -3505,6 +3508,8 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                 greeting_file = "temp_real_estate_bot/real_estate_step1_greeting.raw"
             elif strategy_key == "enogic_strategy":
                 greeting_file = "enogic_bot/enogic_step1_greeting.raw"
+            elif strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
+                greeting_file = "carekay_bot/carekay_step1_greeting.raw"
             elif strategy_key == "samsung_store_strategy":
                 greeting_file = "samsung_bot/samsung_step1_greeting.raw"
             elif strategy_key == "automobile_Naavya":
@@ -3531,7 +3536,7 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                 speaker = "shubh" if is_loan_hi else "ishita"
                 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     speaker = "ishita"
-                pace = 1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1)
+                pace = 1.16 if strategy_key in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))
                 temp = 0.50 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
                 
                 payload = {

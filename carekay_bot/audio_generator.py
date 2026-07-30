@@ -74,7 +74,7 @@ def generate_via_sarvam(text) -> bytes:
         "target_language_code": "gu-IN",
         "speaker": "ishita",
         "model": "bulbul:v3",
-        "pace": 1.15,
+        "pace": 1.16,
         "speech_sample_rate": 8000,
         "output_audio_codec": "mulaw",
         "enable_preprocessing": True
@@ -167,10 +167,10 @@ if __name__ == "__main__":
         print("Generating Carekay Insurance Renewal Bot Gujarati Flow Audio Assets...")
 
     assets = [
-        ("carekay_step1_greeting.raw", "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kaiy બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?"),
-        ("carekay_step2_ask_whatsapp.raw", "આભાર!તમારું નવું પ્રીમિયમ લગભગ ગયા વર્ષ જેટલું જ છે,શું હું તમને WhatsApp પર રિન્યુઅલ અને પેમેન્ટ લિંક મોકલી આપું જેથી તમે તેને ચેક કરી શકો?"),
-        ("carekay_step3_closing.raw", "સારું, મેં લિંક મોકલી આપી છે. જો તમને કોઈ પ્રશ્ન હોય તો તમે અમારી ટીમ સાથે વાત કરી શકો છો. તમારો દિવસ શુભ રહે!"),
-        ("carekay_rejection.raw", "કોઈ વાંધો નહીં, તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે!")
+        ("carekay_step1_greeting.raw", "હલો, નમસ્તે જી! હું કેરકે ઇન્શ્યોરન્સમાંથી કેય વાત કરું છું. તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે. તો શું તમારી સાથે ૨ મિનિટ વાત થઈ શકે?"),
+        ("carekay_step2_ask_whatsapp.raw", "આભાર! તમારું નવું પ્રીમિયમ લગભગ ગયા વર્ષ જેટલું જ છે. તો શું હું તમને વોટ્સએપ પર રિન્યુઅલ અને પેમેન્ટ લિંક મોકલી આપું જેથી તમે તેને ચેક કરી શકો?"),
+        ("carekay_step3_closing.raw", "જી સારું, મેં લિંક મોકલી આપી છે. જો કોઈ પ્રશ્ન હોય તો જણાવજો. તમારો કિંમતી સમય આપવા બદલ આભાર, આવજો!"),
+        ("carekay_rejection.raw", "કોઈ વાંધો નહીં જી, તમારો કિંમતી સમય આપવા બદલ ખૂબ આભાર. તમારો દિવસ શુભ રહે, આવજો!")
     ]
 
     generated_count = 0

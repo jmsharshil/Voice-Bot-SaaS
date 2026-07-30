@@ -33,6 +33,7 @@ ROLE_STRATEGY_MAP = {
     "Naavya Samsung LLM Advisor": "samsung_llm_strategy",
     "Galaxy Z Fold8 Pre-Reserve Advisor": "fold8_prereserve_strategy",
     "Carekay Insurance Advisor": "carekay_strategy",
+    "Carekay Gujarati Insurance Renewal Advisor": "carekay_strategy",
 }
 
 

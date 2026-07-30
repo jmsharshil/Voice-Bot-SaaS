@@ -180,10 +180,10 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "enogic_bot/enogic_step6_ask_business.raw": "Aapke business ka naam kya hai?",
 
     # CAREKAY INSURANCE RENEWAL BOT (GUJARATI)
-    "carekay_bot/carekay_step1_greeting.raw": "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kaiy બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?",
-    "carekay_bot/carekay_step2_ask_whatsapp.raw": "આભાર!તમારું નવું પ્રીમિયમ લગભગ ગયા વર્ષ જેટલું જ છે,શું હું તમને WhatsApp પર રિન્યુઅલ અને પેમેન્ટ લિંક મોકલી આપું જેથી તમે તેને ચેક કરી શકો?",
-    "carekay_bot/carekay_step3_closing.raw": "સારું, મેં લિંક મોકલી આપી છે. જો તમને કોઈ પ્રશ્ન હોય તો તમે અમારી ટીમ સાથે વાત કરી શકો છો. તમારો દિવસ શુભ રહે!",
-    "carekay_bot/carekay_rejection.raw": "કોઈ વાંધો નહીં, તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે!",
+    "carekay_bot/carekay_step1_greeting.raw": "હલો, નમસ્તે જી! હું કેરકે ઇન્શ્યોરન્સમાંથી કેય વાત કરું છું. તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે. તો શું તમારી સાથે ૨ મિનિટ વાત થઈ શકે?",
+    "carekay_bot/carekay_step2_ask_whatsapp.raw": "અરે વાહ, ખૂબ જ સરસ! તમારું નવું પ્રીમિયમ લગભગ ગયા વર્ષ જેટલું જ છે. તો શું હું તમને વોટ્સએપ પર રિન્યુઅલ અને પેમેન્ટ લિંક મોકલી આપું જેથી તમે તેને ચેક કરી શકો?",
+    "carekay_bot/carekay_step3_closing.raw": "જી સારું, મેં લિંક મોકલી આપી છે. જો કોઈ પ્રશ્ન હોય તો જણાવજો. તમારો કિંમતી સમય આપવા બદલ આભાર, આવજો!",
+    "carekay_bot/carekay_rejection.raw": "કોઈ વાંધો નહીં જી, તમારો કિંમતી સમય આપવા બદલ ખૂબ આભાર. તમારો દિવસ શુભ રહે, આવજો!",
 
     # GALAXY Z FOLD 8 BOT (SARVAM FEMALE VOICE)
     "fold8_bot/fold8_step2_launch_info.raw": "અરે વાહ! બાવીસ જુલાઈએ સેમસંગની અનપેક્ડ ઈવેન્ટમાં નવો ગેલેક્સી ઝેડ ફોલ્ડ આઠ અને ફ્લિપ આઠ લોન્ચ થવાનો છે. શું તમે આ નવો ફોન જોવા માટે ઉત્સુક છો?",
@@ -721,8 +721,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         greeting = "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
                 elif strategy_key == "fold8_prereserve_strategy":
                     greeting = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?"
-                elif strategy_key == "carekay_strategy":
-                    greeting = "નમસ્તે! હું Carecay ઇન્શ્યોરન્સમાંથી Kaiy બોલી રહી છું,તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે.શું તમારી પાસે ૧ મિનિટ છે?"
+                elif strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
+                    greeting = "હલો, નમસ્તે જી! હું કેરકે ઇન્શ્યોરન્સમાંથી કેય વાત કરું છું. તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે. તો શું તમારી સાથે ૨ મિનિટ વાત થઈ શકે?"
                 else:
                     greeting = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
             elif tts_lang == "interview_en":
@@ -740,14 +740,14 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 state["customer_name"] = customer_name
             if strategy_key == "hospital_minimal":
                 state["step"] = "confirm_interest"
-            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "enogic_strategy", "fold8_prereserve_strategy", "carekay_strategy"]:
+            elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "enogic_strategy", "fold8_prereserve_strategy", "carekay_strategy", "carekay_insurance_strategy"]:
                 if strategy_key == "temp_real_estate_strategy":
                     state["call_phase"] = "collect_flat_type"
                 elif strategy_key == "samsung_store_strategy":
                     state["call_phase"] = "GREETING_REPLY"
                 elif strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     state["call_phase"] = "ASK_CONSENT"
-                elif strategy_key == "carekay_strategy":
+                elif strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
                     state["call_phase"] = "greeting"
                 else:
                     state["call_phase"] = "interest_confirmation"
@@ -779,7 +779,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             greeting_file = "samsung_bot/samsung_step1_greeting.raw"
         elif self.strategy_key == "enogic_strategy":
             greeting_file = "enogic_bot/enogic_step1_greeting.raw"
-        elif self.strategy_key == "carekay_strategy":
+        elif self.strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
             greeting_file = "carekay_bot/carekay_step1_greeting.raw"
         elif self.strategy_key == "automobile_Naavya":
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
@@ -794,7 +794,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy"
+                "carekay_strategy", "carekay_insurance_strategy"
             ])
         )
         
@@ -1438,7 +1438,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         is_enogic = getattr(self, "strategy_key", None) == "enogic_strategy"
         is_samsung_store = getattr(self, "strategy_key", None) == "samsung_store_strategy"
         is_fold8 = getattr(self, "strategy_key", None) == "fold8_prereserve_strategy"
-        is_carekay = getattr(self, "strategy_key", None) == "carekay_strategy"
+        is_carekay = getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"]
         
         # Determine Matcher lazily
         matcher = None
@@ -2176,7 +2176,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             speaker = "shubh" if is_loan_hi else "ishita"
             if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                 speaker = "ishita"
-            pace = 1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1)
+            pace = 1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))
             temp = 0.50 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
 
             # Normalise clean_text for cache key (lowercase, strip punctuation)
