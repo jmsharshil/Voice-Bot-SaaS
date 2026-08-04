@@ -2195,6 +2195,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             }
             
             clean_text = re.sub(r'<[^>]*>', '', text).strip()
+            if is_shreyas_en:
+                clean_text = clean_text.replace("-", " ")
+                clean_text = re.sub(r'\b5\b', 'five', clean_text)
+                clean_text = re.sub(r'\b10\b', 'ten', clean_text)
             if not clean_text:
                 return b""
             target_lang = "en-IN" if is_shreyas_en else ("hi-IN" if is_loan_hi else "gu-IN")
