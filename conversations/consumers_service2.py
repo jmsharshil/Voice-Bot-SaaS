@@ -76,6 +76,10 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "hi_step7_confirm_testdrive.raw": "Thank you, maine aapka time note kar liya hai. Ek aur baat — kya aap Kia Seltos ka test drive lena pasand karenge? Believe me, ek baar drive karoge toh aapko aur kuch dekhna hi nahi padega!",
     "hi_step8_closing.raw": "Thank you so much! Hamari sales team aapse jaldi hi contact karegi. Aapka time dene ke liye Shukriya.",
 
+    # SHREYAS FOUNDATION
+    "shreyas_bot/shreyas_step1_greeting.raw": "namaste, Welcome to Shreyas Foundation Sports & Outreach Programs — we offer horse riding, skating, football, life-skills, and communication programs, open to all. Which one would your child like to try?",
+    "shreyas_gu_bot/shreyas_gu_step1_greeting.raw": "નમસ્તે જી! શ્રેયસ ફાઉન્ડેશન સ્પોર્ટ્સ એક્ટિવિટીઝમાં તમારું ખૂબ ખૂબ સ્વાગત છે. અમારે ત્યાં બાળકો માટે ઘોડેસવારી, સ્કેટિંગ, ફૂટબોલ અને પર્સનાલિટી ડેવલપમેન્ટ જેવા સરસ પ્રોગ્રામ્સ ચાલે છે. તો તમારા બાળકને આમાંથી શેમાં રસ છે?",
+
     # ENGLISH
     "en_step1_greeting.raw": "Hello! I hope you are doing great. This is Aaisha calling from West-coast Kia.",
     "en_step2_confirm_interest.raw": "You had recently shown interest in the Kia Seltos from Ahmedabad. Am I speaking with the right person?",
@@ -641,8 +645,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 return None
 
         strategy_key = await get_agent_strategy(self.agent_id)
-        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy", "carekay_strategy"]:
+        if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy", "carekay_strategy", "shreyas_gu_strategy"]:
             self.language = "gu"
+        elif strategy_key == "shreyas_strategy":
+            self.language = "en"
 
         # ── STT SETUP ──────────────────────────────────────────
         self.recognizer, self.push_stream = create_speech_recognizer(language=self.language)
@@ -688,7 +694,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         customer_name = cust.name
 
             # 1. Determine TTS Lang
-            if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy", "carekay_strategy"]:
+            if strategy_key in ["real_estate", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy", "carekay_strategy", "shreyas_gu_strategy"]:
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
@@ -723,10 +729,14 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     greeting = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?"
                 elif strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
                     greeting = "હલો, નમસ્તે જી! હું કેરકે ઇન્શ્યોરન્સમાંથી કેય વાત કરું છું. તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે. તો શું તમારી સાથે ૨ મિનિટ વાત થઈ શકે?"
+                elif strategy_key == "shreyas_gu_strategy":
+                    greeting = "નમસ્તે જી! શ્રેયસ ફાઉન્ડેશન સ્પોર્ટ્સ એક્ટિવિટીઝમાં તમારું ખૂબ ખૂબ સ્વાગત છે. અમારે ત્યાં બાળકો માટે ઘોડેસવારી, સ્કેટિંગ, ફૂટબોલ અને પર્સનાલિટી ડેવલપમેન્ટ જેવા સરસ પ્રોગ્રામ્સ ચાલે છે. તો તમારા બાળકને આમાંથી શેમાં રસ છે?"
                 else:
                     greeting = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
             elif tts_lang == "interview_en":
                 greeting = f"Hello, I am {agent.name}."
+            elif strategy_key == "shreyas_strategy":
+                greeting = "namaste, Welcome to Shreyas Foundation Sports & Outreach Programs — we offer horse riding, skating, football, life-skills, and communication programs, open to all. Which one would your child like to try?"
             else:
                 greeting = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. kya aap abhi baat kar sakte hain?"
             
@@ -781,6 +791,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             greeting_file = "enogic_bot/enogic_step1_greeting.raw"
         elif self.strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
             greeting_file = "carekay_bot/carekay_step1_greeting.raw"
+        elif self.strategy_key == "shreyas_strategy":
+            greeting_file = "shreyas_bot/shreyas_step1_greeting.raw"
+        elif self.strategy_key == "shreyas_gu_strategy":
+            greeting_file = "shreyas_gu_bot/shreyas_gu_step1_greeting.raw"
         elif self.strategy_key == "automobile_Naavya":
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         else:
@@ -794,7 +808,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy", "carekay_insurance_strategy"
+                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy"
             ])
         )
         
@@ -1339,7 +1353,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
     # ================= AI (STREAMING) =================
 
-    async def _stream_local_audio_file(self, filename, save_to_db=True):
+    async def _stream_local_audio_file(self, filename, save_to_db=True, is_filler=False):
         """Read a local .raw audio file and stream it to the WebSocket."""
         filename = filename.replace(".mp3", ".raw")
         
@@ -1411,8 +1425,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     if expected_time > actual_time:
                         await asyncio.sleep(expected_time - actual_time)
         finally:
-            self.is_bot_speaking = False
-            self._bot_speaking_ended_at = time.time()
+            if not is_filler:
+                self.is_bot_speaking = False
+                self._bot_speaking_ended_at = time.time()
             print(f"✅ [PLAYBACK]: Finished {filename}")
 
     async def handle_ai_reply(self, text):
@@ -1854,6 +1869,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         self._mark_bot_speaking_start()
         t_llm = time.time()
 
+        # ⚡ Extract pre-emptive filler if requested to play inside the consumer task
+        filler_file = prep_result.get("play_filler")
+
         audio_queue = asyncio.Queue()
         full_response = ""
         first_sentence_time = None
@@ -1963,13 +1981,19 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             await audio_queue.put(None)
 
         async def streaming_consumer():
+            # Play pre-emptive filler if requested to mask latency in parallel with LLM generation
+            if filler_file:
+                print(f"⚡ [FILLER-PARALLEL]: Playing pre-emptive filler audio inside consumer: {filler_file}")
+                await self._stream_local_audio_file(filler_file, save_to_db=False, is_filler=True)
+
             while True:
                 ulaw = await audio_queue.get()
                 if ulaw is None:
                     break
                 if not self.is_bot_speaking:
                     break
-                await self._stream_ulaw(ulaw)
+                is_final = producer_task.done() and audio_queue.empty()
+                await self._stream_ulaw(ulaw, is_final_chunk=is_final)
 
         producer_task = asyncio.create_task(streaming_producer())
         consumer_task = asyncio.create_task(streaming_consumer())
@@ -2159,7 +2183,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 return b""
 
         is_loan_hi = (lang == "hi" and getattr(self, "strategy_key", None) == "loan_strategy")
-        if lang == "gu" or is_loan_hi:
+        is_shreyas_en = (lang == "en" and getattr(self, "strategy_key", None) == "shreyas_strategy")
+        if lang == "gu" or is_loan_hi or is_shreyas_en:
             import requests
             api_key = os.getenv("SARVAM_API_KEY")
             api_url = "https://api.sarvam.ai/text-to-speech/stream"
@@ -2172,11 +2197,12 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             clean_text = re.sub(r'<[^>]*>', '', text).strip()
             if not clean_text:
                 return b""
-            target_lang = "hi-IN" if is_loan_hi else "gu-IN"
-            speaker = "shubh" if is_loan_hi else "ishita"
+            target_lang = "en-IN" if is_shreyas_en else ("hi-IN" if is_loan_hi else "gu-IN")
+            speaker = "shreya" if is_shreyas_en else ("shubh" if is_loan_hi else "ishita")
             if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                 speaker = "ishita"
-            pace = 1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))
+            is_shreyas_gu = getattr(self, "strategy_key", None) == "shreyas_gu_strategy"
+            pace = 1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))))
             temp = 0.50 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
 
             # Normalise clean_text for cache key (lowercase, strip punctuation)
@@ -2301,7 +2327,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             print(f"❌ Azure fallback synthesis also failed: {azure_err}")
             return b""
 
-    async def _stream_ulaw(self, ulaw: bytes):
+    async def _stream_ulaw(self, ulaw: bytes, is_final_chunk: bool = True):
         if not ulaw:
             return
             
@@ -2325,7 +2351,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
             # Early release of bot_speaking state for the last 400ms (3200 bytes)
             # to allow natural barge-in overlap at the end of utterances
-            if len(ulaw) - i < 3200:
+            if is_final_chunk and len(ulaw) - i < 3200:
                 self.is_bot_speaking = False
 
             chunk = ulaw[i:i + 160].ljust(160, b'\xd5')
@@ -2379,6 +2405,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             greeting_file = "samsung_bot/samsung_step1_greeting.raw"
         elif getattr(self, "strategy_key", None) == "carekay_strategy":
             greeting_file = "carekay_bot/carekay_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "shreyas_strategy":
+            greeting_file = "shreyas_bot/shreyas_step1_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "shreyas_gu_strategy":
+            greeting_file = "shreyas_gu_bot/shreyas_gu_step1_greeting.raw"
         elif getattr(self, "strategy_key", None) == "automobile_Naavya":
             greeting_file = f"Naavya/{lang}_step1_greeting.raw"
         else:

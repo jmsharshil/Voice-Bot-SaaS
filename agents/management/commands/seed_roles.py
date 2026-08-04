@@ -367,6 +367,8 @@
 
 from django.core.management.base import BaseCommand
 from agents.models import Industry, AgentRoleTemplate
+from shreyas_bot.prompts import SHREYAS_SYSTEM_PROMPT
+from shreyas_gu_bot.prompts import SHREYAS_GU_SYSTEM_PROMPT
 
 INDUSTRY_VOICE_MAP = {
     "automobile": "en-IN-AartiNeural",
@@ -376,7 +378,8 @@ INDUSTRY_VOICE_MAP = {
     "temp-real-estate": "gu-IN-DhwaniNeural",
     "enogic-commercial-trade": "hi-IN-ArjunNeural",
     "samsung-store": "gu-IN-DhwaniNeural",
-    "insurance": "gu-IN-DhwaniNeural"
+    "insurance": "gu-IN-DhwaniNeural",
+    "sports-outreach": "en-IN-AartiNeural"
 }
 
 TEMPLATES = [
@@ -879,6 +882,23 @@ Negative Constraints:
             "description": "Carekay Insurance Renewal Reminder and Payment Link Advisor",
             "system_prompt_template": "Warm female insurance renewal advisor.",
             "default_tone": "warm",
+        }
+    ]
+},
+{
+    "industry": {"name": "Sports & Outreach", "slug": "sports-outreach"},
+    "roles": [
+        {
+            "role_name": "Shreyas Sports Advisor",
+            "description": "Shreyas Foundation Sports & Outreach Programs Advisor",
+            "system_prompt_template": SHREYAS_SYSTEM_PROMPT,
+            "default_tone": "polite",
+        },
+        {
+            "role_name": "Shreyas Sports Advisor Gujarati",
+            "description": "Shreyas Foundation Sports & Outreach Programs Advisor in Gujarati",
+            "system_prompt_template": SHREYAS_GU_SYSTEM_PROMPT,
+            "default_tone": "polite",
         }
     ]
 }

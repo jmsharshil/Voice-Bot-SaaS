@@ -124,6 +124,28 @@ except ImportError:
     carekay_prepare = None
     carekay_finalize = None
 
+try:
+    from shreyas_bot.strategy import (
+        shreyas_strategy,
+        shreyas_prepare,
+        shreyas_finalize,
+    )
+except ImportError:
+    shreyas_strategy = None
+    shreyas_prepare = None
+    shreyas_finalize = None
+
+try:
+    from shreyas_gu_bot.strategy import (
+        shreyas_gu_strategy,
+        shreyas_gu_prepare,
+        shreyas_gu_finalize,
+    )
+except ImportError:
+    shreyas_gu_strategy = None
+    shreyas_gu_prepare = None
+    shreyas_gu_finalize = None
+
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
 from django.core.cache import cache
@@ -155,6 +177,10 @@ if fold8_prereserve_strategy:
     STRATEGY_MAP["fold8_prereserve_strategy"] = fold8_prereserve_strategy
 if carekay_strategy:
     STRATEGY_MAP["carekay_strategy"] = carekay_strategy
+if shreyas_strategy:
+    STRATEGY_MAP["shreyas_strategy"] = shreyas_strategy
+if shreyas_gu_strategy:
+    STRATEGY_MAP["shreyas_gu_strategy"] = shreyas_gu_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -184,6 +210,10 @@ if fold8_prereserve_prepare:
     PREPARE_MAP["fold8_prereserve_strategy"] = fold8_prereserve_prepare
 if carekay_prepare:
     PREPARE_MAP["carekay_strategy"] = carekay_prepare
+if shreyas_prepare:
+    PREPARE_MAP["shreyas_strategy"] = shreyas_prepare
+if shreyas_gu_prepare:
+    PREPARE_MAP["shreyas_gu_strategy"] = shreyas_gu_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -212,6 +242,10 @@ if fold8_prereserve_finalize:
     FINALIZE_MAP["fold8_prereserve_strategy"] = fold8_prereserve_finalize
 if carekay_finalize:
     FINALIZE_MAP["carekay_strategy"] = carekay_finalize
+if shreyas_finalize:
+    FINALIZE_MAP["shreyas_strategy"] = shreyas_finalize
+if shreyas_gu_finalize:
+    FINALIZE_MAP["shreyas_gu_strategy"] = shreyas_gu_finalize
 
 
 def _resolve_agent(agent):
