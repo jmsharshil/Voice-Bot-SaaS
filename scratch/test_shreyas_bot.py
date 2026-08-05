@@ -80,7 +80,7 @@ session.refresh_from_db()
 print("\n4. Prepare Turn 2 (Smart Filler check - Program):")
 prep2 = shreyas_prepare(agent, "Horse riding sounds fun", session)
 print(f"Turn 2 play_filler: {prep2.get('play_filler')}")
-assert prep2.get("play_filler") == "shreyas_bot/filler_1.raw", "Should choose filler_1 for program query"
+assert prep2.get("play_filler") in [f"shreyas_bot/filler_1_{c}.raw" for c in "abcde"], "Should choose program filler"
 print("OK")
 
 # Turn 3: Age
@@ -88,7 +88,7 @@ session.refresh_from_db()
 print("\n5. Prepare Turn 3 (Smart Filler check - Age):")
 prep3 = shreyas_prepare(agent, "He is 10 years old", session)
 print(f"Turn 3 play_filler: {prep3.get('play_filler')}")
-assert prep3.get("play_filler") == "shreyas_bot/filler_2.raw", "Should choose filler_2 for age query"
+assert prep3.get("play_filler") in [f"shreyas_bot/filler_2_{c}.raw" for c in "abcde"], "Should choose age filler"
 print("OK")
 
 # Turn 4: Consent
@@ -96,7 +96,7 @@ session.refresh_from_db()
 print("\n6. Prepare Turn 4 (Smart Filler check - Consent):")
 prep4 = shreyas_prepare(agent, "Yes please, send details", session)
 print(f"Turn 4 play_filler: {prep4.get('play_filler')}")
-assert prep4.get("play_filler") == "shreyas_bot/filler_3.raw", "Should choose filler_3 for consent query"
+assert prep4.get("play_filler") in [f"shreyas_bot/filler_3_{c}.raw" for c in "abcde"], "Should choose consent filler"
 print("OK")
 
 # Turn 5: Question
@@ -104,7 +104,7 @@ session.refresh_from_db()
 print("\n7. Prepare Turn 5 (Smart Filler check - Question):")
 prep5 = shreyas_prepare(agent, "What are the fees?", session)
 print(f"Turn 5 play_filler: {prep5.get('play_filler')}")
-assert prep5.get("play_filler") == "shreyas_bot/filler_4.raw", "Should choose filler_4 for question query"
+assert prep5.get("play_filler") in [f"shreyas_bot/filler_4_{c}.raw" for c in "abcde"], "Should choose question filler"
 print("OK")
 
 # Turn 6: Default/Fallback
@@ -112,7 +112,7 @@ session.refresh_from_db()
 print("\n8. Prepare Turn 6 (Smart Filler check - Fallback):")
 prep6 = shreyas_prepare(agent, "Hello there", session)
 print(f"Turn 6 play_filler: {prep6.get('play_filler')}")
-assert prep6.get("play_filler") == "shreyas_bot/filler_5.raw", "Should choose filler_5 for default query"
+assert prep6.get("play_filler") in [f"shreyas_bot/filler_5_{c}.raw" for c in "abcde"], "Should choose fallback filler"
 print("OK")
 
 # Clean up test session

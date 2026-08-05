@@ -193,11 +193,41 @@ if __name__ == "__main__":
     print("Generating Shreyas Foundation Sports Bot Audio Assets...")
     assets = [
         ("shreyas_step1_greeting.raw", "namaste, Welcome to Shreyas Foundation Sports and Outreach Programs. We offer horse riding, skating, football, life-skills, and communication programs, open to all. Which one would your child like to try?"),
-        ("filler_1.raw", "Okay, let me check the timings and options for you."),
-        ("filler_2.raw", "Sure, let me check that information for you."),
-        ("filler_3.raw", "Alright, please give me a moment to look into that."),
-        ("filler_4.raw", "Interesting! Let me look up the details for you."),
-        ("filler_5.raw", "Sure, let me find the right details for you."),
+        
+        # 1. Program Selection
+        ("filler_1_a.raw", "Excellent choice! Let me check the batch timings for you."),
+        ("filler_1_b.raw", "That is a great program! Let me check the timings and details."),
+        ("filler_1_c.raw", "Wonderful choice! Let see what slots we have available for that."),
+        ("filler_1_d.raw", "Great! Let me check the schedules for this activity."),
+        ("filler_1_e.raw", "Perfect! Let me pull up the class timings for you."),
+        
+        # 2. Age / Timing
+        ("filler_2_a.raw", "Perfect! Let me check the schedules for this age group."),
+        ("filler_2_b.raw", "Alright! Let me see what batch options we have for this age."),
+        ("filler_2_c.raw", "Got it! Let me check the available time slots for that age."),
+        ("filler_2_d.raw", "Great! Let me check the batch timings for that age group."),
+        ("filler_2_e.raw", "Sure! Let me check our schedule for this specific age."),
+        
+        # 3. WhatsApp Consent (Neutral Acknowledgment)
+        ("filler_3_a.raw", "Yes sure, just a second..."),
+        ("filler_3_b.raw", "Alright, I am checking right now..."),
+        ("filler_3_c.raw", "Sure, I'll let you know in just a moment..."),
+        ("filler_3_d.raw", "Yes, absolutely, just a minute..."),
+        ("filler_3_e.raw", "Okay, let me get the details ready..."),
+        
+        # 4. Question / Inquiry
+        ("filler_4_a.raw", "Good question! Let me look up the details for you."),
+        ("filler_4_b.raw", "Let me verify that information for you."),
+        ("filler_4_c.raw", "Interesting question! Let me check the system details."),
+        ("filler_4_d.raw", "Let me look that up for you right now."),
+        ("filler_4_e.raw", "Sure, let me check the details for that."),
+        
+        # 5. Default / Fallback
+        ("filler_5_a.raw", "Sure, please give me a moment to check."),
+        ("filler_5_b.raw", "Alright, let me look into that for you."),
+        ("filler_5_c.raw", "Sure, let me check the details on that."),
+        ("filler_5_d.raw", "Okay, let me find the right details for you."),
+        ("filler_5_e.raw", "Sure, let me look that up for you."),
     ]
 
     for filename, text in assets:
