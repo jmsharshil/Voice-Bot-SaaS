@@ -649,6 +649,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             self.language = "gu"
         elif strategy_key == "shreyas_strategy":
             self.language = "en"
+        elif strategy_key == "kia_syros_strategy":
+            self.language = "hi"
 
         # ── STT SETUP ──────────────────────────────────────────
         self.recognizer, self.push_stream = create_speech_recognizer(language=self.language)
@@ -698,6 +700,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
+            elif strategy_key == "kia_syros_strategy":
+                tts_lang = "hi"
             else:
                 tts_lang = "en"
                 
@@ -737,6 +741,11 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 greeting = f"Hello, I am {agent.name}."
             elif strategy_key == "shreyas_strategy":
                 greeting = "namaste, Welcome to Shreyas Foundation Sports & Outreach Programs — we offer horse riding, skating, football, life-skills, and communication programs, open to all. Which one would your child like to try?"
+            elif strategy_key == "kia_syros_strategy":
+                if customer_name and customer_name != "Sir/Ma'am":
+                    greeting = f"Hello, kya meri baat {customer_name} se ho rahi hai?"
+                else:
+                    greeting = "Hello, kya meri baat aapse ho rahi hai?"
             else:
                 greeting = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. kya aap abhi baat kar sakte hain?"
             
@@ -750,6 +759,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 state["customer_name"] = customer_name
             if strategy_key == "hospital_minimal":
                 state["step"] = "confirm_interest"
+            elif strategy_key == "kia_syros_strategy":
+                state["step"] = "greeting"
             elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy","enogic_strategy", "fold8_prereserve_strategy", "carekay_strategy", "carekay_insurance_strategy"]:
                 if strategy_key == "temp_real_estate_strategy":
                     state["call_phase"] = "collect_flat_type"
@@ -775,6 +786,9 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         self.agent_tts_lang, greeting, self.strategy_key, customer_name, is_aaisha, self.default_voice = await db_task
         if self.strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
             self.SILENCE_TRIGGER_SEC = 1.4  # Give customer extra time to respond
+        elif self.strategy_key == "kia_syros_strategy":
+            self.SPEECH_DETECT_RMS = 150
+            self.SILENCE_TRIGGER_SEC = 0.55
 
         # Determine greeting audio path
         if self.strategy_key == "hospital_minimal":
@@ -797,18 +811,21 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             greeting_file = "shreyas_gu_bot/shreyas_gu_step1_greeting.raw"
         elif self.strategy_key == "automobile_Naavya":
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
+        elif self.strategy_key == "kia_syros_strategy":
+            greeting_file = "kia_syros_bot/kia_syros_greeting.raw"
         else:
             greeting_file = f"{self.language}_step1_greeting.raw"
             
         is_dynamic_greeting = (
             (self.strategy_key == "samsung_store_strategy" and customer_name is not None)
+            or (self.strategy_key == "kia_syros_strategy")
             or (self.strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"])
             or (self.strategy_key == "automobile" and is_aaisha and customer_name is not None)
             or (not is_aaisha and self.strategy_key not in [
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy"
+                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy"
             ])
         )
         
@@ -1651,7 +1668,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 print(f"❌ [ROUTER ERROR]: {e}. Continuing with original logic.")
 
         # ── END INTENT ────────────────────────────────────────
-        if is_end_intent(normalized):
+        if is_end_intent(normalized) and self.strategy_key != "kia_syros_strategy":
             print("📴 END INTENT DETECTED:", text)
 
             await save_message(self.conversation, "user", text)
@@ -2132,8 +2149,9 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 return b""
 
         is_loan_hi = (lang == "hi" and getattr(self, "strategy_key", None) == "loan_strategy")
+        is_kia_syros = (lang == "hi" and getattr(self, "strategy_key", None) == "kia_syros_strategy")
         is_shreyas_en = (lang == "en" and getattr(self, "strategy_key", None) == "shreyas_strategy")
-        if lang == "gu" or is_loan_hi or is_shreyas_en:
+        if lang == "gu" or is_loan_hi or is_shreyas_en or is_kia_syros:
             import requests
             api_key = os.getenv("SARVAM_API_KEY")
             api_url = "https://api.sarvam.ai/text-to-speech/stream"
@@ -2150,12 +2168,12 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 clean_text = re.sub(r'\b10\b', 'ten', clean_text)
             if not clean_text:
                 return b""
-            target_lang = "en-IN" if is_shreyas_en else ("hi-IN" if is_loan_hi else "gu-IN")
-            speaker = "shreya" if is_shreyas_en else ("shubh" if is_loan_hi else "ishita")
+            target_lang = "en-IN" if is_shreyas_en else ("hi-IN" if (is_loan_hi or is_kia_syros) else "gu-IN")
+            speaker = "shreya" if (is_shreyas_en or is_kia_syros) else ("shubh" if is_loan_hi else "ishita")
             if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                 speaker = "ishita"
             is_shreyas_gu = getattr(self, "strategy_key", None) == "shreyas_gu_strategy"
-            pace = 1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))))
+            pace = 1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if is_kia_syros else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1)))))
             temp = 0.50 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
 
             # Normalise clean_text for cache key

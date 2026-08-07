@@ -136,6 +136,17 @@ except ImportError:
     shreyas_finalize = None
 
 try:
+    from kia_syros_bot.strategy import (
+        kia_syros_strategy,
+        kia_syros_prepare,
+        kia_syros_finalize,
+    )
+except ImportError:
+    kia_syros_strategy = None
+    kia_syros_prepare = None
+    kia_syros_finalize = None
+
+try:
     from shreyas_gu_bot.strategy import (
         shreyas_gu_strategy,
         shreyas_gu_prepare,
@@ -179,6 +190,8 @@ if carekay_strategy:
     STRATEGY_MAP["carekay_strategy"] = carekay_strategy
 if shreyas_strategy:
     STRATEGY_MAP["shreyas_strategy"] = shreyas_strategy
+if kia_syros_strategy:
+    STRATEGY_MAP["kia_syros_strategy"] = kia_syros_strategy
 if shreyas_gu_strategy:
     STRATEGY_MAP["shreyas_gu_strategy"] = shreyas_gu_strategy
 
@@ -212,6 +225,8 @@ if carekay_prepare:
     PREPARE_MAP["carekay_strategy"] = carekay_prepare
 if shreyas_prepare:
     PREPARE_MAP["shreyas_strategy"] = shreyas_prepare
+if kia_syros_prepare:
+    PREPARE_MAP["kia_syros_strategy"] = kia_syros_prepare
 if shreyas_gu_prepare:
     PREPARE_MAP["shreyas_gu_strategy"] = shreyas_gu_prepare
 
@@ -244,6 +259,8 @@ if carekay_finalize:
     FINALIZE_MAP["carekay_strategy"] = carekay_finalize
 if shreyas_finalize:
     FINALIZE_MAP["shreyas_strategy"] = shreyas_finalize
+if kia_syros_finalize:
+    FINALIZE_MAP["kia_syros_strategy"] = kia_syros_finalize
 if shreyas_gu_finalize:
     FINALIZE_MAP["shreyas_gu_strategy"] = shreyas_gu_finalize
 

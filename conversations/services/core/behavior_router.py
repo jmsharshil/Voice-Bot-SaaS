@@ -24,6 +24,7 @@ ROLE_STRATEGY_MAP = {
     # Automobile roles
     "Automobile Advisor": "automobile",
     "Naavya Automobile Advisor": "automobile_Naavya",
+    "Kia Syros EV Advisor": "kia_syros_strategy",
     "Hospital Appointment Advisor": "hospital_minimal",
     "JMS Loan Advisor": "loan_strategy",
     "JMS Loan Reminder Advisor": "reminder_strategy",
