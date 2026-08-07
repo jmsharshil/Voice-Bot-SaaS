@@ -3482,19 +3482,23 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                 text = f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. {summary_txt}" if summary_txt else f"નમસ્તે! હું {agent.name} છું, {company} તરફથી. મિલકત ખરીદવી, વેચવી, ભાડે આપવી કે રોકાણ — કોઈ પણ બાબતમાં મદદ જોઈએ તો કહો!"
         elif tts_lang == "interview_en":
             text = f"Hello, I am {agent.name}."
+        elif strategy_key == "kia_syros_strategy":
+            name_part = name if name and name.lower() not in ["customer", "nan", ""] else "aapse"
+            text = f"Hello, kya main {name_part} se baat kar rahi hoon?"
         else:
             text = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. kya aap abhi baat kar sakte hain?"
 
         # Resolve static greeting mapping if not dynamic
         is_dynamic_greeting = (
             (strategy_key == "samsung_store_strategy" and name is not None)
+            or (strategy_key == "kia_syros_strategy")
             or (strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"])
             or (strategy_key == "automobile" and is_aaisha and name is not None)
             or (not is_aaisha and strategy_key not in [
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy", "carekay_insurance_strategy"
+                "carekay_strategy", "carekay_insurance_strategy", "kia_syros_strategy"
             ])
         )
         if not is_dynamic_greeting:
@@ -3524,7 +3528,8 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
 
         # 1. Try Sarvam AI if language is gu or hi-IN loan strategy
         is_loan_hi = (tts_lang == "hi" and strategy_key == "loan_strategy")
-        if tts_lang == "gu" or is_loan_hi:
+        is_kia_syros = (strategy_key == "kia_syros_strategy")
+        if tts_lang == "gu" or is_loan_hi or is_kia_syros:
             api_key = os.getenv("SARVAM_API_KEY")
             if api_key:
                 api_url = "https://api.sarvam.ai/text-to-speech/stream"
@@ -3532,11 +3537,11 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                     "api-subscription-key": api_key,
                     "Content-Type": "application/json"
                 }
-                target_lang = "hi-IN" if is_loan_hi else "gu-IN"
-                speaker = "shubh" if is_loan_hi else "ishita"
+                target_lang = "hi-IN" if (is_loan_hi or is_kia_syros) else "gu-IN"
+                speaker = "shreya" if is_kia_syros else ("shubh" if is_loan_hi else "ishita")
                 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     speaker = "ishita"
-                pace = 1.16 if strategy_key in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))
+                pace = 1.05 if is_kia_syros else (1.16 if strategy_key in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1)))
                 temp = 0.50 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
                 
                 payload = {
