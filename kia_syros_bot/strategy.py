@@ -137,7 +137,13 @@ def select_kia_syros_filler(user_msg: str, state: dict) -> str:
         "price", "range", "feature", "features", "offer", "offers", "finance", "exchange",
         "daam", "rate", "cost", "km", "charge", "charging", "battery", "mileage", "spec", "specs",
         "keemat", "kimat", "paisey", "paise", "average", "kitna deti hai", "free", "test drive",
-        "details", "info", "information"
+        "details", "info", "information","कीमत", "रेंज", "फीचर", "फीचर्स", "ऑफर", "ऑफर्स", "फाइनेंस", "एक्सचेंज",
+        "दाम", "रेट", "लागत", "किलोमीटर", "चार्ज", "चार्जिंग", "बैटरी", "माइलेज",
+        "स्पेक", "स्पेक्स", "कीमत", "कीमत", "पैसे", "पैसे", "औसत", "कितना देती है",
+        "फ्री", "टेस्ट ड्राइव", "डिटेल्स", "जानकारी", "जानकारी","प्राइस", "रेंज", "फीचर", "फीचर्स", "ऑफर", "ऑफर्स", "फाइनेंस", "एक्सचेंज",
+        "दाम", "रेट", "कॉस्ट", "केएम", "चार्ज", "चार्जिंग", "बैटरी", "माइलेज",
+        "स्पेक", "स्पेक्स", "कीमत", "किमत", "पैसे", "पैसे", "एवरेज", "कितना देती है",
+        "फ्री", "टेस्ट ड्राइव", "डिटेल्स", "इन्फो", "इन्फॉर्मेशन"
     ]
     if any(re.search(r'\b' + re.escape(k) + r'\b', msg) for k in inquiry_keywords):
         files = [
@@ -152,7 +158,10 @@ def select_kia_syros_filler(user_msg: str, state: dict) -> str:
     # 2. Unsure / Hesitant / Rejection (Category 2)
     elif any(re.search(r'\b' + re.escape(k) + r'\b', msg) for k in [
         "unsure", "not sure", "no", "nahi", "na", "busy", "time nahi", "baad mein", "later",
-        "call back", "fursat nahi", "busy hoon", "nahi chahiye", "no thanks"
+        "call back", "fursat nahi", "busy hoon", "nahi chahiye", "no thanks",
+        "असुरक्षित", "पक्का नहीं", "नहीं", "नहीं", "ना", "व्यस्त", "समय नहीं", "बाद में",
+        "कॉल बैक", "फुरसत नहीं", "व्यस्त हूँ", "नहीं चाहिए", "नो थैंक्स","अनश्योर", "नॉट श्योर", "नो", "नहीं", "ना", "बिज़ी", "टाइम नहीं", "बाद में", "लेटर",
+        "कॉल बैक", "फुर्सत नहीं", "बिज़ी हूं", "नहीं चाहिए", "नो थैंक्स"
     ]):
         files = [
             "kia_syros_bot/filler_2_a.raw",
@@ -166,7 +175,11 @@ def select_kia_syros_filler(user_msg: str, state: dict) -> str:
     # 3. Confirmation / Yes (Category 1)
     elif any(re.search(r'\b' + re.escape(k) + r'\b', msg) for k in [
         "yes", "haan", "sure", "ok", "okay", "haa", "ha", "thik hai", "theek hai", "bhej",
-        "karo", "talk", "agree", "confirm", "kar do", "haan ji", "sahi hai", "bilkul"
+        "karo", "talk", "agree", "confirm", "kar do", "haan ji", "sahi hai", "bilkul",
+        "हाँ", "श्योर", "ओके", "ओके", "हाँ", "हा", "ठीक है", "ठीक है", "भेज",
+        "करो", "टॉक", "एग्री", "कन्फर्म", "कर दो", "हाँ जी", "सही है", "बिल्कुल",
+        "यस", "श्योर", "ओके", "ओके", "हाँ", "हा", "ठीक है", "ठीक है", "भेज",
+        "करो", "टॉक", "एग्री", "कन्फर्म", "कर दो", "हाँ जी", "सही है", "बिल्कुल"
     ]):
         files = [
             "kia_syros_bot/filler_1_a.raw",
