@@ -369,6 +369,7 @@ from django.core.management.base import BaseCommand
 from agents.models import Industry, AgentRoleTemplate
 from shreyas_bot.prompts import SHREYAS_SYSTEM_PROMPT
 from shreyas_gu_bot.prompts import SHREYAS_GU_SYSTEM_PROMPT
+from kia_syros_bot.prompts import KIA_SYROS_SYSTEM_PROMPT
 
 INDUSTRY_VOICE_MAP = {
     "automobile": "en-IN-AartiNeural",
@@ -610,6 +611,12 @@ Confirm warmly: "Perfect! I've noted that down — [Name], we'll have everything
 """,
             "default_tone": "warm",
         },
+        {
+            "role_name": "Kia Syros EV Advisor",
+            "description": "Westcoast Kia Sales Advisor for the all-new Kia Syros EV in Hinglish/Hindi",
+            "system_prompt_template": KIA_SYROS_SYSTEM_PROMPT,
+            "default_tone": "warm",
+        }
     ]
 },
 {
