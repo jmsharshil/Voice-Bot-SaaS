@@ -2258,7 +2258,16 @@
                         "नंबर बदलना है",
                         "दूसरे नंबर पर कर देना",
                         "अलग नंबर पर कर देना",
-                        "एक और नंबर पर कर देना"
+                        "एक और नंबर पर कर देना",
+                        "nahi",
+                        "na",
+                        "no",
+                        "nahin",
+                        "nope",
+                        "nahi nahi",
+                        "no no",
+                        "नहीं",
+                        "ना"
                     ]
                 },
                 {
@@ -2266,20 +2275,22 @@
                     "mp3_file": "kia_syros_bot/kia_syros_rejection.raw",
                     "next_phase": "CLOSING",
                     "triggers": [
-                        "nahi",
-                        "na",
-                        "no",
                         "nahi chahiye",
+                        "mujhe nahi chahiye",
                         "no thanks",
+                        "no thank you",
+                        "not interested",
+                        "interested nahi",
                         "mat karo",
+                        "call mat karo",
                         "rehne do",
                         "cancel",
                         "band karo",
-                        "नहीं",
-                        "ना",
                         "नहीं चाहिए",
+                        "मुझे नहीं चाहिए",
                         "रहने दो",
-                        "कैंसल"
+                        "कैंसल",
+                        "कॉल मत करो"
                     ]
                 }
             ]

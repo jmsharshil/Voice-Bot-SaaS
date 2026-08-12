@@ -188,6 +188,17 @@ def test_intent_matcher():
     print(f"  'haan isi number par' (CALLBACK_REPLY) -> {result.get('match_type')}: {result.get('mp3', 'N/A')}")
     assert result["match_type"] != "NONE", "Should match confirm_same_number"
 
+    # Test CALLBACK_REPLY → bare 'nahi' / 'नहीं' triggers want_alt_number instead of reject_callback
+    result_nahi = matcher.find_match("nahi", current_phase="CALLBACK_REPLY", threshold=0.70)
+    print(f"  'nahi' (CALLBACK_REPLY) -> {result_nahi.get('match_type')}: {result_nahi.get('mp3', 'N/A')}")
+    assert result_nahi["match_type"] != "NONE", "Should match intent"
+    assert "alt_number" in result_nahi.get("mp3", ""), f"Expected alt_number audio, got: {result_nahi.get('mp3')}"
+
+    result_nahi_hi = matcher.find_match("नहीं", current_phase="CALLBACK_REPLY", threshold=0.70)
+    print(f"  'नहीं' (CALLBACK_REPLY) -> {result_nahi_hi.get('match_type')}: {result_nahi_hi.get('mp3', 'N/A')}")
+    assert result_nahi_hi["match_type"] != "NONE", "Should match intent"
+    assert "alt_number" in result_nahi_hi.get("mp3", ""), f"Expected alt_number audio, got: {result_nahi_hi.get('mp3')}"
+
     print("OK")
 
 
