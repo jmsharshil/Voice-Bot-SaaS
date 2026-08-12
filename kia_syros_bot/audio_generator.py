@@ -225,16 +225,16 @@ if __name__ == "__main__":
         ("filler_3_g.raw", "Sure, main details confirm kar rahi hoon..."),
         
         # 4. Default / General
-        ("filler_4_a.raw", "Ji, bilkul, ek second..."),
-        ("filler_4_b.raw", "Acha, main note kar rahi hoon..."),
-        ("filler_4_c.raw", "Ji, main abhi check karti hoon..."),
-        ("filler_4_d.raw", "Theek hai, please ek moment..."),
-        ("filler_4_e.raw", "Ji haan, just a second..."),
-        ("filler_4_f.raw", "Bilkul, main abhi check karti hoon..."),
-        ("filler_4_g.raw", "Okay, just a moment..."),
+        ("filler_4_a.raw", "Ji bilkul, samajh gayi. Main ek baar check karke aapko batati hoon..."),
+        ("filler_4_b.raw", "Acha ji, theek hai. Main aapki baat note kar leti hoon..."),
+        ("filler_4_c.raw", "Ji haan, bilkul. Main abhi iski details check kar rahi hoon..."),
+        ("filler_4_d.raw", "Theek hai ji, samajh gayi. Aap ek moment dijiye, main check karti hoon..."),
+        ("filler_4_e.raw", "Bilkul ji, aapki baat samajh gayi. Main abhi check karke batati hoon..."),
+        ("filler_4_f.raw", "Ji bilkul, main aapki baat samajh gayi hoon. Ek moment..."),
+        ("filler_4_g.raw", "Haan ji, theek hai. Main isko ek baar properly check kar leti hoon..."),
         
         # 5. Identity Confirm
-        ("filler_5_a.raw", "Ji achha, shukriya."),
+        ("filler_5_a.raw", "Ji achha, thank you. Confirm karne ke liye shukriya..."),
         ("filler_5_b.raw", "Ji thank you confirm karne ke liye... "),
     ]
 
