@@ -4,105 +4,202 @@ import os
 import sys
 import django
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "voice_bot.settings")
 django.setup()
 
 from conversations.services.core.behavior_router import get_role_strategy
 from conversations.services.core.dialogue_engine import STRATEGY_MAP, PREPARE_MAP, FINALIZE_MAP
-from kia_syros_bot.strategy import kia_syros_prepare, kia_syros_strategy
+from conversations.models import ConversationSession
 from agents.models import VoiceAgent
 
-print("=== Kia Syros Bot Tests ===")
+def test_router():
+    print("\n1. Behavior Router test:")
+    strategy = get_role_strategy("Kia Syros EV Advisor")
+    print(f"Role 'Kia Syros EV Advisor' maps to: {strategy}")
+    assert strategy == "kia_syros_strategy", f"Expected 'kia_syros_strategy', got '{strategy}'"
+    print("OK")
 
-# 1. Routing Test
-print("\n1. Behavior Router test:")
-strategy_key = get_role_strategy("Kia Syros EV Advisor")
-print(f"Role 'Kia Syros EV Advisor' maps to: {strategy_key}")
-assert strategy_key == "kia_syros_strategy", "Strategy mapping failed"
-print("OK")
+def test_strategy_maps():
+    print("\n2. Dialogue Engine strategy registration test:")
+    assert "kia_syros_strategy" in STRATEGY_MAP, "kia_syros_strategy not in STRATEGY_MAP"
+    assert "kia_syros_strategy" in PREPARE_MAP, "kia_syros_strategy not in PREPARE_MAP"
+    assert "kia_syros_strategy" in FINALIZE_MAP, "kia_syros_strategy not in FINALIZE_MAP"
+    print("All strategy function maps registered successfully!")
+    print("OK")
 
-# 2. Registration Test
-print("\n2. Dialogue Engine strategy registration test:")
-assert "kia_syros_strategy" in STRATEGY_MAP, "STRATEGY_MAP registration failed"
-assert "kia_syros_strategy" in PREPARE_MAP, "PREPARE_MAP registration failed"
-assert "kia_syros_strategy" in FINALIZE_MAP, "FINALIZE_MAP registration failed"
-print("All strategy function maps registered successfully!")
-print("OK")
+def test_greeting():
+    print("\n3. Prepare Turn 1 (Greeting) Test:")
+    agent = VoiceAgent.objects.first()
+    session = ConversationSession.objects.get_or_create(
+        agent=agent, session_id="test_kia_session_123"
+    )[0]
+    session.state = {}
+    session.save()
 
-# 3. Strategy Prepare Turn 1 (Greeting)
-print("\n3. Prepare Turn 1 (Greeting) Test:")
-from django.contrib.auth.models import User
-from agents.models import Industry, AgentRoleTemplate
-from conversations.models import ConversationSession
+    from kia_syros_bot.strategy import kia_syros_prepare
+    result = kia_syros_prepare(agent, "initial", session, detected_language="hi")
+    print(f"Turn 1 Prep result (Greeting): {result}")
+    assert "static_reply" in result, "Expected static_reply for greeting"
+    assert "क्या मेरी बात" in result["static_reply"], "Greeting text mismatch"
+    print("OK")
 
-user = User.objects.first()
-if not user:
-    user, _ = User.objects.get_or_create(username="test_admin")
-
-ind, _ = Industry.objects.get_or_create(slug="automobile", defaults={"name": "Automobile"})
-tpl, _ = AgentRoleTemplate.objects.get_or_create(
-    role_name="Kia Syros EV Advisor",
-    industry=ind,
-    defaults={
-        "description": "Kia Syros EV promotion bot",
-        "system_prompt_template": "System prompt",
-        "default_tone": "warm",
-        "default_voice": "hi-IN-SwaraNeural"
+def test_identity_confirm_mp3():
+    print("\n4. Prepare Turn 2 (Identity Confirm → MP3 Pitch) Test:")
+    agent = VoiceAgent.objects.first()
+    session = ConversationSession.objects.get_or_create(
+        agent=agent, session_id="test_kia_session_123"
+    )[0]
+    session.state = {
+        "intro_shown": True,
+        "call_phase": "GREETING_REPLY",
+        "conversation_history": ["Agent: Hello, क्या मेरी बात आप से हो रही है?"]
     }
-)
-agent, _ = VoiceAgent.objects.get_or_create(
-    name="Kia Syros Bot",
-    owner=user,
-    industry=ind,
-    role_template=tpl,
-    defaults={
-        "company_name": "Westcoast Kia",
-        "summary": "Voice bot for Westcoast Kia",
-        "is_active": True
+    session.save()
+
+    from kia_syros_bot.strategy import kia_syros_prepare
+    result = kia_syros_prepare(agent, "Haan main bol raha hoon", session, detected_language="hi")
+    print(f"Turn 2 Prep result: {result}")
+    
+    assert "static_reply" in result, "Expected static_reply (MP3 match) for identity confirmation"
+    assert "PLAY_AUDIO" in result["static_reply"], "Expected PLAY_AUDIO tag in response"
+    assert "kia_syros_pitch" in result["static_reply"], f"Expected pitch audio file, got: {result['static_reply']}"
+    print("OK")
+
+def test_agree_pitch_mp3():
+    print("\n5. Prepare Turn 3 (Agree → MP3 Callback Confirm) Test:")
+    agent = VoiceAgent.objects.first()
+    session = ConversationSession.objects.get_or_create(
+        agent=agent, session_id="test_kia_session_123"
+    )[0]
+    session.state = {
+        "intro_shown": True,
+        "call_phase": "PITCH_REPLY",
+        "conversation_history": [
+            "Agent: Hello, क्या मेरी बात आप से हो रही है?",
+            "User: Haan main bol raha hoon",
+            "Agent: [Pitch]"
+        ],
+        "exchange_count": 1
     }
-)
+    session.save()
 
-session_id = "test_kia_session_123"
-ConversationSession.objects.filter(session_id=session_id).delete()
-session = ConversationSession.objects.create(agent=agent, session_id=session_id)
+    from kia_syros_bot.strategy import kia_syros_prepare
+    result = kia_syros_prepare(agent, "Haan interested hoon", session, detected_language="hi")
+    print(f"Turn 3 Prep result: {result}")
 
-prep1 = kia_syros_prepare(agent, "hello", session)
-print("Turn 1 Prep result (Greeting):", prep1)
-assert "static_reply" in prep1, "First turn must be a greeting text reply"
-assert "Hello, क्या मेरी बात" in prep1["static_reply"], "Greeting text must be returned"
-print("OK")
+    assert "static_reply" in result, "Expected static_reply (MP3 match) for agree"
+    assert "PLAY_AUDIO" in result["static_reply"], "Expected PLAY_AUDIO tag"
+    assert "callback_confirm" in result["static_reply"], f"Expected callback_confirm audio, got: {result['static_reply']}"
+    print("OK")
 
-# 4. Strategy Prepare Turn 2 (Pitch Confirmation)
-print("\n4. Prepare Turn 2 (Pitch Confirmation) Test:")
-prep2 = kia_syros_prepare(agent, "Haan main bol raha hoon", session)
-print("Turn 2 Prep result (Pitch):", prep2)
-assert "system_prompt" in prep2, "Turn 2 must be routed dynamically to LLM"
-assert "play_filler" in prep2, "Turn 2 must select a filler"
-print("OK")
+def test_details_redirect_mp3():
+    print("\n6. Prepare (Ask Details → MP3 Redirect) Test:")
+    agent = VoiceAgent.objects.first()
+    session = ConversationSession.objects.get_or_create(
+        agent=agent, session_id="test_kia_session_123"
+    )[0]
+    session.state = {
+        "intro_shown": True,
+        "call_phase": "PITCH_REPLY",
+        "conversation_history": [],
+        "exchange_count": 1
+    }
+    session.save()
 
-# 5. Strategy Prepare Turn 3 (Inquiry Redirect / Fillers) Test:
-print("\n5. Prepare Turn 3 (Inquiry Redirect / Fillers) Test:")
-prep3 = kia_syros_prepare(agent, "Is the test drive free?", session)
-print("Turn 3 Prep user message:", prep3.get("user_message"))
-print("Turn 3 Prep filler chosen:", prep3.get("play_filler"))
-assert "play_filler" in prep3, "Should select a context filler"
-assert "filler_3_" in prep3["play_filler"], "Should select redirect/inquiry filler (category 3)"
-print("OK")
+    from kia_syros_bot.strategy import kia_syros_prepare
+    result = kia_syros_prepare(agent, "price kya hai Syros ki?", session, detected_language="hi")
+    print(f"Details redirect result: {result}")
 
-# 6. Dialogue Filler Match Tests
-from kia_syros_bot.strategy import select_kia_syros_filler
-print("\n6. Filler Match Tests:")
-f_confirm = select_kia_syros_filler("Haan, callback arrange kar do", {})
-print(f"User: 'Haan, callback arrange kar do' -> Filler: {f_confirm}")
-assert "filler_1_" in f_confirm
+    assert "static_reply" in result, "Expected static_reply for details inquiry"
+    assert "redirect" in result["static_reply"], f"Expected redirect audio, got: {result['static_reply']}"
+    print("OK")
 
-f_unsure = select_kia_syros_filler("Main abhi thoda busy hoon baad mein dekhte hain", {})
-print(f"User: 'Main abhi thoda busy hoon...' -> Filler: {f_unsure}")
-assert "filler_2_" in f_unsure
+def test_rejection_mp3():
+    print("\n7. Prepare (Rejection → MP3 Close) Test:")
+    agent = VoiceAgent.objects.first()
+    session = ConversationSession.objects.get_or_create(
+        agent=agent, session_id="test_kia_session_123"
+    )[0]
+    session.state = {
+        "intro_shown": True,
+        "call_phase": "PITCH_REPLY",
+        "conversation_history": [],
+        "exchange_count": 1
+    }
+    session.save()
 
-f_inquiry = select_kia_syros_filler("Syros EV ki charging time kitna hai?", {})
-print(f"User: 'Syros EV ki charging time...' -> Filler: {f_inquiry}")
-assert "filler_3_" in f_inquiry
+    from kia_syros_bot.strategy import kia_syros_prepare
+    result = kia_syros_prepare(agent, "nahi chahiye mujhe", session, detected_language="hi")
+    print(f"Rejection result: {result}")
 
-print("All strategy logic verified successfully!")
+    assert "static_reply" in result, "Expected static_reply for rejection"
+    assert "rejection" in result["static_reply"], f"Expected rejection audio, got: {result['static_reply']}"
+    assert "END_CALL" in result["static_reply"], "Expected END_CALL tag"
+    assert result.get("auto_disconnect") == True, "Expected auto_disconnect for closing"
+    print("OK")
+
+def test_llm_fallback():
+    print("\n8. Prepare (Unrecognized → LLM Fallback) Test:")
+    agent = VoiceAgent.objects.first()
+    session = ConversationSession.objects.get_or_create(
+        agent=agent, session_id="test_kia_session_123"
+    )[0]
+    session.state = {
+        "intro_shown": True,
+        "call_phase": "PITCH_REPLY",
+        "conversation_history": [],
+        "exchange_count": 1
+    }
+    session.save()
+
+    from kia_syros_bot.strategy import kia_syros_prepare
+    result = kia_syros_prepare(agent, "meri gaadi ka insurance kab khatam ho raha hai?", session, detected_language="hi")
+    print(f"LLM fallback result keys: {list(result.keys())}")
+
+    assert "system_prompt" in result, "Expected system_prompt for LLM fallback"
+    assert "user_message" in result, "Expected user_message for LLM fallback"
+    assert "static_reply" not in result, "Should NOT have static_reply for LLM fallback"
+    print("OK")
+
+def test_intent_matcher():
+    print("\n9. Intent Matcher Direct Tests:")
+    from kia_syros_bot.strategy import get_kia_syros_matcher
+    matcher = get_kia_syros_matcher()
+    assert matcher is not None, "Matcher should load"
+
+    # Test GREETING_REPLY → confirm identity
+    result = matcher.find_match("haan ji bol raha hoon", current_phase="GREETING_REPLY", threshold=0.70)
+    print(f"  'haan ji bol raha hoon' (GREETING_REPLY) -> {result.get('match_type')}: {result.get('mp3', 'N/A')}")
+    assert result["match_type"] != "NONE", "Should match confirm_identity"
+
+    # Test PITCH_REPLY → interested
+    result = matcher.find_match("haan interested hoon", current_phase="PITCH_REPLY", threshold=0.70)
+    print(f"  'haan interested hoon' (PITCH_REPLY) -> {result.get('match_type')}: {result.get('mp3', 'N/A')}")
+    assert result["match_type"] != "NONE", "Should match agree_interested"
+
+    # Test PITCH_REPLY → price inquiry
+    result = matcher.find_match("price kya hai", current_phase="PITCH_REPLY", threshold=0.70)
+    print(f"  'price kya hai' (PITCH_REPLY) -> {result.get('match_type')}: {result.get('mp3', 'N/A')}")
+    assert result["match_type"] != "NONE", "Should match ask_details"
+
+    # Test CALLBACK_REPLY → confirm same number
+    result = matcher.find_match("haan isi number par call karo", current_phase="CALLBACK_REPLY", threshold=0.70)
+    print(f"  'haan isi number par' (CALLBACK_REPLY) -> {result.get('match_type')}: {result.get('mp3', 'N/A')}")
+    assert result["match_type"] != "NONE", "Should match confirm_same_number"
+
+    print("OK")
+
+
+if __name__ == "__main__":
+    print("=== Kia Syros Bot Tests (MP3-First) ===")
+    test_router()
+    test_strategy_maps()
+    test_greeting()
+    test_identity_confirm_mp3()
+    test_agree_pitch_mp3()
+    test_details_redirect_mp3()
+    test_rejection_mp3()
+    test_llm_fallback()
+    test_intent_matcher()
+    print("\n✅ All Kia Syros MP3-First strategy tests passed!")

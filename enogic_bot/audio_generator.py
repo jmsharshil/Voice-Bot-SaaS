@@ -97,7 +97,21 @@ if __name__ == "__main__":
         ("enogic_step3_explain_and_ask_purchase.raw", "ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Saath hi MSMEs ko government subsidies aur benefits bhi milte hain. Toh kya aap apne business ke liye ZED certification purchase karna chahenge?"),
         ("enogic_step4_ask_purchase_directly.raw", "Bahut accha! Toh kya aap apne business ke liye ZED certification purchase karna chahenge?"),
         ("enogic_step8_closing.raw", "Great! Hamari expert consulting team bahut jald aapse contact karegi. Thank you so much!"),
-        ("enogic_step9_graceful_exit.raw", "Bilkul theek hai, koi baat nahi. Agar aapko aage kabhi bhi ZED Certification ya compliance support ki zaroorat ho, toh Enogic hamesha aapke liye ready hai. Apna time dene ke liye shukriya!")
+        ("enogic_step9_graceful_exit.raw", "Bilkul theek hai, koi baat nahi. Agar aapko aage kabhi bhi ZED Certification ya compliance support ki zaroorat ho, toh Enogic hamesha aapke liye ready hai. Apna time dene ke liye shukriya!"),
+
+        # ⚡ FILLER AUDIO — played while LLM generates response to mask latency
+        # Category 1: Confirmation / Positive
+        ("enogic_filler_1a.raw", "Ji bilkul, ek second..."),
+        ("enogic_filler_1b.raw", "Haan ji, main check karta hoon..."),
+        ("enogic_filler_1c.raw", "Sure, main abhi dekhta hoon..."),
+        # Category 2: Inquiry / Question
+        ("enogic_filler_2a.raw", "Achha, main aapko batata hoon..."),
+        ("enogic_filler_2b.raw", "Ji, iski details ke liye ek second..."),
+        ("enogic_filler_2c.raw", "Hmm, main check karta hoon..."),
+        # Category 3: Neutral / Default
+        ("enogic_filler_3a.raw", "Achha ohkk..., main samajh gaya..."),
+        ("enogic_filler_3b.raw", "Ji, ek moment please..."),
+        ("enogic_filler_3c.raw", "Acha, dekhta hoon..."),
     ]
 
     generated_count = 0
