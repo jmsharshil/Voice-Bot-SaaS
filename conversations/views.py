@@ -1651,16 +1651,7 @@ def _round_seconds_to_billed_minutes(total_seconds):
 
 def _calculate_bot_usage(agent):
     """Calculate total billed minutes for a given VoiceAgent."""
-    completed = Conversation.objects.filter(
-        agent=agent,
-        ended_at__isnull=False
-    )
-    total_billed = 0.0
-    for c in completed:
-        raw_seconds = (c.ended_at - c.started_at).total_seconds()
-        if raw_seconds > 0:
-            total_billed += _round_seconds_to_billed_minutes(raw_seconds)
-    return round(total_billed, 1)
+    return agent.used_minutes
 
 
 @api_view(["GET"])

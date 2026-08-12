@@ -288,17 +288,6 @@ class ListUserAgentsView(APIView):
         from conversations.models import Conversation
         import math
 
-        def calculate_usage(agent):
-            completed = Conversation.objects.filter(agent=agent, ended_at__isnull=False)
-            total_billed = 0.0
-            for c in completed:
-                raw_seconds = (c.ended_at - c.started_at).total_seconds()
-                if raw_seconds > 0:
-                    shifted_seconds = raw_seconds + 1
-                    rounded_intervals = math.ceil(shifted_seconds / 30)
-                    total_billed += rounded_intervals * 30 / 60.0
-            return round(total_billed, 1)
-
         return Response([
             {
                 "id": str(a.id),
@@ -308,7 +297,7 @@ class ListUserAgentsView(APIView):
                 "industry_name": a.industry.name if a.industry else "",
                 "role_name": a.role_template.role_name if a.role_template else "",
                 "minutes_quota": a.minutes_quota,
-                "used_minutes": calculate_usage(a),
+                "used_minutes": a.used_minutes,
                 "max_concurrent_calls": a.max_concurrent_calls,
             }
             for a in agents
@@ -453,9 +442,10 @@ class UpdateAgentQuotaView(APIView):
 
         quota = request.data.get("minutes_quota")
         add_minutes = request.data.get("add_minutes")
+        used_mins = request.data.get("used_minutes")
 
-        if quota is None and add_minutes is None:
-            return Response({"error": "Either minutes_quota or add_minutes is required"}, status=400)
+        if quota is None and add_minutes is None and used_mins is None:
+            return Response({"error": "Either minutes_quota, add_minutes, or used_minutes is required"}, status=400)
 
         if add_minutes is not None:
             try:
@@ -465,7 +455,7 @@ class UpdateAgentQuotaView(APIView):
             except ValueError:
                 return Response({"error": "add_minutes must be a positive integer"}, status=400)
             agent.minutes_quota += add_minutes
-        else:
+        elif quota is not None:
             try:
                 quota = int(quota)
                 if quota < 0:
@@ -474,10 +464,30 @@ class UpdateAgentQuotaView(APIView):
                 return Response({"error": "minutes_quota must be a positive integer"}, status=400)
             agent.minutes_quota = quota
 
+        if used_mins is not None:
+            try:
+                target_used = float(used_mins)
+                if target_used < 0:
+                    raise ValueError
+                from conversations.models import Conversation
+                import math
+                completed = Conversation.objects.filter(agent=agent, ended_at__isnull=False)
+                raw_usage = 0.0
+                for c in completed:
+                    raw_seconds = (c.ended_at - c.started_at).total_seconds()
+                    if raw_seconds > 0:
+                        shifted_seconds = raw_seconds + 1
+                        rounded_intervals = math.ceil(shifted_seconds / 30)
+                        raw_usage += rounded_intervals * 30 / 60.0
+                agent.extra_used_minutes = round(target_used - raw_usage, 2)
+            except ValueError:
+                return Response({"error": "used_minutes must be a valid non-negative number"}, status=400)
+
         agent.save()
         return Response({
             "agent_id": str(agent.id),
-            "minutes_quota": agent.minutes_quota
+            "minutes_quota": agent.minutes_quota,
+            "used_minutes": agent.used_minutes
         })
 
 

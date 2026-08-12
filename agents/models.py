@@ -63,11 +63,26 @@ class VoiceAgent(models.Model):
     is_demo = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     minutes_quota = models.IntegerField(default=5000, help_text="Total allocated call minutes for this bot")
+    extra_used_minutes = models.FloatField(default=0.0, help_text="Manual adjustment added to auto-calculated call duration")
     max_concurrent_calls = models.IntegerField(default=2, help_text="Maximum concurrent calls for campaigns using this bot.")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
+
+    @property
+    def used_minutes(self):
+        from conversations.models import Conversation
+        import math
+        completed = Conversation.objects.filter(agent=self, ended_at__isnull=False)
+        total_billed = 0.0
+        for c in completed:
+            raw_seconds = (c.ended_at - c.started_at).total_seconds()
+            if raw_seconds > 0:
+                shifted_seconds = raw_seconds + 1
+                rounded_intervals = math.ceil(shifted_seconds / 30)
+                total_billed += rounded_intervals * 30 / 60.0
+        return round(total_billed + (self.extra_used_minutes or 0.0), 1)
 
     # 🔥 Dynamic prompt resolution
     @property
