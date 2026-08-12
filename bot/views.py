@@ -1187,19 +1187,7 @@ def has_remaining_minutes(agent_id):
     except (VoiceAgent.DoesNotExist, ValueError, TypeError, ValidationError):
         return True # fallback if invalid agent_id
 
-    completed = Conversation.objects.filter(
-        agent=agent,
-        ended_at__isnull=False
-    )
-    total_billed = 0.0
-    for c in completed:
-        raw_seconds = (c.ended_at - c.started_at).total_seconds()
-        if raw_seconds > 0:
-            shifted_seconds = raw_seconds + 1
-            rounded_intervals = math.ceil(shifted_seconds / 30)
-            total_billed += rounded_intervals * 30 / 60.0
-
-    remaining = agent.minutes_quota - total_billed
+    remaining = agent.minutes_quota - agent.used_minutes
     return remaining > 0
 
 
