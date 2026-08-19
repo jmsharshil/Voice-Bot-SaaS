@@ -180,8 +180,19 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "enogic_bot/enogic_step4_ask_purchase_directly.raw": "Bahut accha! Toh kya aap apne business ke liye ZED certification purchase karna chahenge?",
     "enogic_bot/enogic_step8_closing.raw": "Great! Hamari expert consulting team bahut jald aapse contact karegi. Thank you so much!",
     "enogic_bot/enogic_step9_graceful_exit.raw": "Bilkul theek hai, koi baat nahi. Agar aapko aage kabhi bhi ZED Certification ya compliance support ki zaroorat ho, toh Enogic hamesha aapke liye ready hai. Apna time dene ke liye shukriya!",
-    "enogic_bot/enogic_step3_cert_intro.raw": "Wonderful! ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Sath hi MSMEs ko government subsidies aur benefits bhi milte hain. Main is inquiry ko register karne ke liye aapki details note kar leti hoon. Sabse pehle, aapka shubh naam kya hai?",
+    "enogic_bot/enogic_step3_cert_intro.raw": "Wonderful! ZED Certification se aapke business ki quality behtareen hoti hai aur wastage kam hoti hai. Sath hi MSMEs ko government subsidies aur benefits bhi milte hain. Main is inquiry ko register karne ke liye aapki details note kar leta hoon. Sabse pehle, aapka shubh naam kya hai?",
     "enogic_bot/enogic_step6_ask_business.raw": "Aapke business ka naam kya hai?",
+
+    # ENOGIC FILLER AUDIO (played while LLM generates response)
+    "enogic_bot/enogic_filler_1a.raw": "Ji bilkul, ek second...",
+    "enogic_bot/enogic_filler_1b.raw": "Haan ji, main check karta hoon...",
+    "enogic_bot/enogic_filler_1c.raw": "Sure, main abhi dekhta hoon...",
+    "enogic_bot/enogic_filler_2a.raw": "Achha, main aapko batata hoon...",
+    "enogic_bot/enogic_filler_2b.raw": "Ji, iski details ke liye ek second...",
+    "enogic_bot/enogic_filler_2c.raw": "Hmm, main check karta hoon...",
+    "enogic_bot/enogic_filler_3a.raw": "Theek hai, main samajh gaya...",
+    "enogic_bot/enogic_filler_3b.raw": "Ji, ek moment please...",
+    "enogic_bot/enogic_filler_3c.raw": "Acha, dekhta hoon...",
 
     # CAREKAY INSURANCE RENEWAL BOT (GUJARATI)
     "carekay_bot/carekay_step1_greeting.raw": "હલો, નમસ્તે જી! હું કેરકે ઇન્શ્યોરન્સમાંથી કેય વાત કરું છું. તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે. તો શું તમારી સાથે ૨ મિનિટ વાત થઈ શકે?",
@@ -206,6 +217,16 @@ _AUDIO_TRANSCRIPTIONS: dict = {
     "fold8_bot/fold8_store_isanpur.raw": "બરાબર છે. તમારા માટે ઈસનપુર સ્ટોર સૌથી નજીક રહેશે. તો શું આ લોકેશન અનુકૂળ રહેશે?",
     "fold8_bot/fold8_store_naroda.raw": "બરાબર છે. તમારા માટે ન્યૂ નરોડા સ્ટોર સૌથી નજીક રહેશે. તો શું આ લોકેશન અનુકૂળ રહેશે?",
     "fold8_bot/fold8_area_not_found.raw": "બરાબર છે. અમારા સ્ટોર ટીમમાંથી એક પ્રતિનિધિ નજીકના સ્ટોરની વિગત સાથે તમારો સંપર્ક કરશે. પ્રી-રિઝર્વેશન માટે શું હું તમારું પૂરું નામ જાણી શકું?",
+
+    # KIA SYROS EV BOT (HINDI-ENGLISH MIX)
+    "kia_syros_bot/kia_syros_greeting.raw": "Hello, kya meri baat aapse ho rahi hai?",
+    "kia_syros_bot/kia_syros_pitch.raw": "Main Westcoast Kia se bol rahi hoon. Aapne pehle hamare dealership par enquiry ki thi. Isliye hum aapko all-new Kia Syros EV ke exclusive test drive experience ke liye invite karna chahte hain. Toh kya aap interested hain?",
+    "kia_syros_bot/kia_syros_callback_confirm.raw": "Thank you! Kya main confirm kar sakti hoon ki isi number par hamare EV Sales Expert aapse contact karein?",
+    "kia_syros_bot/kia_syros_booking_confirmed.raw": "Thank you. Hamari EV Sales Expert team aapse jald hi contact karegi aur aage ki process mein assist karegi. Have a great day!",
+    "kia_syros_bot/kia_syros_rejection.raw": "No problem. Agar aapko aage kabhi bhi Kia cars ki zaroorat ho, toh humse contact kar sakte hain. Have a great day!",
+    "kia_syros_bot/kia_syros_redirect.raw": "Iski complete aur accurate details hamare EV Sales Expert aapko callback mein explain karenge. Main unse request raise kar deti hoon ki wo aapse jaldi contact karein. Toh kya main aapka callback schedule kar doon?",
+    "kia_syros_bot/kia_syros_persuade.raw": "Ek chhoti si conversation mein hamare EV Sales Expert aapko saari information denge aur agar aap interested honge toh wo test drive bhi arrange kar denge. Kya main unse aapke liye callback schedule kar doon?",
+    "kia_syros_bot/kia_syros_alt_number.raw": "Ji bilkul, aap mujhe wo number bata dijiye, main note kar leti hoon.",
 }
 
 _GREETING_AUDIO_CACHE: dict = {}  # agent_id → bytes

@@ -189,53 +189,17 @@ def generate_tts_file(filename, text):
         print(f"❌ [FAIL] All TTS systems failed for {filename}: {azure_err}")
 
 if __name__ == "__main__":
-    print("Generating Kia Syros Bot Audio Assets...")
+    print("Generating Kia Syros Bot Audio Assets (MP3-First Flow)...")
     assets = [
+        # Conversation flow audio files
         ("kia_syros_greeting.raw", "Hello, kya meri baat aapse ho rahi hai?"),
         ("kia_syros_pitch.raw", "Main Westcoast Kia se bol rahi hoon. Aapne pehle hamare dealership par enquiry ki thi. Isliye hum aapko all-new Kia Syros EV ke exclusive test drive experience ke liye invite karna chahte hain. Toh kya aap interested hain?"),
         ("kia_syros_callback_confirm.raw", "Thank you! Kya main confirm kar sakti hoon ki isi number par hamare EV Sales Expert aapse contact karein?"),
         ("kia_syros_booking_confirmed.raw", "Thank you. Hamari EV Sales Expert team aapse jald hi contact karegi aur aage ki process mein assist karegi. Have a great day!"),
         ("kia_syros_rejection.raw", "No problem. Agar aapko aage kabhi bhi Kia cars ki zaroorat ho, toh humse contact kar sakte hain. Have a great day!"),
-        
-        # 1. Agreement / Confirm
-        ("filler_1_a.raw", "Ji bilkul, main abhi check karti hoon..."),
-        ("filler_1_b.raw", "Sure, main details note kar rahi hoon..."),
-        ("filler_1_c.raw", "Theek hai, main abhi process karti hoon..."),
-        ("filler_1_d.raw", "Ji haan, main abhi process start karti hoon..."),
-        ("filler_1_e.raw", "Bilkul, main callback request register kar rahi hoon..."),
-        ("filler_1_f.raw", "Sure, main abhi isko note kar leti hoon..."),
-        ("filler_1_g.raw", "Ji bilkul, main abhi update kar rahi hoon..."),
-        
-        # 2. Unsure / Hesitant
-        ("filler_2_a.raw", "Acha, main aapko short mein samjha deti hoon..."),
-        ("filler_2_b.raw", "Got it, main iski details check karti hoon..."),
-        ("filler_2_c.raw", "Ji main samajh sakti hoon, ek second..."),
-        ("filler_2_d.raw", "Theek hai, main check karti hoon..."),
-        ("filler_2_e.raw", "Acha, aapki convenience ke hisab se..."),
-        ("filler_2_f.raw", "Ji, main short mein batane ki koshish karti hoon..."),
-        ("filler_2_g.raw", "Theek hai, main note kar rahi hoon..."),
-        
-        # 3. Inquiry / Redirect
-        ("filler_3_a.raw", "Ji, iski details ke liye ek second..."),
-        ("filler_3_b.raw", "Achha sawal hai! Main system mein check karti hoon..."),
-        ("filler_3_c.raw", "Ji, main abhi information check karti hoon..."),
-        ("filler_3_d.raw", "Bilkul, iski specs ke baare mein..."),
-        ("filler_3_e.raw", "Ji haan, Syros EV ke baare mein..."),
-        ("filler_3_f.raw", "Acha, main details verify kar leti hoon..."),
-        ("filler_3_g.raw", "Sure, main details confirm kar rahi hoon..."),
-        
-        # 4. Default / General
-        ("filler_4_a.raw", "Ji bilkul, samajh gayi. Main ek baar check karke aapko batati hoon..."),
-        ("filler_4_b.raw", "Acha ji, theek hai. Main aapki baat note kar leti hoon..."),
-        ("filler_4_c.raw", "Ji haan, bilkul. Main abhi iski details check kar rahi hoon..."),
-        ("filler_4_d.raw", "Theek hai ji, samajh gayi. Aap ek moment dijiye, main check karti hoon..."),
-        ("filler_4_e.raw", "Bilkul ji, aapki baat samajh gayi. Main abhi check karke batati hoon..."),
-        ("filler_4_f.raw", "Ji bilkul, main aapki baat samajh gayi hoon. Ek moment..."),
-        ("filler_4_g.raw", "Haan ji, theek hai. Main isko ek baar properly check kar leti hoon..."),
-        
-        # 5. Identity Confirm
-        ("filler_5_a.raw", "Ji achha, thank you. Confirm karne ke liye shukriya..."),
-        ("filler_5_b.raw", "Ji thank you confirm karne ke liye... "),
+        ("kia_syros_redirect.raw", "Iski complete aur accurate details hamare EV Sales Expert aapko callback mein explain karenge. Main unse request raise kar deti hoon ki wo aapse jaldi contact karein. Toh kya main aapka callback schedule kar doon?"),
+        ("kia_syros_persuade.raw", "Ek chhoti si conversation mein hamare EV Sales Expert aapko saari information denge aur agar aap interested honge toh wo test drive bhi arrange kar denge. Kya main unse aapke liye callback schedule kar doon?"),
+        ("kia_syros_alt_number.raw", "Ji bilkul, aap mujhe wo number bata dijiye, main note kar leti hoon."),
     ]
 
     for filename, text in assets:

@@ -5,8 +5,8 @@ class EnogicBotConfig:
     def __init__(
         self,
         company_name: str = "ENOGIC COMMERCIAL TRADE PRIVATE LIMITED",
-        agent_name: str = "ZARA",
-        agent_gender: str = "female",
+        agent_name: str = "Shubham",
+        agent_gender: str = "male",
         supported_languages: List[str] = None,
         intents_file: Optional[str] = None
     ):
