@@ -1530,20 +1530,22 @@ def telecom_cdr_webhook(request):
         else:
             rec_file = original_url
 
-    # Save CDR
-    cdr = CallDetailRecord.objects.create(
-        conversation=conversation,
-        telecom_call_id=data.get("call_id", 0),
-        phone_number=data.get("phone_number", ""),  # Customer Number
-        calldate=calldate,
-        did=data.get("did", ""),                     # Bot DID Number
-        duration=data.get("duration", 0),
-        disposition=data.get("disposition", "ANSWERED"),
-        call_type=data.get("call_type", "OUTBOUND"),
-        answer_time=answer_time,
+    # Save CDR (use update_or_create to make webhook idempotent and handle duplicate uniqueids)
+    cdr, _ = CallDetailRecord.objects.update_or_create(
         uniqueid=data["uniqueid"],
-        recording_file_name=rec_file,
-        matched=matched,
+        defaults={
+            "conversation": conversation,
+            "telecom_call_id": data.get("call_id", 0),
+            "phone_number": data.get("phone_number", ""),  # Customer Number
+            "calldate": calldate,
+            "did": data.get("did", ""),                     # Bot DID Number
+            "duration": data.get("duration", 0),
+            "disposition": data.get("disposition", "ANSWERED"),
+            "call_type": data.get("call_type", "OUTBOUND"),
+            "answer_time": answer_time,
+            "recording_file_name": rec_file,
+            "matched": matched,
+        }
     )
 
     result = {
