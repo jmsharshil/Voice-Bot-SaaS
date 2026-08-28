@@ -1309,6 +1309,7 @@ def update_lead_level(request, session_id):
 
 from .models import CallDetailRecord
 from datetime import datetime as dt
+from django.db import IntegrityError, transaction
 
 
 @api_view(["POST"])
@@ -1511,6 +1512,13 @@ def telecom_cdr_webhook(request):
     else:
         print(f"NO MATCH: CDR saved but no matching conversation found.")
 
+    # Check again for duplicate uniqueid right before downloading/uploading to Azure
+    if CallDetailRecord.objects.filter(uniqueid=data["uniqueid"]).exists():
+        return Response(
+            {"status": "duplicate", "message": "CDR already received for this uniqueid"},
+            status=200
+        )
+
     # 3. Handle Recording (Download from provider and upload to Azure)
     rec_file = data.get("recording_file_name", "")
     if rec_file:
@@ -1530,21 +1538,61 @@ def telecom_cdr_webhook(request):
         else:
             rec_file = original_url
 
-    # Save CDR
-    cdr = CallDetailRecord.objects.create(
-        conversation=conversation,
-        telecom_call_id=data.get("call_id", 0),
-        phone_number=data.get("phone_number", ""),  # Customer Number
-        calldate=calldate,
-        did=data.get("did", ""),                     # Bot DID Number
-        duration=data.get("duration", 0),
-        disposition=data.get("disposition", "ANSWERED"),
-        call_type=data.get("call_type", "OUTBOUND"),
-        answer_time=answer_time,
-        uniqueid=data["uniqueid"],
-        recording_file_name=rec_file,
-        matched=matched,
-    )
+    # Save CDR safely with atomic transaction to handle concurrent duplicate webhooks
+    try:
+        with transaction.atomic():
+            cdr = CallDetailRecord.objects.create(
+                conversation=conversation,
+                telecom_call_id=data.get("call_id", 0),
+                phone_number=data.get("phone_number", ""),  # Customer Number
+                calldate=calldate,
+                did=data.get("did", ""),                     # Bot DID Number
+                duration=data.get("duration", 0),
+                disposition=data.get("disposition", "ANSWERED"),
+                call_type=data.get("call_type", "OUTBOUND"),
+                answer_time=answer_time,
+                uniqueid=data["uniqueid"],
+                recording_file_name=rec_file,
+                matched=matched,
+            )
+    except IntegrityError as e:
+        print(f"⚠️ IntegrityError while saving CDR (uniqueid={data.get('uniqueid')}): {e}")
+        existing_cdr = CallDetailRecord.objects.filter(uniqueid=data["uniqueid"]).first()
+        if existing_cdr:
+            return Response(
+                {"status": "duplicate", "message": "CDR already received for this uniqueid", "cdr_id": existing_cdr.id},
+                status=200
+            )
+        # If conversation OneToOne constraint caused collision, attempt saving with conversation=None
+        if conversation and CallDetailRecord.objects.filter(conversation=conversation).exists():
+            try:
+                with transaction.atomic():
+                    cdr = CallDetailRecord.objects.create(
+                        conversation=None,
+                        telecom_call_id=data.get("call_id", 0),
+                        phone_number=data.get("phone_number", ""),
+                        calldate=calldate,
+                        did=data.get("did", ""),
+                        duration=data.get("duration", 0),
+                        disposition=data.get("disposition", "ANSWERED"),
+                        call_type=data.get("call_type", "OUTBOUND"),
+                        answer_time=answer_time,
+                        uniqueid=data["uniqueid"],
+                        recording_file_name=rec_file,
+                        matched=False,
+                    )
+                    matched = False
+            except IntegrityError:
+                existing_cdr = CallDetailRecord.objects.filter(uniqueid=data["uniqueid"]).first()
+                return Response(
+                    {"status": "duplicate", "message": "CDR already received for this uniqueid", "cdr_id": existing_cdr.id if existing_cdr else None},
+                    status=200
+                )
+        else:
+            return Response(
+                {"status": "duplicate", "message": "CDR already received for this uniqueid"},
+                status=200
+            )
 
     result = {
         "status": "success",

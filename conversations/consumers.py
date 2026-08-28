@@ -672,6 +672,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             self.language = "en"
         elif strategy_key == "kia_syros_strategy":
             self.language = "hi"
+        elif strategy_key == "raahi_iiiem_strategy":
+            self.language = "auto"
 
         # ── STT SETUP ──────────────────────────────────────────
         self.recognizer, self.push_stream = create_speech_recognizer(language=self.language)
@@ -767,6 +769,12 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     greeting = f"Hello, kya meri baat {customer_name} se ho rahi hai?"
                 else:
                     greeting = "Hello, kya meri baat aapse ho rahi hai?"
+            elif strategy_key == "raahi_iiiem_strategy":
+                name_part = customer_name if (customer_name and customer_name.lower() != "user") else ""
+                if name_part:
+                    greeting = f"{name_part}, export start karna hai ya already export kar rahe hain?"
+                else:
+                    greeting = "Namaste! Main Raahi, Triple i E M se. Aapka naam?"
             else:
                 greeting = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. kya aap abhi baat kar sakte hain?"
             
@@ -834,11 +842,14 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         elif self.strategy_key == "kia_syros_strategy":
             greeting_file = "kia_syros_bot/kia_syros_greeting.raw"
+        elif self.strategy_key == "raahi_iiiem_strategy":
+            greeting_file = "raahi_iiiem_bot/raahi_greeting.raw"
         else:
             greeting_file = f"{self.language}_step1_greeting.raw"
             
         is_dynamic_greeting = (
-            (self.strategy_key == "samsung_store_strategy" and customer_name is not None)
+            (self.strategy_key == "raahi_iiiem_strategy" and customer_name is not None and customer_name.lower() != "user")
+            or (self.strategy_key == "samsung_store_strategy" and customer_name is not None)
             or (self.strategy_key == "kia_syros_strategy")
             or (self.strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"])
             or (self.strategy_key == "automobile" and is_aaisha and customer_name is not None)
@@ -915,22 +926,55 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
     def _update_activity_time(self):
         """Updates the last user or bot activity time."""
         self.last_activity_time = time.time()
+        self.raahi_silence_reprompt_sent = False
 
     async def _disconnect_timeout_loop(self):
-        """Continuously checks if the user has been silent for more than 30 seconds."""
+        """Continuously checks if the user has been silent for 15s (re-prompt) / 30s (disconnect)."""
         while self.is_connected:
             try:
                 await asyncio.sleep(1)
                 if not self.is_connected:
                     break
-                
+
                 # If bot is speaking or AI is processing, keep the activity timer fresh
                 if self.is_bot_speaking or self.is_processing:
                     self.last_activity_time = time.time()
                     continue
-                
+
                 elapsed = time.time() - self.last_activity_time
-                if elapsed >= 30.0:
+                is_raahi = (getattr(self, "strategy_key", None) == "raahi_iiiem_strategy")
+
+                if is_raahi and elapsed >= 15.0:
+                    if not getattr(self, "raahi_silence_reprompt_sent", False):
+                        print(f"⏱️ [RAAHI 15S SILENCE RE-PROMPT]: User silent for {elapsed:.1f}s. Re-prompting user...")
+                        self.raahi_silence_reprompt_sent = True
+                        self.last_activity_time = time.time()
+
+                        from raahi_iiiem_bot.strategy import get_raahi_reprompt
+                        session_state = getattr(self.session, "state", {}) or {}
+                        reprompt_text = get_raahi_reprompt(session_state, language=self.language)
+
+                        if self.tts_task and not self.tts_task.done():
+                            self.tts_task.cancel()
+
+                        await save_message(self.conversation, "bot", reprompt_text)
+                        self.tts_task = asyncio.create_task(self.send_tts(reprompt_text, tts_language=self.language))
+                        continue
+                    else:
+                        print(f"📴 [RAAHI TIMEOUT-DISCONNECT]: User silent for {elapsed:.1f}s after re-prompt. Ending call.")
+                        farewell = "Looks like you are busy. All details have been shared on WhatsApp. Thank you! [END_CALL]" if self.language == "en" else "Lagta hai aap busy hain. Saari details WhatsApp par share kar di gayi hain. Dhanyavaad! [END_CALL]"
+                        if self.tts_task and not self.tts_task.done():
+                            self.tts_task.cancel()
+                        await save_message(self.conversation, "bot", farewell)
+                        self.tts_task = asyncio.create_task(self.send_tts(farewell, tts_language=self.language))
+                        await self.tts_task
+                        await asyncio.sleep(1.5)
+                        await close_conversation(self.conversation)
+                        await self.send(text_data=json.dumps({"event": "stop"}))
+                        self.is_connected = False
+                        await self.close()
+                        break
+                elif not is_raahi and elapsed >= 30.0:
                     print(f"📴 [TIMEOUT-DISCONNECT]: No recognized user activity for {elapsed:.1f}s. Automatically cutting call.")
                     await close_conversation(self.conversation)
                     await self.send(text_data=json.dumps({"event": "stop"}))
@@ -2172,7 +2216,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         is_loan_hi = (lang == "hi" and getattr(self, "strategy_key", None) == "loan_strategy")
         is_kia_syros = (lang == "hi" and getattr(self, "strategy_key", None) == "kia_syros_strategy")
         is_shreyas_en = (lang == "en" and getattr(self, "strategy_key", None) == "shreyas_strategy")
-        if lang == "gu" or is_loan_hi or is_shreyas_en or is_kia_syros:
+        is_raahi = (getattr(self, "strategy_key", None) == "raahi_iiiem_strategy")
+        if lang == "gu" or is_loan_hi or is_shreyas_en or is_kia_syros or is_raahi:
             import requests
             api_key = os.getenv("SARVAM_API_KEY")
             api_url = "https://api.sarvam.ai/text-to-speech/stream"
@@ -2183,18 +2228,20 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             }
             
             clean_text = re.sub(r'<[^>]*>', '', text).strip()
+            clean_text = clean_text.replace("—", ",").replace("–", ",")
             if is_shreyas_en:
                 clean_text = clean_text.replace("-", " ")
                 clean_text = re.sub(r'\b5\b', 'five', clean_text)
                 clean_text = re.sub(r'\b10\b', 'ten', clean_text)
-            if not clean_text:
-                return b""
-            target_lang = "en-IN" if is_shreyas_en else ("hi-IN" if (is_loan_hi or is_kia_syros) else "gu-IN")
-            speaker = "shreya" if (is_shreyas_en or is_kia_syros) else ("shubh" if is_loan_hi else "ishita")
+            if is_raahi:
+                clean_text = clean_text.replace("WhatsApp", "whats app").replace("whatsapp", "whats app")
+            is_eng_reply = is_shreyas_en or (is_raahi and (any(clean_text.lower().startswith(w) for w in ["hello", "thank", "great", "alright", "perfect", "in short", "the booking", "should i", "would you", "shall i", "yes"]) or any(w in clean_text.lower() for w in ["guidance", "exporting", "decided", "rupees", "details"])))
+            target_lang = "en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi) else "gu-IN")
+            speaker = "shreya" if (is_shreyas_en or is_kia_syros or is_raahi) else ("shubh" if is_loan_hi else "ishita")
             if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                 speaker = "ishita"
             is_shreyas_gu = getattr(self, "strategy_key", None) == "shreyas_gu_strategy"
-            pace = 1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if is_kia_syros else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1)))))
+            pace = 1.18 if is_raahi else (1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if is_kia_syros else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1.15))))))
             temp = 0.50 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
 
             # Normalise clean_text for cache key

@@ -4874,7 +4874,7 @@ def run_interview_agent_response(agent, message: str, history_text: str = "") ->
 # 🚀 MAIN STRATEGY
 # =========================================================
 
-def ai_voice_bot_strategy(agent, message, session):
+def ai_voice_bot_strategy(agent, message, session, **kwargs):
     state: dict = session.state or {}
     raw_message = sanitise(message)
     msg = raw_message.lower()

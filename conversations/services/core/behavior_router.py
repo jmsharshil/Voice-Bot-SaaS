@@ -37,6 +37,7 @@ ROLE_STRATEGY_MAP = {
     "Carekay Gujarati Insurance Renewal Advisor": "carekay_strategy",
     "Shreyas Sports Advisor": "shreyas_strategy",
     "Shreyas Sports Advisor Gujarati": "shreyas_gu_strategy",
+    "Raahi iiiEM Export Advisor": "raahi_iiiem_strategy",
 }
 
 

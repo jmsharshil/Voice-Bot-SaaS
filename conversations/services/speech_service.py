@@ -183,24 +183,28 @@ def create_speech_recognizer(language="en"):
         region=AZURE_SPEECH_REGION
     )
 
-    # Set specific language directly to eliminate LID (Language Identification) latency!
-    stt_lang = STT_LANGUAGE_MAP.get(language, "hi-IN")
-    speech_config.speech_recognition_language = stt_lang
+    is_auto = (language == "auto")
+    if is_auto:
+        auto_detect_config = speechsdk.languageconfig.AutoDetectSourceLanguageConfig(
+            languages=["en-IN", "hi-IN"]
+        )
+    else:
+        stt_lang = STT_LANGUAGE_MAP.get(language, "hi-IN")
+        speech_config.speech_recognition_language = stt_lang
 
     speech_config.set_property_by_name("SPEECH-RecoModelKey", "telephony")
 
-    # ⚡ TUNED: Natural pacing timeouts (resolved rushed feedback)
-    # EndSilence: 900ms — allows natural mid-sentence pauses without cutting off
-    # Segmentation: 500ms — catches sentence breaks naturally
-    # InitialSilence: 8000ms — generous wait for first speech
+    # Pacing timeouts (350ms ultra low-latency for auto/Raahi, 900ms for standard agents)
+    end_silence = "350" if is_auto else "900"
+    seg_silence = "250" if is_auto else "500"
     speech_config.set_property(
-        speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "900"
+        speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, end_silence
     )
     speech_config.set_property(
         speechsdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "8000"
     )
     speech_config.set_property(
-        speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "500"
+        speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, seg_silence
     )
 
     speech_config.set_property_by_name(
@@ -222,10 +226,17 @@ def create_speech_recognizer(language="en"):
     push_stream = speechsdk.audio.PushAudioInputStream(stream_format=audio_format)
     audio_config = speechsdk.audio.AudioConfig(stream=push_stream)
 
-    recognizer = speechsdk.SpeechRecognizer(
-        speech_config=speech_config,
-        audio_config=audio_config
-    )
+    if is_auto:
+        recognizer = speechsdk.SpeechRecognizer(
+            speech_config=speech_config,
+            auto_detect_source_language_config=auto_detect_config,
+            audio_config=audio_config
+        )
+    else:
+        recognizer = speechsdk.SpeechRecognizer(
+            speech_config=speech_config,
+            audio_config=audio_config
+        )
 
     return recognizer, push_stream
 

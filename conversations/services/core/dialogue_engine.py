@@ -157,6 +157,17 @@ except ImportError:
     shreyas_gu_prepare = None
     shreyas_gu_finalize = None
 
+try:
+    from raahi_iiiem_bot.strategy import (
+        raahi_iiiem_strategy,
+        raahi_iiiem_prepare,
+        raahi_iiiem_finalize,
+    )
+except ImportError:
+    raahi_iiiem_strategy = None
+    raahi_iiiem_prepare = None
+    raahi_iiiem_finalize = None
+
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
 from django.core.cache import cache
@@ -194,6 +205,8 @@ if kia_syros_strategy:
     STRATEGY_MAP["kia_syros_strategy"] = kia_syros_strategy
 if shreyas_gu_strategy:
     STRATEGY_MAP["shreyas_gu_strategy"] = shreyas_gu_strategy
+if raahi_iiiem_strategy:
+    STRATEGY_MAP["raahi_iiiem_strategy"] = raahi_iiiem_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -229,6 +242,8 @@ if kia_syros_prepare:
     PREPARE_MAP["kia_syros_strategy"] = kia_syros_prepare
 if shreyas_gu_prepare:
     PREPARE_MAP["shreyas_gu_strategy"] = shreyas_gu_prepare
+if raahi_iiiem_prepare:
+    PREPARE_MAP["raahi_iiiem_strategy"] = raahi_iiiem_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -263,6 +278,8 @@ if kia_syros_finalize:
     FINALIZE_MAP["kia_syros_strategy"] = kia_syros_finalize
 if shreyas_gu_finalize:
     FINALIZE_MAP["shreyas_gu_strategy"] = shreyas_gu_finalize
+if raahi_iiiem_finalize:
+    FINALIZE_MAP["raahi_iiiem_strategy"] = raahi_iiiem_finalize
 
 
 def _resolve_agent(agent):
@@ -348,7 +365,10 @@ def prepare_streaming(agent, message, session_id=None, **kwargs):
     if not prepare_fn:
         # Non-streaming fallback (e.g. insurance — has complex multi-LLM logic)
         strategy_fn = STRATEGY_MAP.get(strategy_key, ai_voice_bot_strategy)
-        reply = strategy_fn(agent, message, session, **kwargs)
+        try:
+            reply = strategy_fn(agent, message, session, **kwargs)
+        except TypeError:
+            reply = strategy_fn(agent, message, session)
         if not reply:
             reply = "I'm sorry, I didn't catch that. Could you please rephrase?"
         print("[TIME] Prepare Time (fallback):", round(time.time() - start_time, 3), "s")
