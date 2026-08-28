@@ -1965,7 +1965,11 @@ def dial_next_from_queue():
                         status = CampaignStatus.objects.select_for_update().get(id=1)
                         _active_calls = set(json.loads(status.active_calls)) if getattr(status, 'active_calls', None) else set()
                         _active_calls.discard(normalized)
+                        _missed_calls = json.loads(status.missed_calls) if status.missed_calls else []
+                        if normalized not in _missed_calls:
+                            _missed_calls.append(normalized)
                         status.active_calls = json.dumps(list(_active_calls))
+                        status.missed_calls = json.dumps(_missed_calls)
                         status.completed_count += 1
                         status.save()
                         _campaign_stats["completed"] = status.completed_count
@@ -1976,7 +1980,7 @@ def dial_next_from_queue():
                 threading.Timer(1.0, dial_next_from_queue).start()
                 continue
 
-            # ⏱ WATCHDOG: If call isn't picked up in 60s, force-end it to trigger next
+            # ⏱ WATCHDOG: If call isn't picked up in 35s, check timeout
             import threading
             threading.Timer(35.0, on_call_timeout, args=[normalized]).start()
             
@@ -1988,7 +1992,11 @@ def dial_next_from_queue():
                     status = CampaignStatus.objects.select_for_update().get(id=1)
                     _active_calls = set(json.loads(status.active_calls)) if getattr(status, 'active_calls', None) else set()
                     _active_calls.discard(normalized)
+                    _missed_calls = json.loads(status.missed_calls) if status.missed_calls else []
+                    if normalized not in _missed_calls:
+                        _missed_calls.append(normalized)
                     status.active_calls = json.dumps(list(_active_calls))
+                    status.missed_calls = json.dumps(_missed_calls)
                     status.completed_count += 1
                     status.save()
                     _campaign_stats["completed"] = status.completed_count
@@ -2101,13 +2109,9 @@ def on_call_ended(phone_number):
                 except Exception as ex:
                     print(f"WARNING: Failed to sync campaign history record: {ex}")
 
-    if not found:
-        # Already handled or not part of this campaign
-        return
+    print(f"🔄 AUTO-DIALER: Call ended ({clean_phone}) | Found in active: {found} | Active: {len(_active_calls)} | Queue: {len(_call_queue)}")
 
-    print(f"🔄 AUTO-DIALER: Call ended ({clean_phone}) | Active: {len(_active_calls)} | Queue: {len(_call_queue)}")
-
-    # Fill the empty slot
+    # Fill the empty slot whenever campaign is active
     if _campaign_active:
         import threading
         threading.Timer(2.0, dial_next_from_queue).start()
@@ -2148,6 +2152,7 @@ def on_call_timeout(phone_number):
                 was_answered = True
                 break
                
+        conv_ended = False
         if not was_answered:
             try:
                 from conversations.models import Conversation
@@ -2164,20 +2169,23 @@ def on_call_timeout(phone_number):
                     except Exception:
                         pass
                        
-                was_answered = Conversation.objects.filter(
+                conv = Conversation.objects.filter(
                     user_number__icontains=clean_phone,
                     started_at__gte=start_time
-                ).exists()
+                ).order_by("-started_at").first()
+                if conv:
+                    was_answered = True
+                    conv_ended = bool(conv.ended_at)
             except Exception as e:
                 print(f"⚠️ Error checking conversation in DB during timeout: {e}")
- 
-        if was_answered:
-            print(f"✅ AUTO-DIALER: Call was answered by {phone_number}, ignoring timeout.")
+
+        if was_answered and not conv_ended:
+            print(f"✅ AUTO-DIALER: Call was answered by {phone_number} and is still ongoing, ignoring timeout.")
             return
 
-        if phone_number in _active_calls:
-            print(f"⌛ AUTO-DIALER: Call Timeout ({phone_number}) — No Answer/Busy. Moving to next...")
-            if phone_number not in _missed_calls:
+        if phone_number in _active_calls or any("".join(filter(str.isdigit, a))[-10:] == clean_phone for a in _active_calls):
+            print(f"⌛ AUTO-DIALER: Call Timeout ({phone_number}) — No Answer/Busy or ended. Moving to next...")
+            if not was_answered and phone_number not in _missed_calls:
                 _missed_calls.append(phone_number)
             
             # Save state inside transaction
@@ -2192,6 +2200,10 @@ def on_call_timeout(phone_number):
                 except Exception as ex:
                     print(f"WARNING: Failed to sync campaign history record during timeout: {ex}")
         else:
+            # Even if not in active calls, trigger next dial if active and slots available
+            if _campaign_active:
+                import threading
+                threading.Timer(1.0, dial_next_from_queue).start()
             return
 
     # Call on_call_ended to clean up and trigger next
