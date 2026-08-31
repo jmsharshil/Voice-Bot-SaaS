@@ -103,7 +103,7 @@ def raahi_iiiem_strategy(agent, message, session, **kwargs):
         state["stage"] = STAGE_NEED
     elif "product decide hai" in res_lower or "decided on your product" in res_lower:
         state["stage"] = STAGE_RECOMMEND
-    elif "pehle process samjhun ya fees" in res_lower or "explain the process first" in res_lower:
+    elif "pehle process batau ya fees" in res_lower or "pehle process samjhun ya fees" in res_lower or "explain the process first" in res_lower:
         state["stage"] = STAGE_INFO_PREF
     elif "whatsapp par share kar deti hoon" in res_lower or "share complete details on whatsapp" in res_lower:
         state["stage"] = STAGE_WHATSAPP_CONFIRM
@@ -205,7 +205,7 @@ def raahi_iiiem_finalize(response, prep_result):
         state["stage"] = STAGE_NEED
     elif "product decide hai" in res_lower or "decided on your product" in res_lower:
         state["stage"] = STAGE_RECOMMEND
-    elif "pehle process samjhun ya fees" in res_lower or "explain the process first" in res_lower:
+    elif "pehle process batau ya fees" in res_lower or "pehle process samjhun ya fees" in res_lower or "explain the process first" in res_lower:
         state["stage"] = STAGE_INFO_PREF
     elif "whatsapp par share kar deti hoon" in res_lower or "share complete details on whatsapp" in res_lower:
         state["stage"] = STAGE_WHATSAPP_CONFIRM
