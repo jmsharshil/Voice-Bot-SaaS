@@ -36,6 +36,7 @@ def test_raahi_clean_llm():
     assert "PLAN INFO FIRST vs PRICE SECOND RULE" in prep["system_prompt"], "System prompt must contain PLAN INFO FIRST rule!"
     assert "NO WHATSAPP OFFER RULE" in prep["system_prompt"], "System prompt must contain NO WHATSAPP OFFER rule!"
     assert "SINGLE AGENT INTRODUCTION RULE" in prep["system_prompt"], "System prompt must contain SINGLE AGENT INTRODUCTION rule!"
+    assert "TURN 2 WELCOME RULE" in prep["system_prompt"], "System prompt must contain TURN 2 WELCOME rule!"
     print("✅ Clean Raahi Master Prompt v3.1 & RAG Strategy Execution Test Passed!")
 
 if __name__ == "__main__":
