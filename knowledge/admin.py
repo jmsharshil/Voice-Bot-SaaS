@@ -40,4 +40,4 @@ class KnowledgeFileAdmin(admin.ModelAdmin):
 
 @admin.register(KnowledgeChunk)
 class KnowledgeChunkAdmin(admin.ModelAdmin):
-    list_display = ("id", "knowledge_file", "chunk_index")
+    list_display = ("id", "knowledge_file")
