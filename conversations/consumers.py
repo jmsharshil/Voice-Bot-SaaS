@@ -1417,6 +1417,16 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         if not self.stream_sid:
             print("⏳ [PLAYBACK]: Waiting for streamSid before playing local audio file...")
             await self.stream_sid_event.wait()
+
+        # Pre-buffer 240ms silence on initial call connection to prevent telephony media truncation
+        if not getattr(self, '_initial_greeting_streamed', False):
+            self._initial_greeting_streamed = True
+            silence_chunk = b'\xff' * 160
+            for _ in range(12):
+                if not self.is_connected:
+                    break
+                await self._send_media_frame(silence_chunk)
+                await asyncio.sleep(0.020)
         
         # Determine current language prefix (e.g., 'hi_', 'en_', 'gu_')
         # Check if the file exists directly first (e.g. hosp_step2_ask_slot.raw)
@@ -2377,6 +2387,16 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         if not self.stream_sid:
             print("⏳ [PLAYBACK]: Waiting for streamSid before streaming raw audio...")
             await self.stream_sid_event.wait()
+
+        # Pre-buffer 240ms silence on initial call connection to prevent telephony media truncation
+        if not getattr(self, '_initial_greeting_streamed', False):
+            self._initial_greeting_streamed = True
+            silence_chunk = b'\xff' * 160
+            for _ in range(12):
+                if not self.is_connected:
+                    break
+                await self._send_media_frame(silence_chunk)
+                await asyncio.sleep(0.020)
 
         loop = asyncio.get_event_loop()
 
