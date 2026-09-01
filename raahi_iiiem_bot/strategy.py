@@ -78,6 +78,17 @@ def raahi_iiiem_strategy(agent, message, session, **kwargs):
         save_session(session, state)
         return reply
 
+    # Extract customer name if not captured yet
+    customer_name = state.get("customer_name")
+    if not customer_name or customer_name.lower() in ["ji", "user"]:
+        extracted_name = _extract_name_from_user_input(raw_message)
+        if extracted_name:
+            state["customer_name"] = extracted_name
+            customer_name = extracted_name
+            save_session(session, state)
+        else:
+            customer_name = "Ji"
+
     conversation_history.append(f"User: {raw_message}")
     if len(conversation_history) > MAX_TURNS:
         conversation_history = conversation_history[-MAX_TURNS:]
@@ -137,6 +148,35 @@ def raahi_iiiem_strategy(agent, message, session, **kwargs):
 
 # ─── STREAMING PREPARE / FINALIZE ────────────────────────
 
+def _extract_name_from_user_input(msg: str) -> str:
+    if not msg:
+        return None
+    text = re.sub(r'[\u0964,.!?\'"]', ' ', msg).strip()
+
+    m = re.search(r'(?:main|me|i am|मैं)\s+(?:mera\s+naam\s+|मेरा\s+नाम\s+)?([A-Za-z\u0900-\u097F]+)\s+(?:bol|baat|hoon|hu|हो|रहा|रही|हूँ|हुन)', text, re.I)
+    if m:
+        name = m.group(1).capitalize()
+        if name.lower() not in ["bhi", "to", "ji", "ha", "haan", "sir", "madam", "baat", "bol", "naam", "mera", "jo", "ki", "जी", "भी", "तो", "का"]:
+            return name
+
+    m = re.search(r'(?:mera|my|मेरा)\s+naam\s+(?:is\s+)?(?:to\s+)?([A-Za-z\u0900-\u097F]+)', text, re.I)
+    if m:
+        name = m.group(1).capitalize()
+        if name.lower() not in ["bhi", "to", "ji", "ha", "haan", "sir", "madam", "is", "hai", "है", "जी"]:
+            return name
+
+    m = re.search(r'my\s+name\s+is\s+([A-Za-z\u0900-\u097F]+)', text, re.I)
+    if m:
+        return m.group(1).capitalize()
+
+    words = [w for w in text.split() if w and w.lower() not in ["ji", "ha", "haan", "yes", "no", "sir", "madam", "mera", "naam", "main", "hoon", "hu", "to", "bhi", "g", "ji", "जी", "मैं", "हूँ", "हो", "मेरा", "नाम", "बोल", "रहा", "रही", "है"]]
+    if len(words) >= 1 and len(words) <= 2:
+        candidate = words[0].capitalize()
+        if len(candidate) >= 2:
+            return candidate
+
+    return None
+
 def raahi_iiiem_prepare(agent, message, session, detected_language=None, **kwargs):
     """Streaming prepare method called before starting OpenAI LLM streaming."""
     state = session.state or {}
@@ -170,12 +210,22 @@ def raahi_iiiem_prepare(agent, message, session, detected_language=None, **kwarg
             "tts_language": "hi"
         }
 
+    # Extract customer name if not captured yet
+    customer_name = state.get("customer_name")
+    if not customer_name or customer_name.lower() in ["ji", "user"]:
+        extracted_name = _extract_name_from_user_input(raw_message)
+        if extracted_name:
+            state["customer_name"] = extracted_name
+            customer_name = extracted_name
+            save_session(session, state)
+        else:
+            customer_name = "Ji"
+
     conversation_history.append(f"User: {raw_message}")
     if len(conversation_history) > MAX_TURNS:
         conversation_history = conversation_history[-MAX_TURNS:]
 
     current_stage = state.get("stage", STAGE_GREET)
-    customer_name = state.get("customer_name", "Ji")
     history_text = get_db_history_text(session.session_id)
 
     # 📚 RAG Retrieval (FAISS Semantic Search + Keyword Matching)

@@ -35,6 +35,7 @@ def test_raahi_clean_llm():
     assert "CUSTOMER NAME RULE – DO NOT REPEAT NAME" in prep["system_prompt"], "System prompt must contain DO NOT REPEAT NAME rule!"
     assert "PLAN INFO FIRST vs PRICE SECOND RULE" in prep["system_prompt"], "System prompt must contain PLAN INFO FIRST rule!"
     assert "NO WHATSAPP OFFER RULE" in prep["system_prompt"], "System prompt must contain NO WHATSAPP OFFER rule!"
+    assert "SINGLE AGENT INTRODUCTION RULE" in prep["system_prompt"], "System prompt must contain SINGLE AGENT INTRODUCTION rule!"
     print("✅ Clean Raahi Master Prompt v3.1 & RAG Strategy Execution Test Passed!")
 
 if __name__ == "__main__":
