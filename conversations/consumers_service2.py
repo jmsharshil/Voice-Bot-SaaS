@@ -775,9 +775,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 else:
                     greeting = "Namaste! Main Raahi, Triple i E M se. Aapka naam?"
             elif strategy_key == "priya_naavya_strategy":
-                import random
-                from priya_naavya_bot.strategy import OPENING_VARIANTS
-                greeting = random.choice(OPENING_VARIANTS)
+                greeting = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
             else:
                 greeting = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. kya aap abhi baat kar sakte hain?"
             

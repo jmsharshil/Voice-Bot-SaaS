@@ -3528,8 +3528,7 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
             elif strategy_key == "raahi_iiiem_strategy":
                 greeting_file = "raahi_iiiem_bot/raahi_greeting.raw"
             elif strategy_key == "priya_naavya_strategy":
-                from priya_naavya_bot.strategy import OPENING_VARIANTS
-                text = random.choice(OPENING_VARIANTS)
+                text = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
                 greeting_file = None
             else:
                 greeting_file = f"{language}_step1_greeting.raw"

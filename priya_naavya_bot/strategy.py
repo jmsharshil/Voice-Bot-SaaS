@@ -22,16 +22,9 @@ from conversations.services.core.strategies import save_session, is_farewell
 
 logger = logging.getLogger("PriyaNaavyaBotStrategy")
 
-GREETING_VARIANT_1 = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
-GREETING_VARIANT_2 = "Hello sir, main Priya, JMS Tech se... aap real estate ka kaam dekhte hain na? Bas ek chhota sa sawaal — raat ko ya Sunday ko jo leads aate hain, unko aap turant reply kar paate hain?"
-GREETING_VARIANT_3 = "Namaste, main Priya baat kar rahi hoon Naavya.ai se — hum kayi real estate brokers ke saath kaam kar rahe hain, missed leads waapas lane mein. Do minute doge?"
-
-OPENING_VARIANTS = [
-    GREETING_VARIANT_1,
-    GREETING_VARIANT_2,
-    GREETING_VARIANT_3,
-]
+GREETING_VARIANT_1 = "Namaste sir, main Priya bol rahi hoon, Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi, aapke property leads ke baare mein."
 LOCKED_GREETING = GREETING_VARIANT_1
+OPENING_VARIANTS = [LOCKED_GREETING]
 
 def _priya_sanitise(message: str) -> str:
     return message.strip()[:MAX_MESSAGE_LENGTH]
@@ -58,11 +51,11 @@ def get_db_history_text(session_id: str) -> str:
 
 
 OBJECTION_TARGET_RESPONSES = {
-    "AI": "Haan sir, bilkul sahi pakda — main ek AI voice assistant hoon Naavya.ai ki taraf se. Lekin jo bhi maine bataya, woh sab sach hai, aur yehi toh main prove bhi kar rahi hoon is call se.",
-    "STAFF": "Achha hai sir, team hona zaroori hai bhi. Yeh unki jagah nahi le raha — yeh sirf woh calls pakadta hai jo raat mein ya busy time mein miss ho jaate hain, jisse aapki team ko bhi kam bhaagdaud karni pade.",
-    "PRICE": "Achha sawaal sir. WhatsApp/website waala version das se pachaas hazaar mein shuru hota hai, aur full voice waala jo calls bhi uthaaye, woh pachaas se pachattar hazaar ka hai. Lekin sahi number aapke business size pe depend karta hai — demo mein Dhruv exact bata denge.",
-    "WHATSAPP": "Bilkul sir, abhi bhej deti hoon. Saath mein ek do minute ka video bhi hai jo dikhaata hai yeh asal mein kaise kaam karta hai — dekh lijiyega, kal phir baat karte hain.",
-    "BUSY": "Koi baat nahi sir, samajh sakti hoon. Bas itna bataiye — agar aapke missed leads waapas milne lagein, toh kya yeh dekhne laayak hoga? Nahi toh main abhi rakhti hoon, aapka din achha rahe."
+    "AI": "Haan sir, bilkul sahi pakda... main ek AI voice assistant hoon, Naavya.ai ki taraf se. Lekin jo bhi maine bataya, woh sab sach hai... aur yehi toh main prove bhi kar rahi hoon, is call se.",
+    "STAFF": "Achha hai sir, team hona zaroori hai bhi... Yeh unki jagah nahi le raha, yeh sirf woh calls pakadta hai, jo raat mein ya busy time mein miss ho jaate hain... jisse aapki team ko bhi, kam bhaagdaud karni pade.",
+    "PRICE": "Achha sawaal sir... WhatsApp ya website waala version, das se pachaas hazaar mein shuru hota hai, aur full voice waala jo calls bhi uthaaye, woh pachaas se pachattar hazaar ka hai... Lekin sahi number, aapke business size pe depend karta hai... demo mein Dhruv exact bata denge.",
+    "WHATSAPP": "Bilkul sir, abhi bhej deti hoon... Saath mein, ek do minute ka video bhi hai, jo dikhaata hai yeh asal mein kaise kaam karta hai... dekh lijiyega, kal phir baat karte hain.",
+    "BUSY": "Koi baat nahi sir, samajh sakti hoon... Bas itna bataiye, agar aapke missed leads waapas milne lagein, toh kya yeh dekhne laayak hoga? Nahi toh main abhi rakhti hoon, aapka din achha rahe."
 }
 
 
@@ -222,12 +215,12 @@ def priya_naavya_strategy(agent, message, session, **kwargs):
 
 
 STAGE_TARGET_RESPONSES = {
-    STAGE_PAIN: "Achha sir, aap roughly mahine mein kitni property leads handle karte hain? ...aur kabhi aisa hua hai ki koi lead sirf isliye nikal gaya kyunki reply late ho gaya?",
-    STAGE_VALUE: "Yehi toh baat hai sir — Naavya.ai aapke saare calls aur WhatsApp ka jawaab turant deta hai, din ho ya raat, Sunday ho ya festival. Aur jaise-jaise baatcheet hoti hai, yeh seekhta jaata hai — ek naye employee se kahin zyada tez.",
-    STAGE_META_PROOF: "Waise sir, ek maze ki baat bataun? Yeh call jo abhi ho rahi hai — yeh bhi Naavya.ai hi kar raha hai. Aapko pata bhi nahi chala, hai na? Yehi cheez yeh aapke customers ke saath bhi karega.",
-    STAGE_TRIAL: "Main aapko ek teen din ka free trial de sakti hoon, bina kisi commitment ke — bas dekhiye kaise kaam karta hai aapke asli leads pe.",
-    STAGE_BOOK_DEMO: "Bahut badhiya sir! Toh main aapko WhatsApp pe demo ka link bhej deti hoon, aur kal 11 baje hamari team se Dhruv aapko call karke poora dikhayenge — theek rahega? [BOOKING_CONFIRMED]",
-    STAGE_CLOSING: "Theek hai sir! Link abhi WhatsApp pe bhej deti hoon, aur kal 11 baje Dhruv aapko call karenge. Shukriya! [END_CALL]"
+    STAGE_PAIN: "Achha sir, aap roughly mahine mein, kitni property leads handle karte hain? ...aur kabhi aisa hua hai ki, koi lead sirf isliye nikal gaya, kyunki reply late ho gaya?",
+    STAGE_VALUE: "Yehi toh baat hai sir, Naavya.ai aapke saare calls, aur WhatsApp ka jawaab, turant deta hai... din ho ya raat, Sunday ho ya festival. Aur jaise-jaise baatcheet hoti hai, yeh seekhta jaata hai, ek naye employee se, kahin zyada tez.",
+    STAGE_META_PROOF: "Waise sir, ek maze ki baat bataun? Yeh call, jo abhi ho rahi hai, yeh bhi Naavya.ai hi kar raha hai... Aapko pata bhi nahi chala, hai na? Yehi cheez, yeh aapke customers ke saath bhi karega.",
+    STAGE_TRIAL: "Main aapko, ek teen din ka free trial de sakti hoon, bina kisi commitment ke... bas dekhiye, kaise kaam karta hai, aapke asli leads pe.",
+    STAGE_BOOK_DEMO: "Bahut badhiya sir! Toh main aapko, WhatsApp pe demo ka link bhej deti hoon... aur kal 11 baje, hamari team se Dhruv aapko call karke, poora dikhayenge... theek rahega? [BOOKING_CONFIRMED]",
+    STAGE_CLOSING: "Theek hai sir! Link abhi, WhatsApp pe bhej deti hoon, aur kal 11 baje, Dhruv aapko call karenge... Shukriya! [END_CALL]"
 }
 
 

@@ -20,19 +20,19 @@ def test_priya_bot():
     print(f"Agent Found: {agent.name} (ID: {agent.id})")
     print(f"Role Name  : {agent.role_template.role_name}")
 
-    print("\n--- 2. Testing Random Opening Greetings (3 Variants) ---")
+    print("\n--- 2. Testing Locked Opening Greeting ---")
     seen_variants = set()
-    for i in range(30):
+    for i in range(5):
         sess = ConversationSession.objects.create(session_id=f"test_priya_rot_{i}", agent=agent)
         res = priya_naavya_prepare(agent, "hello", sess)
         reply = res["static_reply"]
         seen_variants.add(reply)
         sess.delete()
     
-    print(f"Total Unique Opening Variants Observed: {len(seen_variants)} / 3")
+    print(f"Total Unique Opening Variants Observed: {len(seen_variants)} / 1 (Locked)")
     for v in seen_variants:
         print(f"  - '{v}'")
-    assert len(seen_variants) >= 2, "Expected multiple opening greeting variants!"
+    assert len(seen_variants) == 1, "Expected single locked opening greeting!"
 
     print("\n--- 3. Testing Full Positive Stage Flow (Stages 1 -> 6) ---")
     sess = ConversationSession.objects.create(session_id="test_priya_flow_positive", agent=agent)
