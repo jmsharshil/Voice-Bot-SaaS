@@ -372,6 +372,7 @@ from shreyas_bot.prompts import SHREYAS_SYSTEM_PROMPT
 from shreyas_gu_bot.prompts import SHREYAS_GU_SYSTEM_PROMPT
 from kia_syros_bot.prompts import KIA_SYROS_SYSTEM_PROMPT
 from raahi_iiiem_bot.prompts import RAAHI_IIIEM_SYSTEM_PROMPT
+from priya_naavya_bot.prompts import PRIYA_NAAVYA_SYSTEM_PROMPT
 
 INDUSTRY_VOICE_MAP = {
     "automobile": "en-IN-AartiNeural",
@@ -383,7 +384,8 @@ INDUSTRY_VOICE_MAP = {
     "samsung-store": "gu-IN-DhwaniNeural",
     "insurance": "gu-IN-DhwaniNeural",
     "sports-outreach": "en-IN-AartiNeural",
-    "education-training": "hi-IN-AartiNeural"
+    "education-training": "hi-IN-AartiNeural",
+    "real-estate-ai": "hi-IN-AartiNeural"
 }
 
 TEMPLATES = [
@@ -929,6 +931,17 @@ Negative Constraints:
             "default_tone": "friendly",
         }
     ]
+},
+{
+    "industry": {"name": "Real Estate AI Calling", "slug": "real-estate-ai"},
+    "roles": [
+        {
+            "role_name": "Priya Naavya AI Advisor",
+            "description": "Voice agent Priya for Naavya.ai / JMS Tech Real Estate MSME AI Calling.",
+            "system_prompt_template": PRIYA_NAAVYA_SYSTEM_PROMPT,
+            "default_tone": "friendly",
+        }
+    ]
 }
 ]
 
@@ -999,6 +1012,30 @@ class Command(BaseCommand):
                     agent.is_active = True
                     agent.save()
                 self.stdout.write(self.style.SUCCESS(f"VoiceAgent Raahi seeded successfully (ID: {agent.id})"))
+
+            # Auto-seed Priya Naavya.ai VoiceAgent
+            priya_role = AgentRoleTemplate.objects.filter(role_name__icontains="Priya").first()
+            if priya_role:
+                p_agent, p_created = VoiceAgent.objects.get_or_create(
+                    role_template=priya_role,
+                    defaults={
+                        "id": "b87c12de-3f45-4819-9c56-7a8d90123456",
+                        "name": "Priya - Naavya.ai MSME Bot",
+                        "owner": owner,
+                        "industry": priya_role.industry,
+                        "company_name": "Naavya.ai (JMS Tech)",
+                        "summary": "Voice agent Priya for Naavya.ai / JMS Tech Real Estate MSME AI Calling.",
+                        "is_active": True
+                    }
+                )
+                if not p_created:
+                    p_agent.name = "Priya - Naavya.ai MSME Bot"
+                    p_agent.industry = priya_role.industry
+                    p_agent.company_name = "Naavya.ai (JMS Tech)"
+                    p_agent.summary = "Voice agent Priya for Naavya.ai / JMS Tech Real Estate MSME AI Calling."
+                    p_agent.is_active = True
+                    p_agent.save()
+                self.stdout.write(self.style.SUCCESS(f"VoiceAgent Priya seeded successfully (ID: {p_agent.id})"))
 
         self.stdout.write(self.style.SUCCESS("Indian voices assigned & roles seeded successfully"))
     # def handle(self, *args, **kwargs):

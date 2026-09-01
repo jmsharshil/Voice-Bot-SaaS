@@ -4,6 +4,7 @@ Analyzes the full conversation transcript after a call ends
 and produces a structured lead assessment.
 """
 import json
+import time
 import traceback
 from conversations.models import Conversation, Message, LeadAnalysis
 from conversations.services.azure_openai_service import generate_response
@@ -95,21 +96,32 @@ def analyze_lead(conversation_id):
         if lead_level not in valid_levels:
             lead_level = "cold"
 
-        # Save to database
-        lead, created = LeadAnalysis.objects.update_or_create(
-            conversation=conversation,
-            defaults={
-                "agent": conversation.agent,
-                "lead_level": lead_level,
-                "user_name": analysis.get("user_name", "")[:255],
-                "user_email": analysis.get("user_email", "")[:255],
-                "user_phone": analysis.get("user_phone", "")[:50],
-                "interest_topic": analysis.get("interest_topic", "")[:255],
-                "summary": analysis.get("summary", ""),
-                "appointment_date": analysis.get("appointment_date", "")[:255],
-                "raw_analysis": analysis,
-            }
-        )
+        # Save to database with retry on sqlite lock
+        from django.db import OperationalError
+        lead = None
+        created = False
+        for attempt in range(5):
+            try:
+                lead, created = LeadAnalysis.objects.update_or_create(
+                    conversation=conversation,
+                    defaults={
+                        "agent": conversation.agent,
+                        "lead_level": lead_level,
+                        "user_name": analysis.get("user_name", "")[:255],
+                        "user_email": analysis.get("user_email", "")[:255],
+                        "user_phone": analysis.get("user_phone", "")[:50],
+                        "interest_topic": analysis.get("interest_topic", "")[:255],
+                        "summary": analysis.get("summary", ""),
+                        "appointment_date": analysis.get("appointment_date", "")[:255],
+                        "raw_analysis": analysis,
+                    }
+                )
+                break
+            except OperationalError as oe:
+                if "locked" in str(oe).lower() and attempt < 4:
+                    time.sleep(1.0)
+                else:
+                    raise
 
         status = "created" if created else "updated"
         print(

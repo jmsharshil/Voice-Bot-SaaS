@@ -3496,7 +3496,7 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
 
         # Resolve static greeting mapping if not dynamic
         is_dynamic_greeting = (
-            (strategy_key == "raahi_iiiem_strategy" and name is not None and name.lower() not in ["customer", "user", "nan", ""])
+            (strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy"])
             or (strategy_key == "samsung_store_strategy" and name is not None)
             or (strategy_key == "kia_syros_strategy")
             or (strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"])
@@ -3505,7 +3505,7 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy", "carekay_insurance_strategy", "kia_syros_strategy", "raahi_iiiem_strategy"
+                "carekay_strategy", "carekay_insurance_strategy", "kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy"
             ])
         )
         if not is_dynamic_greeting:
@@ -3527,11 +3527,16 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                 greeting_file = f"Naavya/{language}_step1_greeting.raw"
             elif strategy_key == "raahi_iiiem_strategy":
                 greeting_file = "raahi_iiiem_bot/raahi_greeting.raw"
+            elif strategy_key == "priya_naavya_strategy":
+                from priya_naavya_bot.strategy import OPENING_VARIANTS
+                text = random.choice(OPENING_VARIANTS)
+                greeting_file = None
             else:
                 greeting_file = f"{language}_step1_greeting.raw"
 
-            from conversations.consumers import _AUDIO_TRANSCRIPTIONS
-            text = _AUDIO_TRANSCRIPTIONS.get(greeting_file, text)
+            if greeting_file:
+                from conversations.consumers import _AUDIO_TRANSCRIPTIONS
+                text = _AUDIO_TRANSCRIPTIONS.get(greeting_file, text)
 
         ulaw_bytes = b""
 
@@ -3539,7 +3544,8 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
         is_loan_hi = (tts_lang == "hi" and strategy_key == "loan_strategy")
         is_kia_syros = (strategy_key == "kia_syros_strategy")
         is_raahi = (strategy_key == "raahi_iiiem_strategy")
-        if tts_lang == "gu" or is_loan_hi or is_kia_syros or is_raahi:
+        is_priya_naavya = (strategy_key == "priya_naavya_strategy")
+        if tts_lang == "gu" or is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya:
             api_key = os.getenv("SARVAM_API_KEY")
             if api_key:
                 api_url = "https://api.sarvam.ai/text-to-speech/stream"
@@ -3547,11 +3553,11 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                     "api-subscription-key": api_key,
                     "Content-Type": "application/json"
                 }
-                target_lang = "hi-IN" if (is_loan_hi or is_kia_syros or is_raahi) else "gu-IN"
-                speaker = "ishita" if is_raahi else ("shreya" if is_kia_syros else ("shubh" if is_loan_hi else "ishita"))
+                target_lang = "hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya) else "gu-IN"
+                speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if is_kia_syros else ("shubh" if is_loan_hi else "ishita"))
                 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     speaker = "ishita"
-                pace = 1.02 if is_raahi else (1.05 if is_kia_syros else (1.16 if strategy_key in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))))
+                pace = 1.02 if (is_raahi or is_priya_naavya) else (1.05 if is_kia_syros else (1.16 if strategy_key in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))))
 
                 temp = 0.50 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
                 

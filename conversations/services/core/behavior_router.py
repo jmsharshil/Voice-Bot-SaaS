@@ -39,6 +39,9 @@ ROLE_STRATEGY_MAP = {
     "Shreyas Sports Advisor Gujarati": "shreyas_gu_strategy",
     "Raahi iiiEM Export Advisor": "raahi_iiiem_strategy",
     "Raahi Triple iEM Advisor": "raahi_iiiem_strategy",
+    "Priya Naavya AI Advisor": "priya_naavya_strategy",
+    "Priya Naavya Advisor": "priya_naavya_strategy",
+    "Naavya.ai MSME Advisor": "priya_naavya_strategy",
 }
 
 
@@ -47,4 +50,6 @@ def get_role_strategy(role_name: str):
         return "automobile"
     if "raahi" in role_name.lower():
         return "raahi_iiiem_strategy"
+    if "priya" in role_name.lower():
+        return "priya_naavya_strategy"
     return ROLE_STRATEGY_MAP.get(role_name, "automobile")

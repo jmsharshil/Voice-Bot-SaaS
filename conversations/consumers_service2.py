@@ -1,3 +1,4 @@
+import random
 from urllib.parse import parse_qs
 import audioop
 from asgiref.sync import sync_to_async
@@ -723,7 +724,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
-            elif strategy_key == "kia_syros_strategy":
+            elif strategy_key in ["kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy"]:
                 tts_lang = "hi"
             else:
                 tts_lang = "en"
@@ -773,6 +774,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     greeting = f"{name_part}, export start karna hai ya already export kar rahe hain?"
                 else:
                     greeting = "Namaste! Main Raahi, Triple i E M se. Aapka naam?"
+            elif strategy_key == "priya_naavya_strategy":
+                import random
+                from priya_naavya_bot.strategy import OPENING_VARIANTS
+                greeting = random.choice(OPENING_VARIANTS)
             else:
                 greeting = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. kya aap abhi baat kar sakte hain?"
             
@@ -842,11 +847,13 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             greeting_file = "kia_syros_bot/kia_syros_greeting.raw"
         elif self.strategy_key == "raahi_iiiem_strategy":
             greeting_file = "raahi_iiiem_bot/raahi_greeting.raw"
+        elif self.strategy_key == "priya_naavya_strategy":
+            greeting_file = None
         else:
             greeting_file = f"{self.language}_step1_greeting.raw"
             
         is_dynamic_greeting = (
-            (self.strategy_key == "raahi_iiiem_strategy" and customer_name is not None and customer_name.lower() != "user")
+            (self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy"])
             or (self.strategy_key == "samsung_store_strategy" and customer_name is not None)
             or (self.strategy_key == "kia_syros_strategy")
             or (self.strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"])
@@ -855,7 +862,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy", "raahi_iiiem_strategy"
+                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy"
             ])
         )
         
@@ -866,7 +873,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         # Record the greeting message in the database so it appears in the chat transcript
         await save_message(self.conversation, "bot", greeting_text)
 
-        local_greeting_path = os.path.join("mp3_responses", greeting_file)
+        local_greeting_path = os.path.join("mp3_responses", greeting_file) if greeting_file else None
         # Check if pre-synthesized dynamic greeting exists
         clean_phone = "".join(filter(str.isdigit, str(self.user_number)))[-10:] if self.user_number else ""
         pre_synthesized_path = os.path.join("mp3_responses", f"pre_synthesized_{self.agent_id}_{clean_phone}.raw")
@@ -892,7 +899,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             # ⚡ INSTANT: stream pre-synthesized bytes directly — zero TTS latency
             print("⚡ Greeting served from audio cache (0ms TTS)")
             self.tts_task = asyncio.create_task(self._stream_cached_greeting(cached_audio))
-        elif os.path.exists(local_greeting_path):
+        elif local_greeting_path and os.path.exists(local_greeting_path):
             print(f"🚀 INSTANT GREETING: Found local file {local_greeting_path}")
             with open(local_greeting_path, "rb") as f:
                 ulaw_bytes = f.read()
@@ -2270,7 +2277,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         is_kia_syros = (lang == "hi" and getattr(self, "strategy_key", None) == "kia_syros_strategy")
         is_shreyas_en = (lang == "en" and getattr(self, "strategy_key", None) == "shreyas_strategy")
         is_raahi = (getattr(self, "strategy_key", None) == "raahi_iiiem_strategy")
-        if lang == "gu" or is_loan_hi or is_shreyas_en or is_kia_syros or is_raahi:
+        is_priya_naavya = (getattr(self, "strategy_key", None) == "priya_naavya_strategy")
+        if lang == "gu" or is_loan_hi or is_shreyas_en or is_kia_syros or is_raahi or is_priya_naavya:
             import requests
             api_key = os.getenv("SARVAM_API_KEY")
             api_url = "https://api.sarvam.ai/text-to-speech/stream"
@@ -2287,15 +2295,15 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 clean_text = clean_text.replace("-", " ")
                 clean_text = re.sub(r'\b5\b', 'five', clean_text)
                 clean_text = re.sub(r'\b10\b', 'ten', clean_text)
-            if is_raahi:
+            if is_raahi or is_priya_naavya:
                 clean_text = clean_text.replace("WhatsApp", "whats app").replace("whatsapp", "whats app")
-            is_eng_reply = is_shreyas_en or (is_raahi and (any(clean_text.lower().startswith(w) for w in ["hello", "thank", "great", "alright", "perfect", "in short", "the booking", "should i", "would you", "shall i", "yes"]) or any(w in clean_text.lower() for w in ["guidance", "exporting", "decided", "rupees", "details"])))
-            target_lang = "en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi) else "gu-IN")
-            speaker = "ishita" if is_raahi else ("shreya" if (is_shreyas_en or is_kia_syros) else ("shubh" if is_loan_hi else "ishita"))
+            is_eng_reply = is_shreyas_en or ((is_raahi or is_priya_naavya) and (any(clean_text.lower().startswith(w) for w in ["hello", "thank", "great", "alright", "perfect", "in short", "the booking", "should i", "would you", "shall i", "yes"]) or any(w in clean_text.lower() for w in ["guidance", "exporting", "decided", "rupees", "details"])))
+            target_lang = "en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya) else "gu-IN")
+            speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if (is_shreyas_en or is_kia_syros) else ("shubh" if is_loan_hi else "ishita"))
             if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                 speaker = "ishita"
             is_shreyas_gu = getattr(self, "strategy_key", None) == "shreyas_gu_strategy"
-            pace = 1.02 if is_raahi else (1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if is_kia_syros else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1.15))))))
+            pace = 1.02 if (is_raahi or is_priya_naavya) else (1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if is_kia_syros else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1.15))))))
             temp = 0.50 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
 
             # Normalise clean_text for cache key (lowercase, strip punctuation)
@@ -2622,6 +2630,12 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         lang = tts_language or self.language
 
         try:
+            # Strip backend control tags before speech synthesis
+            for _tag in ["[BOOKING_CONFIRMED]", "[END_CALL]", "[NOT_INTERESTED]", "[LEAD_COMPLETE]", "[HUMAN_HANDOFF]"]:
+                text = text.replace(_tag, "")
+            text = re.sub(r'\[\s*STAGE:[^\]]*\]', '', text, flags=re.I).strip()
+            text = re.sub(r'\[\s*PLAY_AUDIO:[^\]]*\]', '', text, flags=re.I).strip()
+
             sentences = split_into_sentences(text)
             audio_queue = asyncio.Queue()
 
@@ -2640,21 +2654,26 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     except asyncio.TimeoutError:
                         print(f"❌ TTS TIMEOUT for sentence: {sentence[:40]}")
                         ulaw = b""
-                    await audio_queue.put(ulaw)
+                    
+                    is_last_sentence = (i == len(sentences) - 1)
+                    if ulaw:
+                        await audio_queue.put((ulaw, is_last_sentence))
+                    
                     # Natural inter-sentence pause (skip after last sentence)
-                    if i < len(sentences) - 1 and ulaw:
+                    if not is_last_sentence and ulaw:
                         pause_frames = SILENCE_FRAME * 6  # ~120ms natural gap
-                        await audio_queue.put(pause_frames)
+                        await audio_queue.put((pause_frames, False))
                 await audio_queue.put(None)
 
             async def consumer():
                 while True:
-                    ulaw = await audio_queue.get()
-                    if ulaw is None:
+                    item = await audio_queue.get()
+                    if item is None:
                         break
+                    ulaw, is_last = item
                     if not self.is_bot_speaking:
                         break
-                    await self._stream_ulaw(ulaw)
+                    await self._stream_ulaw(ulaw, is_final_chunk=is_last)
 
             producer_task = asyncio.create_task(producer())
             consumer_task = asyncio.create_task(consumer())
