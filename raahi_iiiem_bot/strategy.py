@@ -84,13 +84,22 @@ def raahi_iiiem_strategy(agent, message, session, **kwargs):
 
     history_text = get_db_history_text(session.session_id)
 
+    # 📚 RAG Retrieval (FAISS Semantic Search + Keyword Matching)
+    try:
+        from knowledge.services.retriever import retrieve_relevant_chunks
+        rag_context = retrieve_relevant_chunks(agent, raw_message) or ""
+    except Exception as e:
+        logger.error(f"RAG retrieval error for Raahi: {e}")
+        rag_context = ""
+
     system_prompt = RAAHI_IIIEM_SYSTEM_PROMPT.format(
         agent_name=agent.name or AGENT_NAME,
         company_name=agent.company_name or COMPANY_NAME,
         history_text=history_text,
         current_stage=current_stage,
         customer_name=customer_name,
-        user_message=raw_message
+        user_message=raw_message,
+        rag_context=rag_context
     )
 
     from conversations.services.azure_openai_service import generate_response
@@ -169,13 +178,22 @@ def raahi_iiiem_prepare(agent, message, session, detected_language=None, **kwarg
     customer_name = state.get("customer_name", "Ji")
     history_text = get_db_history_text(session.session_id)
 
+    # 📚 RAG Retrieval (FAISS Semantic Search + Keyword Matching)
+    try:
+        from knowledge.services.retriever import retrieve_relevant_chunks
+        rag_context = retrieve_relevant_chunks(agent, raw_message) or ""
+    except Exception as e:
+        logger.error(f"RAG retrieval error for Raahi: {e}")
+        rag_context = ""
+
     system_prompt = RAAHI_IIIEM_SYSTEM_PROMPT.format(
         agent_name=agent.name or AGENT_NAME,
         company_name=agent.company_name or COMPANY_NAME,
         history_text=history_text,
         current_stage=current_stage,
         customer_name=customer_name,
-        user_message=raw_message
+        user_message=raw_message,
+        rag_context=rag_context
     )
 
     return {
