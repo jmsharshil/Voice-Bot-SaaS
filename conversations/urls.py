@@ -4,8 +4,10 @@ from .views import (
     call_analytics_page, call_analytics_data, call_analytics_session,
     call_analytics_per_bot,
     lead_analysis_page, lead_analysis_data, lead_analysis_detail, update_lead_level,
-    telecom_cdr_webhook, telecom_cdr_list,
+    telecom_cdr_webhook, telecom_cdr_list, icemake_webhook,
     minutes_usage_api,
+    icemake_dashboard_page, icemake_dashboard_data,
+    proxy_audio,
 )
 from django.urls import path
 
@@ -29,8 +31,14 @@ urlpatterns = [
     path("lead-analysis/detail/<str:session_id>/", lead_analysis_detail),
     path("lead-analysis/update-level/<str:session_id>/", update_lead_level),
 
-    # Telecom CDR Webhook
+    # Ice Make Support Dashboard
+    path("icemake-dashboard/", icemake_dashboard_page, name="icemake-dashboard"),
+    path("icemake-dashboard/data/", icemake_dashboard_data, name="icemake-dashboard-data"),
+    path("proxy-audio/", proxy_audio, name="proxy-audio"),
+
+    # Telecom CDR & Ice Make Webhooks
     path("webhook/cdr/", telecom_cdr_webhook),
+    path("webhook/icemake/", icemake_webhook),
     path("cdr/list/", telecom_cdr_list),
 
     # Minutes Usage

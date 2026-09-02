@@ -1312,23 +1312,62 @@ from datetime import datetime as dt
 from django.db import IntegrityError, transaction
 
 
+@api_view(["GET", "POST"])
+def icemake_webhook(request):
+    """
+    Flexible webhook endpoint for Ice Make telecom trunk.
+    Handles both incoming call setup (inbound twiml) and post-call CDR webhook.
+    """
+    try:
+        raw_data = getattr(request, "data", {}) or {}
+        if not raw_data and request.body:
+            import json
+            try:
+                raw_data = json.loads(request.body.decode("utf-8"))
+            except Exception:
+                raw_data = {}
+
+        pass
+    except Exception as e:
+        raw_data = getattr(request, "data", {}) or {}
+
+    # Check if CDR post-call webhook payload
+    if "call" in raw_data or "recording_url" in raw_data or "duration" in raw_data or "call_id" in raw_data or "event" in raw_data:
+        return _process_telecom_cdr_request(request, raw_data)
+
+    # Route to inbound call handler
+    try:
+        from bot.views import inbound_call_webhook
+        return inbound_call_webhook(request)
+    except Exception as e_inb:
+        print(f"[ICEMAKE-WEBHOOK] Inbound delegate error: {e_inb}")
+        return Response({"status": "ok"}, status=200)
+
 @api_view(["POST"])
 def telecom_cdr_webhook(request):
+    raw_data = request.data or {}
+    return _process_telecom_cdr_request(request, raw_data)
+
+def safe_int_val(val, default=0):
+    if not val:
+        return default
+    try:
+        return int(float(str(val)))
+    except Exception:
+        return default
+
+def _process_telecom_cdr_request(request, raw_data):
     """
-    Receives Call Detail Record from telecom system after each call ends.
-    Matches recording_file_name (minus .wav) to Conversation.session_id.
-    No authentication required (as per telecom team agreement).
+    Internal helper to process CDR webhook data from Service 1 or Service 2.
     """
-    raw_data = request.data
-    print(f"[CDR-WEBHOOK] Incoming payload: {raw_data}")
 
     # Normalize Service 2 format to internal schema format
     if "call" in raw_data:
         call_data = raw_data["call"]
         event = raw_data.get("event", "")
 
-        # Ignore non-final events (initiated, ringing, etc.) so we only save CDR on completion
-        is_final = event in ["call.completed", "call.failed"]
+        # Accept final call events (completed, failed, ended, or if no event string provided)
+        is_final = not event or event in ["call.completed", "call.failed", "call.ended"]
         if not is_final:
             return Response(
                 {"status": "ignored", "message": f"Non-final event '{event}' ignored"},
@@ -1348,49 +1387,78 @@ def telecom_cdr_webhook(request):
         else:
             direction = "outbound"
 
-        if direction == "inbound":
-            phone_number = call_data.get("from", "")
-            did = call_data.get("to", "")
+        known_dids = [
+            "7971019486", "917971019486",
+            "7971017251", "917971017251",
+            "7969016753", "917969016753",
+            "100259134222", "91100259134222"
+        ]
+
+        # First priority: Direct phone_number field if present (Insurance-Bot / IVRManager format)
+        direct_phone = raw_data.get("phone_number") or raw_data.get("caller_number")
+        if direct_phone and direct_phone != "unknown":
+            clean_dp = "".join(filter(str.isdigit, str(direct_phone)))
+            if not any(b in clean_dp for b in known_dids):
+                phone_number = str(direct_phone).strip()
+                did = str(raw_data.get("did") or call_data.get("from") or call_data.get("to") or "unknown").strip()
+            else:
+                # Direct phone_number was DID -> real caller is in 'did'
+                phone_number = str(raw_data.get("did") or "").strip()
+                did = str(direct_phone).strip()
         else:
-            phone_number = call_data.get("to", "")
-            did = call_data.get("from", "")
+            raw_from = str(call_data.get("from") or "").strip()
+            raw_to = str(call_data.get("to") or "").strip()
+            clean_from = "".join(filter(str.isdigit, raw_from))
+            clean_to = "".join(filter(str.isdigit, raw_to))
+
+            if any(b in clean_from for b in known_dids):
+                # 'from' is DID -> 'to' is REAL CALLER!
+                phone_number = raw_to
+                did = raw_from
+            elif any(b in clean_to for b in known_dids):
+                # 'to' is DID -> 'from' is REAL CALLER!
+                phone_number = raw_from
+                did = raw_to
+            else:
+                phone_number = raw_from if direction == "inbound" else raw_to
+                did = raw_to if direction == "inbound" else raw_from
+
+        print(f"🎯 [CDR RESOLVED USER CALLER NUMBER]: {phone_number} (DID: {did})")
 
         status = call_data.get("status", "")
-        if status == "failed":
+        if status in ["failed", "FAILED"]:
             disposition = "FAILED"
-        elif call_data.get("callStatus") == "NO ANSWER":
+        elif call_data.get("callStatus") in ["NO ANSWER", "NO_ANSWER"]:
             disposition = "NO ANSWER"
-        elif call_data.get("answeredAt") is not None:
+        elif call_data.get("answeredAt") is not None or status in ["ended", "completed"]:
             disposition = "ANSWERED"
         else:
             disposition = "NO ANSWER"
 
         data = {
-            "uniqueid": call_data.get("id"),
-            "ws_session_id": call_data.get("id"),
-            "phone_number": phone_number,
-            "did": did,
-            "duration": call_data.get("durationSec") or 0,
+            "uniqueid": call_data.get("id") or raw_data.get("uniqueid") or f"cdr_{uuid.uuid4().hex[:12]}",
+            "ws_session_id": call_data.get("id") or raw_data.get("ws_session_id"),
+            "phone_number": phone_number or "unknown",
+            "did": did or "unknown",
+            "duration": safe_int_val(call_data.get("durationSec") or raw_data.get("duration")),
             "disposition": disposition,
             "call_type": direction.upper(),
-            "recording_file_name": call_data.get("recordingUrl") or call_data.get("recording_file_name") or "",
-            # Use outboundQueueId or fallback to 0
-            "call_id": custom_params.get("outboundQueueId") or 0,
+            "recording_file_name": call_data.get("recordingUrl") or call_data.get("recording_file_name") or raw_data.get("recording_file_name") or raw_data.get("resource_url") or "",
+            "call_id": safe_int_val(custom_params.get("outboundQueueId") or raw_data.get("call_id")),
         }
 
-        # Parse and format dates to strings so that they can be parsed by existing date parser code below
-        started_at_str = call_data.get("startedAt")
+        # Parse and format dates to strings
+        started_at_str = call_data.get("startedAt") or raw_data.get("calldate") or raw_data.get("callDate")
         if started_at_str:
             try:
-                # ISO to "%Y-%m-%d %H:%M:%S"
                 dt_obj = dt.strptime(started_at_str.split(".")[0].replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
                 data["calldate"] = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
             except Exception:
                 data["calldate"] = started_at_str
         else:
-            data["calldate"] = ""
+            data["calldate"] = dt.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        answered_at_str = call_data.get("answeredAt")
+        answered_at_str = call_data.get("answeredAt") or raw_data.get("answer_time")
         if answered_at_str:
             try:
                 dt_obj = dt.strptime(answered_at_str.split(".")[0].replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
@@ -1400,30 +1468,51 @@ def telecom_cdr_webhook(request):
         else:
             data["answer_time"] = None
     else:
-        # Service 1 format
-        data = raw_data
+        # Service 1 / IVRManager format
+        data = dict(raw_data)
+        data["calldate"] = raw_data.get("calldate") or raw_data.get("callDate") or dt.now().strftime("%Y-%m-%d %H:%M:%S")
+        data["recording_file_name"] = raw_data.get("recording_file_name") or raw_data.get("resource_url") or ""
+        data["duration"] = safe_int_val(raw_data.get("duration") or raw_data.get("call_duration"))
+        data["disposition"] = raw_data.get("disposition") or raw_data.get("call_status") or "ANSWERED"
+        data["call_id"] = safe_int_val(raw_data.get("call_id"))
 
-    # Validate required fields
-    required = ["call_id", "phone_number", "calldate", "did", "uniqueid"]
-    missing = [f for f in required if f not in data]
-    if missing:
-        return Response(
-            {"error": f"Missing required fields: {', '.join(missing)}"},
-            status=400
-        )
+    # Ensure required fields have valid defaults
+    if "call_id" not in data or data["call_id"] is None:
+        data["call_id"] = 0
+    if "phone_number" not in data or not data["phone_number"]:
+        data["phone_number"] = "unknown"
+    if "did" not in data or not data["did"]:
+        data["did"] = "unknown"
+    if "uniqueid" not in data or not data["uniqueid"]:
+        data["uniqueid"] = f"cdr_{uuid.uuid4().hex[:12]}"
+    if "calldate" not in data or not data["calldate"]:
+        data["calldate"] = dt.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Check for duplicate (by uniqueid)
-    if CallDetailRecord.objects.filter(uniqueid=data["uniqueid"]).exists():
-        return Response(
-            {"status": "duplicate", "message": "CDR already received for this uniqueid"},
-            status=200
-        )
+    print("\n" + "─" * 80)
+    print("📋 [NORMALIZED ICEMAKE POST PAYLOAD - IVRManager Format]:")
+    import json
+    normalized_print_payload = {
+        "call_id": data.get("call_id"),
+        "phone_number": data.get("phone_number"),
+        "did": data.get("did"),
+        "uniqueid": data.get("uniqueid"),
+        "call_date": data.get("calldate"),
+        "call_status": data.get("disposition"),
+        "call_duration": str(data.get("duration")),
+        "resource_url": data.get("recording_file_name")
+    }
+    print(json.dumps(normalized_print_payload, indent=2, default=str))
+    print("─" * 80 + "\n")
 
     # Parse dates safely
+    from django.utils import timezone
     try:
         calldate = dt.strptime(data["calldate"], "%Y-%m-%d %H:%M:%S")
     except (ValueError, TypeError):
-        calldate = None
+        calldate = timezone.now()
+
+    if not calldate:
+        calldate = timezone.now()
 
     answer_time = None
     if data.get("answer_time"):
@@ -1448,36 +1537,33 @@ def telecom_cdr_webhook(request):
             conversation = Conversation.objects.filter(stream_sid=ws_sid[7:]).first()
 
         if conversation:
-            # Prevent OneToOne constraint IntegrityError if already linked to a CDR
-            if CallDetailRecord.objects.filter(conversation=conversation).exists():
-                conversation = None
-            else:
-                print(f"PERFECT MATCH: ws_session_id '{ws_sid}' -> Conversation {conversation.id}")
+            print(f"PERFECT MATCH: ws_session_id '{ws_sid}' -> Conversation {conversation.id}")
 
-    # 2. FALLBACK: Match by phone number (last 10 digits) - only match conversations without a CDR
+    # 2. FALLBACK: Match by phone number (last 10 digits) within 15 mins window
     if not conversation:
         raw_phone = data.get("phone_number", "")
-        if raw_phone:
+        if raw_phone and calldate:
+            import datetime
             clean_phone = "".join(filter(str.isdigit, raw_phone))[-10:]
             if clean_phone:
+                time_15m_start = calldate - datetime.timedelta(minutes=15)
+                time_15m_end = calldate + datetime.timedelta(minutes=15)
                 conversation = Conversation.objects.filter(
                     user_number__icontains=clean_phone,
-                    cdr__isnull=True
+                    cdr__isnull=True,
+                    started_at__range=(time_15m_start, time_15m_end)
                 ).order_by("-started_at").first()
                 if conversation:
                     print(f"FALLBACK MATCH: Phone '{clean_phone}' -> Conversation {conversation.id}")
 
     # 3. SECOND FALLBACK: Match by timestamp window (for Service 2 "unknown" phone numbers) - only match conversations without a CDR
     if not conversation:
-        # Find recently started conversations for this agent/queue that are still marked "unknown"
-        # and started around the same time as this call (within 5 minutes).
         raw_phone = data.get("phone_number", "")
         if raw_phone and calldate:
             import datetime
             time_threshold_start = calldate - datetime.timedelta(minutes=5)
             time_threshold_end = calldate + datetime.timedelta(minutes=5)
             
-            # Find a conversation that started in this time window, is "unknown", and does not have a CDR
             conversation = Conversation.objects.filter(
                 user_number="unknown",
                 cdr__isnull=True,
@@ -1487,106 +1573,100 @@ def telecom_cdr_webhook(request):
             if conversation:
                 print(f"CDR TIMESTAMP MATCH: Linked unmatched 'unknown' Conversation {conversation.id} to phone {raw_phone}")
 
+    # 4. THIRD FALLBACK: Match latest active conversation created around calldate (within 15 mins)
+    if not conversation and calldate:
+        import datetime
+        time_start = calldate - datetime.timedelta(minutes=15)
+        time_end = calldate + datetime.timedelta(minutes=15)
+        conversation = Conversation.objects.filter(
+            started_at__range=(time_start, time_end)
+        ).order_by("-started_at").first()
+
     if conversation:
         matched = True
-        # Sync call type if mismatch
         if conversation.call_type != data.get("call_type"):
             conversation.call_type = data.get("call_type")
             conversation.save(update_fields=["call_type"])
-            print(f"💾 Updated Conversation {conversation.id} call_type to '{conversation.call_type}' from CDR")
 
-        # If the conversation user_number is "unknown", empty, or equals the bot's DID (since it should be the customer's number), update it
-        bot_did = data.get("did", "")
-        clean_bot_did = "".join(filter(str.isdigit, bot_did))[-10:] if bot_did else ""
-        conv_user_clean = "".join(filter(str.isdigit, conversation.user_number))[-10:] if conversation.user_number else ""
-        
-        should_update_phone = (
-            conversation.user_number == "unknown" or 
-            not conversation.user_number or 
-            (clean_bot_did and conv_user_clean == clean_bot_did)
-        )
-        if should_update_phone:
+        if data.get("phone_number") and data.get("phone_number") != "unknown":
             conversation.user_number = data.get("phone_number", "")
             conversation.save(update_fields=["user_number"])
-            print(f"💾 Updated Conversation {conversation.id} user_number to '{conversation.user_number}' from CDR")
-    else:
-        print(f"NO MATCH: CDR saved but no matching conversation found.")
 
-    # Check again for duplicate uniqueid right before downloading/uploading to Azure
-    if CallDetailRecord.objects.filter(uniqueid=data["uniqueid"]).exists():
-        return Response(
-            {"status": "duplicate", "message": "CDR already received for this uniqueid"},
-            status=200
-        )
-
-    # 3. Handle Recording (Download from provider and upload to Azure)
+    # Handle Recording (Download from provider and upload to Azure)
     rec_file = data.get("recording_file_name", "")
     if rec_file:
-        # Normalize original URL if needed
         if not rec_file.startswith("http"):
             original_url = f"https://voice-bot.on-forge.com/recordings/{rec_file}"
         else:
             original_url = rec_file
         
-        # Upload to Azure
         azure_service = AzureBlobService()
         azure_url = azure_service.download_and_upload(original_url, data.get("phone_number", "unknown"))
         
-        # If azure upload worked, use that URL. Otherwise fallback to provider URL.
         if azure_url:
             rec_file = azure_url
         else:
             rec_file = original_url
 
-    # Save CDR safely with atomic transaction to handle concurrent duplicate webhooks
-    try:
-        with transaction.atomic():
-            cdr = CallDetailRecord.objects.create(
-                conversation=conversation,
-                telecom_call_id=data.get("call_id", 0),
-                phone_number=data.get("phone_number", ""),  # Customer Number
-                calldate=calldate,
-                did=data.get("did", ""),                     # Bot DID Number
-                duration=data.get("duration", 0),
-                disposition=data.get("disposition", "ANSWERED"),
-                call_type=data.get("call_type", "OUTBOUND"),
-                answer_time=answer_time,
-                uniqueid=data["uniqueid"],
-                recording_file_name=rec_file,
-                matched=matched,
-            )
-    except IntegrityError as e:
-        print(f"⚠️ IntegrityError while saving CDR (uniqueid={data.get('uniqueid')}): {e}")
+    # Save or update CDR safely
+    existing_cdr = None
+    if conversation:
+        existing_cdr = CallDetailRecord.objects.filter(conversation=conversation).first()
+    if not existing_cdr and data.get("uniqueid"):
         existing_cdr = CallDetailRecord.objects.filter(uniqueid=data["uniqueid"]).first()
-        if existing_cdr:
-            return Response(
-                {"status": "duplicate", "message": "CDR already received for this uniqueid", "cdr_id": existing_cdr.id},
-                status=200
-            )
-        # If conversation OneToOne constraint caused collision, attempt saving with conversation=None
-        if conversation and CallDetailRecord.objects.filter(conversation=conversation).exists():
-            try:
-                with transaction.atomic():
-                    cdr = CallDetailRecord.objects.create(
-                        conversation=None,
-                        telecom_call_id=data.get("call_id", 0),
-                        phone_number=data.get("phone_number", ""),
-                        calldate=calldate,
-                        did=data.get("did", ""),
-                        duration=data.get("duration", 0),
-                        disposition=data.get("disposition", "ANSWERED"),
-                        call_type=data.get("call_type", "OUTBOUND"),
-                        answer_time=answer_time,
-                        uniqueid=data["uniqueid"],
-                        recording_file_name=rec_file,
-                        matched=False,
-                    )
-                    matched = False
-            except IntegrityError:
-                existing_cdr = CallDetailRecord.objects.filter(uniqueid=data["uniqueid"]).first()
+
+    if existing_cdr:
+        existing_cdr.recording_file_name = rec_file or existing_cdr.recording_file_name
+        existing_cdr.duration = safe_int_val(data.get("duration"), existing_cdr.duration)
+        existing_cdr.disposition = data.get("disposition", existing_cdr.disposition)
+        existing_cdr.answer_time = answer_time or existing_cdr.answer_time
+        if not existing_cdr.uniqueid or existing_cdr.uniqueid == str(data["uniqueid"]):
+            existing_cdr.uniqueid = data["uniqueid"]
+        existing_cdr.matched = True
+        existing_cdr.save()
+        cdr = existing_cdr
+    else:
+        try:
+            with transaction.atomic():
+                cdr = CallDetailRecord.objects.create(
+                    conversation=conversation,
+                    telecom_call_id=safe_int_val(data.get("call_id"), 0),
+                    phone_number=data.get("phone_number", ""),
+                    calldate=calldate,
+                    did=data.get("did", ""),
+                    duration=safe_int_val(data.get("duration"), 0),
+                    disposition=data.get("disposition", "ANSWERED"),
+                    call_type=data.get("call_type", "OUTBOUND"),
+                    answer_time=answer_time,
+                    uniqueid=data.get("uniqueid") or f"cdr_{uuid.uuid4().hex[:12]}",
+                    recording_file_name=rec_file,
+                    matched=matched,
+                )
+        except IntegrityError as e:
+            existing_cdr = CallDetailRecord.objects.filter(uniqueid=data["uniqueid"]).first()
+            if existing_cdr:
+                if rec_file and not existing_cdr.recording_file_name:
+                    existing_cdr.recording_file_name = rec_file
+                    existing_cdr.save(update_fields=["recording_file_name"])
                 return Response(
-                    {"status": "duplicate", "message": "CDR already received for this uniqueid", "cdr_id": existing_cdr.id if existing_cdr else None},
+                    {"status": "duplicate", "message": "CDR already received for this uniqueid", "cdr_id": existing_cdr.id},
                     status=200
+                )
+            else:
+                import uuid
+                cdr = CallDetailRecord.objects.create(
+                    conversation=conversation,
+                    telecom_call_id=safe_int_val(data.get("call_id"), 0),
+                    phone_number=data.get("phone_number", ""),
+                    calldate=calldate,
+                    did=data.get("did", ""),
+                    duration=safe_int_val(data.get("duration"), 0),
+                    disposition=data.get("disposition", "ANSWERED"),
+                    call_type=data.get("call_type", "OUTBOUND"),
+                    answer_time=answer_time,
+                    uniqueid=f"cdr_{uuid.uuid4().hex[:12]}",
+                    recording_file_name=rec_file,
+                    matched=matched,
                 )
         else:
             return Response(
@@ -1603,9 +1683,6 @@ def telecom_cdr_webhook(request):
     if matched:
         result["conversation_id"] = conversation.id
         result["agent_name"] = conversation.agent.name if conversation.agent else None
-        print(f"CDR SUCCESS: {data.get('phone_number')} linked to Conversation {conversation.id}")
-    else:
-        print(f"CDR STORED (unmatched): {data.get('phone_number')}")
 
     # 🔄 AUTO-DIALER: Trigger next call if a campaign is active
     try:
@@ -1761,3 +1838,158 @@ def minutes_usage_api(request):
                 "remaining_minutes": 0,
                 "message": "No bot assigned to this user.",
             })
+
+def icemake_dashboard_page(request):
+    """Renders the ICEMAKE Support & Call Recordings Dashboard page."""
+    from django.shortcuts import render
+    return render(request, "icemake_dashboard.html")
+
+
+@api_view(["GET"])
+def icemake_dashboard_data(request):
+    """
+    Returns JSON array of all IcemakeTicket records joined with CallDetailRecord.
+    """
+    from datetime import timedelta
+    from icemake_bot.models import IcemakeTicket
+    from conversations.models import CallDetailRecord
+
+    tickets = IcemakeTicket.objects.select_related("conversation").order_by("-created_at")
+    
+    data = []
+    for t in tickets[:200]:
+        cdr = None
+        # 1. Direct match on conversation CDR
+        if t.conversation:
+            cdr = CallDetailRecord.objects.filter(conversation=t.conversation).exclude(recording_file_name="").first()
+            if not cdr:
+                cdr = CallDetailRecord.objects.filter(conversation=t.conversation).first()
+        
+        # 2. Match by stream SID if available
+        if (not cdr or not cdr.recording_file_name) and t.conversation and t.conversation.stream_sid:
+            sid = t.conversation.stream_sid.replace("stream_", "")
+            cdr = CallDetailRecord.objects.filter(uniqueid=sid).exclude(recording_file_name="").first()
+            if not cdr:
+                cdr = CallDetailRecord.objects.filter(uniqueid=f"stream_{sid}").exclude(recording_file_name="").first()
+
+        # 3. Match strictly by phone number AND Ice Make strategy key
+        if (not cdr or not cdr.recording_file_name) and t.registered_mobile:
+            clean_reg = "".join(filter(str.isdigit, str(t.registered_mobile)))[-10:]
+            if clean_reg and t.created_at:
+                cdr_phone = CallDetailRecord.objects.filter(
+                    phone_number__icontains=clean_reg,
+                    received_at__gte=t.created_at - timedelta(minutes=15),
+                    received_at__lte=t.created_at + timedelta(minutes=15),
+                    conversation__agent__role_template__role_name__icontains="Ice Make"
+                ).exclude(recording_file_name="").order_by("-received_at").first()
+                if cdr_phone:
+                    cdr = cdr_phone
+
+        rec_url = getattr(cdr, "recording_file_name", "") or ""
+        if rec_url and not rec_url.startswith("http"):
+            if rec_url.startswith("/media/"):
+                rec_url = request.build_absolute_uri(rec_url)
+            else:
+                rec_url = f"https://voice-bot.on-forge.com/recordings/{rec_url}"
+
+        duration = getattr(cdr, "duration", 0) or 0
+        disposition = getattr(cdr, "disposition", "ANSWERED") or "ANSWERED"
+        caller_phone = getattr(cdr, "phone_number", "") or (t.conversation.user_number if t.conversation else t.registered_mobile)
+
+        data.append({
+            "id": t.id,
+            "ticket_number": t.ticket_number,
+            "customer_name": t.customer_name or "Not Provided",
+            "registered_mobile": t.registered_mobile or "Not Provided",
+            "caller_phone": caller_phone or t.registered_mobile or "Not Provided",
+            "city_state": t.city_state or "Not Provided",
+            "company_name": t.company_name or "Not Provided",
+            "machine_model_no": t.machine_model_no or "Not Provided",
+            "issue_type": t.issue_type or "Other",
+            "issue_description": t.issue_description or "Not Provided",
+            "language": t.language,
+            "created_at": t.created_at.strftime("%Y-%m-%d %H:%M:%S") if t.created_at else "",
+            "google_sheet_synced": t.google_sheet_synced,
+            "recording_url": rec_url,
+            "call_duration": duration,
+            "call_status": disposition,
+        })
+
+    return Response({"tickets": data})
+
+
+@api_view(["GET"])
+def proxy_audio(request):
+    """
+    Proxies external audio recording URLs so HTML5 audio element can stream them 
+    inline completely without 'Content-Disposition: attachment' or CORS restrictions.
+    """
+    import requests
+    from django.http import StreamingHttpResponse, HttpResponse
+
+    audio_url = request.GET.get("url")
+    if not audio_url:
+        return HttpResponse("Missing url parameter", status=400)
+
+    try:
+        req = requests.get(audio_url, stream=True, timeout=15)
+        if req.status_code != 200:
+            return HttpResponse("Failed to fetch audio from remote server", status=req.status_code)
+
+        content_type = req.headers.get("Content-Type", "audio/mpeg")
+        response = StreamingHttpResponse(
+            req.iter_content(chunk_size=8192),
+            content_type=content_type
+        )
+        response["Content-Disposition"] = "inline"
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Accept-Ranges"] = "bytes"
+        if "Content-Length" in req.headers:
+            response["Content-Length"] = req.headers["Content-Length"]
+        return response
+    except Exception as e:
+        return HttpResponse(f"Error streaming audio: {str(e)}", status=500)
+
+
+def ranged_media_serve(request, path):
+    """
+    Serves local media files with HTTP 206 Partial Content (Range request) support
+    so HTML5 audio/video elements in Chrome, Edge, and Safari can stream, seek, 
+    and play full audio recordings from start to finish without stopping early.
+    """
+    import os
+    import re
+    from django.conf import settings
+    from django.http import HttpResponse, Http404, FileResponse
+
+    file_path = os.path.join(settings.MEDIA_ROOT, path)
+    if not os.path.exists(file_path):
+        raise Http404("Media file not found")
+
+    file_size = os.path.getsize(file_path)
+    range_header = request.META.get('HTTP_RANGE', '').strip()
+    range_match = re.match(r'bytes=(\d+)-(\d+)?', range_header)
+
+    if range_match:
+        start = int(range_match.group(1))
+        end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+        if start >= file_size:
+            return HttpResponse(status=416)
+        
+        end = min(end, file_size - 1)
+        length = end - start + 1
+
+        with open(file_path, 'rb') as f:
+            f.seek(start)
+            data = f.read(length)
+
+        response = HttpResponse(data, status=206, content_type='audio/mpeg')
+        response['Content-Range'] = f'bytes {start}-{end}/{file_size}'
+        response['Content-Length'] = str(length)
+        response['Accept-Ranges'] = 'bytes'
+        return response
+
+    response = FileResponse(open(file_path, 'rb'), content_type='audio/mpeg')
+    response['Content-Length'] = str(file_size)
+    response['Accept-Ranges'] = 'bytes'
+    return response

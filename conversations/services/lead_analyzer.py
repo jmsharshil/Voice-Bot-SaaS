@@ -51,16 +51,27 @@ def analyze_lead(conversation_id):
         conversation = Conversation.objects.get(id=conversation_id)
         messages = Message.objects.filter(conversation=conversation).order_by("created_at")
 
+        def _save_lead(defaults):
+            import time
+            for attempt in range(4):
+                try:
+                    return LeadAnalysis.objects.update_or_create(
+                        conversation=conversation,
+                        defaults=defaults
+                    )
+                except Exception as e_lock:
+                    if "locked" in str(e_lock).lower() and attempt < 3:
+                        time.sleep(0.5 * (attempt + 1))
+                        continue
+                    raise e_lock
+
         if messages.count() < 2:
             print(f"📊 LEAD ANALYSIS: Very short call ({messages.count()} msgs) — updating lead status.")
-            LeadAnalysis.objects.update_or_create(
-                conversation=conversation,
-                defaults={
-                    "agent": conversation.agent,
-                    "lead_level": "cold",
-                    "summary": "Very short call — user hung up during greeting or short exchange.",
-                }
-            )
+            _save_lead({
+                "agent": conversation.agent,
+                "lead_level": "cold",
+                "summary": "Very short call — user hung up during greeting or short exchange.",
+            })
             return None
 
         # Build transcript
@@ -96,20 +107,17 @@ def analyze_lead(conversation_id):
             lead_level = "cold"
 
         # Save to database
-        lead, created = LeadAnalysis.objects.update_or_create(
-            conversation=conversation,
-            defaults={
-                "agent": conversation.agent,
-                "lead_level": lead_level,
-                "user_name": analysis.get("user_name", "")[:255],
-                "user_email": analysis.get("user_email", "")[:255],
-                "user_phone": analysis.get("user_phone", "")[:50],
-                "interest_topic": analysis.get("interest_topic", "")[:255],
-                "summary": analysis.get("summary", ""),
-                "appointment_date": analysis.get("appointment_date", "")[:255],
-                "raw_analysis": analysis,
-            }
-        )
+        lead, created = _save_lead({
+            "agent": conversation.agent,
+            "lead_level": lead_level,
+            "user_name": analysis.get("user_name", "")[:255],
+            "user_email": analysis.get("user_email", "")[:255],
+            "user_phone": analysis.get("user_phone", "")[:50],
+            "interest_topic": analysis.get("interest_topic", "")[:255],
+            "summary": analysis.get("summary", ""),
+            "appointment_date": analysis.get("appointment_date", "")[:255],
+            "raw_analysis": analysis,
+        })
 
         status = "created" if created else "updated"
         print(

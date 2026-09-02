@@ -168,6 +168,17 @@ except ImportError:
     raahi_iiiem_prepare = None
     raahi_iiiem_finalize = None
 
+try:
+    from icemake_bot.strategy import (
+        icemake_strategy,
+        icemake_prepare,
+        icemake_finalize,
+    )
+except ImportError:
+    icemake_strategy = None
+    icemake_prepare = None
+    icemake_finalize = None
+
 from conversations.services.core.behavior_router import get_role_strategy
 from agents.models import VoiceAgent
 from django.core.cache import cache
@@ -207,6 +218,8 @@ if shreyas_gu_strategy:
     STRATEGY_MAP["shreyas_gu_strategy"] = shreyas_gu_strategy
 if raahi_iiiem_strategy:
     STRATEGY_MAP["raahi_iiiem_strategy"] = raahi_iiiem_strategy
+if icemake_strategy:
+    STRATEGY_MAP["icemake"] = icemake_strategy
 
 # ⚡ Streaming support — strategies that support prepare/finalize split
 PREPARE_MAP = {
@@ -244,6 +257,8 @@ if shreyas_gu_prepare:
     PREPARE_MAP["shreyas_gu_strategy"] = shreyas_gu_prepare
 if raahi_iiiem_prepare:
     PREPARE_MAP["raahi_iiiem_strategy"] = raahi_iiiem_prepare
+if icemake_prepare:
+    PREPARE_MAP["icemake"] = icemake_prepare
 
 FINALIZE_MAP = {
     "ai_voice_bot": ai_voice_bot_finalize,
@@ -280,6 +295,8 @@ if shreyas_gu_finalize:
     FINALIZE_MAP["shreyas_gu_strategy"] = shreyas_gu_finalize
 if raahi_iiiem_finalize:
     FINALIZE_MAP["raahi_iiiem_strategy"] = raahi_iiiem_finalize
+if icemake_finalize:
+    FINALIZE_MAP["icemake"] = icemake_finalize
 
 
 def _resolve_agent(agent):

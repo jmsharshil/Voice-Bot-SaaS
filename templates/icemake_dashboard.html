@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ice Make 24x7 - Customer Complaints & Call Recordings Dashboard</title>
+    <!-- Google Fonts & FontAwesome icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-light: #f8fafc;
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+            --primary-indigo: #4f46e5;
+            --primary-hover: #4338ca;
+            --primary-glow: rgba(79, 70, 229, 0.2);
+            --accent-cyan: #0891b2;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --success-green: #16a34a;
+            --warning-amber: #d97706;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #f1f5f9;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 1.5rem 2rem;
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1rem 1.5rem;
+            background: #ffffff;
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .brand-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: white;
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        .brand-text h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-text p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #15803d;
+            padding: 0.4rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #16a34a;
+            border-radius: 50%;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+        }
+
+        /* Stats Row */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .stat-icon.blue { background: #e0e7ff; color: #4f46e5; }
+        .stat-icon.cyan { background: #ecfeff; color: #0891b2; }
+        .stat-icon.green { background: #f0fdf4; color: #16a34a; }
+        .stat-icon.amber { background: #fffbeb; color: #d97706; }
+
+        .stat-info h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+        }
+
+        .stat-info p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Controls / Search Bar */
+        .controls-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-box input {
+            width: 100%;
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 0.65rem 1rem 0.65rem 2.6rem;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary-indigo);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .select-input {
+            background: #f8fafc;
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 0.65rem 1rem;
+            color: var(--text-main);
+            font-size: 0.88rem;
+            font-family: inherit;
+            outline: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .select-input option {
+            background: #ffffff;
+            color: var(--text-main);
+        }
+
+        .btn-refresh {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0.65rem 1.2rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.25);
+        }
+
+        .btn-refresh:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+        }
+
+        /* Complaints Table Container */
+        .table-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.72rem;
+            letter-spacing: 0.05em;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #f1f5f9;
+            vertical-align: middle;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: #f8fafc;
+        }
+
+        .ticket-badge {
+            background: #e0e7ff;
+            border: 1px solid #c7d2fe;
+            color: #4338ca;
+            font-family: monospace;
+            font-size: 0.85rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 700;
+            display: inline-block;
+        }
+
+        .product-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 0.3rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .sheet-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.82rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .sheet-badge.synced {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .sheet-badge.pending {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        /* Custom Audio Player & Sticky Player Dock */
+        .play-ticket-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.9rem;
+            background: #e0e7ff;
+            color: #4338ca;
+            border: 1px solid #c7d2fe;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .play-ticket-btn:hover {
+            background: #4f46e5;
+            color: #ffffff;
+            border-color: #4f46e5;
+            transform: translateY(-1px);
+        }
+
+        .play-ticket-btn.playing {
+            background: #10b981;
+            color: #ffffff;
+            border-color: #10b981;
+        }
+
+        .sticky-audio-bar {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            max-width: 920px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+            border-radius: 16px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sticky-audio-bar.hidden {
+            display: none !important;
+        }
+
+        .sticky-track-details {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 220px;
+        }
+
+        .sticky-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #e0e7ff;
+            color: #4f46e5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .sticky-track-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .sticky-track-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .sticky-controls {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-grow: 1;
+            max-width: 480px;
+        }
+
+        .sticky-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: #f1f5f9;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .sticky-btn:hover {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        .sticky-btn.play {
+            background: #4f46e5;
+            color: #ffffff;
+            width: 40px;
+            height: 40px;
+            font-size: 1.05rem;
+        }
+
+        .sticky-btn.play:hover {
+            background: #4338ca;
+            transform: scale(1.05);
+        }
+
+        .sticky-slider {
+            flex-grow: 1;
+            height: 6px;
+            border-radius: 3px;
+            accent-color: #4f46e5;
+            cursor: pointer;
+        }
+
+        .sticky-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .no-rec {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+
+        /* Empty State */
+        .empty-state {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+        }
+    </style>
+    <script src="/static/js/auth_helper.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <header>
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-snowflake"></i>
+            </div>
+            <div class="brand-text">
+                <h1>Ice Make Support Dashboard</h1>
+                <p>24x7 Customer Complaint Records & Call Audio Recordings</p>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="live-badge">
+                <div class="pulse-dot"></div>
+                Live Service Active
+            </div>
+            <button id="logoutBtn" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem;">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </button>
+        </div>
+    </header>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="fa-solid fa-ticket"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="statTotalComplaints">0</h3>
+                <p>Total Complaints Logged</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon cyan">
+                <i class="fa-solid fa-microphone"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="statRecordedCalls">0</h3>
+                <p>Call Audio Recordings</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="fa-solid fa-file-excel"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="statSyncedSheet">0</h3>
+                <p>Synced to Google Sheet</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon amber">
+                <i class="fa-solid fa-icicles"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="statProducts">Freezer, Chiller</h3>
+                <p>Supported Products</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-card">
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" placeholder="Search by Ticket ID, Customer Name, Phone, City, Product...">
+        </div>
+        <div class="filter-group">
+            <select id="productFilter" class="select-input">
+                <option value="ALL">All Products</option>
+                <option value="Blast Freezer">Blast Freezer</option>
+                <option value="Chiller">Chiller</option>
+                <option value="Freezer">Freezer</option>
+                <option value="Other">Other</option>
+            </select>
+
+            <select id="syncFilter" class="select-input">
+                <option value="ALL">All Sync Status</option>
+                <option value="SYNCED">Google Sheet Synced</option>
+                <option value="PENDING">Pending</option>
+            </select>
+
+            <button class="btn-refresh" onclick="fetchTickets()">
+                <i class="fa-solid fa-rotate-right"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-card">
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ticket ID</th>
+                        <th>Customer Details</th>
+                        <th>Location / State</th>
+                        <th>Product</th>
+                        <th>Issue Summary</th>
+                        <th style="min-width: 350px;">Call Recording</th>
+                        <th>Sheet Status</th>
+                        <th>Date & Time</th>
+                    </tr>
+                </thead>
+                <tbody id="ticketsTbody">
+                    <!-- Dynamic Rows Insertion -->
+                </tbody>
+            </table>
+        </div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fa-solid fa-inbox"></i>
+            <h3>No Customer Complaints Found</h3>
+            <p>New complaints will automatically appear here live.</p>
+        </div>
+</div>
+
+<!-- Sticky Audio Player Dock -->
+<div id="stickyAudioBar" class="sticky-audio-bar hidden">
+    <div class="sticky-track-details">
+        <div class="sticky-icon"><i class="fa-solid fa-compact-disc fa-spin"></i></div>
+        <div>
+            <div id="stickyTrackInfo" class="sticky-track-title">Ticket Recording</div>
+            <div id="stickyTimeText" class="sticky-track-sub">0:00 / 0:00</div>
+        </div>
+    </div>
+    
+    <div class="sticky-controls">
+        <button id="stickyPlayBtn" class="sticky-btn play" onclick="togglePlayPause()">
+            <i class="fa-solid fa-pause"></i>
+        </button>
+        <input type="range" id="stickySeekSlider" class="sticky-slider" value="0" min="0" max="100" oninput="seekAudio(this.value)">
+    </div>
+
+    <div class="sticky-actions">
+        <a id="stickyDownloadBtn" href="#" target="_blank" download class="sticky-btn" title="Download Audio">
+            <i class="fa-solid fa-download"></i>
+        </a>
+        <button class="sticky-btn" onclick="closeAudioBar()" title="Close Player">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+</div>
+
+<script>
+    let allTickets = [];
+    let currentAudio = new Audio();
+    let activeTicketId = null;
+
+    function formatDuration(seconds) {
+        if (!seconds || isNaN(seconds)) return "0:00";
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    async function fetchTickets() {
+        try {
+            const res = await fetch('/api/icemake-dashboard/data/');
+            const data = await res.json();
+            allTickets = data.tickets || [];
+            updateStats();
+            renderTickets();
+        } catch (err) {
+            console.error("Failed to load tickets:", err);
+        }
+    }
+
+    function updateStats() {
+        const total = allTickets.length;
+        const recCount = allTickets.filter(t => t.recording_url).length;
+        const syncedCount = allTickets.filter(t => t.google_sheet_synced).length;
+
+        document.getElementById('statTotalComplaints').textContent = total;
+        document.getElementById('statRecordedCalls').textContent = recCount;
+        document.getElementById('statSyncedSheet').textContent = syncedCount;
+    }
+
+    function playTicketAudio(ticketId, url, ticketNum, custName) {
+        const bar = document.getElementById("stickyAudioBar");
+        const playBtn = document.getElementById("stickyPlayBtn");
+        const trackInfo = document.getElementById("stickyTrackInfo");
+        const downloadBtn = document.getElementById("stickyDownloadBtn");
+
+        bar.classList.remove("hidden");
+
+        if (activeTicketId === ticketId && !currentAudio.paused) {
+            currentAudio.pause();
+            playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+            updateRowButtons();
+            return;
+        }
+
+        if (activeTicketId !== ticketId) {
+            currentAudio.src = url;
+            activeTicketId = ticketId;
+            trackInfo.innerHTML = `<strong>${ticketNum}</strong> • ${custName}`;
+            downloadBtn.href = url;
+        }
+
+        currentAudio.play().catch(e => console.error("Audio play error:", e));
+        playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+        updateRowButtons();
+    }
+
+    function togglePlayPause() {
+        const playBtn = document.getElementById("stickyPlayBtn");
+        if (!currentAudio.src) return;
+        
+        if (currentAudio.paused) {
+            currentAudio.play();
+            playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+        } else {
+            currentAudio.pause();
+            playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+        }
+        updateRowButtons();
+    }
+
+    function seekAudio(percent) {
+        if (currentAudio.duration && !isNaN(currentAudio.duration)) {
+            currentAudio.currentTime = (percent / 100) * currentAudio.duration;
+        }
+    }
+
+    function closeAudioBar() {
+        if (currentAudio) {
+            currentAudio.pause();
+        }
+        document.getElementById("stickyAudioBar").classList.add("hidden");
+        activeTicketId = null;
+        updateRowButtons();
+    }
+
+    function updateRowButtons() {
+        document.querySelectorAll('.play-ticket-btn').forEach(btn => {
+            const tid = btn.getAttribute('data-ticket-id');
+            const isPlaying = activeTicketId == tid && !currentAudio.paused;
+            if (isPlaying) {
+                btn.classList.add('playing');
+                btn.querySelector('i').className = 'fa-solid fa-pause';
+                btn.querySelector('.btn-label').textContent = 'Playing...';
+            } else {
+                btn.classList.remove('playing');
+                btn.querySelector('i').className = 'fa-solid fa-play';
+                btn.querySelector('.btn-label').textContent = 'Play Audio';
+            }
+        });
+    }
+
+    currentAudio.ontimeupdate = () => {
+        const seekSlider = document.getElementById("stickySeekSlider");
+        const timeText = document.getElementById("stickyTimeText");
+
+        if (currentAudio.duration && !isNaN(currentAudio.duration)) {
+            seekSlider.value = (currentAudio.currentTime / currentAudio.duration) * 100;
+            timeText.textContent = `${formatDuration(currentAudio.currentTime)} / ${formatDuration(currentAudio.duration)}`;
+        }
+    };
+
+    currentAudio.onended = () => {
+        document.getElementById("stickyPlayBtn").innerHTML = '<i class="fa-solid fa-play"></i>';
+        document.getElementById("stickySeekSlider").value = 0;
+        updateRowButtons();
+    };
+
+    function renderTickets() {
+        const tbody = document.getElementById('ticketsTbody');
+        const emptyState = document.getElementById('emptyState');
+        const search = document.getElementById('searchInput').value.toLowerCase().trim();
+        const prodFilter = document.getElementById('productFilter').value;
+        const syncFilter = document.getElementById('syncFilter').value;
+
+        const filtered = allTickets.filter(t => {
+            const matchSearch = 
+                t.ticket_number.toLowerCase().includes(search) ||
+                t.customer_name.toLowerCase().includes(search) ||
+                t.registered_mobile.toLowerCase().includes(search) ||
+                t.caller_phone.toLowerCase().includes(search) ||
+                t.city_state.toLowerCase().includes(search) ||
+                t.machine_model_no.toLowerCase().includes(search) ||
+                t.issue_description.toLowerCase().includes(search);
+
+            const matchProd = prodFilter === 'ALL' || t.machine_model_no.toLowerCase().includes(prodFilter.toLowerCase());
+            const matchSync = syncFilter === 'ALL' || 
+                (syncFilter === 'SYNCED' && t.google_sheet_synced) ||
+                (syncFilter === 'PENDING' && !t.google_sheet_synced);
+
+            return matchSearch && matchProd && matchSync;
+        });
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        
+        tbody.innerHTML = filtered.map(t => {
+            let audioHtml = '';
+            const isPlaying = activeTicketId == t.id && !currentAudio.paused;
+
+            if (t.recording_url) {
+                audioHtml = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button class="play-ticket-btn ${isPlaying ? 'playing' : ''}" data-ticket-id="${t.id}" onclick="playTicketAudio('${t.id}', '${t.recording_url}', '${t.ticket_number}', '${t.customer_name.replace(/'/g, "\\'")}')">
+                            <i class="fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}"></i>
+                            <span class="btn-label">${isPlaying ? 'Playing...' : 'Play Audio'}</span>
+                            <small style="opacity: 0.85; margin-left: 2px;">(${formatDuration(t.call_duration)})</small>
+                        </button>
+                        <a href="${t.recording_url}" target="_blank" download class="download-btn" title="Download Audio" style="color: var(--primary-indigo); font-size: 1.1rem; padding: 4px;">
+                            <i class="fa-solid fa-download"></i>
+                        </a>
+                    </div>
+                `;
+            } else {
+                audioHtml = `<span class="no-rec"><i class="fa-solid fa-volume-xmark"></i> No Audio</span>`;
+            }
+
+            const sheetStatusHtml = t.google_sheet_synced ?
+                `<span class="sheet-badge synced"><i class="fa-solid fa-check-double"></i> Synced</span>` :
+                `<span class="sheet-badge pending"><i class="fa-solid fa-clock"></i> Pending</span>`;
+
+            return `
+                <tr>
+                    <td><span class="ticket-badge">${t.ticket_number}</span></td>
+                    <td>
+                        <strong style="color: var(--text-main); font-size: 0.95rem;">${t.customer_name}</strong>
+                        <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 2px;">
+                            <i class="fa-solid fa-phone"></i> ${t.registered_mobile}
+                        </div>
+                    </td>
+                    <td>
+                        <div style="color: var(--text-main);">${t.city_state}</div>
+                        <div style="color: var(--text-muted); font-size: 0.78rem;">${t.company_name}</div>
+                    </td>
+                    <td>
+                        <span class="product-pill">
+                            <i class="fa-solid fa-box-open"></i> ${t.machine_model_no}
+                        </span>
+                    </td>
+                    <td style="max-width: 260px; line-height: 1.4; color: var(--text-main);">
+                        ${t.issue_description}
+                    </td>
+                    <td>${audioHtml}</td>
+                    <td>${sheetStatusHtml}</td>
+                    <td>
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">${t.created_at}</div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Event Listeners
+    document.getElementById('searchInput').addEventListener('input', renderTickets);
+    document.getElementById('productFilter').addEventListener('change', renderTickets);
+    document.getElementById('syncFilter').addEventListener('change', renderTickets);
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.clear();
+        window.location.replace('/accounts/login/');
+    });
+
+    // Initial Load
+    fetchTickets();
+
+    // Safe Auto-Refresh: Skip DOM re-render while user is actively playing audio!
+    setInterval(() => {
+        if (currentAudio && !currentAudio.paused) return;
+        fetchTickets();
+    }, 10000);
+</script>
+
+</body>
+</html>

@@ -672,7 +672,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             self.language = "en"
         elif strategy_key == "kia_syros_strategy":
             self.language = "hi"
-        elif strategy_key == "raahi_iiiem_strategy":
+        elif strategy_key in ["raahi_iiiem_strategy", "icemake_strategy"]:
             self.language = "auto"
 
         # ── STT SETUP ──────────────────────────────────────────
@@ -723,7 +723,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
-            elif strategy_key == "kia_syros_strategy":
+            elif strategy_key in ["kia_syros_strategy", "icemake"]:
                 tts_lang = "hi"
             else:
                 tts_lang = "en"
@@ -775,6 +775,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     greeting = f"{name_part}, export start karna hai ya already export kar rahe hain?"
                 else:
                     greeting = "Namaste! Main Raahi, Triple i E M se. Aapka naam?"
+            elif strategy_key == "icemake":
+                greeting = "Welcome to Ice Make twenty four by seven service support. आप किस भाषा में बात करना पसंद करेंगे?"
             else:
                 greeting = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. kya aap abhi baat kar sakte hain?"
             
@@ -818,6 +820,9 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         elif self.strategy_key == "kia_syros_strategy":
             self.SPEECH_DETECT_RMS = 150
             self.SILENCE_TRIGGER_SEC = 0.55
+        elif self.strategy_key == "icemake":
+            self.SPEECH_DETECT_RMS = 150
+            self.SILENCE_TRIGGER_SEC = 0.85  # 850ms allows natural pauses during 10-digit phone number recitation
 
         # Determine greeting audio path
         if self.strategy_key == "hospital_minimal":
@@ -844,6 +849,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             greeting_file = "kia_syros_bot/kia_syros_greeting.raw"
         elif self.strategy_key == "raahi_iiiem_strategy":
             greeting_file = "raahi_iiiem_bot/raahi_greeting.raw"
+        elif self.strategy_key == "icemake":
+            greeting_file = "icemake_bot/icemake_greeting.raw"
         else:
             greeting_file = f"{self.language}_step1_greeting.raw"
             
@@ -857,7 +864,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy", "raahi_iiiem_strategy"
+                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy", "raahi_iiiem_strategy", "icemake"
             ])
         )
         
@@ -869,6 +876,9 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         await save_message(self.conversation, "bot", greeting_text)
 
         local_greeting_path = os.path.join("mp3_responses", greeting_file)
+        if not os.path.exists(local_greeting_path) and os.path.exists(greeting_file):
+            local_greeting_path = greeting_file
+
         # Check if pre-synthesized dynamic greeting exists
         clean_phone = "".join(filter(str.isdigit, str(self.user_number)))[-10:] if self.user_number else ""
         pre_synthesized_path = os.path.join("mp3_responses", f"pre_synthesized_{self.agent_id}_{clean_phone}.raw")
@@ -1780,6 +1790,17 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         prep_ms = round((time.time() - t_prep) * 1000)
 
         tts_language = prep_result.get("tts_language", self.language)
+        if tts_language and tts_language != self.language and tts_language in ["gu", "hi", "en", "te"]:
+            print(f"🌐 [DYNAMIC STT SWITCH]: Locking STT recognizer from '{self.language}' to '{tts_language}'")
+            self.language = tts_language
+            try:
+                self.recognizer.stop_continuous_recognition_async()
+                self.recognizer, self.push_stream = create_speech_recognizer(language=self.language)
+                self._setup_stt_callbacks()
+                self.recognizer.start_continuous_recognition_async()
+            except Exception as e_stt:
+                print(f"⚠️ STT switch error: {e_stt}")
+
         skip_output_translation = prep_result.get("skip_output_translation", False)
         skip_input_translation = prep_result.get("skip_input_translation", False)
 
@@ -1917,8 +1938,11 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             text = re.sub(r'PLAY_AUDIO:\s*[a-zA-Z0-9_\-\./]*(?:\.raw)?', '', text, flags=re.I)
             text = re.sub(r'\[\s*PHASE:[^\]]*\]', '', text, flags=re.I)
             text = re.sub(r'PHASE:\s*[a-zA-Z0-9_]*', '', text, flags=re.I)
+            text = re.sub(r'\[.*?\]', '', text)
             for t in ["[BOOKING_CONFIRMED]", "[NOT_INTERESTED]", "[LEAD_COMPLETE]", "[END_CALL]",
-                      "BOOKING_CONFIRMED", "NOT_INTERESTED", "LEAD_COMPLETE", "END_CALL"]:
+                      "[FLOW_COMPLETE]", "[FLOW_COMPLETED]", "[flow_completed]", "[flow_complated]",
+                      "BOOKING_CONFIRMED", "NOT_INTERESTED", "LEAD_COMPLETE", "END_CALL",
+                      "FLOW_COMPLETE", "FLOW_COMPLETED", "flow_completed", "flow_complated"]:
                 text = text.replace(t, "")
             return text.replace("[", "").replace("]", "").strip()
 
@@ -2187,6 +2211,12 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         return speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
 
     def _synthesize_ulaw(self, text: str, language: str = None) -> bytes:
+        import re
+        if text:
+            text = re.sub(r'\[.*?\]', '', text).strip()
+            text = text.replace("[", "").replace("]", "").strip()
+        if not text:
+            return b""
         lang = language or self.language
         is_enogic = (getattr(self, "strategy_key", None) == "enogic_strategy")
         if is_enogic:
@@ -2374,22 +2404,17 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
 
         loop = asyncio.get_event_loop()
 
-        # for _ in range(2):
-        #     if not self.is_bot_speaking:
-        #         return
-        #     await self._send_media_frame(SILENCE_FRAME)
-        #     await asyncio.sleep(0.020)
+        is_initial = getattr(self, "is_playing_greeting", False)
+        if is_initial:
+            for _ in range(8):
+                await self._send_media_frame(b'\xff' * 160)
+                await asyncio.sleep(0.020)
 
         start_time = loop.time()
         for idx, i in enumerate(range(0, len(ulaw), 160)):
             if not self.is_bot_speaking and len(ulaw) - i >= 3200:
                 print("🛑 TTS stopped mid-stream")
                 return
-
-            # Early release of bot_speaking state for the last 400ms (3200 bytes)
-            # to allow natural barge-in overlap at the end of utterances
-            if is_final_chunk and len(ulaw) - i < 3200:
-                self.is_bot_speaking = False
 
             chunk = ulaw[i:i + 160].ljust(160, b'\x7f')
             await self._send_media_frame(chunk)
@@ -2398,6 +2423,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             sleep_duration = target_time - loop.time()
             if sleep_duration > 0:
                 await asyncio.sleep(sleep_duration)
+            else:
+                await asyncio.sleep(0.005)
 
         # for _ in range(2):
         #     if not self.is_bot_speaking:
@@ -2429,7 +2456,9 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         lang = tts_language or self.language
         
         if not skip_local_cache:
-            if getattr(self, "strategy_key", None) == "hospital_minimal":
+            if getattr(self, "strategy_key", None) in ["icemake", "icemake_strategy"]:
+                greeting_file = "icemake_bot/icemake_greeting.raw"
+            elif getattr(self, "strategy_key", None) == "hospital_minimal":
                 greeting_file = "hosp_step1_greeting.raw"
             elif getattr(self, "strategy_key", None) == "loan_strategy":
                 greeting_file = "loan_bot/loan_step1_greeting.raw"
@@ -2451,6 +2480,9 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 greeting_file = f"{lang}_step1_greeting.raw"
                 
             local_greeting = os.path.join("mp3_responses", greeting_file)
+            if not os.path.exists(local_greeting) and os.path.exists(greeting_file):
+                local_greeting = greeting_file
+
             if not skip_local_cache and os.path.exists(local_greeting):
                 print(f"🚀 INSTANT GREETING: Found local file {local_greeting}")
                 with open(local_greeting, "rb") as f:
@@ -2478,12 +2510,14 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         """Stream pre-synthesized greeting bytes — zero Azure TTS round-trip."""
         if not ulaw:
             return
+        self.is_playing_greeting = True
         self.is_bot_speaking = True
         self._mark_bot_speaking_start()
         try:
             await self._stream_ulaw(ulaw)
         finally:
             self.is_bot_speaking = False
+            self.is_playing_greeting = False
             self._mark_bot_speaking_end()
 
     async def _play_samsung_llm_dynamic_greeting(self, customer_name, body_file):

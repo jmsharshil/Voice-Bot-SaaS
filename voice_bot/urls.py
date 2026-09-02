@@ -44,7 +44,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
-from conversations.views import demo_page
+from conversations.views import demo_page, icemake_dashboard_page
 from conversations.views import call_analytics_page, lead_analysis_page, lead_analysis_data, lead_analysis_detail
 # from chat_channels.whatsapp.webhook import whatsapp_webhook
 
@@ -54,6 +54,7 @@ urlpatterns = [
     path("voicebot/", demo_page, name="voicebot"),
     path("analytics/", call_analytics_page, name="navya-analytics"),
     path("dashboard/", lead_analysis_page, name="lead-analysis"),
+    path("icemake-dashboard/", icemake_dashboard_page, name="icemake-dashboard"),
     path("navya-analytics/lead-analysis/data/", lead_analysis_data, name="lead-analysis-data"),
     path("navya-analytics/lead-analysis/detail/<str:session_id>/", lead_analysis_detail, name="lead-analysis-detail"),
     path("accounts/", include("accounts.urls")),
@@ -68,11 +69,9 @@ urlpatterns = [
 
 from django.conf import settings
 from django.urls import re_path
-from django.views.static import serve
+from conversations.views import ranged_media_serve
 
-# Serve media files (profile pictures, etc.) regardless of DEBUG setting.
-# Django's static() helper refuses to work when DEBUG=False, so we use
-# re_path + serve directly so Daphne/ASGI can serve uploaded media.
+# Serve media files with HTTP 206 Byte Range support so HTML5 audio elements can stream complete recordings
 urlpatterns += [
-    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    re_path(r'^media/(?P<path>.*)$', ranged_media_serve),
 ]

@@ -77,6 +77,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 
 INSTALLED_APPS = [
+    'icemake_bot',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -161,7 +162,8 @@ if DEBUG:
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
             'OPTIONS': {
-                'timeout': 20,
+                'timeout': 45,
+                'init_command': 'PRAGMA journal_mode=WAL; PRAGMA busy_timeout=45000; PRAGMA synchronous=NORMAL;',
             }
         }
     }
