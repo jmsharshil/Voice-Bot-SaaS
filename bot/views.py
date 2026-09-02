@@ -3486,11 +3486,11 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
             name_part = name if name and name.lower() not in ["customer", "nan", ""] else "aapse"
             text = f"Hello, kya main {name_part} se baat kar rahi hoon?"
         elif strategy_key == "raahi_iiiem_strategy":
-            name_part = name if name and name.lower() not in ["customer", "user", "nan", ""] else None
+            name_part = name if name and name.lower() not in ["customer", "user", "nan", "ji", ""] else None
             if name_part:
-                text = f"{name_part}, export start karna hai ya already export kar rahe hain?"
+                text = f"Namaste {name_part} ji! Triple i E M mein aapka swagat hai. Main aapki kaise madad kar sakti hoon?"
             else:
-                text = "Namaste! ... Main Raahi, Triple i E M se. Aapka naam?"
+                text = "Hi, I am Raahi calling from Triple i E M, how can I help you today?"
         else:
             text = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. kya aap abhi baat kar sakte hain?"
 
@@ -3525,10 +3525,8 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                 greeting_file = "samsung_bot/samsung_step1_greeting.raw"
             elif strategy_key == "automobile_Naavya":
                 greeting_file = f"Naavya/{language}_step1_greeting.raw"
-            elif strategy_key == "raahi_iiiem_strategy":
-                greeting_file = "raahi_iiiem_bot/raahi_greeting.raw"
-            elif strategy_key == "priya_naavya_strategy":
-                text = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
+            elif strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy"]:
+                text = "Hi, I am Raahi calling from Triple i E M, how can I help you today?"
                 greeting_file = None
             else:
                 greeting_file = f"{language}_step1_greeting.raw"

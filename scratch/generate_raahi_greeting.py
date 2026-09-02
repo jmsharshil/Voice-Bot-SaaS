@@ -22,7 +22,7 @@ headers = {
     "Content-Type": "application/json"
 }
 
-text = "Namaste! ... Main Raahi, Triple i E M se. Aapka naam?"
+text = "Hi, I am Raahi calling from Triple i E M, how can I help you today?"
 
 payload = {
     "text": text,

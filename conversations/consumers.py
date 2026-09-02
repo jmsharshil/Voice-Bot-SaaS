@@ -771,11 +771,11 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 else:
                     greeting = "Hello, kya meri baat aapse ho rahi hai?"
             elif strategy_key == "raahi_iiiem_strategy":
-                name_part = customer_name if (customer_name and customer_name.lower() != "user") else ""
+                name_part = customer_name if (customer_name and customer_name.lower() not in ["user", "ji"]) else ""
                 if name_part:
-                    greeting = f"{name_part}, export start karna hai ya already export kar rahe hain?"
+                    greeting = f"Namaste {name_part} ji! Triple i E M mein aapka swagat hai. Main aapki kaise madad kar sakti hoon?"
                 else:
-                    greeting = "Namaste! Main Raahi, Triple i E M se. Aapka naam?"
+                    greeting = "Hi, I am Raahi calling from Triple i E M, how can I help you today?"
             elif strategy_key == "priya_naavya_strategy":
                 greeting = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
             else:
@@ -845,9 +845,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         elif self.strategy_key == "kia_syros_strategy":
             greeting_file = "kia_syros_bot/kia_syros_greeting.raw"
-        elif self.strategy_key == "raahi_iiiem_strategy":
-            greeting_file = "raahi_iiiem_bot/raahi_greeting.raw"
-        elif self.strategy_key == "priya_naavya_strategy":
+        elif self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy"]:
             greeting_file = None
         else:
             greeting_file = f"{self.language}_step1_greeting.raw"

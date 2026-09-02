@@ -66,11 +66,12 @@ def raahi_iiiem_strategy(agent, message, session, **kwargs):
     # Initial Opening Turn (Zero-Latency Instant Greeting)
     if not state.get("intro_shown"):
         customer_name_input = state.get("customer_name")
-        if customer_name_input and customer_name_input.lower() != "user":
-            reply = f"{customer_name_input}, export start karna hai ya already export kar rahe hain?"
+        if customer_name_input and customer_name_input.lower() not in ["user", "ji"]:
+            reply = f"Namaste {customer_name_input} ji! Triple i E M mein aapka swagat hai. Main aapki kaise madad kar sakti hoon?"
             state["stage"] = STAGE_NEED
+            state["name_greeted"] = True
         else:
-            reply = f"Namaste! Main Raahi, Triple i E M se. Aapka naam?"
+            reply = f"Hi, I am Raahi calling from Triple i E M, how can I help you today?"
             state["stage"] = STAGE_GREET
 
         state["intro_shown"] = True
@@ -195,11 +196,12 @@ def raahi_iiiem_prepare(agent, message, session, detected_language=None, **kwarg
     # Zero Latency Connection Greeting
     if not state.get("intro_shown"):
         customer_name_input = state.get("customer_name")
-        if customer_name_input and customer_name_input.lower() != "user":
-            reply = f"{customer_name_input}, export start karna hai ya already export kar rahe hain?"
+        if customer_name_input and customer_name_input.lower() not in ["user", "ji"]:
+            reply = f"Namaste {customer_name_input} ji! Triple i E M mein aapka swagat hai. Main aapki kaise madad kar sakti hoon?"
             state["stage"] = STAGE_NEED
+            state["name_greeted"] = True
         else:
-            reply = f"Namaste! Main Raahi, Triple i E M se. Aapka naam?"
+            reply = f"Hi, I am Raahi calling from Triple i E M, how can I help you today?"
             state["stage"] = STAGE_GREET
 
         state["intro_shown"] = True

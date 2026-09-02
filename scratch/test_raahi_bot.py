@@ -32,12 +32,10 @@ def test_raahi_clean_llm():
     prep = raahi_iiiem_prepare(agent, msg, session)
     print("System Prompt Length:", len(prep["system_prompt"]))
     print("User Message Passed:", prep["user_message"])
-    assert "CUSTOMER NAME RULE – DO NOT REPEAT NAME" in prep["system_prompt"], "System prompt must contain DO NOT REPEAT NAME rule!"
-    assert "PLAN INFO FIRST vs PRICE SECOND RULE" in prep["system_prompt"], "System prompt must contain PLAN INFO FIRST rule!"
-    assert "NO WHATSAPP OFFER RULE" in prep["system_prompt"], "System prompt must contain NO WHATSAPP OFFER rule!"
-    assert "SINGLE AGENT INTRODUCTION RULE" in prep["system_prompt"], "System prompt must contain SINGLE AGENT INTRODUCTION rule!"
-    assert "TURN 2 WELCOME RULE" in prep["system_prompt"], "System prompt must contain TURN 2 WELCOME rule!"
-    print("✅ Clean Raahi Master Prompt v3.1 & RAG Strategy Execution Test Passed!")
+    assert "IMPORTANT PRONUNCIATION" in prep["system_prompt"], "System prompt must contain IMPORTANT PRONUNCIATION!"
+    assert "CENTRE CONTACT MASTER" in prep["system_prompt"], "System prompt must contain CENTRE CONTACT MASTER!"
+    assert "ETP (EXPORT TRAINING PLAN)" in prep["system_prompt"], "System prompt must contain ETP (EXPORT TRAINING PLAN)!"
+    print("✅ Clean Raahi Master Prompt v3.2 & RAG Strategy Execution Test Passed!")
 
 if __name__ == "__main__":
     test_raahi_clean_llm()
