@@ -1584,8 +1584,9 @@ def _process_telecom_cdr_request(request, raw_data):
 
     if conversation:
         matched = True
-        if conversation.call_type != data.get("call_type"):
-            conversation.call_type = data.get("call_type")
+        new_call_type = data.get("call_type")
+        if new_call_type and conversation.call_type != new_call_type:
+            conversation.call_type = new_call_type
             conversation.save(update_fields=["call_type"])
 
         if data.get("phone_number") and data.get("phone_number") != "unknown":
