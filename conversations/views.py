@@ -1629,6 +1629,10 @@ def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
         existing_cdr = CallDetailRecord.objects.filter(uniqueid=data["uniqueid"]).first()
 
     if existing_cdr:
+        if data.get("phone_number") and data.get("phone_number") != "unknown":
+            existing_cdr.phone_number = data.get("phone_number")
+        if data.get("did") and data.get("did") != "unknown":
+            existing_cdr.did = data.get("did")
         existing_cdr.recording_file_name = rec_file or existing_cdr.recording_file_name
         existing_cdr.duration = safe_int_val(data.get("duration"), existing_cdr.duration)
         existing_cdr.disposition = data.get("disposition", existing_cdr.disposition)

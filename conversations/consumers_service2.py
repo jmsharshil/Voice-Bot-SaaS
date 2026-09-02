@@ -2846,7 +2846,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                             conversation_id=conv_id,
                             defaults={
                                 "telecom_call_id": conv_id,
-                                "phone_number": user_phone or "unknown",
+                                "phone_number": "unknown",
                                 "calldate": timezone.now(),
                                 "did": "919484959435",
                                 "disposition": "ANSWERED",
