@@ -750,6 +750,7 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
         # 2. Wait up to 6 seconds for IVRManager POST API CDR to land if not in DB yet
         if (not cdr or is_bot_did(getattr(cdr, "phone_number", ""))) and is_bot_did(raw_c):
             import time
+            ice_dids = ["7971019486", "917971019486", "+917971019486"]
             for _ in range(3):
                 time.sleep(2)
                 if ticket.conversation:
@@ -762,6 +763,7 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
                 
                 t_time = ticket.created_at
                 for candidate in CallDetailRecord.objects.filter(
+                    did__in=ice_dids,
                     received_at__gte=t_time - timedelta(minutes=15),
                     received_at__lte=t_time + timedelta(minutes=15)
                 ).exclude(phone_number="unknown").order_by("-received_at"):
