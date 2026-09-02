@@ -15,6 +15,10 @@ from raahi_iiiem_bot.strategy import raahi_iiiem_strategy, raahi_iiiem_prepare, 
 
 def test_raahi_clean_llm():
     agent = VoiceAgent.objects.filter(name__icontains="Raahi").first()
+    if not agent:
+        print("Creating mock Raahi agent for test...")
+        agent = VoiceAgent.objects.create(name="Raahi - Triple i E M", company_name="Triple i E M")
+
     session_id = f"test_raahi_clean_{uuid.uuid4().hex[:8]}"
     session, _ = ConversationSession.objects.get_or_create(
         agent=agent,
@@ -23,13 +27,17 @@ def test_raahi_clean_llm():
     session.state = {"intro_shown": True, "stage": "STAGE_1_GREET", "customer_name": "Ayushi"}
     session.save()
 
-    # Test raw prepare execution without Python keyword dictionaries
-    msg = "नो नो आई हैव नॉट डिसाइडिड माइ प्रॉडक्ट।"
+    # Test raw prepare execution
+    msg = "ETP plan ka price aur details kya hai?"
     prep = raahi_iiiem_prepare(agent, msg, session)
     print("System Prompt Length:", len(prep["system_prompt"]))
     print("User Message Passed:", prep["user_message"])
-    assert "CRITICAL BILINGUAL LANGUAGE SWITCHING RULE" in prep["system_prompt"], "System prompt must contain bilingual language rule!"
-    print("Clean LLM Strategy Execution Test Passed!")
+    assert "CUSTOMER NAME RULE – DO NOT REPEAT NAME" in prep["system_prompt"], "System prompt must contain DO NOT REPEAT NAME rule!"
+    assert "PLAN INFO FIRST vs PRICE SECOND RULE" in prep["system_prompt"], "System prompt must contain PLAN INFO FIRST rule!"
+    assert "NO WHATSAPP OFFER RULE" in prep["system_prompt"], "System prompt must contain NO WHATSAPP OFFER rule!"
+    assert "SINGLE AGENT INTRODUCTION RULE" in prep["system_prompt"], "System prompt must contain SINGLE AGENT INTRODUCTION rule!"
+    assert "TURN 2 WELCOME RULE" in prep["system_prompt"], "System prompt must contain TURN 2 WELCOME rule!"
+    print("✅ Clean Raahi Master Prompt v3.1 & RAG Strategy Execution Test Passed!")
 
 if __name__ == "__main__":
     test_raahi_clean_llm()

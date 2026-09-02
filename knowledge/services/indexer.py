@@ -283,19 +283,25 @@ def generate_embeddings_batch(texts: list) -> np.ndarray:
 
 # ── FAISS Index Management ────────────────────────────────────
 
-def build_agent_index(agent):
+def build_agent_index(agent_input):
     """
     Build (or rebuild) the FAISS index for an agent from all their KnowledgeChunks.
     Called by the management command and on first upload.
     """
     from knowledge.models import KnowledgeChunk
+    from agents.models import VoiceAgent
 
     start = time.time()
-    agent_id = str(agent.id)
+    if isinstance(agent_input, VoiceAgent):
+        agent = agent_input
+        agent_id = str(agent.id)
+    else:
+        agent_id = str(agent_input)
+        agent = VoiceAgent.objects.filter(id=agent_id).first()
 
     chunks = list(
         KnowledgeChunk.objects.filter(
-            knowledge_file__agent=agent
+            knowledge_file__agent_id=agent_id
         ).values_list("id", "content")
     )
 

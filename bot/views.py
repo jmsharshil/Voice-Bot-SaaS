@@ -1446,7 +1446,7 @@ def upload_call_file(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
+    BOT_URL = f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
 
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
@@ -1589,7 +1589,7 @@ _missed_calls = []            # Numbers that timed out (No Answer)
 TELECOM_DIAL_URL = "https://app.voicelink.co.in/api/v1/add_lead"
 TELECOM_API_KEY = "729230|7gNpRt1e7KzmxvRkmG5bG9IwJhEQJFXkUri3XtaNfe6bc240"
 CALLER_ID = "+919484959435"
-BOT_URL = "wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
+BOT_URL = "wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
 
 
 def _normalize_phone(phone):
@@ -1614,7 +1614,7 @@ def _get_voicelink_urls(phone, agent_id, language="hi", campaign_id=None):
         domain = parsed.netloc
         ws_scheme = parsed.scheme or "wss"
     except Exception:
-        domain = "voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
+        domain = "nonesthetically-affectional-janel.ngrok-free.dev"
         ws_scheme = "wss"
         
     websocket_url = f"{ws_scheme}://{domain}/ws/voice-bot/service2/?agent_id={agent_id}&language={language}&phone={phone}"
@@ -2248,7 +2248,7 @@ def start_auto_campaign(request):
             "error": "All allocated call credits have been utilized. Please purchase more minutes to resume calling operations."
         }, status=400)
 
-    BOT_URL = f"wss://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net/ws/voice-bot/service2/?agent_id={agent_id}"
+    BOT_URL = f"wss://nonesthetically-affectional-janel.ngrok-free.dev/ws/voice-bot/service2/?agent_id={agent_id}"
 
     if _campaign_active:
         with _call_queue_lock:
@@ -3138,7 +3138,7 @@ def trigger_retry_sub_campaign_if_needed(parent_campaign):
             domain = parsed.netloc
             ws_scheme = parsed.scheme or "wss"
         except Exception:
-            domain = "voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
+            domain = "nonesthetically-affectional-janel.ngrok-free.dev"
             ws_scheme = "wss"
             
         BOT_URL = f"{ws_scheme}://{domain}/ws/voice-bot/service2/?agent_id={agent_id}"
@@ -3491,12 +3491,16 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                 text = f"{name_part}, export start karna hai ya already export kar rahe hain?"
             else:
                 text = "Namaste! ... Main Raahi, Triple i E M se. Aapka naam?"
+        elif strategy_key == "priya_naavya_strategy":
+            text = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
+        elif strategy_key == "icemake":
+            text = "Welcome to Ice Make twenty four by seven service support. आप किस भाषा में बात करना पसंद करेंगे?"
         else:
             text = f"Hello! Main {agent.name} bol rahi hoon {company} se. {summary_txt}." if summary_txt else f"Hello, Main {agent.name} bol rahi hoon {company} se. kya aap abhi baat kar sakte hain?"
 
         # Resolve static greeting mapping if not dynamic
         is_dynamic_greeting = (
-            (strategy_key == "raahi_iiiem_strategy" and name is not None and name.lower() not in ["customer", "user", "nan", ""])
+            (strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy"])
             or (strategy_key == "samsung_store_strategy" and name is not None)
             or (strategy_key == "kia_syros_strategy")
             or (strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"])
@@ -3505,7 +3509,7 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy", "carekay_insurance_strategy", "kia_syros_strategy", "raahi_iiiem_strategy"
+                "carekay_strategy", "carekay_insurance_strategy", "kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy"
             ])
         )
         if not is_dynamic_greeting:
@@ -3527,11 +3531,15 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                 greeting_file = f"Naavya/{language}_step1_greeting.raw"
             elif strategy_key == "raahi_iiiem_strategy":
                 greeting_file = "raahi_iiiem_bot/raahi_greeting.raw"
+            elif strategy_key == "priya_naavya_strategy":
+                text = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
+                greeting_file = None
             else:
                 greeting_file = f"{language}_step1_greeting.raw"
 
-            from conversations.consumers import _AUDIO_TRANSCRIPTIONS
-            text = _AUDIO_TRANSCRIPTIONS.get(greeting_file, text)
+            if greeting_file:
+                from conversations.consumers import _AUDIO_TRANSCRIPTIONS
+                text = _AUDIO_TRANSCRIPTIONS.get(greeting_file, text)
 
         ulaw_bytes = b""
 
@@ -3539,7 +3547,9 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
         is_loan_hi = (tts_lang == "hi" and strategy_key == "loan_strategy")
         is_kia_syros = (strategy_key == "kia_syros_strategy")
         is_raahi = (strategy_key == "raahi_iiiem_strategy")
-        if tts_lang == "gu" or is_loan_hi or is_kia_syros or is_raahi:
+        is_priya_naavya = (strategy_key == "priya_naavya_strategy")
+        is_icemake = (strategy_key == "icemake")
+        if tts_lang == "gu" or is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya or is_icemake:
             api_key = os.getenv("SARVAM_API_KEY")
             if api_key:
                 api_url = "https://api.sarvam.ai/text-to-speech/stream"
@@ -3547,11 +3557,11 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                     "api-subscription-key": api_key,
                     "Content-Type": "application/json"
                 }
-                target_lang = "hi-IN" if (is_loan_hi or is_kia_syros or is_raahi) else "gu-IN"
-                speaker = "ishita" if is_raahi else ("shreya" if is_kia_syros else ("shubh" if is_loan_hi else "ishita"))
+                target_lang = "hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya or is_icemake) else "gu-IN"
+                speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if (is_kia_syros or is_icemake) else ("shubh" if is_loan_hi else "ishita"))
                 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     speaker = "ishita"
-                pace = 1.02 if is_raahi else (1.05 if is_kia_syros else (1.16 if strategy_key in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))))
+                pace = 1.02 if (is_raahi or is_priya_naavya) else (1.05 if (is_kia_syros or is_icemake) else (1.16 if strategy_key in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))))
 
                 temp = 0.50 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
                 

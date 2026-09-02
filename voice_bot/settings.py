@@ -162,8 +162,8 @@ if DEBUG:
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
             'OPTIONS': {
-                'timeout': 45,
-                'init_command': 'PRAGMA journal_mode=WAL; PRAGMA busy_timeout=45000; PRAGMA synchronous=NORMAL;',
+                'timeout': 60,
+                'init_command': 'PRAGMA journal_mode=WAL; PRAGMA busy_timeout=60000; PRAGMA synchronous=NORMAL;',
             }
         }
     }
