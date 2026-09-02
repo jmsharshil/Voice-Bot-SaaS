@@ -774,12 +774,19 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
                 if cdr and not is_bot_did(cdr.phone_number):
                     break
 
-        if cdr and cdr.phone_number and cdr.phone_number != "unknown":
-            calling_number = str(cdr.phone_number)
-        elif raw_c and raw_c != "unknown":
-            calling_number = raw_c
-        else:
-            calling_number = str(ticket.registered_mobile) if ticket.registered_mobile else "Not Provided"
+        def get_clean_caller_number():
+            if cdr and cdr.phone_number and not is_bot_did(cdr.phone_number):
+                return str(cdr.phone_number).strip()
+            if cdr and getattr(cdr, "did", None) and not is_bot_did(cdr.did):
+                return str(cdr.did).strip()
+            if raw_c and not is_bot_did(raw_c):
+                return str(raw_c).strip()
+            reg_mob = str(ticket.registered_mobile or "").strip()
+            if reg_mob and reg_mob.lower() not in ["", "unknown", "not provided"]:
+                return reg_mob
+            return "Not Provided"
+
+        calling_number = get_clean_caller_number()
 
     except Exception as e_call:
         logger.warning("Could not fetch calling number: %s", e_call)
