@@ -1333,7 +1333,10 @@ def icemake_webhook(request):
 
     # Check if CDR post-call webhook payload
     if "call" in raw_data or "recording_url" in raw_data or "duration" in raw_data or "call_id" in raw_data or "event" in raw_data:
-        return _process_telecom_cdr_request(request, raw_data)
+        from agents.models import VoiceAgent
+        ice_agent = VoiceAgent.objects.filter(role_template__role_name__icontains="Ice Make").first()
+        ice_agent_id = str(ice_agent.id) if ice_agent else None
+        return _process_telecom_cdr_request(request, raw_data, target_agent_id=ice_agent_id)
 
     # Route to inbound call handler
     try:
@@ -1356,7 +1359,7 @@ def safe_int_val(val, default=0):
     except Exception:
         return default
 
-def _process_telecom_cdr_request(request, raw_data):
+def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
     """
     Internal helper to process CDR webhook data from Service 1 or Service 2.
     """
@@ -1548,11 +1551,14 @@ def _process_telecom_cdr_request(request, raw_data):
             if clean_phone:
                 time_15m_start = calldate - datetime.timedelta(minutes=15)
                 time_15m_end = calldate + datetime.timedelta(minutes=15)
-                conversation = Conversation.objects.filter(
+                qs = Conversation.objects.filter(
                     user_number__icontains=clean_phone,
                     cdr__isnull=True,
                     started_at__range=(time_15m_start, time_15m_end)
-                ).order_by("-started_at").first()
+                )
+                if target_agent_id:
+                    qs = qs.filter(agent_id=target_agent_id)
+                conversation = qs.order_by("-started_at").first()
                 if conversation:
                     print(f"FALLBACK MATCH: Phone '{clean_phone}' -> Conversation {conversation.id}")
 
@@ -1564,11 +1570,14 @@ def _process_telecom_cdr_request(request, raw_data):
             time_threshold_start = calldate - datetime.timedelta(minutes=5)
             time_threshold_end = calldate + datetime.timedelta(minutes=5)
             
-            conversation = Conversation.objects.filter(
+            qs = Conversation.objects.filter(
                 user_number="unknown",
                 cdr__isnull=True,
                 started_at__range=(time_threshold_start, time_threshold_end)
-            ).order_by("-started_at").first()
+            )
+            if target_agent_id:
+                qs = qs.filter(agent_id=target_agent_id)
+            conversation = qs.order_by("-started_at").first()
             
             if conversation:
                 print(f"CDR TIMESTAMP MATCH: Linked unmatched 'unknown' Conversation {conversation.id} to phone {raw_phone}")
@@ -1578,9 +1587,12 @@ def _process_telecom_cdr_request(request, raw_data):
         import datetime
         time_start = calldate - datetime.timedelta(minutes=15)
         time_end = calldate + datetime.timedelta(minutes=15)
-        conversation = Conversation.objects.filter(
+        qs = Conversation.objects.filter(
             started_at__range=(time_start, time_end)
-        ).order_by("-started_at").first()
+        )
+        if target_agent_id:
+            qs = qs.filter(agent_id=target_agent_id)
+        conversation = qs.order_by("-started_at").first()
 
     if conversation:
         matched = True
