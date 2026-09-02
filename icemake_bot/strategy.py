@@ -747,37 +747,46 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
         if ticket.conversation:
             cdr = CallDetailRecord.objects.filter(conversation=ticket.conversation).exclude(phone_number="unknown").order_by("-received_at").first()
         
-        # 2. Wait up to 6 seconds for IVRManager POST API CDR to land if not in DB yet
-        if (not cdr or is_bot_did(getattr(cdr, "phone_number", ""))) and is_bot_did(raw_c):
+        # 2. Wait up to 8 seconds for IVRManager POST API CDR to land if not in DB yet
+        has_real_cdr_number = cdr and cdr.phone_number and cdr.phone_number != "unknown" and not is_bot_did(cdr.phone_number)
+        if not has_real_cdr_number:
             import time
-            for _ in range(3):
+            ice_dids = ["7971019486", "917971019486", "+917971019486"]
+            for _ in range(4):
                 time.sleep(2)
                 if ticket.conversation:
                     ticket.conversation.refresh_from_db()
-                    curr_c = str(ticket.conversation.user_number or "").strip()
-                    if curr_c and not is_bot_did(curr_c):
-                        raw_c = curr_c
-                        print(f"🎯 [GOOGLE SHEET RESOLVED REAL CALLER FROM CONVERSATION]: {raw_c}")
+                    cdr = CallDetailRecord.objects.filter(conversation=ticket.conversation).exclude(phone_number="unknown").order_by("-received_at").first()
+                    if cdr and cdr.phone_number and not is_bot_did(cdr.phone_number):
+                        print(f"🎯 [GOOGLE SHEET RESOLVED REAL CALLER FROM LINKED CDR]: {cdr.phone_number}")
                         break
                 
                 t_time = ticket.created_at
                 for candidate in CallDetailRecord.objects.filter(
+                    did__in=ice_dids,
                     received_at__gte=t_time - timedelta(minutes=15),
                     received_at__lte=t_time + timedelta(minutes=15)
                 ).exclude(phone_number="unknown").order_by("-received_at"):
                     if candidate.phone_number and not is_bot_did(candidate.phone_number):
                         cdr = candidate
-                        print(f"🎯 [GOOGLE SHEET RESOLVED REAL CALLER FROM CDR]: {cdr.phone_number}")
+                        print(f"🎯 [GOOGLE SHEET RESOLVED REAL CALLER FROM CDR CANDIDATE]: {cdr.phone_number}")
                         break
-                if cdr and not is_bot_did(cdr.phone_number):
+                if cdr and cdr.phone_number and not is_bot_did(cdr.phone_number):
                     break
 
-        if cdr and cdr.phone_number and cdr.phone_number != "unknown":
-            calling_number = str(cdr.phone_number)
-        elif raw_c and raw_c != "unknown":
-            calling_number = raw_c
-        else:
-            calling_number = str(ticket.registered_mobile) if ticket.registered_mobile else "Not Provided"
+        def get_clean_caller_number():
+            if cdr and cdr.phone_number and cdr.phone_number != "unknown" and not is_bot_did(cdr.phone_number):
+                return str(cdr.phone_number).strip()
+            if cdr and getattr(cdr, "did", None) and cdr.did != "unknown" and not is_bot_did(cdr.did):
+                return str(cdr.did).strip()
+            reg_mob = str(ticket.registered_mobile or "").strip()
+            if raw_c and raw_c != "unknown" and not is_bot_did(raw_c) and raw_c != reg_mob:
+                return str(raw_c).strip()
+            if reg_mob and reg_mob.lower() not in ["", "unknown", "not provided"]:
+                return reg_mob
+            return "Not Provided"
+
+        calling_number = get_clean_caller_number()
 
     except Exception as e_call:
         logger.warning("Could not fetch calling number: %s", e_call)
@@ -803,16 +812,23 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
         "date": created_at_str
     }
     
-    if ticket.google_sheet_synced:
-        print(f"[GOOGLE SHEET ALREADY SYNCED]: Ticket #{ticket.ticket_number} already exported to Google Sheet. Skipping.")
-        return
+    # Atomic DB claim to prevent thread race conditions
+    from icemake_bot.models import IcemakeTicket
+    if not force:
+        updated_count = IcemakeTicket.objects.filter(
+            id=ticket.id,
+            google_sheet_synced=False
+        ).update(google_sheet_synced=True)
+        if updated_count == 0:
+            print(f"[GOOGLE SHEET ALREADY CLAIMED]: Ticket #{ticket.ticket_number} already exported to Google Sheet by another thread. Skipping.")
+            return
+    else:
+        ticket.google_sheet_synced = True
+        ticket.save(update_fields=["google_sheet_synced"])
 
     try:
         response = requests.post(url, json=payload, timeout=25, allow_redirects=True)
-        print(f"[Google Sheet Webhook Status]: {response.status_code}, response: {response.text}")
-        if response.status_code == 200:
-            ticket.google_sheet_synced = True
-            ticket.save(update_fields=["google_sheet_synced"])
+        print(f"[Google Sheet Webhook Status]: {response.status_code}, response: {response.text[:200]}")
     except Exception as e:
         logger.error("Failed to append ticket to Google Sheet: %s", e)
 
