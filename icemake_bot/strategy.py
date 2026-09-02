@@ -812,13 +812,19 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
         "date": created_at_str
     }
     
-    if ticket.google_sheet_synced and not force:
-        print(f"[GOOGLE SHEET ALREADY SYNCED]: Ticket #{ticket.ticket_number} already exported to Google Sheet. Skipping.")
-        return
-
-    # Lock ticket against concurrent threads to ensure only 1 single row is written to Google Sheet
-    ticket.google_sheet_synced = True
-    ticket.save(update_fields=["google_sheet_synced"])
+    # Atomic DB claim to prevent thread race conditions
+    from icemake_bot.models import IcemakeTicket
+    if not force:
+        updated_count = IcemakeTicket.objects.filter(
+            id=ticket.id,
+            google_sheet_synced=False
+        ).update(google_sheet_synced=True)
+        if updated_count == 0:
+            print(f"[GOOGLE SHEET ALREADY CLAIMED]: Ticket #{ticket.ticket_number} already exported to Google Sheet by another thread. Skipping.")
+            return
+    else:
+        ticket.google_sheet_synced = True
+        ticket.save(update_fields=["google_sheet_synced"])
 
     try:
         response = requests.post(url, json=payload, timeout=25, allow_redirects=True)
