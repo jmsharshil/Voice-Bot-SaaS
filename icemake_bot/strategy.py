@@ -816,12 +816,13 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
         print(f"[GOOGLE SHEET ALREADY SYNCED]: Ticket #{ticket.ticket_number} already exported to Google Sheet. Skipping.")
         return
 
+    # Lock ticket against concurrent threads to ensure only 1 single row is written to Google Sheet
+    ticket.google_sheet_synced = True
+    ticket.save(update_fields=["google_sheet_synced"])
+
     try:
         response = requests.post(url, json=payload, timeout=25, allow_redirects=True)
-        print(f"[Google Sheet Webhook Status]: {response.status_code}, response: {response.text}")
-        if response.status_code == 200:
-            ticket.google_sheet_synced = True
-            ticket.save(update_fields=["google_sheet_synced"])
+        print(f"[Google Sheet Webhook Status]: {response.status_code}, response: {response.text[:200]}")
     except Exception as e:
         logger.error("Failed to append ticket to Google Sheet: %s", e)
 
