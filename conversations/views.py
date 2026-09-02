@@ -1697,9 +1697,20 @@ def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
         "matched": matched,
     }
 
-    if matched:
+    if matched and conversation:
         result["conversation_id"] = conversation.id
         result["agent_name"] = conversation.agent.name if conversation.agent else None
+
+        # Check if Ice Make Ticket exists for this conversation and re-sync to Google Sheet with REAL POST CALLER NUMBER!
+        try:
+            from icemake_bot.models import IcemakeTicket
+            from icemake_bot.strategy import _append_to_google_sheet
+            ticket = IcemakeTicket.objects.filter(conversation=conversation).first()
+            if ticket:
+                print(f"🎯 [ICEMAKE POST API CDR RECEIVED]: Syncing real SIM caller number '{data.get('phone_number')}' to Google Sheet!")
+                _append_to_google_sheet(ticket, force=True)
+        except Exception as e_resync:
+            print(f"⚠️ Ice Make POST API Google Sheet sync error: {e_resync}")
 
     # 🔄 AUTO-DIALER: Trigger next call if a campaign is active
     try:

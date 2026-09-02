@@ -812,7 +812,7 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
         "date": created_at_str
     }
     
-    if ticket.google_sheet_synced:
+    if ticket.google_sheet_synced and not force:
         print(f"[GOOGLE SHEET ALREADY SYNCED]: Ticket #{ticket.ticket_number} already exported to Google Sheet. Skipping.")
         return
 
