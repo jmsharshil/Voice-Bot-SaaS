@@ -3542,7 +3542,8 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
         is_kia_syros = (strategy_key == "kia_syros_strategy")
         is_raahi = (strategy_key == "raahi_iiiem_strategy")
         is_priya_naavya = (strategy_key == "priya_naavya_strategy")
-        if tts_lang == "gu" or is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya:
+        is_icemake = (strategy_key == "icemake")
+        if tts_lang == "gu" or is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya or is_icemake:
             api_key = os.getenv("SARVAM_API_KEY")
             if api_key:
                 api_url = "https://api.sarvam.ai/text-to-speech/stream"
@@ -3550,11 +3551,11 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                     "api-subscription-key": api_key,
                     "Content-Type": "application/json"
                 }
-                target_lang = "hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya) else "gu-IN"
-                speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if is_kia_syros else ("shubh" if is_loan_hi else "ishita"))
+                target_lang = "hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya or is_icemake) else "gu-IN"
+                speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if (is_kia_syros or is_icemake) else ("shubh" if is_loan_hi else "ishita"))
                 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     speaker = "ishita"
-                pace = 1.02 if (is_raahi or is_priya_naavya) else (1.05 if is_kia_syros else (1.16 if strategy_key in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))))
+                pace = 1.02 if (is_raahi or is_priya_naavya) else (1.05 if (is_kia_syros or is_icemake) else (1.16 if strategy_key in ["carekay_strategy", "carekay_insurance_strategy"] else (1.1 if is_loan_hi else (1.05 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1))))
 
                 temp = 0.50 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
                 

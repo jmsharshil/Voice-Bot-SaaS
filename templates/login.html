@@ -877,6 +877,12 @@
         }
 
         function getRedirectUrl(perms, isAdmin) {
+            const isIcemake = localStorage.getItem('is_icemake_user') === 'true' || 
+                              (localStorage.getItem('role') || '').toLowerCase().includes('ice make') ||
+                              (localStorage.getItem('username') || '').toLowerCase().includes('icemake');
+            if (isIcemake) {
+                return '/icemake-dashboard/';
+            }
             if (isAdmin || perms.can_view_leads) {
                 return '/dashboard/';
             } else if (perms.can_view_calls) {
@@ -974,6 +980,7 @@
                     localStorage.setItem('role', data.role || 'No Role');
                     localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
                     localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
+                    localStorage.setItem('is_icemake_user', data.is_icemake_user ? 'true' : 'false');
                     localStorage.setItem('profile_picture', data.profile_picture || '');
                     localStorage.setItem('company_logo', data.company_logo || '');
 

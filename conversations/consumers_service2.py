@@ -673,7 +673,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             self.language = "en"
         elif strategy_key == "kia_syros_strategy":
             self.language = "hi"
-        elif strategy_key == "raahi_iiiem_strategy":
+        elif strategy_key in ["raahi_iiiem_strategy", "icemake_strategy"]:
             self.language = "auto"
 
         # ── STT SETUP ──────────────────────────────────────────
@@ -724,7 +724,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
-            elif strategy_key in ["kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy"]:
+            elif strategy_key in ["kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy", "icemake"]:
                 tts_lang = "hi"
             else:
                 tts_lang = "en"
@@ -774,6 +774,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     greeting = f"Namaste {name_part} ji! Triple i E M mein aapka swagat hai. Main aapki kaise madad kar sakti hoon?"
                 else:
                     greeting = "Hi, I am Raahi calling from Triple i E M, how can I help you today?"
+            elif strategy_key == "icemake":
+                greeting = "Welcome to Ice Make twenty four by seven service support. आप किस भाषा में बात करना पसंद करेंगे?"
             elif strategy_key == "priya_naavya_strategy":
                 greeting = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
             else:
@@ -819,6 +821,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         elif self.strategy_key == "kia_syros_strategy":
             self.SPEECH_DETECT_RMS = 150
             self.SILENCE_TRIGGER_SEC = 0.55
+        elif self.strategy_key == "icemake":
+            self.SPEECH_DETECT_RMS = 150
+            self.SILENCE_TRIGGER_SEC = 0.85  # 850ms allows natural pauses during 10-digit phone number recitation
 
         # Determine greeting audio path
         if self.strategy_key == "hospital_minimal":
@@ -845,6 +850,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             greeting_file = "kia_syros_bot/kia_syros_greeting.raw"
         elif self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy"]:
             greeting_file = None
+        elif self.strategy_key == "icemake":
+            greeting_file = "icemake_bot/icemake_greeting.raw"
         else:
             greeting_file = f"{self.language}_step1_greeting.raw"
             
@@ -858,7 +865,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy"
+                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy", "icemake"
             ])
         )
         
@@ -870,6 +877,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         await save_message(self.conversation, "bot", greeting_text)
 
         local_greeting_path = os.path.join("mp3_responses", greeting_file) if greeting_file else None
+        if local_greeting_path and not os.path.exists(local_greeting_path) and os.path.exists(greeting_file):
+            local_greeting_path = greeting_file
+
         # Check if pre-synthesized dynamic greeting exists
         clean_phone = "".join(filter(str.isdigit, str(self.user_number)))[-10:] if self.user_number else ""
         pre_synthesized_path = os.path.join("mp3_responses", f"pre_synthesized_{self.agent_id}_{clean_phone}.raw")
@@ -898,9 +908,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         elif local_greeting_path and os.path.exists(local_greeting_path):
             print(f"🚀 INSTANT GREETING: Found local file {local_greeting_path}")
             with open(local_greeting_path, "rb") as f:
-                ulaw_bytes = f.read()
-            pcm_bytes = audioop.ulaw2lin(ulaw_bytes, 2)
-            alaw_bytes = audioop.lin2alaw(pcm_bytes, 2)
+                alaw_bytes = f.read()
             _GREETING_AUDIO_CACHE[f"{self.agent_id}_{self.language}"] = alaw_bytes
             self.tts_task = asyncio.create_task(self._stream_cached_greeting(alaw_bytes))
         else:
@@ -1837,6 +1845,17 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         prep_ms = round((time.time() - t_prep) * 1000)
 
         tts_language = prep_result.get("tts_language", self.language)
+        if tts_language and tts_language != self.language and tts_language in ["gu", "hi", "en", "te"]:
+            print(f"🌐 [DYNAMIC STT SWITCH]: Locking STT recognizer from '{self.language}' to '{tts_language}'")
+            self.language = tts_language
+            try:
+                self.recognizer.stop_continuous_recognition_async()
+                self.recognizer, self.push_stream = create_speech_recognizer(language=self.language)
+                self._setup_stt_callbacks()
+                self.recognizer.start_continuous_recognition_async()
+            except Exception as e_stt:
+                print(f"⚠️ STT switch error: {e_stt}")
+
         skip_output_translation = prep_result.get("skip_output_translation", False)
         skip_input_translation = prep_result.get("skip_input_translation", False)
 
@@ -1893,7 +1912,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     # Clean up reply (strip tags) as fallback
                     clean_reply = re.sub(r'\[\s*PLAY_AUDIO:[^\]]*\]', '', reply, flags=re.I).strip()
                     clean_reply = re.sub(r'PLAY_AUDIO:\s*[a-zA-Z0-9_\-\./]*(?:\.raw)?', '', clean_reply, flags=re.I).strip()
-                    for t in ["[BOOKING_CONFIRMED]", "[NOT_INTERESTED]", "[LEAD_COMPLETE]", "[END_CALL]"]:
+                    clean_reply = re.sub(r'\[.*?\]', '', clean_reply).strip()
+                    for t in ["[BOOKING_CONFIRMED]", "[NOT_INTERESTED]", "[LEAD_COMPLETE]", "[END_CALL]",
+                              "[FLOW_COMPLETE]", "[FLOW_COMPLETED]", "[flow_completed]", "[flow_complated]"]:
                         clean_reply = clean_reply.replace(t, "")
                     clean_reply = clean_reply.replace("[", "").replace("]", "").strip()
                     transcription = clean_reply
@@ -1910,10 +1931,17 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         
                 self.tts_task = asyncio.create_task(self._stream_local_audio_file(audio_filename, save_to_db=False))
             else:
-                reply_for_user = reply
+                should_auto_disc = prep_result.get("auto_disconnect", False)
+                if any(t in reply for t in ["[FLOW_COMPLETE]", "[FLOW_COMPLETED]", "[flow_completed]", "[flow_complated]", "[END_CALL]", "[LEAD_COMPLETE]"]):
+                    should_auto_disc = True
+
+                clean_reply = re.sub(r'\[.*?\]', '', reply).strip()
+                clean_reply = clean_reply.replace("[", "").replace("]", "").strip()
+
+                reply_for_user = clean_reply
                 if not skip_output_translation and self.language != "en":
                     reply_for_user = await sync_to_async(translate_text)(
-                        reply, from_lang="en", to_lang=self.language
+                        clean_reply, from_lang="en", to_lang=self.language
                     )
 
                 total_ms = round((time.time() - pipeline_start) * 1000)
@@ -1932,6 +1960,19 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 self.tts_task = asyncio.create_task(
                     self.send_tts(reply_for_user, tts_language=tts_language)
                 )
+
+                if should_auto_disc:
+                    print("📴 AUTO-DISCONNECT (flow complete): Waiting for closing speech before ending call")
+                    await self.tts_task
+                    await asyncio.sleep(2.0)
+                    await close_conversation(self.conversation)
+                    await self.send(text_data=json.dumps({
+                        "event": "stop",
+                        "format": "a-law 8-bit, 8kHz, Mono",
+                        "encoding": "base64"
+                    }))
+                    self.is_connected = False
+                    await self.close()
 
             if prep_result.get("auto_disconnect"):
                 print("📴 AUTO-DISCONNECT (static reply): Booking confirmed by user — waiting 2s for buffer and ending call")
@@ -1978,8 +2019,11 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             text = re.sub(r'PLAY_AUDIO:\s*[a-zA-Z0-9_\-\./]*(?:\.raw)?', '', text, flags=re.I)
             text = re.sub(r'\[\s*PHASE:[^\]]*\]', '', text, flags=re.I)
             text = re.sub(r'PHASE:\s*[a-zA-Z0-9_]*', '', text, flags=re.I)
+            text = re.sub(r'\[.*?\]', '', text)
             for t in ["[BOOKING_CONFIRMED]", "[NOT_INTERESTED]", "[LEAD_COMPLETE]", "[END_CALL]",
-                      "BOOKING_CONFIRMED", "NOT_INTERESTED", "LEAD_COMPLETE", "END_CALL"]:
+                      "[FLOW_COMPLETE]", "[FLOW_COMPLETED]", "[flow_completed]", "[flow_complated]",
+                      "BOOKING_CONFIRMED", "NOT_INTERESTED", "LEAD_COMPLETE", "END_CALL",
+                      "FLOW_COMPLETE", "FLOW_COMPLETED", "flow_completed", "flow_complated"]:
                 text = text.replace(t, "")
             return text.replace("[", "").replace("]", "").strip()
 
@@ -2253,6 +2297,12 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         return speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
 
     def _synthesize_ulaw(self, text: str, language: str = None) -> bytes:
+        import re
+        if text:
+            text = re.sub(r'\[.*?\]', '', text).strip()
+            text = text.replace("[", "").replace("]", "").strip()
+        if not text:
+            return b""
         lang = language or self.language
         is_enogic = (getattr(self, "strategy_key", None) == "enogic_strategy")
         if is_enogic:
@@ -2283,8 +2333,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         is_kia_syros = (lang == "hi" and getattr(self, "strategy_key", None) == "kia_syros_strategy")
         is_shreyas_en = (lang == "en" and getattr(self, "strategy_key", None) == "shreyas_strategy")
         is_raahi = (getattr(self, "strategy_key", None) == "raahi_iiiem_strategy")
+        is_icemake = (getattr(self, "strategy_key", None) == "icemake")
         is_priya_naavya = (getattr(self, "strategy_key", None) == "priya_naavya_strategy")
-        if lang == "gu" or is_loan_hi or is_shreyas_en or is_kia_syros or is_raahi or is_priya_naavya:
+
+        if lang == "gu" or is_loan_hi or is_shreyas_en or is_kia_syros or is_raahi or is_icemake or is_priya_naavya:
             import requests
             api_key = os.getenv("SARVAM_API_KEY")
             api_url = "https://api.sarvam.ai/text-to-speech/stream"
@@ -2303,13 +2355,14 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 clean_text = re.sub(r'\b10\b', 'ten', clean_text)
             if is_raahi or is_priya_naavya:
                 clean_text = clean_text.replace("WhatsApp", "whats app").replace("whatsapp", "whats app")
+            
             is_eng_reply = is_shreyas_en or ((is_raahi or is_priya_naavya) and (any(clean_text.lower().startswith(w) for w in ["hello", "thank", "great", "alright", "perfect", "in short", "the booking", "should i", "would you", "shall i", "yes"]) or any(w in clean_text.lower() for w in ["guidance", "exporting", "decided", "rupees", "details"])))
-            target_lang = "en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya) else "gu-IN")
-            speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if (is_shreyas_en or is_kia_syros) else ("shubh" if is_loan_hi else "ishita"))
+            target_lang = "en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_icemake or is_priya_naavya) else "gu-IN")
+            speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if (is_shreyas_en or is_kia_syros or is_icemake) else ("shubh" if is_loan_hi else "ishita"))
             if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                 speaker = "ishita"
             is_shreyas_gu = getattr(self, "strategy_key", None) == "shreyas_gu_strategy"
-            pace = 1.02 if (is_raahi or is_priya_naavya) else (1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if is_kia_syros else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1.15))))))
+            pace = 1.02 if (is_raahi or is_priya_naavya) else (1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if (is_kia_syros or is_icemake) else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1.15))))))
             temp = 0.50 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
 
             # Normalise clean_text for cache key (lowercase, strip punctuation)
@@ -2454,22 +2507,18 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
         loop = asyncio.get_event_loop()
 
-        # for _ in range(2):
-        #     if not self.is_bot_speaking:
-        #         return
-        #     await self._send_media_frame(SILENCE_FRAME)
-        #     await asyncio.sleep(0.020)
+        is_initial = getattr(self, "is_playing_greeting", False)
+        if is_initial:
+            for _ in range(8):
+                await self._send_media_frame(b'\xd5' * 160)
+                await asyncio.sleep(0.020)
 
         start_time = loop.time()
         for idx, i in enumerate(range(0, len(ulaw), 160)):
-            if not self.is_bot_speaking and len(ulaw) - i >= 3200:
+            is_initial = getattr(self, "is_playing_greeting", False)
+            if not is_initial and not self.is_bot_speaking and len(ulaw) - i >= 3200:
                 print("🛑 TTS stopped mid-stream")
                 return
-
-            # Early release of bot_speaking state for the last 400ms (3200 bytes)
-            # to allow natural barge-in overlap at the end of utterances
-            if is_final_chunk and len(ulaw) - i < 3200:
-                self.is_bot_speaking = False
 
             chunk = ulaw[i:i + 160].ljust(160, b'\xd5')
             await self._send_media_frame(chunk)
@@ -2478,6 +2527,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             sleep_duration = target_time - loop.time()
             if sleep_duration > 0:
                 await asyncio.sleep(sleep_duration)
+            else:
+                await asyncio.sleep(0.005)
 
         # for _ in range(2):
         #     if not self.is_bot_speaking:
@@ -2510,7 +2561,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         import os
         lang = tts_language or self.language
         
-        if getattr(self, "strategy_key", None) == "hospital_minimal":
+        if getattr(self, "strategy_key", None) in ["icemake", "icemake_strategy"]:
+            greeting_file = "icemake_bot/icemake_greeting.raw"
+        elif getattr(self, "strategy_key", None) == "hospital_minimal":
             greeting_file = "hosp_step1_greeting.raw"
         elif getattr(self, "strategy_key", None) == "loan_strategy":
             greeting_file = "loan_bot/loan_step1_greeting.raw"
@@ -2532,12 +2585,18 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             greeting_file = f"{lang}_step1_greeting.raw"
             
         local_greeting = os.path.join("mp3_responses", greeting_file)
+        if not os.path.exists(local_greeting) and os.path.exists(greeting_file):
+            local_greeting = greeting_file
+
         if not skip_local_cache and os.path.exists(local_greeting):
             print(f"🚀 INSTANT GREETING: Found local file {local_greeting}")
             with open(local_greeting, "rb") as f:
-                ulaw_bytes = f.read()
-            pcm_bytes = audioop.ulaw2lin(ulaw_bytes, 2)
-            alaw_bytes = audioop.lin2alaw(pcm_bytes, 2)
+                raw_bytes = f.read()
+            if local_greeting.endswith(".raw"):
+                alaw_bytes = raw_bytes
+            else:
+                pcm_bytes = audioop.ulaw2lin(raw_bytes, 2)
+                alaw_bytes = audioop.lin2alaw(pcm_bytes, 2)
             _GREETING_AUDIO_CACHE[f"{self.agent_id}_{lang}"] = alaw_bytes
             await self._stream_cached_greeting(alaw_bytes)
             return
@@ -2562,12 +2621,14 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         """Stream pre-synthesized greeting bytes — zero Azure TTS round-trip."""
         if not ulaw:
             return
+        self.is_playing_greeting = True
         self.is_bot_speaking = True
         self._mark_bot_speaking_start()
         try:
             await self._stream_ulaw(ulaw)
         finally:
             self.is_bot_speaking = False
+            self.is_playing_greeting = False
             self._mark_bot_speaking_end()
 
     async def _play_samsung_llm_dynamic_greeting(self, customer_name, body_file):
@@ -2772,6 +2833,52 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     print(f"⚠️ Auto-dialer fallback error: {e}")
 
             threading.Thread(target=_run_lead_analysis, daemon=True).start()
+
+            if getattr(self, "strategy_key", None) == "icemake":
+                def _sync_icemake_google_sheet():
+                    import time
+                    from django.utils import timezone
+                    from conversations.models import CallDetailRecord
+                    try:
+                        cdr, created = CallDetailRecord.objects.get_or_create(
+                            conversation_id=conv_id,
+                            defaults={
+                                "telecom_call_id": conv_id,
+                                "phone_number": user_phone or "unknown",
+                                "calldate": timezone.now(),
+                                "did": "919484959435",
+                                "disposition": "ANSWERED",
+                                "call_type": "INBOUND",
+                                "uniqueid": f"conv_{conv_id}",
+                                "matched": True,
+                            }
+                        )
+                        if created:
+                            print(f"📊 [AUTO DISCONNECT CDR CREATED]: CDR #{cdr.id} created for conversation {conv_id}")
+                    except Exception as e_cdr:
+                        print(f"⚠️ Auto CDR creation notice: {e_cdr}")
+
+                    time.sleep(3)
+                    try:
+                        from icemake_bot.models import IcemakeTicket
+                        from icemake_bot.strategy import (
+                            _append_to_google_sheet,
+                            _send_whatsapp_ticket_confirmation,
+                            _send_whatsapp_engineer_notification
+                        )
+                        ticket = IcemakeTicket.objects.filter(conversation_id=conv_id).first()
+                        if ticket:
+                            print(f"[ICEMAKE POST-DISCONNECT SYNC]: Exporting Ticket #{ticket.ticket_number} to Google Sheet & sending WhatsApp to Customer & Engineer...")
+                            _append_to_google_sheet(ticket)
+                            _send_whatsapp_ticket_confirmation(ticket)
+                            # ⏳ Pause 5.5s to comply with WASender Account Protection rate limit (1 msg / 5 sec)
+                            time.sleep(5.5)
+                            _send_whatsapp_engineer_notification(ticket)
+                    except Exception as e_sheet:
+                        print(f"❌ Post-call Icemake sheet/whatsapp sync error: {e_sheet}")
+
+                threading.Thread(target=_sync_icemake_google_sheet, daemon=True).start()
+
             print("📊 Lead analysis started in background...")
 
 # ── SERVER STARTUP PRE-WARMING FOR SAMSUNG LLM BOT ─────────────────────────
@@ -2871,3 +2978,27 @@ def prewarm_sarvam_cache_at_startup():
     threading.Thread(target=run_prewarm, daemon=True).start()
 
 prewarm_sarvam_cache_at_startup()
+
+import requests
+from django.conf import settings
+
+def send_whatsapp_message(to_number: str, message: str) -> dict:
+    """Helper to send WhatsApp message via WASender API."""
+    api_key = getattr(settings, "WA_SENDER_API_KEY", os.getenv("WA_SENDER_API_KEY", "f0b328f10d3a4c98bc28ef457de06d3a3a9e51263fefc472b1f42577bf8e8f66"))
+    base_url = getattr(settings, "WA_SENDER_BASE_URL", os.getenv("WA_SENDER_BASE_URL", "https://wasenderapi.com/api"))
+    
+    clean_number = "".join(filter(str.isdigit, str(to_number or "")))
+    if not clean_number.startswith("91") and len(clean_number) == 10:
+        clean_number = "91" + clean_number
+        
+    url = f"{base_url}/send-message"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {"phone": clean_number, "message": message}
+    
+    try:
+        res = requests.post(url, json=payload, headers=headers, timeout=15)
+        print(f"📩 WHATSAPP SENT to {clean_number}: status={res.status_code}, body={res.text}")
+        return res.json()
+    except Exception as e:
+        print(f"❌ WhatsApp sending failed to {clean_number}: {e}")
+        return {}

@@ -142,6 +142,15 @@ def login_view(request):
     if user.is_superuser:
         permissions['is_admin'] = True
 
+    # Determine if user is Ice Make specific user
+    is_icemake_user = False
+    if role_name and "ice make" in role_name.lower():
+        is_icemake_user = True
+    elif user.username.lower() in ["icemake", "ice_make", "icemake_admin", "icemake_user"]:
+        is_icemake_user = True
+    elif hasattr(user, 'profile') and user.profile and user.profile.assigned_agent and "ice make" in user.profile.assigned_agent.name.lower():
+        is_icemake_user = True
+
     return Response(
         {
             "access": str(refresh.access_token),
@@ -152,6 +161,7 @@ def login_view(request):
             "permissions": permissions,
             "assigned_agent_id": assigned_agent_id,
             "is_superuser": user.is_superuser,
+            "is_icemake_user": is_icemake_user,
             "profile_picture": profile_picture_url,
             "company_logo": company_logo_url,
         },

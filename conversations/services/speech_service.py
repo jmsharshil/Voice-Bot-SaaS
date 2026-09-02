@@ -186,7 +186,7 @@ def create_speech_recognizer(language="en"):
     is_auto = (language == "auto")
     if is_auto:
         auto_detect_config = speechsdk.languageconfig.AutoDetectSourceLanguageConfig(
-            languages=["en-IN", "hi-IN"]
+            languages=["en-IN", "hi-IN", "gu-IN", "te-IN"]
         )
     else:
         stt_lang = STT_LANGUAGE_MAP.get(language, "hi-IN")

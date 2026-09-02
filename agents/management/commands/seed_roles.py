@@ -385,7 +385,8 @@ INDUSTRY_VOICE_MAP = {
     "insurance": "gu-IN-DhwaniNeural",
     "sports-outreach": "en-IN-AartiNeural",
     "education-training": "hi-IN-AartiNeural",
-    "real-estate-ai": "hi-IN-AartiNeural"
+    "real-estate-ai": "hi-IN-AartiNeural",
+    "cold-room-refrigeration": "hi-IN-SwaraNeural"
 }
 
 TEMPLATES = [
@@ -942,6 +943,20 @@ Negative Constraints:
             "default_tone": "friendly",
         }
     ]
+},
+{
+    "industry": {"name": "Cold Room Refrigeration", "slug": "cold-room-refrigeration"},
+    "roles": [
+        {
+            "role_name": "Ice Make Cold Room Support",
+            "description": "24x7 After-Hours Cold Room Support Agent for ICEMAKE Refrigeration LTD.",
+            "system_prompt_template": (
+                "You are Aaisha, a 24x7 Cold Room Support Agent for ICEMAKE Refrigeration Ltd.\n"
+                "Help customers register complaints about Chillers, Freezers, and Blast Freezers."
+            ),
+            "default_tone": "professional",
+        }
+    ]
 }
 ]
 
@@ -980,6 +995,10 @@ class Command(BaseCommand):
             # ✅ Step 5: Create / Update roles
             for role in block["roles"]:
                 role["default_voice"] = industry_voice
+                existing_roles = list(AgentRoleTemplate.objects.filter(industry=industry, role_name=role["role_name"]))
+                if len(existing_roles) > 1:
+                    for duplicate in existing_roles[1:]:
+                        duplicate.delete()
 
                 AgentRoleTemplate.objects.update_or_create(
                     industry=industry,
@@ -1036,6 +1055,30 @@ class Command(BaseCommand):
                     p_agent.is_active = True
                     p_agent.save()
                 self.stdout.write(self.style.SUCCESS(f"VoiceAgent Priya seeded successfully (ID: {p_agent.id})"))
+
+            # Auto-seed Ice Make VoiceAgent
+            ice_role = AgentRoleTemplate.objects.filter(role_name__icontains="Ice Make").first()
+            if ice_role:
+                i_agent, i_created = VoiceAgent.objects.get_or_create(
+                    role_template=ice_role,
+                    defaults={
+                        "id": "5fe0fa32-9b47-4985-aa15-b3b041e6e15d",
+                        "name": "Ice Make Support Agent",
+                        "owner": owner,
+                        "industry": ice_role.industry,
+                        "company_name": "ICEMAKE Refrigeration Ltd.",
+                        "summary": "24x7 After-Hours Cold Room Support Agent that logs chiller and freezer complaints and registers tickets.",
+                        "is_active": True
+                    }
+                )
+                if not i_created:
+                    i_agent.name = "Ice Make Support Agent"
+                    i_agent.industry = ice_role.industry
+                    i_agent.company_name = "ICEMAKE Refrigeration Ltd."
+                    i_agent.summary = "24x7 After-Hours Cold Room Support Agent that logs chiller and freezer complaints and registers tickets."
+                    i_agent.is_active = True
+                    i_agent.save()
+                self.stdout.write(self.style.SUCCESS(f"VoiceAgent Ice Make seeded successfully (ID: {i_agent.id})"))
 
         self.stdout.write(self.style.SUCCESS("Indian voices assigned & roles seeded successfully"))
     # def handle(self, *args, **kwargs):

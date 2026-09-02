@@ -49,8 +49,13 @@ class AzureBlobService:
                 logger.info(f"Creating container '{self.container_name}'...")
                 self.container_client.create_container()
 
+            from azure.storage.blob import ContentSettings
+            content_settings = ContentSettings(
+                content_type="audio/mpeg",
+                content_disposition="inline"
+            )
             blob_client = self.container_client.get_blob_client(filename)
-            blob_client.upload_blob(file_content, overwrite=True)
+            blob_client.upload_blob(file_content, overwrite=True, content_settings=content_settings)
             
             # Construct Public URL
             media_url = f"https://{self.custom_domain}/{self.container_name}/{filename}"
