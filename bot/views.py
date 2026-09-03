@@ -3551,7 +3551,7 @@ def pre_synthesize_greeting(agent_id, phone, name, language="hi"):
                     "api-subscription-key": api_key,
                     "Content-Type": "application/json"
                 }
-                target_lang = "hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya or is_icemake) else "gu-IN"
+                target_lang = (f"{tts_lang}-IN" if (is_icemake and tts_lang in ["hi", "gu", "te", "pa", "en"]) else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya or is_icemake) else "gu-IN"))
                 speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if (is_kia_syros or is_icemake) else ("shubh" if is_loan_hi else "ishita"))
                 if strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                     speaker = "ishita"

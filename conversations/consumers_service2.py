@@ -1845,7 +1845,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         prep_ms = round((time.time() - t_prep) * 1000)
 
         tts_language = prep_result.get("tts_language", self.language)
-        if tts_language and tts_language != self.language and tts_language in ["gu", "hi", "en", "te"]:
+        if tts_language and tts_language != self.language and tts_language in ["gu", "hi", "en", "te", "pa"]:
             print(f"🌐 [DYNAMIC STT SWITCH]: Locking STT recognizer from '{self.language}' to '{tts_language}'")
             self.language = tts_language
             try:
@@ -2357,7 +2357,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 clean_text = clean_text.replace("WhatsApp", "whats app").replace("whatsapp", "whats app")
             
             is_eng_reply = is_shreyas_en or ((is_raahi or is_priya_naavya) and (any(clean_text.lower().startswith(w) for w in ["hello", "thank", "great", "alright", "perfect", "in short", "the booking", "should i", "would you", "shall i", "yes"]) or any(w in clean_text.lower() for w in ["guidance", "exporting", "decided", "rupees", "details"])))
-            target_lang = "en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_icemake or is_priya_naavya) else "gu-IN")
+            target_lang = (f"{lang}-IN" if lang in ["hi", "gu", "te", "pa", "en"] else "hi-IN") if is_icemake else ("en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya) else "gu-IN"))
             speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if (is_shreyas_en or is_kia_syros or is_icemake) else ("shubh" if is_loan_hi else "ishita"))
             if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                 speaker = "ishita"
