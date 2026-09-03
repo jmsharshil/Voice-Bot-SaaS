@@ -208,6 +208,10 @@ def create_speech_recognizer(language="en"):
     )
 
     speech_config.set_property_by_name(
+        "SpeechServiceConnection_LanguageIdMode", "Continuous"
+    )
+
+    speech_config.set_property_by_name(
         "SpeechServiceResponse_RequestStreamingResponse", "true"
     )
     speech_config.set_property_by_name(
