@@ -54,6 +54,41 @@ QUESTIONS = {
         3: "ਠੀਕ ਹੈ, ਧੰਨਵਾਦ! ਅਤੇ ਤੁਹਾਡਾ ਸ਼ਹਿਰ, ਪਤਾ ਅਤੇ ਜੇ ਉਪਲਬਧ ਹੋਵੇ ਤਾਂ ਪਿੰਨਕੋਡ ਨੰਬਰ ਕੀ ਹੈ?",
         4: "ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਫ਼ੋਨ ਨੰਬਰ ਦੱਸੋ।",
         6: "ਧੰਨਵਾਦ {name} ਜੀ! ਤੁਸੀਂ ਆਈਸ ਮੇਕ ਦਾ ਕਿਹੜਾ ਪ੍ਰੋਡਕਟ ਵਰਤ ਰਹੇ ਹੋ?",
+    },
+    "bn": {
+        1: "ধন্যবাদ, দয়া করে আপনার নাম বলুন।",
+        2: "{name} জি, আপনার সাথে কথা বলে খুব ভালো লাগলো! আপনাকে সাহায্য করতে, দয়া করে বলবেন আপনি কোন রাজ্য থেকে ফোন করছেন?",
+        3: "ঠিক আছে, ধন্যবাদ! এবং আপনার শহর, ঠিকানা এবং পিনকোড নম্বর কত?",
+        4: "দয়া করে আপনার ফোন নম্বরটি বলুন।",
+        6: "ধন্যবাদ {name} জি! আপনি আইস মেকের কোন প্রোডাক্টটি ব্যবহার করছেন?",
+    },
+    "mr": {
+        1: "धन्यवाद, कृपया तुमचे नाव सांगा.",
+        2: "{name} जी, तुमच्याशी बोलून खूप आनंद झाला! तुम्हाला उत्तम मदत करण्यासाठी, तुम्ही कोणत्या राज्यातून बोलत आहात ते सांगू शकाल का?",
+        3: "ठीक आहे, धन्यवाद! आणि तुमचा शहर, पत्ता आणि उपलब्ध असल्यास पिनकोड नंबर कोणता आहे?",
+        4: "कृपया तुमचा फोन नंबर सांगा.",
+        6: "धन्यवाद {name} जी! तुम्ही आईस मेकचे कोणते उत्पादन वापरत आहात?",
+    },
+    "ta": {
+        1: "நன்றி, தயவுசெய்து உங்கள் பெயரை சொல்லுங்கள்.",
+        2: "{name} அவர்களே, உங்களுடன் பேசுவதில் மிக்க மகிழ்ச்சி! உங்களுக்கு சிறந்த உதவி செய்வதற்கு, நீங்கள் எந்த மாநிலத்திலிருந்து அழைக்கிறீர்கள் என்று சொல்ல முடியுமா?",
+        3: "சரி, நன்றி! உங்கள் நகரம், முகவரி மற்றும் பின்கோடு எண் என்ன?",
+        4: "தயவுசெய்து உங்கள் தொலைபேசி எண்ணைச் சொல்லுங்கள்.",
+        6: "நன்றி {name} அவர்களே! நீங்கள் எந்த ஐஸ் மேக் தயாரிப்பைப் பயன்படுத்துகிறீர்கள்?",
+    },
+    "kn": {
+        1: "ಧನ್ಯವಾದಗಳು, ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರನ್ನು ಹೇಳಿ.",
+        2: "{name} ಅವರೇ, ನಿಮ್ಮೊಂದಿಗೆ ಮಾತನಾಡಲು ತುಂಬಾ ಸಂತೋಷವಾಗಿದೆ! ನಿಮಗೆ ಉತ್ತಮವಾಗಿ ಸಹಾಯ ಮಾಡಲು, ನೀವು ಯಾವ ರಾಜ್ಯದಿಂದ ಕರೆ ಮಾಡುತ್ತಿದ್ದೀರಿ ಎಂದು ಹೇಳಬಹುದೇ?",
+        3: "ಸರಿ, ಧನ್ಯವಾದಗಳು! ನಿಮ್ಮ ನಗರ, ವಿಳಾಸ ಮತ್ತು ಲಭ್ಯವಿದ್ದರೆ ಪಿನ್‌ಕೋಡ್ ಸಂಖ್ಯೆ ಯಾವುದು?",
+        4: "ದಯವಿಟ್ಟು ನಿಮ್ಮ ದೂರವಾಣಿ ಸಂಖ್ಯೆಯನ್ನು ತಿಳಿಸಿ.",
+        6: "ಧನ್ಯವಾದಗಳು {name} ಅವರೇ! ನೀವು ಐಸ್ ಮೇಕ್‌ನ ಯಾವ ಉತ್ಪನ್ನವನ್ನು ಬಳಸುತ್ತಿದ್ದೀರಿ?",
+    },
+    "ml": {
+        1: "നന്ദി, ദയവായി താങ്കളുടെ പേര് പറയാമോ?",
+        2: "{name} ജി, നിങ്ങളോട് സംസാരിക്കാൻ സാധിച്ചതിൽ സന്തോഷം! മികച്ച സേവനം നൽകുന്നതിനായി, ഏത് സംസ്ഥാനത്തു നിന്നാണ് വിളിക്കുന്നതെന്ന് പറയാമോ?",
+        3: "തീർച്ചയായും, നന്ദി! നിങ്ങളുടെ നഗരം, വിലാസം, ലഭ്യമാണെങ്കിൽ പിൻകോഡ് നമ്പർ ഏതാണ്?",
+        4: "ദയവായി നിങ്ങളുടെ ഫോൺ നമ്പർ പറയാമോ?",
+        6: "നന്ദി {name} ജി! നിങ്ങൾ ഐസ് മേക്കിന്റെ ഏത് പ്രൊഡക്റ്റാണ് ഉപയോഗിക്കുന്നത്?",
     }
 }
 
@@ -71,6 +106,21 @@ def _format_spoken_number(phone_num: str, lang: str) -> str:
     elif lang == "pa":
         pa_digit_words = {'0': 'ਜ਼ੀਰੋ', '1': 'ਇੱਕ', '2': 'ਦੋ', '3': 'ਤਿੰਨ', '4': 'ਚਾਰ', '5': 'ਪੰਜ', '6': 'ਛੇ', '7': 'ਸੱਤ', '8': 'ਅੱਠ', '9': 'ਨੌਂ'}
         return ", ".join(pa_digit_words.get(d, d) for d in phone_num)
+    elif lang == "bn":
+        bn_digit_words = {'0': 'শূন্য', '1': 'এক', '2': 'দুই', '3': 'তিন', '4': 'চার', '5': 'পাঁচ', '6': 'ছয়', '7': 'সাত', '8': 'আট', '9': 'নয়'}
+        return ", ".join(bn_digit_words.get(d, d) for d in phone_num)
+    elif lang == "mr":
+        mr_digit_words = {'0': 'शून्य', '1': 'एक', '2': 'दोन', '3': 'तीन', '4': 'चार', '5': 'पाच', '6': 'सहा', '7': 'सात', '8': 'आठ', '9': 'नऊ'}
+        return ", ".join(mr_digit_words.get(d, d) for d in phone_num)
+    elif lang == "ta":
+        ta_digit_words = {'0': 'சுழியம்', '1': 'ஒன்று', '2': 'இரண்டு', '3': 'மூன்று', '4': 'நான்கு', '5': 'ஐந்து', '6': 'ஆறு', '7': 'ஏழு', '8': 'எட்டு', '9': 'ஒன்பது'}
+        return ", ".join(ta_digit_words.get(d, d) for d in phone_num)
+    elif lang == "kn":
+        kn_digit_words = {'0': 'ಶೂನ್ಯ', '1': 'ಒಂದು', '2': 'ಎರಡು', '3': 'ಮೂರು', '4': 'ನಾಲ್ಕು', '5': 'ಐದು', '6': 'ಆರು', '7': 'ಏಳು', '8': 'ಎಂಟು', '9': 'ಒಂಬತ್ತು'}
+        return ", ".join(kn_digit_words.get(d, d) for d in phone_num)
+    elif lang == "ml":
+        ml_digit_words = {'0': 'പൂജ്യം', '1': 'ഒന്ന്', '2': 'രണ്ട്', '3': 'മൂന്ന്', '4': 'നാല്', '5': 'അഞ്ച്', '6': 'ആറ്', '7': 'ഏഴ്', '8': 'എട്ട്', '9': 'ഒൻപത്'}
+        return ", ".join(ml_digit_words.get(d, d) for d in phone_num)
     else:
         en_digit_words = {'0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine'}
         return ", ".join(en_digit_words.get(d, d) for d in phone_num)
@@ -98,6 +148,26 @@ def _format_spoken_ticket(ticket_number: str, lang: str) -> str:
     elif lang == "pa":
         pa_digit_words = {'0': 'ਜ਼ੀਰੋ', '1': 'ਇੱਕ', '2': 'ਦੋ', '3': 'ਤਿੰਨ', '4': 'ਚਾਰ', '5': 'ਪੰਜ', '6': 'ਛੇ', '7': 'ਸੱਤ', '8': 'ਅੱਠ', '9': 'ਨੌਂ'}
         parts = [pa_digit_words.get(ch, ch) if ch.isdigit() else ('ਸੀ' if ch == 'C' else ch) for ch in ticket_number]
+        return ", ".join(parts)
+    elif lang == "bn":
+        bn_digit_words = {'0': 'শূন্য', '1': 'এক', '2': 'দুই', '3': 'তিন', '4': 'চার', '5': 'পাঁচ', '6': 'ছয়', '7': 'সাত', '8': 'আট', '9': 'নয়'}
+        parts = [bn_digit_words.get(ch, ch) if ch.isdigit() else ('সি' if ch == 'C' else ch) for ch in ticket_number]
+        return ", ".join(parts)
+    elif lang == "mr":
+        mr_digit_words = {'0': 'शून्य', '1': 'एक', '2': 'दोन', '3': 'तीन', '4': 'चार', '5': 'पाच', '6': 'सहा', '7': 'सात', '8': 'आठ', '9': 'नऊ'}
+        parts = [mr_digit_words.get(ch, ch) if ch.isdigit() else ('सी' if ch == 'C' else ch) for ch in ticket_number]
+        return ", ".join(parts)
+    elif lang == "ta":
+        ta_digit_words = {'0': 'சுழியம்', '1': 'ஒன்று', '2': 'இரண்டு', '3': 'மூன்று', '4': 'நான்கு', '5': 'ஐந்து', '6': 'ஆறு', '7': 'ஏழு', '8': 'எட்டு', '9': 'ஒன்பது'}
+        parts = [ta_digit_words.get(ch, ch) if ch.isdigit() else ('சி' if ch == 'C' else ch) for ch in ticket_number]
+        return ", ".join(parts)
+    elif lang == "kn":
+        kn_digit_words = {'0': 'ಶೂನ್ಯ', '1': 'ಒಂದು', '2': 'ಎರಡು', '3': 'ಮೂರು', '4': 'ನಾಲ್ಕು', '5': 'ಐದು', '6': 'ಆರು', '7': 'ಏಳು', '8': 'ಎಂಟು', '9': 'ಒಂಬತ್ತು'}
+        parts = [kn_digit_words.get(ch, ch) if ch.isdigit() else ('ಸಿ' if ch == 'C' else ch) for ch in ticket_number]
+        return ", ".join(parts)
+    elif lang == "ml":
+        ml_digit_words = {'0': 'പൂജ്യം', '1': 'ഒന്ന്', '2': 'രണ്ട്', '3': 'മൂന്ന്', '4': 'നാല്', '5': 'അഞ്ച്', '6': 'ആറ്', '7': 'ഏഴ്', '8': 'എട്ട്', '9': 'ഒൻപത്'}
+        parts = [ml_digit_words.get(ch, ch) if ch.isdigit() else ('സി' if ch == 'C' else ch) for ch in ticket_number]
         return ", ".join(parts)
     else:
         en_digit_words = {'0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine'}
@@ -181,20 +251,52 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
             }
         else:
             unsupported_keywords = [
-                "marathi", "marthi", "मराठी", "मराठि",
-                "tamil", "tamizh", "தமிழ்", "तमिल", "तमिळ",
-                "kannada", "kanada", "కన్నడ", "കന്നഡ", "कन्नड़", "कन्नड",
-                "malayalam", "മലയാളം", "मलयालम",
-                "bengali", "bangla", "বাংলা", "बंगाली", "बांग्ला",
                 "urdu", "اردو", "उर्दू",
                 "french", "फ़्रेंच", "फ्रेंच",
                 "german", "जर्मन",
                 "spanish", "स्पैनिश", "स्पेनिश",
                 "arabic", "عربي", "अरबी",
-                "odia", "oriya", "ଓଡ଼িଆ", "उड़िया", "ओड़िया"
+                "odia", "oriya", "ଓଡ଼ିଆ", "उड़िया", "ओड़िया",
+                "assamese", "অসমীয়া", "असमिया",
+                "bhojpuri", "भोजपुरी",
+                "nepali", "नेपाली",
+                "konkani", "कोंकणी",
+                "rajasthani", "राजस्थानी",
+                "haryanvi", "हरियाणवी"
             ]
+
             
             if any(k in msg for k in [
+                "malayalam", "malayalam", "ml", "malayala",
+                "മലയാളം", "മലയാളത്തില്", "മലയാളത്തിൽ", "മലയാളം ഭാഷ",
+                "मलयालम", "मलयालम में", "मलयालम भाषा"
+            ]):
+                lang = "ml"
+            elif any(k in msg for k in [
+                "kannada", "kanada", "kn",
+                "ಕನ್ನಡ", "ಕನ್ನಡದಲ್ಲಿ", "ಕನ್ನಡ ಭಾಷೆ",
+                "कन्नड़", "कन्नड", "कन्नड़ भाषा","कन्नाडा।"
+            ]):
+                lang = "kn"
+            elif any(k in msg for k in [
+                "tamil", "tamizh", "ta",
+                "தமிழ்", "தமிழ", "தமிழில்", "தமிழ் மொழி",
+                "तमिल", "तमिळ", "तमिल भाषा","तामिल","तामिल"
+            ]):
+                lang = "ta"
+            elif any(k in msg for k in [
+                "marathi", "marthi", "mr",
+                "मराठी", "मराठि", "मराठीत", "मराठी भाषा", "मराठी मध्ये", "मराठीत बोला", "मराठी?"
+            ]):
+                lang = "mr"
+            elif any(k in msg for k in [
+                "bengali", "bangla", "bengoli", "bangoli", "bn",
+                "বাংলা", "বাংলায়", "বাংলা ভাষা",
+                "बंगाली", "बांग्ला", "बंगला","बंगाली","बेंगाली","बंगोली","बेंगोली","बंगोली","बांग्ला","बंगला","बैंगाली",
+                "बंगाली भाषा","बंगाली में","बांग्ला भाषा","बांग्ला में"
+            ]):
+                lang = "bn"
+            elif any(k in msg for k in [
                 "gujarati", "gujrati", "gujrat", "guj", "gujarathi", "gujrathi",
                 "ગુજરાતી", "ગુજરાતિ", "ગુજરાત", "ગુજરાતીમાં", "ગુજ", "હા",
                 "गुजराती", "गुजराति", "गुजरात", "गिजराती", "गुजरती", "गुजरातीं","गुजराती?"
@@ -203,7 +305,7 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
             elif any(k in msg for k in [
                 "telugu", "telgu", "telugoo", "tlg", "telegu",
                 "తెలుగు", "తెలుగూ", "తెలుగులో", "తెలుగులొ",
-                "तेलुगु", "तेलुगू", "तेलगु", "तेलगू", "तेलुगु में",
+                "తేలుగు", "తేలుగూ", "తేలగు", "తేలగూ", "తేలుగు మేం",
                 "તેલુગૂ", "તેલુગુ"
             ]):
                 lang = "te"
@@ -229,33 +331,58 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
             elif any(k in msg for k in unsupported_keywords):
                 lang = None
             else:
-                if re.search(r'[\u0a00-\u0a7f]', raw_message):  # Gurmukhi (Punjabi) script
+                if re.search(r'[\u0980-\u09ff]', raw_message):  # Bengali script
+                    lang = "bn"
+                elif re.search(r'[\u0a00-\u0a7f]', raw_message):  # Gurmukhi (Punjabi) script
                     lang = "pa"
                 elif re.search(r'[\u0a80-\u0aff]', raw_message):
                     lang = "gu"
-                elif re.search(r'[\u0c00-\u0c7f]', raw_message):
+                elif re.search(r'[\u0c00-\u0c7f]', raw_message):  # Telugu script
                     lang = "te"
+                elif re.search(r'[\u0b80-\u0bff]', raw_message):  # Tamil script
+                    lang = "ta"
+                elif re.search(r'[\u0cb0-\u0cff]', raw_message):  # Kannada script
+                    lang = "kn"
+                elif re.search(r'[\u0d00-\u0d7f]', raw_message):  # Malayalam script
+                    lang = "ml"
                 elif re.search(r'[\u0900-\u097f]', raw_message):
-                    # Check if Devanagari message contains Gujarati phonetic words
+                    # Check if Devanagari message contains Gujarati phonetic words or Marathi words
                     if any(w in msg for w in ["गुजराती", "गुजरात", "गिजराती", "गुजरती", "गुजराती?"]):
                         lang = "gu"
+                    elif any(w in msg for w in ["मराठी", "मराठि", "मराठीत", "आहे", "काय", "मला", "सांगा"]):
+                        lang = "mr"
                     else:
                         lang = "hi"
                 else:
                     lang = "en"
             
             if not lang:
-                if re.search(r'[\u0a80-\u0aff]', raw_message):
-                    reply = "હાલમાં અમે ઈંગ્લીશ, હિન્દી, ગુજરાતી, તેલુગુ અને પંજાબીમાં સેવા પૂરી પાડીએ છીએ. તમે કઈ ભાષામાં આગળ વધવા માંગો છો?"
+                if re.search(r'[\u0d00-\u0d7f]', raw_message):  # Malayalam script
+                    reply = "നിലവിൽ ഞങ്ങൾ ഇംഗ്ലീഷ്, ഹിന്ദി, ഗുജറാത്തി, തെലുങ്ക്, പഞ്ചാബി, ബംഗാളി, മറാത്തി, തമിഴ്, കന്നഡ, മലയാളം എന്നീ ഭാഷകളിൽ സേവനം നൽകുന്നു. ഏത് ഭാഷയിൽ തുടരാനാണ് നിങ്ങൾ ആഗ്രഹിക്കുന്നത്?"
+                    tts_lang = "ml"
+                elif re.search(r'[\u0980-\u09ff]', raw_message):  # Bengali script
+                    reply = "বর্তমানে আমরা ইংলিশ, হিন্দি, গুজরাটি, তেলুগু, পাঞ্জাবি, মারাঠি, তামিল, কন্নড় এবং বাংলায় সেবা প্রদান করি। আপনি কোন ভাষায় এগিয়ে যেতে চান?"
+                    tts_lang = "bn"
+                elif re.search(r'[\u0a80-\u0aff]', raw_message):  # Gujarati script
+                    reply = "હાલમાં અમે ઈંગ્લીશ, હિન્દી, ગુજરાતી, તેલુગુ, પંજાબી, બંગાળી, મરાઠી, તમિલ અને કન્નડમાં સેવા પૂરી પાડીએ છીએ. તમે કઈ ભાષામાં આગળ વધવા માંગો છો?"
                     tts_lang = "gu"
-                elif re.search(r'[\u0c00-\u0c7f]', raw_message):
-                    reply = "ప్రస్తుతానికి మేము ఇంగ్లీష్, హిందీ, గుజరాతీ, తెలుగు మరియు పంజాబీ భాషలలో సేవలను అందిస్తున్నాము. మీరు ఏ భాషలో కొనసాగాలనుకుంటున్నారు?"
+                elif re.search(r'[\u0c00-\u0c7f]', raw_message):  # Telugu script
+                    reply = "ప్రస్తుతానికి మేము ఇంగ్లీష్, హిందీ, గుజరాతీ, తెలుగు, పంజాబీ, బెంగాలీ, మరాఠీ, తమిళం మరియు కన్నడ భాషలలో సేవలను అందిస్తున్నాము. మీరు ఏ భాషలో కొనసాగాలనుకుంటున్నారు?"
                     tts_lang = "te"
-                elif re.search(r'[\u0900-\u097f]', raw_message):
-                    reply = "फ़िलहाल हम इंग्लिश, हिंदी, गुजराती, तेलुगु और पंजाबी में सेवा प्रदान करते हैं। आप किस भाषा में बात करना चाहेंगे?"
+                elif re.search(r'[\u0b80-\u0bff]', raw_message):  # Tamil script
+                    reply = "தற்போது நாங்கள் ஆங்கிலம், இந்தி, குஜராத்தி, தெலுங்கு, பஞ்சாபி, பெங்காலி, மராத்தி, தமிழ் மற்றும் கன்னடம் ஆகிய மொழிகளில் சேவைகளை வழங்குகிறோம். நீங்கள் எந்த மொழியில் தொடர விரும்புகிறீர்கள்?"
+                    tts_lang = "ta"
+                elif re.search(r'[\u0cb0-\u0cff]', raw_message):  # Kannada script
+                    reply = "ಪ್ರಸ್ತುತ ನಾವು ಇಂಗ್ಲಿಷ್, ಹಿಂದಿ, ಗುಜರಾತಿ, ತೆಲುಗು, ಪಂಜಾಬಿ, ಬೆಂಗಾಲಿ, ಮರಾಠಿ, ತಮಿಳು ಮತ್ತು ಕನ್ನಡ ಭಾಷೆಗಳಲ್ಲಿ ಸೇವೆಗಳನ್ನು ನೀಡುತ್ತಿದ್ದೇವೆ. ನೀವು ಯಾವ ಭಾಷೆಯಲ್ಲಿ ಮುಂದುವರೆಯಲು ಬಯಸುತ್ತೀರಿ?"
+                    tts_lang = "kn"
+                elif re.search(r'[\u0a00-\u0a7f]', raw_message):  # Gurmukhi / Punjabi script
+                    reply = "ਫਿਲਹਾਲ ਅਸੀਂ ਅੰਗਰੇਜ਼ੀ, ਹਿੰਦੀ, ਗੁਜਰਾਤੀ, ਤੇਲਗੂ, ਪੰਜਾਬੀ, ਬੰਗਾਲੀ, ਮਰਾਠੀ, ਤਮਿਲ ਅਤੇ ਕੰਨੜ ਵਿੱਚ ਸੇਵਾਵਾਂ ਪ੍ਰਦਾਨ ਕਰਦੇ ਹਾਂ। ਤੁਸੀਂ ਕਿਸ ਭਾਸ਼ਾ ਵਿੱਚ ਅੱਗੇ ਵਧਣਾ ਚਾਹੋਗੇ?"
+                    tts_lang = "pa"
+                elif re.search(r'[\u0900-\u097f]', raw_message):  # Devanagari script (Hindi / Marathi)
+                    reply = "फ़िलहाल हम इंग्लिश, हिंदी, गुजराती, तेलुगु, पंजाबी, बंगाली, मराठी, तमिल, कन्नड़ और मलयालम में सेवा प्रदान करते हैं। आप किस भाषा में बात करना चाहेंगे?"
                     tts_lang = "hi"
-                else:
-                    reply = "Currently, we support English, Hindi, Gujarati, Telugu, and Punjabi. Which language would you like to continue in?"
+                else:  # Default English
+                    reply = "Currently, we support English, Hindi, Gujarati, Telugu, Punjabi, Bengali, Marathi, Tamil, Kannada, and Malayalam. Which language would you like to continue in?"
                     tts_lang = "en"
                 
                 state["current_step"] = 0
@@ -283,13 +410,21 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 if cust_name and prod_name:
                     state["current_step"] = 7  # Jump directly to Issue Description
                     if lang == "hi":
-                        reply = f"धन्यवाद। नमस्ते {cust_name} जी! हम देख सकते हैं कि आप अपने आइस मेक {prod_name} के संबंध में कॉल कर रहे हैं। कृपया अपनी समस्या विस्तार से बताइए।"
+                        reply = f"धन्यवाद। नमस्ते {cust_name} जी! हम देख सकते हैं कि आप अपने आइस मेक {prod_name} के संबंध में कॉल कर रहे हैं। कृपया अपनी समस्या विस्तार से बताइए。"
                     elif lang == "gu":
                         reply = f"આભાર. નમસ્તે {cust_name} જી! અમે જોઈ શકીએ છીએ કે તમે તમારા આઈસ મેક {prod_name} અંગે કૉલ કરી રહ્યા છો. કૃપા કરીને તમારી સમસ્યા વિગતવાર જણાવો."
                     elif lang == "te":
                         reply = f"ధన్యవాదాలు. నమస్కారం {cust_name} గారు! మీరు మీ ఐస్ మేక్ {prod_name} గురించి కాల్ చేస్తున్నట్లు గమనించాము. దయచేసి మీ సమస్యను వివరించండి."
                     elif lang == "pa":
                         reply = f"ਧੰਨਵਾਦ। ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ {cust_name} ਜੀ! ਅਸੀਂ ਦੇਖ ਸਕਦੇ ਹਾਂ ਕਿ ਤੁਸੀਂ ਆਪਣੇ ਆਈਸ ਮੇਕ {prod_name} ਬਾਰੇ ਕਾਲ ਕਰ ਰਹੇ ਹੋ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਸਮੱਸਿਆ ਵਿਸਥਾਰ ਨਾਲ ਦੱਸੋ।"
+                    elif lang == "bn":
+                        reply = f"ধন্যবাদ। নমস্কার {cust_name} জি! আমরা দেখতে পাচ্ছি যে আপনি আপনার আইস মেক {prod_name} সম্পর্কে কল করছেন। অনুগ্রহ করে আপনার সমস্যাটি বিস্তারিত বলুন।"
+                    elif lang == "mr":
+                        reply = f"धन्यवाद. नमस्कार {cust_name} जी! आम्ही पाहू शकतो की तुम्ही तुमच्या आईस मेक {prod_name} बाबत कॉल करत आहात. कृपया तुमची समस्या सविस्तर सांगा."
+                    elif lang == "ta":
+                        reply = f"நன்றி. வணக்கம் {cust_name} அவர்களே! நீங்கள் உங்கள் ஐஸ் மேக் {prod_name} பற்றி அழைக்கிறீர்கள் என்று பார்க்கிறோம். தயவுசெய்து உங்கள் பிரச்சனையை விரிவாக சொல்லுங்கள்."
+                    elif lang == "kn":
+                        reply = f"ಧನ್ಯವಾದಗಳು. ನಮಸ್ಕಾರ {cust_name} ಅವರೇ! ನೀವು ನಿಮ್ಮ ಐಸ್ ಮೇಕ್ {prod_name} ಕುರಿತು ಕರೆ ಮಾಡುತ್ತಿದ್ದೀರಿ ಎಂದು ನಾವು ನೋಡಬಹುದು. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ವಿವರವಾಗಿ ಹೇಳಿ."
                     else:
                         reply = f"Thank you. Welcome Mr. {cust_name}! I see you are calling regarding your Ice Make {prod_name}. Could you please describe the issue you are experiencing?"
                 elif cust_name:
@@ -302,11 +437,18 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                         reply = f"ధన్యవాదాలు. నమస్కారం {cust_name} గారు! మీరు ఏ ఐస్ మేక్ ప్రొడక్ట్ ఉపయోగిస్తున్నారు?"
                     elif lang == "pa":
                         reply = f"ਧੰਨਵਾਦ। ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ {cust_name} ਜੀ! ਤੁਸੀਂ ਆਈਸ ਮੇਕ ਦਾ ਕਿਹੜਾ ਪ੍ਰੋਡਕਟ ਵਰਤ ਰਹੇ ਹੋ?"
+                    elif lang == "bn":
+                        reply = f"ধন্যবাদ। নমস্কার {cust_name} জি! আপনি আইস মেকের কোন প্রোডাক্টটি ব্যবহার করছেন?"
+                    elif lang == "mr":
+                        reply = f"धन्यवाद. नमस्कार {cust_name} जी! तुम्ही आईस मेकचे कोणते उत्पादन वापरत आहात?"
+                    elif lang == "ta":
+                        reply = f"நன்றி. வணக்கம் {cust_name} அவர்களே! நீங்கள் எந்த ஐஸ் மேக் தயாரிப்பைப் பயன்படுத்துகிறீர்கள்?"
+                    elif lang == "kn":
+                        reply = f"ಧನ್ಯವಾದಗಳು. ನಮസ്ಕಾರ {cust_name} ಅವರೇ! ನೀವು ಐಸ್ ಮೇಕ್‌ನ ಯಾವ ಉತ್ಪನ್ನವನ್ನು ಬಳಸುತ್ತಿದ್ದೀರಿ?"
+                    elif lang == "ml":
+                        reply = f"നന്ദി. നമസ്കാരം {cust_name} ജി! നിങ്ങൾ ഐസ് മേക്കിന്റെ ഏത് പ്രൊഡക്റ്റാണ് ഉപയോഗിക്കുന്നത്?"
                     else:
                         reply = f"Thank you. Welcome Mr. {cust_name}! Which Ice Make product are you using?"
-                else:
-                    state["current_step"] = 1
-                    reply = QUESTIONS[lang][1]
             else:
                 state["current_step"] = 1
                 reply = QUESTIONS[lang][1]
@@ -347,6 +489,18 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 reply = "તમારી સાથે વાત કરીને ખૂબ જ આનંદ થયો! તમને શ્રેષ્ઠ રીતે મદદ કરવા માટે, શું તમે જણાવી શકો છો કે તમે કયા રાજ્યમાંથી બોલી રહ્યા છો?"
             elif lang == "te":
                 reply = "మీతో మాట్లాడటం చాలా సంతోషంగా ఉంది! మీకు ఉత్తమంగా సహాయపడటానికి, మీరు ఏ రాష్ట్రం నుండి కాల్ చేస్తున్నారో చెప్పగలరా?"
+            elif lang == "pa":
+                reply = "ਤੁਹਾਡੇ ਨਾਲ ਗੱਲ ਕਰਕੇ ਬਹੁਤ ਖੁਸ਼ੀ ਹੋਈ! ਤੁਹਾਡੀ ਬਿਹਤਰ ਮਦਦ ਲਈ, ਕੀ ਤੁਸੀਂ ਦੱਸ ਸਕਦੇ ਹੋ ਕਿ ਤੁਸੀਂ ਕਿਸ ਸੂਬੇ ਤੋਂ ਫ਼ੋਨ ਕਰ ਰਹੇ ਹੋ?"
+            elif lang == "bn":
+                reply = "আপনার সাথে কথা বলে খুব ভালো লাগলো! আপনাকে সাহায্য করতে, দয়া করে বলবেন আপনি কোন রাজ্য থেকে ফোন করছেন?"
+            elif lang == "mr":
+                reply = "तुमच्याशी बोलून खूप आनंद झाला! तुम्हाला उत्तम मदत करण्यासाठी, तुम्ही कोणत्या राज्यातून बोलत आहात ते सांगू शकाल का?"
+            elif lang == "ta":
+                reply = "உங்களுடன் பேசுவதில் மிக்க மகிழ்ச்சி! உங்களுக்கு சிறந்த உதவி செய்வதற்கு, நீங்கள் எந்த மாநிலத்திலிருந்து அழைக்கிறீர்கள் என்று சொல்ல முடியுமா?"
+            elif lang == "kn":
+                reply = "ನಿಮ್ಮೊಂದಿಗೆ ಮಾತನಾಡಲು ತುಂಬಾ ಸಂತೋಷವಾಗಿದೆ! ನಿಮಗೆ ಉತ್ತಮವಾಗಿ ಸಹಾಯ ಮಾಡಲು, ನೀವು ಯಾವ ರಾಜ್ಯದಿಂದ ಕರೆ ಮಾಡುತ್ತಿದ್ದೀರಿ ಎಂದು ಹೇಳಬಹುದೇ?"
+            elif lang == "ml":
+                reply = "നിങ്ങളോട് സംസാരിക്കാൻ സാധിച്ചതിൽ സന്തോഷം! മികച്ച സേവനം നൽകുന്നതിനായി, ഏത് സംസ്ഥാനത്തു നിന്നാണ് വിളിക്കുന്നതെന്ന് പറയാമോ?"
             else:
                 reply = "It's a pleasure to connect with you! To assist you best, could you please tell me which state you are calling from?"
 
@@ -384,6 +538,16 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 reply = "మీ పిన్‌కోడ్ సరిగ్గా లేదు. పిన్‌కోడ్ 6 అంకెలు ఉండాలి. దయచేసి మీ 6 అంకెల పిన్‌కోడ్‌ను మళ్లీ తెలపండి."
             elif lang == "pa":
                 reply = "ਤੁਹਾਡਾ ਪਿੰਨਕੋਡ ਗਲਤ ਲੱਗਦਾ ਹੈ। ਪਿੰਨਕੋਡ 6 ਅੰਕਾਂ ਦਾ ਹੋਣਾ ਚਾਹੀਦਾ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ 6 ਅੰਕਾਂ ਦਾ ਪਿੰਨਕੋਡ ਜਾਂ ਪਤਾ ਦੁਬਾਰਾ ਦੱਸੋ।"
+            elif lang == "bn":
+                reply = "আপনার পিনকোডটি ভুল মনে হচ্ছে। পিনকোড ৬ ডিজিটের হতে হবে। দয়া করে আপনার ৬ ডিজিটের পিনকোড বা ঠিকানা পুনরায় বলুন।"
+            elif lang == "mr":
+                reply = "तुमचा पिनकोड अमान्य वाटत आहे. पिनकोड ६ अंकांचा असावा. कृपया तुमचा ६ अंकांचा पिनकोड किंवा पत्ता पुन्हा सांगा."
+            elif lang == "ta":
+                reply = "உங்கள் பின்கோடு சரியில்லை என்று தெரிகிறது. பின்கோடு ஆறு இலக்கமாக இருக்க வேண்டும். தயவுசெய்து உங்கள் ஆறு இலக்க பின்கோடு அல்லது முகவரியை மீண்டும் சொல்லுங்கள்."
+            elif lang == "kn":
+                reply = "ನಿಮ್ಮ ಪಿನ್‌ಕೋಡ್ ತಪ್ಪಾಗಿದೆ ಎಂದು ತೋರುತ್ತದೆ. ಪಿನ್‌ಕೋಡ್ 6 ಅಂಕಿಗಳಿರಬೇಕು. ದಯವಿಟ್ಟು ನಿಮ್ಮ 6 ಅಂಕಿಗಳ ಪಿನ್‌ಕೋಡ್ ಅಥವಾ ವಿಳಾಸವನ್ನು ಮತ್ತೆ ಹೇಳಿ."
+            elif lang == "ml":
+                reply = "നിങ്ങളുടെ പിൻകോഡ് തെറ്റാണെന്ന് തോന്നുന്നു. പിൻകോഡ് 6 അക്കമുള്ളതായിരിക്കണം. ദയവായി നിങ്ങളുടെ 6 അക്ക പിൻകോഡും വിലാസവും വീണ്ടും പറയൂ."
             else:
                 reply = "Your pincode seems invalid. Pincode must be 6 digits. Please share your 6-digit pincode or area address again."
             
@@ -419,6 +583,16 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 reply = "మీ నంబర్ సరిగ్గా లేదు. దయచేసి మీ 10 అంకెల మొబైల్ నంబర్‌ను మళ్లీ చెప్పండి."
             elif lang == "pa":
                 reply = "ਤੁਹਾਡਾ ਨੰਬਰ ਗਲਤ ਲੱਗਦਾ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ 10 ਅੰਕਾਂ ਦਾ ਮੋਬਾਈਲ ਨੰਬਰ ਦੁਬਾਰਾ ਦੱਸੋ।"
+            elif lang == "bn":
+                reply = "আপনার নম্বরটি ভুল মনে হচ্ছে। দয়া করে আপনার ১০ ডিজিটের মোবাইল নম্বরটি পুনরায় বলুন।"
+            elif lang == "mr":
+                reply = "तुमचा नंबर अमान्य वाटत आहे. कृपया तुमचा १० अंकांचा मोबाईल नंबर पुन्हा सांगा।"
+            elif lang == "ta":
+                reply = "உங்கள் எண் சரியில்லை என்று தெரிகிறது. தயவுசெய்து உங்கள் பத்து இலக்க மொபைல் எண்ணை மீண்டும் சொல்லுங்கள்."
+            elif lang == "kn":
+                reply = "ನಿಮ್ಮ ಸಂಖ್ಯೆ ತಪ್ಪಾಗಿದೆ ಎಂದು ತೋರುತ್ತದೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ 10 ಅಂಕಿಗಳ ಮೊಬೈಲ್ ಸಂಖ್ಯೆಯನ್ನು ಮತ್ತೆ ಹೇಳಿ."
+            elif lang == "ml":
+                reply = "നിങ്ങളുടെ നമ്പർ തെറ്റാണെന്ന് തോന്നുന്നു. ദയവായി നിങ്ങളുടെ 10 അക്ക മൊബൈൽ നമ്പർ വീണ്ടും പറയൂ."
             else:
                 reply = "Your number seems inappropriate. Please tell your ten digit mobile number."
             
@@ -448,6 +622,16 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 reply = f"ధన్యవాదాలు, నేను మీ నంబర్‌ను {spoken_num} గా నమోదు చేసాను. ఇది మీ రిజిస్టర్డ్ నంబర్ అని ధృవీకరిస్తారా?"
             elif lang == "pa":
                 reply = f"ਧੰਨਵਾਦ, ਮੈਂ ਤੁਹਾਡਾ ਨੰਬਰ {spoken_num} ਦਰਜ ਕੀਤਾ ਹੈ। ਕੀ ਤੁਸੀਂ ਪੁਸ਼ਟੀ ਕਰ ਸਕਦੇ ਹੋ ਕਿ ਇਹ ਤੁਹਾਡਾ ਰਜਿਸਟਰਡ ਨੰਬਰ ਹੈ?"
+            elif lang == "bn":
+                reply = f"ধন্যবাদ, আমি আপনার নম্বরটি {spoken_num} হিসেবে নোট করেছি। আপনি কি নিশ্চিত করতে পারেন এটি আপনার রেজিস্টার্ড নম্বর?"
+            elif lang == "mr":
+                reply = f"धन्यवाद, मी तुमचा नंबर {spoken_num} म्हणून नोंदवला आहे. हा तुमचा नोंदणीकृत नंबर आहे याची तुम्ही खात्री करू शकता का?"
+            elif lang == "ta":
+                reply = f"நன்றி, நான் உங்கள் எண்ணை {spoken_num} என்று பதிவு செய்துள்ளேன். இது உங்கள் பதிவு செய்யப்பட்ட எண் என்று உறுதிப்படுத்த முடியுமா?"
+            elif lang == "kn":
+                reply = f"ಧನ್ಯವಾದಗಳು, ನಾನು ನಿಮ್ಮ ಸಂಖ್ಯೆಯನ್ನು {spoken_num} ಎಂದು ದಾಖಲಿಸಿದ್ದೇನೆ. ಇದು ನಿಮ್ಮ ನೋಂದಾಯಿತ ಸಂಖ್ಯೆ ಎಂದು ದೃಢೀಕರಿಸಬಹುದೇ?"
+            elif lang == "ml":
+                reply = f"നന്ദി, ഞാൻ നിങ്ങളുടെ നമ്പർ {spoken_num} എന്ന് രേഖപ്പെടുത്തിയിട്ടുണ്ട്. ഇത് നിങ്ങളുടെ രജിസ്റ്റർ ചെയ്ത നമ്പറാണെന്ന് സ്ഥിരീകരിക്കാമോ?"
             else:
                 reply = f"Thank you, I recorded your number as {spoken_num}. Could you please confirm if this is your registered number?"
 
@@ -472,6 +656,16 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 reply = "ధన్యవాదాలు! మీరు ఏ ఐస్ మేక్ ప్రొడక్ట్ ఉపయోగిస్తున్నారు?"
             elif lang == "pa":
                 reply = "ਧੰਨਵਾਦ! ਤੁਸੀਂ ਆਈਸ ਮੇਕ ਦਾ ਕਿਹੜਾ ਪ੍ਰੋਡਕਟ ਵਰਤ ਰਹੇ ਹੋ?"
+            elif lang == "bn":
+                reply = "ধন্যবাদ! আপনি আইস মেকের কোন প্রোডাক্টটি ব্যবহার করছেন?"
+            elif lang == "mr":
+                reply = "धन्यवाद! तुम्ही आईस मेकचे कोणते उत्पादन वापरत आहात?"
+            elif lang == "ta":
+                reply = "நன்றி! நீங்கள் எந்த ஐஸ் மேக் தயாரிப்பைப் பயன்படுத்துகிறீர்கள்?"
+            elif lang == "kn":
+                reply = "ಧನ್ಯವಾದಗಳು! ನೀವು ಐಸ್ ಮೇಕ್‌ನ ಯಾವ ಉತ್ಪನ್ನವನ್ನು ಬಳಸುತ್ತಿದ್ದೀರಿ?"
+            elif lang == "ml":
+                reply = "നന്ദി! നിങ്ങൾ ഐസ് മേക്കിന്റെ ഏത് പ്രൊഡക്റ്റാണ് ഉപയോഗിക്കുന്നത്?"
             else:
                 reply = "Thank you! Which Ice Make product are you using?"
 
@@ -490,6 +684,16 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
             reply = "సరే. దయచేసి మీరు ఎదుర్కొంటున్న సమస్యను వివరించండి. మీరు రెండు నిమిషాల వరకు మీ సమస్యను చెప్పవచ్చు. ఈ కాల్ రికార్డ్ చేయబడుతోంది మరియు వెంటనే చర్య కోసం ఇంజనీర్‌కు పంపబడుతుంది."
         elif lang == "pa":
             reply = "ਠੀਕ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਸਮੱਸਿਆ ਵਿਸਥਾਰ ਨਾਲ ਦੱਸੋ। ਤੁਸੀਂ ਦੋ ਮਿੰਟ ਤੱਕ ਆਪਣੀ ਸਮੱਸਿਆ ਦੱਸ ਸਕਦੇ ਹੋ। ਇਹ ਕਾਲ ਰਿਕਾਰਡ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ ਅਤੇ ਤੁਰੰਤ ਕਾਰਵਾਈ ਲਈ ਇੰਜੀਨੀਅਰ ਨੂੰ ਭੇਜੀ ਜਾਵੇਗੀ।"
+        elif lang == "bn":
+            reply = "ঠিক আছে। দয়া করে আপনার সমস্যাটি বিস্তারিত বলুন। আপনি দুই মিনিট পর্যন্ত আপনার সমস্যা বলতে পারেন। এই কলটি রেকর্ড করা হচ্ছে এবং দ্রুত ব্যবস্থার জন্য ইঞ্জিনিয়ারের কাছে পাঠানো হবে।"
+        elif lang == "mr":
+            reply = "ठीक आहे. कृपया तुमची समस्या सविस्तर सांगा. तुम्ही दोन मिनिटांपर्यंत तुमची समस्या सांगू शकता. हा कॉल रेकॉर्ड केला जात आहे आणि त्वरित कारवाईसाठी इंजिनिअरकडे पाठवला जाईल."
+        elif lang == "ta":
+            reply = "சரி. தயவுசெய்து நீங்கள் எதிர்கொள்ளும் பிரச்சனையை விரிவாக சொல்லுங்கள். நீங்கள் இரண்டு நிமிடங்கள் வரை உங்கள் பிரச்சனையை சொல்லலாம். இந்த அழைப்பு பதிவு செய்யப்படுகிறது மற்றும் உடனடி நடவடிக்கைக்காக பொறியாளரிடம் அனுப்பப்படும்."
+        elif lang == "kn":
+            reply = "ಸರಿ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ವಿವರವಾಗಿ ಹೇಳಿ. ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ನೀವು ಎರಡು ನಿಮಿಷಗಳವರೆಗೆ ಹೇಳಬಹುದು. ಈ ಕರೆಯನ್ನು ರೆಕಾರ್ಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ ಮತ್ತು ತಕ್ಷಣದ ಕ್ರಮಕ್ಕಾಗಿ ಇಂಜಿನಿಯರ್‌ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ."
+        elif lang == "ml":
+            reply = "ശരി. ദയവായി നിങ്ങളുടെ പ്രശ്നം വിശദമായി പറയൂ. രണ്ട് മിനിറ്റ് വരെ നിങ്ങളുടെ പ്രശ്നം വിവരിക്കാം. ഈ കോൾ റെക്കോർഡ് ചെയ്യപ്പെടുന്നുണ്ട്, ഉടൻ നടപടിക്കായി എഞ്ചിനീയർക്ക് കൈമാറുന്നതാണ്."
         else:
             reply = "Got it. Could you please describe the issue you are facing? You can describe your issue for up to two minutes. This call is recorded and sent to an engineer for immediate action."
 
@@ -541,6 +745,41 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 f"ਆਈਸ ਮੇਕ 24 ਬਾਈ 7 ਸਰਵਿਸ ਸਪੋਰਟ ਨਾਲ ਸੰਪਰਕ ਕਰਨ ਲਈ ਧੰਨਵਾਦ। "
                 f"ਤੁਹਾਡੀ ਸ਼ਿਕਾਇਤ ਦਰਜ ਕਰ ਲਈ ਗਈ ਹੈ ਅਤੇ ਤੁਹਾਡਾ ਸ਼ਿਕਾਇਤ ਨੰਬਰ {spoken_ticket} ਹੈ। ਤੁਹਾਨੂੰ ਆਪਣੇ ਵਟਸਐਪ 'ਤੇ ਜਾਣਕਾਰੀ ਮਿਲ ਜਾਵੇਗੀ। "
                 f"ਸਾਡੀ ਸਰਵਿਸ ਟੀਮ ਤੁਹਾਡੀ ਸ਼ਿਕਾਇਤ ਦੀ ਸਮੀਖਿਆ ਕਰੇਗੀ ਅਤੇ ਅੱਗੇ ਤੁਹਾਡੀ ਮਦਦ ਕਰੇਗੀ। ਤੁਹਾਡਾ ਦਿਨ ਸ਼ੁਭ ਹੋਵੇ। [FLOW_COMPLETE]"
+            )
+        elif lang == "bn":
+            reply = (
+                f"ধন্যবাদ, আমি আপনার সমস্যাটি নোট করেছি। "
+                f"আইস মেক ২৪/৭ সার্ভিস সাপোর্টে যোগাযোগ করার জন্য ধন্যবাদ। "
+                f"আপনার অভিযোগটি নিবন্ধিত হয়েছে এবং আপনার অভিযোগ নম্বর হলো {spoken_ticket}। আপনি আপনার হোয়াটসঅ্যাপে বিস্তারিত তথ্য পেয়ে যাবেন। "
+                f"আমাদের সার্ভিস টিম আপনার অভিযোগ পরীক্ষা করবে এবং আপনাকে সাহায্য করবে। আপনার দিনটি শুভ হোক। [FLOW_COMPLETE]"
+            )
+        elif lang == "mr":
+            reply = (
+                f"धन्यवाद, मी तुमची समस्या नोंदवून घेतली आहे. "
+                f"आईस मेक २४/७ सर्व्हिस सपोर्टशी संपर्क साधल्याबद्दल धन्यवाद. "
+                f"तुमची तक्रार नोंदवली गेली आहे आणि तुमचा तक्रार क्रमांक {spoken_ticket} हा आहे. तुम्हाला तुमच्या व्हॉट्सॲपवर माहिती मिळेल. "
+                f"आमची सर्व्हिस टीम तुमच्या तक्रारीचे पुनरावलोकन करेल आणि पुढे तुम्हाला मदत करेल. तुमचा दिवस शुभ जावो. [FLOW_COMPLETE]"
+            )
+        elif lang == "ta":
+            reply = (
+                f"நன்றி, நான் உங்கள் பிரச்சனையை குறித்துக் கொண்டேன். "
+                f"ஐஸ் மேக் இருபத்தி நான்கு மணி நேர சேவை ஆதரவை தொடர்பு கொண்டதற்கு நன்றி. "
+                f"உங்கள் புகார் பதிவு செய்யப்பட்டுள்ளது மற்றும் உங்கள் புகார் எண் {spoken_ticket} ஆகும். உங்கள் வாட்ஸ்அப்பில் விவரங்கள் கிடைக்கும். "
+                f"எங்கள் சேவை குழு உங்கள் புகாரை மதிப்பாய்வு செய்து மேலும் உங்களுக்கு உதவும். உங்கள் நாள் நல்லதாக இருக்கட்டும். [FLOW_COMPLETE]"
+            )
+        elif lang == "kn":
+            reply = (
+                f"ಧನ್ಯವಾದಗಳು, ನಾನು ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ಟಿಪ್ಪಣಿ ಮಾಡಿಕೊಂಡಿದ್ದೇನೆ. "
+                f"ಐಸ್ ಮೇಕ್ ಇಪ್ಪತ್ತನಾಲ್ಕು ಗಂಟೆಗಳ ಸೇವಾ ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು. "
+                f"ನಿಮ್ಮ ದೂರು ನೋಂದಾಯಿಸಲ್ಪಟ್ಟಿದೆ ಮತ್ತು ನಿಮ್ಮ ದೂರು ಸಂಖ್ಯೆ {spoken_ticket} ಆಗಿದೆ. ನಿಮ್ಮ ವಾಟ್ಸಾಪ್‌ನಲ್ಲಿ ನೀವು ವಿವರಗಳನ್ನು ಪಡೆಯುತ್ತೀರಿ. "
+                f"ನಮ್ಮ ಸೇವಾ ತಂಡವು ನಿಮ್ಮ ದೂರನ್ನು ಪರಿಶೀಲಿಸುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಮತ್ತಷ್ಟು ಸಹಾಯ ಮಾಡುತ್ತದೆ. ಶುಭ ದಿನ. [FLOW_COMPLETE]"
+            )
+        elif lang == "ml":
+            reply = (
+                f"നന്ദി, ഞാൻ നിങ്ങളുടെ പ്രശ്നം കുറിച്ചെടുത്തിട്ടുണ്ട്. "
+                f"ഐസ് മേക്ക് 24/7 സർവീസ് സപ്പോർട്ടിലേക്ക് ബന്ധപ്പെട്ടതിന് നന്ദി. "
+                f"നിങ്ങളുടെ പരാതി രജിസ്റ്റർ ചെയ്തു, പരാതി നമ്പർ {spoken_ticket} ആകുന്നു. വിവരങ്ങൾ വാട്ട്സാപ്പിൽ ലഭിക്കുന്നതാണ്. "
+                f"ഞങ്ങളുടെ സർവീസ് ടീം നിങ്ങളുടെ പരാതി പരിശോധിക്കുകയും തുടർന്ന് സഹായിക്കുകയും ചെയ്യും. നല്ലൊരു ദിവസം ആശംസിക്കുന്നു. [FLOW_COMPLETE]"
             )
         else:
             reply = (
@@ -599,7 +838,7 @@ def _generate_ticket_number() -> str:
 def _extract_clean_ticket_entities(state: dict) -> dict:
     """
     Uses AI/LLM entity extraction to parse raw conversational user answers
-    (in Hindi, Hinglish, Gujarati, Telugu, or English) into clean, proper English string values for the Google Sheet.
+    (in Hindi, Hinglish, Gujarati, Telugu, Punjabi, Bengali, Marathi, Malayalam, or English) into clean, proper English string values for the Google Sheet.
     """
     import json
     from conversations.services.azure_openai_service import client
@@ -614,7 +853,7 @@ def _extract_clean_ticket_entities(state: dict) -> dict:
 
     prompt = f"""
 Extract and normalize the following customer support ticket entity values into clean, proper English string values for a CRM spreadsheet.
-The original input might contain conversational filler in Hindi, Hinglish, Gujarati, Telugu, or English (e.g. "Mera naam Harshil hai", "Maru naam Yash chhe", "Main Gujarat se hu", "Ji main Ahmedabad me rehta hu", "Meri company Ice Make hai", "Ji usme cooling nahi ho raha hai").
+The original input might contain conversational filler in Hindi, Hinglish, Gujarati, Telugu, Punjabi, Bengali, Marathi, Malayalam, or English (e.g. "Mera naam Harshil hai", "Maru naam Yash chhe", "Maze नाव Taksh ahe", "Amar naam Yash", "Ente peru Rahul", "Main Gujarat se hu", "Ji main Ahmedabad me rehta hu", "Meri company Ice Make hai", "Ji usme cooling nahi ho raha hai").
 
 Raw Inputs:
 - Customer Name Raw: "{raw_name}"
@@ -677,6 +916,10 @@ def _clean_conversational_text(text: str) -> str:
         r'^(મારું\s+નામ|મારૂ\s+નામ|નામ|મારુ\s+નામ|મારુ\s+નામે|હું|હૂં|નમસ્તે|હેલો|મારુના\s+એમ\s+ટોક|મારુના\s+એમ|મારુના\s+એમ\s+ટોક|આઈ\s+એમ|આઇ\s+એમ)\s+',
         r'\s+(છે|છુ|છું|બોલું\s+છું|બોલું\s+છુ|નામ\s+છે|બોલી\s+રહ્યા\s+છે|બોલી\s+રહ્યો\s+છું)$',
         
+        # Marathi fillers
+        r'^(माझे\s+नाव|माझं\s+नाव|नाव|माझे\s+नाव\s+आहे|मी|नमस्कार|हॅलो)\s+',
+        r'\s+(आहे|आहे।|बोलतोय|बोलतेय|बोलतोय\s+मी|बोलतेय\s+मी|नाव\s+आहे)$',
+        
         # Devanagari Hindi & STT Phonetic fillers (e.g. हमारा नाम, मारुना ऐम टॉक, मेरा नाम)
         r'^(हमारा\s+नाम|अमारा\s+नाम|मारुना\s+ऐम\s+टॉक|मारुना\s+ऐम|मारुना\s+एम|मेरा\s+नाम|ममेरा\s+नाम|मेरा\s+नाम\s+है|मेरा\s+नाम्|जी\s+मेरा\s+नाम|जी|मैं|मै|हेलो|हाय|नमस्ते|मारु\s+नाम|मारू\s+नाम|मैरा\s+नाम|माय\s+नेम\s+इज|माय\s+नेम|आई\s+एम|आइ\s+एम)\s+',
         r'\s+(है|हूँ|हूं|बोल\s+रहा\s+हूँ|बोल\s+रही\s+हूँ|बोल\s+रहा\s+हु|बोल\s+रही\s+हु|नाम\s+है|बोल\s+रहा\s+है|बोल\s+रही\s+है|जी|जी।)$',
@@ -688,7 +931,11 @@ def _clean_conversational_text(text: str) -> str:
         
         # Telugu fillers
         r'^(naku\s+peru|naa\s+peru|na\s+peru|peru)\s+',
-        r'\s+(vachesi|andi|garu)$'
+        r'\s+(vachesi|andi|garu)$',
+
+        # Malayalam fillers
+        r'^(എന്റെ\s+പേര്|എന്റെ\s+പേര്\s+ആണ്|എന്റെ\s+പേരു്|പേര്|എൻറെ\s+പേര്|ഞാൻ)\s+',
+        r'\s+(ആണ്|ആണു്|ആകുന്നു|പറയുന്നത്|ആണ്।)$'
     ]
     
     # Apply 3 iterations to strip multi-layered fillers like "હેલો મારું નામ તક્ષ પટેલ છે" or "मारुना ऐम टॉक झे"
@@ -697,8 +944,8 @@ def _clean_conversational_text(text: str) -> str:
             clean = re.sub(pattern, '', clean, flags=re.IGNORECASE).strip()
     
     # Final cleanup of trailing single verbs, conversational words, or punctuation
-    clean = re.sub(r'^(है|हूँ|हूं|hai|hu|છે|છુ|છું|टॉक|talk|speaking|talking)\s+|\s+(है|हूँ|हूं|hai|hu|છે|છુ|છું|टॉक|talk|speaking|talking)$', '', clean, flags=re.IGNORECASE).strip()
-    clean = re.sub(r'^[^\w\u0900-\u097F\u0A80-\u0AFF\u0C00-\u0C7F]+|[^\w\u0900-\u097F\u0A80-\u0AFF\u0C00-\u0C7F]+$', '', clean).strip()
+    clean = re.sub(r'^(है|हूँ|हूं|hai|hu|છે|છુ|છું|ആണ്|टॉक|talk|speaking|talking)\s+|\s+(है|हूँ|हूं|hai|hu|છે|છુ|છું|ആണ്|टॉक|talk|speaking|talking)$', '', clean, flags=re.IGNORECASE).strip()
+    clean = re.sub(r'^[^\w\u0900-\u097F\u0A80-\u0AFF\u0C00-\u0C7F\u0D00-\u0D7F]+|[^\w\u0900-\u097F\u0A80-\u0AFF\u0C00-\u0C7F\u0D00-\u0D7F]+$', '', clean).strip()
     
     return clean if clean else text
 

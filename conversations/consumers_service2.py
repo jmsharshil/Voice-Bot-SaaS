@@ -445,6 +445,13 @@ TTS_VOICE_MAP = {
     "en": "en-IN-AartiNeural",
     "hi": "hi-IN-AartiNeural",
     "gu": "gu-IN-DhwaniNeural",
+    "te": "te-IN-ShrutiNeural",
+    "pa": "pa-IN-VaaniNeural",
+    "bn": "bn-IN-TanishaNeural",
+    "mr": "mr-IN-AarohiNeural",
+    "ta": "ta-IN-PallaviNeural",
+    "kn": "kn-IN-SapnaNeural",
+    "ml": "ml-IN-SobhanaNeural",
 }
 
 SSML_STYLE_MAP = {
@@ -1021,7 +1028,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 )
                 if detected_lang:
                     lang_code = detected_lang.split("-")[0]
-                    if lang_code in ["en", "hi", "gu"] and not self.is_bot_speaking:
+                    if lang_code in ["en", "hi", "gu", "te", "pa", "bn", "mr", "ta", "kn"] and not self.is_bot_speaking:
                         # 🚨 Do NOT switch language while bot speaks — echo causes mis-detection
                         self.loop.call_soon_threadsafe(self._set_language, lang_code)
             
@@ -1050,7 +1057,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 self._bot_speaking_ended_at > 0
                 and (recognised_at - self._bot_speaking_ended_at) < post_speech_grace
             )
-            if lang_code in ["en", "hi", "gu"] and not self.is_bot_speaking and not in_post_speech:
+            if lang_code in ["en", "hi", "gu", "te", "pa", "bn", "mr", "ta", "kn"] and not self.is_bot_speaking and not in_post_speech:
                 self.loop.call_soon_threadsafe(self._set_language, lang_code)
 
             print(f"✅ Azure FINAL [{detected_lang}]: {text}")
@@ -2357,7 +2364,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 clean_text = clean_text.replace("WhatsApp", "whats app").replace("whatsapp", "whats app")
             
             is_eng_reply = is_shreyas_en or ((is_raahi or is_priya_naavya) and (any(clean_text.lower().startswith(w) for w in ["hello", "thank", "great", "alright", "perfect", "in short", "the booking", "should i", "would you", "shall i", "yes"]) or any(w in clean_text.lower() for w in ["guidance", "exporting", "decided", "rupees", "details"])))
-            target_lang = (f"{lang}-IN" if lang in ["hi", "gu", "te", "pa", "en"] else "hi-IN") if is_icemake else ("en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya) else "gu-IN"))
+            target_lang = (f"{lang}-IN" if lang in ["hi", "gu", "te", "pa", "bn", "mr", "ta", "kn", "ml", "en"] else "hi-IN") if is_icemake else ("en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya) else "gu-IN"))
             speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if (is_shreyas_en or is_kia_syros or is_icemake) else ("shubh" if is_loan_hi else "ishita"))
             if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
                 speaker = "ishita"

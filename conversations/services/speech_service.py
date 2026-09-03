@@ -163,13 +163,27 @@ import base64
 TTS_VOICE_MAP = {
     "en": "en-IN-AartiNeural",
     "hi": "hi-IN-AartiNeural",
-    "gu": "gu-IN-DhwaniNeural"
+    "gu": "gu-IN-DhwaniNeural",
+    "te": "te-IN-ShrutiNeural",
+    "pa": "pa-IN-VaaniNeural",
+    "bn": "bn-IN-TanishaNeural",
+    "mr": "mr-IN-AarohiNeural",
+    "ta": "ta-IN-PallaviNeural",
+    "kn": "kn-IN-SapnaNeural",
+    "ml": "ml-IN-SobhanaNeural",
 }
 
 STT_LANGUAGE_MAP = {
     "en": "en-IN",
     "hi": "hi-IN",
-    "gu": "gu-IN"
+    "gu": "gu-IN",
+    "te": "te-IN",
+    "pa": "pa-IN",
+    "bn": "bn-IN",
+    "mr": "mr-IN",
+    "ta": "ta-IN",
+    "kn": "kn-IN",
+    "ml": "ml-IN"
 }
 
 AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY")
@@ -186,7 +200,7 @@ def create_speech_recognizer(language="en"):
     is_auto = (language == "auto")
     if is_auto:
         auto_detect_config = speechsdk.languageconfig.AutoDetectSourceLanguageConfig(
-            languages=["en-IN", "hi-IN", "gu-IN", "te-IN"]
+            languages=["en-IN", "hi-IN", "gu-IN", "bn-IN", "mr-IN", "ta-IN", "kn-IN"]
         )
     else:
         stt_lang = STT_LANGUAGE_MAP.get(language, "hi-IN")
