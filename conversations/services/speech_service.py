@@ -200,7 +200,7 @@ def create_speech_recognizer(language="en"):
     is_auto = (language == "auto")
     if is_auto:
         auto_detect_config = speechsdk.languageconfig.AutoDetectSourceLanguageConfig(
-            languages=["en-IN", "hi-IN", "gu-IN", "bn-IN", "mr-IN", "ta-IN", "kn-IN"]
+           languages=["en-IN", "hi-IN"]
         )
     else:
         stt_lang = STT_LANGUAGE_MAP.get(language, "hi-IN")
@@ -219,10 +219,6 @@ def create_speech_recognizer(language="en"):
     )
     speech_config.set_property(
         speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, seg_silence
-    )
-
-    speech_config.set_property_by_name(
-        "SpeechServiceConnection_LanguageIdMode", "Continuous"
     )
 
     speech_config.set_property_by_name(
