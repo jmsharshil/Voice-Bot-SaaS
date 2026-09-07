@@ -21,10 +21,9 @@ class KnowledgeFileAdmin(admin.ModelAdmin):
                 chunk_objs = [
                     KnowledgeChunk(
                         knowledge_file=obj,
-                        chunk_index=idx,
                         content=c_text
                     )
-                    for idx, c_text in enumerate(chunks)
+                    for c_text in chunks
                 ]
                 KnowledgeChunk.objects.bulk_create(chunk_objs)
 
