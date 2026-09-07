@@ -175,8 +175,9 @@ def raahi_iiiem_strategy(agent, message, session, **kwargs):
         language_instruction = (
             "CRITICAL LANGUAGE & NUMERICAL RULE:\n"
             "- The caller is speaking in ENGLISH. You MUST reply 100% in natural, professional ENGLISH. Do NOT use Hindi words.\n"
+            "- SPEAK NUMBERS ONLY ONCE: NEVER repeat digits in parentheses or brackets (e.g. NEVER write '(201)' or '(7573036066)'). State numbers strictly once.\n"
             "- NUMERICAL WORDS IN ENGLISH: Speak all numbers, prices, phone numbers, pincodes, building/office numbers, and batch timings using ENGLISH words.\n"
-            "  • Phone numbers: Write digit-by-digit in English words or spaced digits (e.g. 'seven five seven three zero three six zero six six' or '7 5 7 3 0 3 6 0 6 6'). NEVER write bare unspaced numbers like '7573036066'.\n"
+            "  • Phone numbers: Write digit-by-digit in English words or spaced digits (e.g. 'seven five seven three zero three six zero six six' or '7 5 7 3 0 3 6 0 6 6'). NEVER write bare unspaced numbers like '7573036066'. If sharing multiple numbers, separate them clearly (e.g. 'Primary contact is ... and alternate is ...').\n"
             "  • Prices: 'fourteen thousand nine hundred ninety-nine rupees plus GST', 'nineteen thousand nine hundred ninety-nine rupees plus GST', 'thirty-four thousand nine hundred ninety-nine rupees plus GST', 'forty-nine thousand nine hundred ninety-nine rupees plus GST', 'five thousand rupees', 'ten thousand rupees'.\n"
             "  • Building/Pincode: 'office two zero one dash two zero two', 'three eight zero zero zero nine'."
         )
@@ -184,7 +185,9 @@ def raahi_iiiem_strategy(agent, message, session, **kwargs):
         language_instruction = (
             "CRITICAL LANGUAGE & NUMERICAL RULE:\n"
             "- The caller is speaking in HINDI/HINGLISH. Reply naturally in HINDI or HINGLISH.\n"
+            "- SPEAK NUMBERS ONLY ONCE: NEVER repeat digits in parentheses or brackets (e.g. NEVER write '(201)' or '(7573036066)'). State numbers strictly once.\n"
             "- NUMERICAL WORDS IN HINDI: Speak all numbers, prices, phone numbers, pincodes, building/office numbers, and batch timings using HINDI numerical words.\n"
+            "  • Phone numbers: Write digit-by-digit in Hindi words (e.g. 'saat paanch saat teen zero teen chhah zero chhah chhah'). NEVER add bracketed numbers. If sharing multiple numbers, separate them clearly (e.g. 'Primary number hai ..., aur alternate number hai ...').\n"
             "  • Prices: 'chaudah hazaar nau sau ninyanve rupees plus GST', 'unnees hazaar nau sau ninyanve rupees plus GST', 'chaintis hazaar nau sau ninyanve rupees plus GST', 'unchaas hazaar nau sau ninyanve rupees plus GST', 'paanch hazaar rupees', 'das hazaar rupees'.\n"
             "  • Building/Pincode: 'office do sau ek dash do sau do', 'teen aath zero zero zero nau'."
         )
@@ -338,8 +341,9 @@ def raahi_iiiem_prepare(agent, message, session, detected_language=None, **kwarg
         language_instruction = (
             "CRITICAL LANGUAGE & NUMERICAL RULE:\n"
             "- The caller is speaking in ENGLISH. You MUST reply 100% in natural, professional ENGLISH. Do NOT use Hindi words.\n"
+            "- SPEAK NUMBERS ONLY ONCE: NEVER repeat digits in parentheses or brackets (e.g. NEVER write '(201)' or '(7573036066)'). State numbers strictly once.\n"
             "- NUMERICAL WORDS IN ENGLISH: Speak all numbers, prices, phone numbers, pincodes, building/office numbers, and batch timings using ENGLISH words.\n"
-            "  • Phone numbers: Write digit-by-digit in English words or spaced digits (e.g. 'seven five seven three zero three six zero six six' or '7 5 7 3 0 3 6 0 6 6'). NEVER write bare unspaced numbers like '7573036066'.\n"
+            "  • Phone numbers: Write digit-by-digit in English words or spaced digits (e.g. 'seven five seven three zero three six zero six six' or '7 5 7 3 0 3 6 0 6 6'). NEVER write bare unspaced numbers like '7573036066'. If sharing multiple numbers, separate them clearly (e.g. 'Primary contact is ... and alternate is ...').\n"
             "  • Prices: 'fourteen thousand nine hundred ninety-nine rupees plus GST', 'nineteen thousand nine hundred ninety-nine rupees plus GST', 'thirty-four thousand nine hundred ninety-nine rupees plus GST', 'forty-nine thousand nine hundred ninety-nine rupees plus GST', 'five thousand rupees', 'ten thousand rupees'.\n"
             "  • Building/Pincode: 'office two zero one dash two zero two', 'three eight zero zero zero nine'."
         )
@@ -347,7 +351,9 @@ def raahi_iiiem_prepare(agent, message, session, detected_language=None, **kwarg
         language_instruction = (
             "CRITICAL LANGUAGE & NUMERICAL RULE:\n"
             "- The caller is speaking in HINDI/HINGLISH. Reply naturally in HINDI or HINGLISH.\n"
+            "- SPEAK NUMBERS ONLY ONCE: NEVER repeat digits in parentheses or brackets (e.g. NEVER write '(201)' or '(7573036066)'). State numbers strictly once.\n"
             "- NUMERICAL WORDS IN HINDI: Speak all numbers, prices, phone numbers, pincodes, building/office numbers, and batch timings using HINDI numerical words.\n"
+            "  • Phone numbers: Write digit-by-digit in Hindi words (e.g. 'saat paanch saat teen zero teen chhah zero chhah chhah'). NEVER add bracketed numbers. If sharing multiple numbers, separate them clearly (e.g. 'Primary number hai ..., aur alternate number hai ...').\n"
             "  • Prices: 'chaudah hazaar nau sau ninyanve rupees plus GST', 'unnees hazaar nau sau ninyanve rupees plus GST', 'chaintis hazaar nau sau ninyanve rupees plus GST', 'unchaas hazaar nau sau ninyanve rupees plus GST', 'paanch hazaar rupees', 'das hazaar rupees'.\n"
             "  • Building/Pincode: 'office do sau ek dash do sau do', 'teen aath zero zero zero nau'."
         )
