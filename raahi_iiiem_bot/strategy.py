@@ -49,6 +49,68 @@ def get_db_history_text(session_id: str) -> str:
     return ""
 
 
+def _detect_user_language(message: str, detected_language: str = None, session_state: dict = None) -> str:
+    """Detect whether the caller is speaking English or Hindi."""
+    msg = (message or "").strip().lower()
+    if not msg:
+        if session_state and "detected_language" in session_state:
+            return session_state["detected_language"]
+        return "hi"
+
+    # If text is in Devanagari script, it's definitely Hindi
+    if any('\u0900' <= char <= '\u097F' for char in msg):
+        return "hi"
+
+    words = set(re.findall(r'\b[a-zA-Z]+\b', msg))
+
+    hindi_hinglish_words = {
+        "mujhe", "mera", "meri", "mere", "aap", "aapka", "aapki", "aapke", "karna", "karni",
+        "karne", "karein", "karo", "hai", "hain", "kya", "kaise", "kaisi", "kaisa", "batao",
+        "bataiye", "chahiye", "sikhna", "seekhna", "janna", "jaanna", "puchna", "kitna", "kitni",
+        "kitne", "kaun", "kaha", "kahan", "nahi", "nahin", "accha", "achha", "theek", "shukriya",
+        "dhanyavaad", "namaste", "namaskar", "haan", "bol", "raha", "rahi", "hoon", "hu", "baat",
+        "liye", "wale", "wali", "wala", "mein", "par", "se", "ko", "aur", "ya"
+    }
+
+    english_words = {
+        "i", "want", "to", "know", "about", "export", "import", "course", "details",
+        "fee", "fees", "price", "cost", "batch", "timings", "timing", "when", "how",
+        "what", "can", "you", "tell", "me", "please", "yes", "no", "offline", "online",
+        "center", "centre", "address", "location", "who", "where", "my", "name", "is",
+        "training", "program", "plan", "start", "business", "help", "hello", "hi", "good",
+        "morning", "afternoon", "evening", "thank", "thanks", "ok", "okay", "sure", "interested",
+        "information", "provide", "explain", "would", "like"
+    }
+
+    hindi_count = len(words.intersection(hindi_hinglish_words))
+    english_count = len(words.intersection(english_words))
+
+    if hindi_count > english_count:
+        return "hi"
+    elif english_count > hindi_count:
+        return "en"
+
+    # Contextual single word hints
+    if words.intersection({"yes", "no", "sure", "okay", "thanks", "please", "english"}):
+        return "en"
+    if words.intersection({"haan", "nahi", "theek", "shukriya", "hindi"}):
+        return "hi"
+
+    # Preserve previous session detected language
+    if session_state and "detected_language" in session_state:
+        return session_state["detected_language"]
+
+    # Fallback to STT detected language
+    if detected_language:
+        dl = detected_language.lower()
+        if dl.startswith("en"):
+            return "en"
+        elif dl.startswith("hi"):
+            return "hi"
+
+    return "hi"
+
+
 def raahi_iiiem_strategy(agent, message, session, **kwargs):
     """Non-streaming / HTTP fallback implementation."""
     state: dict = session.state or {}
@@ -56,8 +118,13 @@ def raahi_iiiem_strategy(agent, message, session, **kwargs):
     msg = raw_message.lower()
     conversation_history: list = state.get("conversation_history", [])
 
+    user_lang = _detect_user_language(raw_message, None, state)
+    state["detected_language"] = user_lang
+
     if is_farewell(msg):
         save_session(session, {})
+        if user_lang == "en":
+            return "Thank you for contacting Triple i E M, have a great day! [END_CALL]"
         return "Dhanyavaad, aapka din shubh ho! [END_CALL]"
 
     current_stage = state.get("stage", STAGE_GREET)
@@ -104,6 +171,24 @@ def raahi_iiiem_strategy(agent, message, session, **kwargs):
         logger.error(f"RAG retrieval error for Raahi: {e}")
         rag_context = ""
 
+    if user_lang == "en":
+        language_instruction = (
+            "CRITICAL LANGUAGE & NUMERICAL RULE:\n"
+            "- The caller is speaking in ENGLISH. You MUST reply 100% in natural, professional ENGLISH. Do NOT use Hindi words.\n"
+            "- NUMERICAL WORDS IN ENGLISH: Speak all numbers, prices, phone numbers, pincodes, building/office numbers, and batch timings using ENGLISH words.\n"
+            "  • Phone numbers: Write digit-by-digit in English words or spaced digits (e.g. 'seven five seven three zero three six zero six six' or '7 5 7 3 0 3 6 0 6 6'). NEVER write bare unspaced numbers like '7573036066'.\n"
+            "  • Prices: 'fourteen thousand nine hundred ninety-nine rupees plus GST', 'nineteen thousand nine hundred ninety-nine rupees plus GST', 'thirty-four thousand nine hundred ninety-nine rupees plus GST', 'forty-nine thousand nine hundred ninety-nine rupees plus GST', 'five thousand rupees', 'ten thousand rupees'.\n"
+            "  • Building/Pincode: 'office two zero one dash two zero two', 'three eight zero zero zero nine'."
+        )
+    else:
+        language_instruction = (
+            "CRITICAL LANGUAGE & NUMERICAL RULE:\n"
+            "- The caller is speaking in HINDI/HINGLISH. Reply naturally in HINDI or HINGLISH.\n"
+            "- NUMERICAL WORDS IN HINDI: Speak all numbers, prices, phone numbers, pincodes, building/office numbers, and batch timings using HINDI numerical words.\n"
+            "  • Prices: 'chaudah hazaar nau sau ninyanve rupees plus GST', 'unnees hazaar nau sau ninyanve rupees plus GST', 'chaintis hazaar nau sau ninyanve rupees plus GST', 'unchaas hazaar nau sau ninyanve rupees plus GST', 'paanch hazaar rupees', 'das hazaar rupees'.\n"
+            "  • Building/Pincode: 'office do sau ek dash do sau do', 'teen aath zero zero zero nau'."
+        )
+
     system_prompt = RAAHI_IIIEM_SYSTEM_PROMPT.format(
         agent_name=agent.name or AGENT_NAME,
         company_name=agent.company_name or COMPANY_NAME,
@@ -111,7 +196,8 @@ def raahi_iiiem_strategy(agent, message, session, **kwargs):
         current_stage=current_stage,
         customer_name=customer_name,
         user_message=raw_message,
-        rag_context=rag_context
+        rag_context=rag_context,
+        language_instruction=language_instruction
     )
 
     from conversations.services.azure_openai_service import generate_response
@@ -185,11 +271,19 @@ def raahi_iiiem_prepare(agent, message, session, detected_language=None, **kwarg
     msg = raw_message.lower()
     conversation_history = state.get("conversation_history", [])
 
+    user_lang = _detect_user_language(raw_message, detected_language, state)
+    state["detected_language"] = user_lang
+    tts_lang = user_lang
+
     if is_farewell(msg):
         save_session(session, {})
+        if user_lang == "en":
+            farewell_reply = "Thank you for contacting Triple i E M, have a great day! [END_CALL]"
+        else:
+            farewell_reply = "Dhanyavaad, aapka din shubh ho! [END_CALL]"
         return {
-            "static_reply": "Dhanyavaad, aapka din shubh ho! [END_CALL]",
-            "tts_language": "hi",
+            "static_reply": farewell_reply,
+            "tts_language": tts_lang,
             "auto_disconnect": True
         }
 
@@ -200,16 +294,18 @@ def raahi_iiiem_prepare(agent, message, session, detected_language=None, **kwarg
             reply = f"Namaste {customer_name_input} ji! Triple i E M mein aapka swagat hai. Main aapki kaise madad kar sakti hoon?"
             state["stage"] = STAGE_NEED
             state["name_greeted"] = True
+            init_tts_lang = "hi"
         else:
             reply = f"Hi, I am Raahi calling from Triple i E M, how can I help you today?"
             state["stage"] = STAGE_GREET
+            init_tts_lang = "en"
 
         state["intro_shown"] = True
         state["conversation_history"] = [f"Agent: {reply}"]
         save_session(session, state)
         return {
             "static_reply": reply,
-            "tts_language": "hi"
+            "tts_language": init_tts_lang
         }
 
     # Extract customer name if not captured yet
@@ -238,6 +334,24 @@ def raahi_iiiem_prepare(agent, message, session, detected_language=None, **kwarg
         logger.error(f"RAG retrieval error for Raahi: {e}")
         rag_context = ""
 
+    if user_lang == "en":
+        language_instruction = (
+            "CRITICAL LANGUAGE & NUMERICAL RULE:\n"
+            "- The caller is speaking in ENGLISH. You MUST reply 100% in natural, professional ENGLISH. Do NOT use Hindi words.\n"
+            "- NUMERICAL WORDS IN ENGLISH: Speak all numbers, prices, phone numbers, pincodes, building/office numbers, and batch timings using ENGLISH words.\n"
+            "  • Phone numbers: Write digit-by-digit in English words or spaced digits (e.g. 'seven five seven three zero three six zero six six' or '7 5 7 3 0 3 6 0 6 6'). NEVER write bare unspaced numbers like '7573036066'.\n"
+            "  • Prices: 'fourteen thousand nine hundred ninety-nine rupees plus GST', 'nineteen thousand nine hundred ninety-nine rupees plus GST', 'thirty-four thousand nine hundred ninety-nine rupees plus GST', 'forty-nine thousand nine hundred ninety-nine rupees plus GST', 'five thousand rupees', 'ten thousand rupees'.\n"
+            "  • Building/Pincode: 'office two zero one dash two zero two', 'three eight zero zero zero nine'."
+        )
+    else:
+        language_instruction = (
+            "CRITICAL LANGUAGE & NUMERICAL RULE:\n"
+            "- The caller is speaking in HINDI/HINGLISH. Reply naturally in HINDI or HINGLISH.\n"
+            "- NUMERICAL WORDS IN HINDI: Speak all numbers, prices, phone numbers, pincodes, building/office numbers, and batch timings using HINDI numerical words.\n"
+            "  • Prices: 'chaudah hazaar nau sau ninyanve rupees plus GST', 'unnees hazaar nau sau ninyanve rupees plus GST', 'chaintis hazaar nau sau ninyanve rupees plus GST', 'unchaas hazaar nau sau ninyanve rupees plus GST', 'paanch hazaar rupees', 'das hazaar rupees'.\n"
+            "  • Building/Pincode: 'office do sau ek dash do sau do', 'teen aath zero zero zero nau'."
+        )
+
     system_prompt = RAAHI_IIIEM_SYSTEM_PROMPT.format(
         agent_name=agent.name or AGENT_NAME,
         company_name=agent.company_name or COMPANY_NAME,
@@ -245,13 +359,14 @@ def raahi_iiiem_prepare(agent, message, session, detected_language=None, **kwarg
         current_stage=current_stage,
         customer_name=customer_name,
         user_message=raw_message,
-        rag_context=rag_context
+        rag_context=rag_context,
+        language_instruction=language_instruction
     )
 
     return {
         "system_prompt": system_prompt,
         "user_message": raw_message,
-        "tts_language": "hi",
+        "tts_language": tts_lang,
         "skip_input_translation": True,
         "skip_output_translation": True,
         "translate_input_to": "original",
