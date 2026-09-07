@@ -684,7 +684,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             self.language = "auto"
 
         # ── STT SETUP ──────────────────────────────────────────
-        self.recognizer, self.push_stream = create_speech_recognizer(language=self.language)
+        self.strategy_key = strategy_key
+        self.recognizer, self.push_stream = create_speech_recognizer(language=self.language, strategy_key=self.strategy_key)
         self._setup_stt_callbacks()
         self.recognizer.start_continuous_recognition_async()
 
@@ -757,9 +758,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     greeting = f"નમસ્તે! હું નાવ્યા છું. હું VTech Samsung Cafe તરફથી વાત કરી રહી છું. શું મારી વાત {name_part} સાથે થઈ રહી છે?"
                 elif strategy_key == "samsung_llm_strategy":
                     if customer_name:
-                        greeting = f"નમસ્તે {customer_name} જી! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
+                        greeting = f"નમસ્તે, શું હું {customer_name} સાથે વાત કરી રહી છું?"
                     else:
-                        greeting = "નમસ્તે! હું વીટેક સેમસંગ કેફેમાંથી નાવ્યા બોલું છું. શું મારી વાત તમારી સાથે થઈ શકે?"
+                        greeting = "નમસ્તે! શું હું તમારી સાથે વાત કરી શકું?"
                 elif strategy_key == "fold8_prereserve_strategy":
                     greeting = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?"
                 elif strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
@@ -805,7 +806,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     state["call_phase"] = "collect_flat_type"
                 elif strategy_key == "samsung_store_strategy":
                     state["call_phase"] = "GREETING_REPLY"
-                elif strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"]:
+                elif strategy_key == "samsung_llm_strategy":
+                    state["call_phase"] = "CONFIRM_IDENTITY"
+                elif strategy_key == "fold8_prereserve_strategy":
                     state["call_phase"] = "ASK_CONSENT"
                 elif strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
                     state["call_phase"] = "greeting"
@@ -828,9 +831,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         elif self.strategy_key == "kia_syros_strategy":
             self.SPEECH_DETECT_RMS = 150
             self.SILENCE_TRIGGER_SEC = 0.55
-        elif self.strategy_key == "icemake":
+        elif self.strategy_key in ["icemake", "icemake_strategy"]:
             self.SPEECH_DETECT_RMS = 150
-            self.SILENCE_TRIGGER_SEC = 0.85  # 850ms allows natural pauses during 10-digit phone number recitation
+            self.SILENCE_TRIGGER_SEC = 1.4  # Allow natural pauses during full query/details
 
         # Determine greeting audio path
         if self.strategy_key == "hospital_minimal":
@@ -1178,9 +1181,48 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
     # ================= FINAL TEXT CONSUMER =================
 
     async def _final_text_consumer(self):
+        phone_buffer = []
+        phone_last_time = 0.0
+
         while self.is_connected:
+            is_icemake = getattr(self, "strategy_key", None) in ["icemake", "icemake_strategy"]
+            is_phone_step = False
+            if is_icemake:
+                try:
+                    from conversations.models import ConversationSession
+                    session = await sync_to_async(
+                        lambda: ConversationSession.objects.filter(session_id=self.session_id).first()
+                    )()
+                    if session and session.state and session.state.get("current_step") == 4:
+                        is_phone_step = True
+                except Exception:
+                    pass
+
+            # ── Step 4 Phone Number 3-Second Silence Flush ──
+            if is_phone_step and phone_buffer:
+                if time.time() - phone_last_time >= 3.0:
+                    combined_phone_text = " ".join(phone_buffer).strip()
+                    phone_buffer.clear()
+                    phone_last_time = 0.0
+                    if combined_phone_text and not self.is_bot_speaking and not self.is_processing:
+                        print(f"📱 [STEP 4 PHONE 3s SILENCE TIMEOUT]: Dispatching complete phone input: '{combined_phone_text}'")
+                        normalized = _normalize(combined_phone_text)
+                        self.last_dispatched_text = normalized
+                        self.last_dispatch_time = time.time()
+                        self._clear_vad_dispatch()
+                        self.partial_text = ""
+
+                        self.is_processing = True
+                        try:
+                            async with self.processing_lock:
+                                await self.handle_ai_reply(combined_phone_text)
+                        finally:
+                            self.is_processing = False
+                        continue
+
             try:
-                text = await asyncio.wait_for(self.final_text_queue.get(), timeout=1.0)
+                wait_timeout = 0.2 if (is_phone_step and phone_buffer) else 1.0
+                text = await asyncio.wait_for(self.final_text_queue.get(), timeout=wait_timeout)
             except asyncio.TimeoutError:
                 continue
             except Exception:
@@ -1191,6 +1233,14 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
             if self.is_bot_speaking or self.is_processing:
                 print("⏭️ Skipped (bot busy):", text)
+                continue
+
+            # ── Step 4 Phone Input Buffering ──
+            if is_phone_step:
+                print(f"📱 [STEP 4 PHONE BUFFERING]: Received chunk '{text}' — waiting for 3s silence...")
+                phone_buffer.append(text)
+                phone_last_time = time.time()
+                self.last_activity_time = time.time()
                 continue
 
             normalized = _normalize(text)
@@ -1380,9 +1430,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     self.speech_active = False
                     self.silence_start_time = None
 
-                    is_samsung = (getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"])
+                    is_samsung_or_icemake = (getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy", "icemake", "icemake_strategy"])
                     if (
-                        not is_samsung
+                        not is_samsung_or_icemake
                         and not self.is_bot_speaking
                         and not self.is_processing
                         and self.partial_text
@@ -1857,7 +1907,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             self.language = tts_language
             try:
                 self.recognizer.stop_continuous_recognition_async()
-                self.recognizer, self.push_stream = create_speech_recognizer(language=self.language)
+                self.recognizer, self.push_stream = create_speech_recognizer(language=self.language, strategy_key=getattr(self, "strategy_key", None))
                 self._setup_stt_callbacks()
                 self.recognizer.start_continuous_recognition_async()
             except Exception as e_stt:
@@ -2161,6 +2211,11 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         total_ms = round((time.time() - pipeline_start) * 1000)
         print(f"⏱ STREAMING PIPELINE: translate_in={translate_in_ms}ms | prep={prep_ms}ms | LLM+TTS={llm_ms}ms | TOTAL={total_ms}ms")
 
+        is_end_call_signal = False
+        if full_response:
+            if any(tag in full_response for tag in ["[END_CALL]", "[BOOKING_CONFIRMED]", "[NOT_INTERESTED]", "END_CALL"]):
+                is_end_call_signal = True
+
         play_override_audio = None
         if full_response:
             audio_match = re.search(r'\[\s*PLAY_AUDIO:\s*([a-zA-Z0-9_\-\.]+)(?:\.raw)?\s*\]', full_response, re.I)
@@ -2188,15 +2243,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         print("🤖 BOT REPLY:", reply_for_user)
 
         # ── FLOW FOLLOW-UP ────────────────────────────────────────────────────
-        # After the LLM answers an out-of-script question, stream the current
-        # phase's pre-recorded audio question to snap the call back on-track.
-        # NOTE: _stream_local_audio_file prepends self.language automatically,
-        #       so pass bare filenames (no lang prefix) here.
-        if not prep_result.get("auto_disconnect") and not prep_result.get("skip_flow_followup"):
+        if not prep_result.get("auto_disconnect") and not prep_result.get("skip_flow_followup") and not is_end_call_signal:
             _phase_audio = None
             if play_override_audio:
                 _phase_audio = play_override_audio
-                # Map audio back to phase and update phase in state
                 AUDIO_TO_PHASE = {
                     "step2_confirm_interest.raw": "CONFIRM_INTEREST",
                     "step3_ask_timeline.raw": "ASK_TIMELINE",
@@ -2234,27 +2284,20 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 await self._stream_local_audio_file(_phase_audio)
         # ─────────────────────────────────────────────────────────────────────
 
-        if prep_result.get("auto_disconnect"):
-            if prep_result.get("skip_name_collection"):
-                print("📴 AUTO-DISCONNECT (insurance): Ending call immediately")
-                await asyncio.sleep(1.5)
-                await close_conversation(self.conversation)
-                await self.send(text_data=json.dumps({
-                    "event": "stop",
-                    "format": "a-law 8-bit, 8kHz, Mono",
-                    "encoding": "base64"
-                }))
-                self.is_connected = False
-                await self.close()
-                return
+        state_obj = prep_result.get("state", {}) or {}
+        is_closing_phase = is_end_call_signal or prep_result.get("auto_disconnect") or state_obj.get("call_phase") == "CLOSING"
 
-            print("📴 BOOKING CONFIRMED — LLM asked for name, waiting for user response")
-            state = prep_result.get("state", {})
-            session_obj = prep_result.get("session")
-            if state is not None and session_obj:
-                state["name_collection_pending"] = True
-                from conversations.services.core.strategies import save_session
-                await sync_to_async(save_session)(session_obj, state)
+        if is_closing_phase:
+            print("📴 AUTO-DISCONNECT: Ending call automatically after closing statement.")
+            await asyncio.sleep(1.0)
+            await close_conversation(self.conversation)
+            await self.send(text_data=json.dumps({
+                "event": "stop",
+                "format": "a-law 8-bit, 8kHz, Mono",
+                "encoding": "base64"
+            }))
+            self.is_connected = False
+            await self.close()
             return
 
     # ================= TTS HELPERS =================
@@ -2367,10 +2410,12 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             target_lang = (f"{lang}-IN" if lang in ["hi", "gu", "te", "pa", "bn", "mr", "ta", "kn", "ml", "en"] else "hi-IN") if is_icemake else ("en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya) else "gu-IN"))
             speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if (is_shreyas_en or is_kia_syros or is_icemake) else ("shubh" if is_loan_hi else "ishita"))
             if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
-                speaker = "ishita"
+                def_v = (getattr(self, "default_voice", "") or "").lower()
+                valid_speakers = ["shreya", "ishita", "kavya", "aditi", "priya", "vibhuti"]
+                speaker = def_v if def_v in valid_speakers else "shreya"
             is_shreyas_gu = getattr(self, "strategy_key", None) == "shreyas_gu_strategy"
-            pace = 1.02 if (is_raahi or is_priya_naavya) else (1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if (is_kia_syros or is_icemake) else (1.1 if is_loan_hi else (1.05 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1.15))))))
-            temp = 0.50 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
+            pace = 1.02 if (is_raahi or is_priya_naavya) else (1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if (is_kia_syros or is_icemake) else (1.1 if is_loan_hi else (1.12 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1.15))))))
+            temp = 0.65 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
 
             # Normalise clean_text for cache key (lowercase, strip punctuation)
             norm_text = re.sub(r'[.,\/#!$%\^&\*;:{}=\-_`~()।!?]', '', clean_text).lower().strip()
@@ -2431,7 +2476,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
         voice_name_lower = getattr(self, "default_voice", "").lower()
         male_identifiers = ["prabhat", "arjun", "aarav", "niranjan", "madhur", "arvind", "kashyap", "adam"]
-        if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] or any(m_id in voice_name_lower for m_id in male_identifiers):
+        if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "fold8_prereserve_strategy"] or any(m_id in voice_name_lower for m_id in male_identifiers):
             voice_id = "pNInz6obpgq9S3JwcM8g"  # Adam (Male) - high emotional expressiveness
         else:
             voice_id = ELEVENLABS_VOICE_MAP.get(lang, ELEVENLABS_VOICE_MAP["en"])

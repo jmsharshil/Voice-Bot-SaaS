@@ -191,13 +191,14 @@ AZURE_SPEECH_REGION = os.getenv("AZURE_SPEECH_REGION")
 
 
 # ✅ OPTIMIZED: Direct speech recognizer without Language Identification (LID) latency & with natural pacing
-def create_speech_recognizer(language="en"):
+def create_speech_recognizer(language="en", strategy_key=None):
     speech_config = speechsdk.SpeechConfig(
         subscription=AZURE_SPEECH_KEY,
         region=AZURE_SPEECH_REGION
     )
 
     is_auto = (language == "auto")
+    is_icemake = (strategy_key in ["icemake", "icemake_strategy"])
     if is_auto:
         auto_detect_config = speechsdk.languageconfig.AutoDetectSourceLanguageConfig(
            languages=["en-IN", "hi-IN"]
@@ -208,9 +209,20 @@ def create_speech_recognizer(language="en"):
 
     speech_config.set_property_by_name("SPEECH-RecoModelKey", "telephony")
 
-    # Pacing timeouts (350ms ultra low-latency for auto/Raahi, 900ms for standard agents)
-    end_silence = "350" if is_auto else "900"
-    seg_silence = "250" if is_auto else "500"
+    # Pacing timeouts:
+    # - icemake: 1200ms end silence & 800ms seg silence to allow customers to speak complete sentences/details without cutting off mid-query
+    # - auto/Raahi: 350ms ultra low-latency
+    # - standard agents: 900ms
+    if is_icemake:
+        end_silence = "1200"
+        seg_silence = "800"
+    elif is_auto:
+        end_silence = "350"
+        seg_silence = "250"
+    else:
+        end_silence = "900"
+        seg_silence = "500"
+
     speech_config.set_property(
         speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, end_silence
     )

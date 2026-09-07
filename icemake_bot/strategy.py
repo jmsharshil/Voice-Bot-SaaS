@@ -470,12 +470,18 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
             }
 
     prev_step = current_step
+    
+    # ── OUT-OF-FLOW INTERCEPTION ──
+    out_of_flow_res = _check_and_handle_out_of_flow(raw_message, lang, prev_step, session, state, mode=mode)
+    if out_of_flow_res:
+        return out_of_flow_res
+
     state["conversation_history"].append(f"User: {raw_message}")
     _log_translator(raw_message, None, lang)
 
     # ── STEP 1: Process Customer Name ──
     if prev_step == 1:
-        clean_name = _clean_conversational_text(raw_message)
+        clean_name = _extract_person_name(raw_message, lang)
         state["customer_name"] = clean_name
         next_step = 2
         name_to_use = clean_name if clean_name and clean_name != "Not Provided" else ""
@@ -574,7 +580,7 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
 
     # ── STEP 4: Process Phone Number & Validate (Must be EXACTLY 10 Digits) ──
     elif prev_step == 4:
-        digits = "".join(filter(str.isdigit, raw_message))
+        digits = _extract_phone_number_ai(raw_message, lang)
         if len(digits) != 10:
             if lang == "hi":
                 reply = "आपका नंबर अमान्य लग रहा है। कृपया अपना 10 अंकों का मोबाइल नंबर फिर से बताइए।"
@@ -853,8 +859,10 @@ def _extract_clean_ticket_entities(state: dict) -> dict:
     raw_issue = state.get("issue_description", "")
 
     prompt = f"""
-Extract and normalize the following customer support ticket entity values into clean, proper English string values for a CRM spreadsheet.
-The original input might contain conversational filler in Hindi, Hinglish, Gujarati, Telugu, Punjabi, Bengali, Marathi, Malayalam, or English (e.g. "Mera naam Harshil hai", "Maru naam Yash chhe", "Maze नाव Taksh ahe", "Amar naam Yash", "Ente peru Rahul", "Main Gujarat se hu", "Ji main Ahmedabad me rehta hu", "Meri company Ice Make hai", "Ji usme cooling nahi ho raha hai").
+You are an expert Refrigeration Engineering & CRM Data Extraction Assistant for Ice Make Refrigeration Ltd.
+Analyze the customer's raw problem description carefully. Speech Recognition (STT) input might be noisy, phonetically garbled, informal, or in any regional language (Hindi, Gujarati, Tamil, Telugu, Marathi, Punjabi, Malayalam, Bengali, Kannada, English).
+
+Your job is to INTELLIGENTLY identify the underlying technical refrigeration issue, repair any speech recognition errors, and map it into standardized technical terminology.
 
 Raw Inputs:
 - Customer Name Raw: "{raw_name}"
@@ -865,22 +873,30 @@ Raw Inputs:
 - Issue Description Raw: "{raw_issue}"
 
 Rules:
-1. "customer_name": Extract ONLY the person's name in Title Case English (e.g., "Mera naam Harshil Mehta hai" -> "Harshil Mehta", "Maru naam Yash chhe" -> "Yash", "Naku peru Jiggar" -> "Jigar", "Hello" -> "Not Provided").
-2. "state": Extract ONLY the Indian state name in English (e.g., "Gujarat se hu" -> "Gujarat", "Main UP se hu" -> "Uttar Pradesh", "Rajasthan" -> "Rajasthan").
-3. "city": Extract ONLY the city/area name in English Title Case (e.g., "Main Ahmedabad me job करता हूँ" -> "Ahmedabad", "Banswara" -> "Banswara").
-4. "address": Extract ONLY the company or address name (including 6-digit pincode if provided by user) in English Title Case (e.g., "Meri company ka naam Ice Make hai, pincode 380015" -> "Ice Make 380015", "XYZ Diary" -> "XYZ Diary").
-5. "machine_model_no": Extract ONLY the clean product/machine name in English Title Case (e.g., "Blast Freezer", "Chiller", "Freezer", "Cold Storage Room").
-6. "type_of_complaint": Translate and summarize the issue description into 1 short, clean English sentence (e.g., "Freezer is not cooling properly").
+1. "customer_name": Extract ONLY the person's name in Title Case English (e.g., "Harshil Mehta").
+2. "state": Extract ONLY the Indian state name in English (e.g., "Gujarat").
+3. "city": Extract ONLY the city/area name in English Title Case (e.g., "Ahmedabad").
+4. "address": Extract ONLY the company or address name (including 6-digit pincode if provided) in English Title Case.
+5. "machine_model_no": Extract ONLY the clean product/machine name in English Title Case (e.g., "Blast Freezer", "Chiller", "Cold Storage Room", "Freezer", "Ice Plant").
+6. "issue_type": INTELLIGENTLY classify the root technical issue into EXACTLY ONE of these standard categories:
+   - "No Cooling / Insufficient Cooling" (for cooling failure, temperature not dropping, thandak nahi hona, thandak kam hona)
+   - "Abnormal Noise & Vibration" (for loud noise, sound in compressor, fan noise, vibration)
+   - "Gas Leakage / Low Pressure" (for gas leakage, pressure loss, gas kam hona)
+   - "Electrical / Tripping Fault" (for machine tripping, power issue, current, MCB trip, not turning on)
+   - "Water Leakage / Defrost Fault" (for water leaking, excessive ice accumulation, frosting issue)
+   - "Temperature Sensor Error" (for display error, sensor fault, temperature indicator issue)
+   - "General Maintenance / Service" (for routine checkup, general service, or unspecified issue)
+7. "type_of_complaint": Formulate ONE clear, professional, grammatically correct English sentence summarizing the exact issue clearly, fixing any STT misrecognitions or informal phrasing (e.g., "thandak nahi ho raha" -> "Equipment is not cooling properly and temperature is failing to drop", "compressor sound kar raha hai" -> "Compressor is generating abnormal loud noise during operation").
 
 Return ONLY a valid JSON object with keys:
-{{"customer_name": "...", "state": "...", "city": "...", "address": "...", "machine_model_no": "...", "type_of_complaint": "..."}}
+{{"customer_name": "...", "state": "...", "city": "...", "address": "...", "machine_model_no": "...", "issue_type": "...", "type_of_complaint": "..."}}
 """
 
     try:
         response = client.chat.completions.create(
             model=settings.AZURE_OPENAI_DEPLOYMENT,
             messages=[
-                {"role": "system", "content": "You are a precise JSON entity extraction assistant for CRM data entry."},
+                {"role": "system", "content": "You are an expert refrigeration engineering entity extraction assistant for CRM data entry."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.0,
@@ -897,8 +913,257 @@ Return ONLY a valid JSON object with keys:
             "city": _clean_conversational_text(raw_city),
             "address": _clean_conversational_text(raw_address),
             "machine_model_no": _clean_conversational_text(raw_product),
+            "issue_type": "No Cooling / Insufficient Cooling",
             "type_of_complaint": _clean_conversational_text(raw_issue)
         }
+
+def _extract_person_name(raw_message: str, lang: str = "en") -> str:
+    """
+    Smart 2-tier name extraction system across all 10 supported languages:
+    Tier 1: Fast regex-based cleaning via _clean_conversational_text.
+    Tier 2: AI LLM entity extraction for complex/natural multi-word sentences to isolate ONLY the exact person name.
+    """
+    if not raw_message or not raw_message.strip():
+        return "Not Provided"
+
+    cleaned = _clean_conversational_text(raw_message)
+    words = cleaned.split()
+
+    # Tier 1 check: If response is 1 to 3 words (<= 25 chars) without conversational verbs/filler, use cleaned directly
+    is_simple = len(words) <= 3 and len(cleaned) <= 25 and not any(
+        w in cleaned.lower() for w in [
+            "bol", "rha", "rhi", "hu", "chhe", "ahe", "call", "baat", "karni",
+            "janna", "chahiy", "chhi", "aanu", "peru", "naam", "name", "state", "city",
+            "cold", "storage", "freezer", "chiller", "ice", "make"
+        ]
+    )
+
+    if is_simple and cleaned and cleaned != "Not Provided":
+        return cleaned
+
+    # Tier 2: AI LLM Extraction for complex conversational responses across all 10 languages
+    try:
+        from conversations.services.azure_openai_service import client
+        from django.conf import settings
+
+        prompt = f"""
+Extract ONLY the caller's actual person name from this user utterance in any language (Hindi, Gujarati, English, Marathi, Punjabi, Bengali, Telugu, Tamil, Kannada, Malayalam).
+
+Rules:
+- Return ONLY the person's real name (e.g., "Harshil Mehta", "Yash Patel", "Vishnu", "Gurpreet Singh", "तक्ष", "હર્ષિલ").
+- Do NOT include conversational words, location, city, state, or product terms.
+- If the user did NOT state their name or gave a non-name answer (e.g. "Hello", "Gujarat se hu"), return "Not Provided".
+
+User Utterance: "{raw_message}"
+Name:"""
+
+        response = client.chat.completions.create(
+            model=settings.AZURE_OPENAI_DEPLOYMENT,
+            messages=[
+                {"role": "system", "content": "You are an expert name extraction assistant for multi-lingual voice calls."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.0,
+            max_tokens=20
+        )
+        ai_name = response.choices[0].message.content.strip().strip('"').strip("'").strip(".")
+        if ai_name and ai_name.lower() not in ["not provided", "none", "unknown", "n/a", "no name", "not mentioned"]:
+            return ai_name
+    except Exception as e:
+        logger.warning("AI Name Extraction notice: %s", e)
+
+    return cleaned if cleaned else "Not Provided"
+
+def _extract_phone_number_ai(raw_message: str, lang: str = "en") -> str:
+    """
+    Intelligent 2-tier phone number extraction system across all 10 supported languages
+    (Hindi, Gujarati, Marathi, Tamil, Telugu, Punjabi, Malayalam, Bengali, Kannada, English, Hinglish):
+    
+    Tier 1: Fast Regional Digit Character & ASCII Digit Mapping
+      - Maps Unicode digits from Devanagari, Gujarati, Bengali, Gurmukhi, Tamil, Telugu, Kannada, Malayalam directly to ASCII '0'-'9'.
+      - Strips spaces, dashes, commas, dots, and trailing intonation marks like '?'.
+      - If mapped result contains EXACTLY 10 ASCII digits, returns immediately (< 1ms).
+
+    Tier 2: AI LLM Digit & Spoken Word Extraction (Azure OpenAI)
+      - Used when numbers are spoken as words (e.g., "नौ चार दो सात दो आठ पाँच छह पाँच तीन", "9427 બે આઠ 5653", "ஒன்பது நான்கு...", "nine four two...").
+      - Returns exact 10 ASCII digits or empty string.
+    """
+    if not raw_message or not raw_message.strip():
+        return ""
+
+    # Tier 1: Regional Script Unicode digit mapping
+    regional_digit_map = {
+        '०': '0', '१': '1', '२': '2', '३': '3', '४': '4', '५': '5', '६': '6', '७': '7', '८': '8', '९': '9',  # Devanagari
+        '૦': '0', '૧': '1', '૨': '2', '૩': '3', '૪': '4', '૫': '5', '૬': '6', '૭': '7', '૮': '8', '૯': '9',  # Gujarati
+        '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9',  # Bengali
+        '੦': '0', '੧': '1', '੨': '2', '੩': '3', '੪': '4', '੫': '5', '੬': '6', '੭': '7', '੮': '8', '੯': '9',  # Gurmukhi
+        '௦': '0', '௧': '1', '௨': '2', '௩': '3', '௪': '4', '௫': '5', '௬': '6', '௭': '7', '௮': '8', '௯': '9',  # Tamil
+        '౦': '0', '౧': '1', '౨': '2', '౩': '3', '౪': '4', '౫': '5', '౬': '6', '౭': '7', '౮': '8', '౯': '9',  # Telugu
+        '೦': '0', '೧': '1', '೨': '2', '೩': '3', '೪': '4', '೫': '5', '೬': '6', '೭': '7', '೮': '8', '೯': '9',  # Kannada
+        '൦': '0', '<ctrl42>': '1', '൨': '2', '൩': '3', '൪': '4', '൫': '5', '൬': '6', '൭': '7', '൮': '8', '൯': '9'   # Malayalam
+    }
+
+    converted_chars = []
+    for ch in raw_message:
+        if ch in regional_digit_map:
+            converted_chars.append(regional_digit_map[ch])
+        elif ch.isdigit():
+            converted_chars.append(ch)
+
+    tier1_digits = "".join(converted_chars)
+    if len(tier1_digits) == 10:
+        return tier1_digits
+
+    # Tier 2: AI LLM Extraction for spoken numbers or mixed words/digits across all 10 languages
+    try:
+        from conversations.services.azure_openai_service import client
+        from django.conf import settings
+
+        prompt = f"""
+You are an expert multi-lingual Indian phone number converter and digit extractor.
+Extract and convert the user's spoken 10-digit phone number into EXACTLY 10 ASCII digits.
+
+The input may be in any language (Hindi, Gujarati, Marathi, Tamil, Telugu, Punjabi, Malayalam, Bengali, Kannada, English, Hinglish).
+User input can be spoken in ANY of these formats:
+1. Single digit words: e.g. "नौ चार दो सात दो आठ पाँच छह पाँच तीन", "નવ ચાર બે સાત...", "nine four two..."
+2. Compound / Double-digit / Tens words: e.g., Gujarati "નવમું ઝીરો એકાણું બાણું ચારસો બે" -> 90 91 92 40 02 -> 9091924002; Hindi "नब्बे तिरानवे चौरासी साठ पंद्रह" -> 90 93 84 60 15 -> 9093846015; English "ninety-four twenty-seven twenty-eight fifty-six fifty-three" -> 9427285653.
+3. Mixed digits and words: e.g., "9427 બે આઠ 5653", "9427 double zero..."
+
+Rules:
+- Translate all regional number words, compound tens/hundreds phrases, and number names into their numeric digit representation.
+- Output ONLY the 10 ASCII digits without spaces, hyphens, punctuation, or explanations (e.g., 9091924002).
+- If no 10-digit number can be extracted, return "NONE".
+
+User Input: "{raw_message}"
+10-Digit Number:"""
+
+        response = client.chat.completions.create(
+            model=settings.AZURE_OPENAI_DEPLOYMENT,
+            messages=[
+                {"role": "system", "content": "You are an expert phone number extraction assistant for multi-lingual Indian voice calls handling spoken compound and single numbers."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.0,
+            max_tokens=20
+        )
+        ai_digits = response.choices[0].message.content.strip().strip('"').strip("'")
+        ai_clean_digits = "".join(filter(str.isdigit, ai_digits))
+        if len(ai_clean_digits) == 10:
+            return ai_clean_digits
+    except Exception as e:
+        logger.warning("AI Phone Number Extraction notice: %s", e)
+
+    return tier1_digits
+
+def _check_and_handle_out_of_flow(raw_message: str, lang: str, current_step: int, session, state: dict, mode: str = "telephony") -> dict:
+    """
+    Detects if user utterance is an out-of-flow question/query (FAQ, repeat request, office location, products, warranty, sales inquiry).
+    If yes:
+      Generates ONE single, natural, cohesive response in the user's language that answers their question directly
+      and smoothly transitions back to the required step detail.
+    """
+    if not raw_message or len(raw_message.strip()) < 3 or current_step in (0, 7, 8):
+        return None
+
+    # Guard 1: If input contains a 10-digit phone number, it's phone data for Step 4 — NEVER intercept!
+    digits = _extract_phone_number_ai(raw_message, lang)
+    if len(digits) == 10:
+        return None
+
+    msg_lower = raw_message.lower()
+    query_triggers = [
+        "kaha", "kidhar", "where", "kahan", "kaunsa", "kya", "what", "kaise", "how",
+        "office", "head office", "company", "location", "factory", "gandhinagar", "ahmedabad",
+        "rate", "price", "cost", "kharidna", "buy", "purchase", "new cold room", "new chiller",
+        "warranty", "guarantee", "timing", "open", "time", "contact",
+        "repeat", "रिपीट", "फिर से", "દુબારા", "ફરીથી", "કહ્યું", "બોલ્યા", "ક્યાં", "ક્યાં છે", "ઓફિસ", "સરનામું", "ભાવ", "કિંમત"
+    ]
+    
+    # Require explicit question trigger words (do not trigger on Azure STT's trailing '?' alone on phone/answers)
+    has_trigger_word = any(t in msg_lower for t in query_triggers)
+    if not has_trigger_word:
+        return None
+
+    step_goals = {
+        1: "Ask caller for their person name",
+        2: "Ask caller which Indian state they are calling from",
+        3: "Ask caller for their city/area address and 6-digit pincode",
+        4: "Ask caller for their 10-digit mobile phone number",
+        5: "Ask caller to confirm if their phone number is registered",
+        6: "Ask caller which Ice Make product they are using (e.g. Blast Freezer, Chiller, Cold Storage Room)"
+    }
+    
+    step_goal = step_goals.get(current_step, "Ask caller for their complaint details")
+
+    cust_name = state.get("customer_name", "Not Provided")
+    state_name = state.get("state_name", "Not Provided")
+    company_name = state.get("company_name", "Not Provided")
+    reg_mobile = state.get("registered_mobile", "Not Provided")
+
+    try:
+        from conversations.services.azure_openai_service import client
+        from django.conf import settings
+
+        prompt = f"""
+You are the 24x7 AI Voice Assistant for Ice Make Refrigeration Ltd.
+The user is on a live customer service call. Currently we are collecting complaint registration details.
+
+Current Call Context:
+- Step Goal: {step_goal}
+- Customer Name Collected: "{cust_name}"
+- State Collected: "{state_name}"
+- City/Address Collected: "{company_name}"
+- Phone Number Collected: "{reg_mobile}"
+
+Ice Make Company Knowledge:
+- Head Office / Factory: Dantali, GIDC, Gandhinagar - Ahmedabad Highway, Gujarat.
+- Products Manufactured: Cold Storage Rooms, Blast Freezers, Chillers, Deep Freezers, Ice Plants, Dairy Equipment.
+- 24x7 Service Support: Complaints registered are assigned to service engineers immediately.
+- New Sales / Pricing: Sales team will connect with customer after ticket registration for quotes.
+
+User Input: "{raw_message}"
+
+Instructions:
+1. Answer or address the user's input/question directly, politely, and accurately in language code '{lang}'.
+2. Then, in the SAME response, smoothly and naturally transition to asking for the required detail for the current step ({step_goal}).
+3. Do NOT include redundant opening filler words like "जी बिल्कुल धन्यवाद" or "ચોક્કસ આભાર". Make the response sound like 1 natural, cohesive, elegant sentence.
+
+Language Code: '{lang}'
+Response:"""
+
+        response = client.chat.completions.create(
+            model=settings.AZURE_OPENAI_DEPLOYMENT,
+            messages=[
+                {"role": "system", "content": "You are a warm, natural, helpful customer service voice agent for Ice Make Refrigeration Ltd."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.0,
+            max_tokens=80
+        )
+        full_reply = response.choices[0].message.content.strip().strip('"')
+        
+        if not full_reply:
+            return None
+
+        if "conversation_history" not in state:
+            state["conversation_history"] = []
+        state["conversation_history"].append(f"User: {raw_message}")
+        state["conversation_history"].append(f"Agent: {full_reply}")
+        save_session(session, state)
+        _log_translator(raw_message, full_reply, lang)
+
+        return {
+            "static_reply": full_reply,
+            "tts_language": lang,
+            "skip_output_translation": True,
+            "strategy_key": STRATEGY_KEY,
+            "mode": mode,
+            "session": session,
+            "state": state
+        }
+    except Exception as e:
+        logger.warning("Out-of-flow query intercept notice: %s", e)
+        return None
 
 def _clean_conversational_text(text: str) -> str:
     if not text:
@@ -973,7 +1238,7 @@ def _create_ticket_db_record(conversation, state):
                 "pin_code": state.get("pin_code", ""),
                 "machine_model_no": extracted.get("machine_model_no", state.get("product_name", "Not Provided")),
                 "machine_sr_no": state.get("machine_sr_no", "Not Provided"),
-                "issue_type": state.get("issue_type", "Other"),
+                "issue_type": extracted.get("issue_type", state.get("issue_type", "No Cooling / Insufficient Cooling")),
                 "issue_description": extracted.get("type_of_complaint", state.get("issue_description", "")),
             }
         )
@@ -1004,7 +1269,9 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
     clean_name = extracted.get("customer_name") or ticket.customer_name or "Not Provided"
     clean_address = extracted.get("address") or ticket.company_name or "Not Provided"
     clean_model = extracted.get("machine_model_no") or ticket.machine_model_no or "Not Provided"
-    clean_issue = extracted.get("type_of_complaint") or ticket.issue_description or "Not Provided"
+    clean_issue_type = extracted.get("issue_type") or ticket.issue_type or "General Maintenance / Service"
+    raw_issue_desc = extracted.get("type_of_complaint") or ticket.issue_description or "Not Provided"
+    clean_issue = f"[{clean_issue_type}] {raw_issue_desc}" if (clean_issue_type and clean_issue_type != "Other" and clean_issue_type.lower() not in raw_issue_desc.lower()) else raw_issue_desc
 
     created_at_str = localtime(ticket.created_at).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -1144,7 +1411,7 @@ def _send_whatsapp_ticket_confirmation(ticket):
             f"📋 *Complaint ID:* {ticket.ticket_number}\n"
             f"👤 *Name:* {ticket.customer_name or 'Customer'}\n"
             f"📞 *Registered Phone:* {ticket.registered_mobile or 'N/A'}\n"
-            f"⚙️ *Machine Model:* {ticket.machine_model_no or 'N/A'}\n"
+            f"⚙️ *Product Name:* {ticket.machine_model_no or 'N/A'}\n"
             f"🛠️ *Issue Type:* {ticket.issue_type or 'Other'}\n"
             f"📝 *Description:* {ticket.issue_description or 'N/A'}\n\n"
             f"Our technical service team will review your complaint and contact you shortly.\n\n"
@@ -1180,7 +1447,7 @@ def _send_whatsapp_engineer_notification(ticket):
             f"📞 *Customer Mobile:* {cust_phone}\n"
             f"📍 *City / State:* {ticket.city_state or 'N/A'}\n"
             f"🏠 *Address:* {ticket.company_name or 'N/A'}\n"
-            f"⚙️ *Machine Model:* {ticket.machine_model_no or 'N/A'}\n"
+            f"⚙️ *Product Name:* {ticket.machine_model_no or 'N/A'}\n"
             f"🛠️ *Issue Type:* {ticket.issue_type or 'Other'}\n"
             f"📝 *Description:* {ticket.issue_description or 'N/A'}\n\n"
             f"Please attend to this issue immediately.\n"

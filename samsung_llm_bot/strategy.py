@@ -37,12 +37,7 @@ def get_db_history_text(session_id: str) -> str:
     return ""
 
 def _get_guj_agent_name(name):
-    name_lower = (name or "").lower()
-    if "neel" in name_lower:
-        return "નીલ"
-    if "naavya" in name_lower:
-        return "નાવ્યા"
-    return name or "નાવ્યા"
+    return "નાવ્યા"
 
 def _get_guj_company_name(company):
     comp_lower = (company or "").lower()
@@ -77,15 +72,34 @@ def samsung_llm_strategy(agent, message, session, **kwargs):
 
     if not state.get("intro_shown"):
         customer_name = state.get("customer_name")
-        if customer_name:
-            reply = f"નમસ્તે {customer_name} જી! હું {agent_name} છું. હું {company_name} તરફથી વાત કરી રહી છું. તમે થોડા દિવસ પહેલા સેમસંગ પ્રોડક્ટ માટે રસ દર્શાવ્યો હતો એટલે કોલ કર્યો છે. શું તમારી સાથે બે મિનિટ વાત થઈ શકે?"
+        if customer_name and customer_name != "ગ્રાહક":
+            reply = f"નમસ્તે, શું હું {customer_name} સાથે વાત કરી રહી છું?"
         else:
-            reply = f"નમસ્તે! હું {agent_name} છું. હું {company_name} તરફથી વાત કરી રહી છું. તમે થોડા દિવસ પહેલા સેમસંગ પ્રોડક્ટ માટે રસ દર્શાવ્યો હતો એટલે કોલ કર્યો છે. શું તમારી સાથે બે મિનિટ વાત થઈ શકે?"
+            reply = "નમસ્તે! શું હું તમારી સાથે વાત કરી શકું?"
         state["intro_shown"] = True
-        state["call_phase"] = "ASK_CONSENT"
+        state["call_phase"] = "CONFIRM_IDENTITY"
         state["conversation_history"] = [f"Agent: {reply}"]
         save_session(session, state)
         return reply
+
+    # Step 2: Handle confirmation of identity after initial greeting
+    if state.get("call_phase") in ["CONFIRM_IDENTITY", "ASK_CONSENT", "GREETING_REPLY", "interest_confirmation"] and state.get("call_phase") != "ASK_PRODUCT_INTEREST":
+        negatives = ["ના", "નથી", "નાજી", "no", "not", "busy", "wrong number"]
+        if any(n in msg for n in negatives):
+            reply = "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે. [END_CALL]"
+            state["call_phase"] = "CLOSING"
+            state["current_phase"] = "CLOSING"
+            save_session(session, state)
+            return reply
+        else:
+            pitch_reply = f"અરે વાહ! હું {agent_name}, VTech Samsung Café Ahmedabad તરફથી વાત કરી રહી છું! અત્યારે અમારે ત્યાં ચાલી રહી છે 'VTech Festive Upgrades' ની ધમાકેદાર ઑફર! એમાં તમને Smartphone, Laptop, Tablet અને Wearable પર મળી રહ્યા છે શાનદાર Cashback અને Best EMI Options! અને સાથે ખરીદી પર Loyalty Points પણ! આ Festive Seasonમાં તમે કયું Product ખરીદવાનું વિચારી રહ્યા છો — Smartphone, Laptop, Tablet કે Wearable?"
+            state["call_phase"] = "ASK_PRODUCT_INTEREST"
+            state["current_phase"] = "ASK_PRODUCT_INTEREST"
+            conversation_history.append(f"User: {raw_message}")
+            conversation_history.append(f"Agent: {pitch_reply}")
+            state["conversation_history"] = conversation_history
+            save_session(session, state)
+            return pitch_reply
 
     conversation_history.append(f"User: {raw_message}")
     if len(conversation_history) > MAX_TURNS:
@@ -93,9 +107,12 @@ def samsung_llm_strategy(agent, message, session, **kwargs):
 
     # Fallback to LLM
     history_text = get_db_history_text(session.session_id)
+    cust_name = state.get("customer_name")
+    cust_label = cust_name if cust_name and cust_name != "ગ્રાહક" else "તમે"
     system_prompt = SAMSUNG_LLM_SYSTEM_PROMPT.format(
-        agent_name=agent.name or "Neel",
-        company_name=agent.company_name or "VTech Samsung Cafe",
+        agent_name=agent_name,
+        company_name=company_name,
+        customer_name=cust_label,
         history_text=history_text
     )
     from conversations.services.azure_openai_service import generate_response
@@ -104,8 +121,10 @@ def samsung_llm_strategy(agent, message, session, **kwargs):
     # Determine if call ended
     if "[END_CALL]" in reply or "[BOOKING_CONFIRMED]" in reply or "[NOT_INTERESTED]" in reply:
         state["call_phase"] = "CLOSING"
+        state["current_phase"] = "CLOSING"
     else:
         state["call_phase"] = "LLM_CONVERSATION"
+        state["current_phase"] = "LLM_CONVERSATION"
 
     conversation_history.append(f"Agent: {reply}")
     state["conversation_history"] = conversation_history
@@ -138,12 +157,13 @@ def samsung_llm_prepare(agent, message, session, detected_language=None, **kwarg
     # Low-latency Greeting (Zero LLM Delay on Connection)
     if not state.get("intro_shown"):
         customer_name = state.get("customer_name")
-        if customer_name:
-            reply = f"નમસ્તે {customer_name} જી! હું {agent_name} છું. હું {company_name} તરફથી વાત કરી રહી છું. તમે થોડા દિવસ પહેલા સેમસંગ પ્રોડક્ટ માટે રસ દર્શાવ્યો હતો એટલે કોલ કર્યો છે. શું તમારી સાથે બે મિનિટ વાત થઈ શકે?"
+        if customer_name and customer_name != "ગ્રાહક":
+            reply = f"નમસ્તે, શું હું {customer_name} સાથે વાત કરી રહી છું?"
         else:
-            reply = f"નમસ્તે! હું {agent_name} છું. હું {company_name} તરફથી વાત કરી રહી છું. તમે થોડા દિવસ પહેલા સેમસંગ પ્રોડક્ટ માટે રસ દર્શાવ્યો હતો એટલે કોલ કર્યો છે. શું તમારી સાથે બે મિનિટ વાત થઈ શકે?"
+            reply = "નમસ્તે! શું હું તમારી સાથે વાત કરી શકું?"
         state["intro_shown"] = True
-        state["call_phase"] = "ASK_CONSENT"
+        state["call_phase"] = "CONFIRM_IDENTITY"
+        state["current_phase"] = "CONFIRM_IDENTITY"
         state["conversation_history"] = [f"Agent: {reply}"]
         save_session(session, state)
         return {
@@ -151,14 +171,43 @@ def samsung_llm_prepare(agent, message, session, detected_language=None, **kwarg
             "tts_language": detected_lang
         }
 
+    # Step 2: Handle confirmation of identity after initial greeting ONLY ONCE
+    if state.get("call_phase") in ["CONFIRM_IDENTITY", "ASK_CONSENT", "GREETING_REPLY", "interest_confirmation"] and state.get("call_phase") != "ASK_PRODUCT_INTEREST":
+        negatives = ["ના", "નથી", "નાજી", "no", "not", "busy", "wrong number"]
+        if any(n in msg for n in negatives):
+            reply = "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે. [END_CALL]"
+            state["call_phase"] = "CLOSING"
+            state["current_phase"] = "CLOSING"
+            save_session(session, state)
+            return {
+                "static_reply": reply,
+                "tts_language": detected_lang,
+                "auto_disconnect": True
+            }
+        else:
+            pitch_reply = f"અરે વાહ! હું {agent_name}, VTech Samsung Café Ahmedabad તરફથી વાત કરી રહી છું! અત્યારે અમારે ત્યાં ચાલી રહી છે 'VTech Festive Upgrades' ની ધમાકેદાર ઑફર! એમાં તમને Smartphone, Laptop, Tablet અને Wearable પર મળી રહ્યા છે શાનદાર Cashback અને Best EMI Options! અને સાથે ખરીદી પર Loyalty Points પણ! આ Festive Seasonમાં તમે કયું Product ખરીદવાનું વિચારી રહ્યા છો — Smartphone, Laptop, Tablet કે Wearable?"
+            state["call_phase"] = "ASK_PRODUCT_INTEREST"
+            state["current_phase"] = "ASK_PRODUCT_INTEREST"
+            conversation_history.append(f"User: {raw_message}")
+            conversation_history.append(f"Agent: {pitch_reply}")
+            state["conversation_history"] = conversation_history
+            save_session(session, state)
+            return {
+                "static_reply": pitch_reply,
+                "tts_language": detected_lang
+            }
+
     conversation_history.append(f"User: {raw_message}")
     if len(conversation_history) > MAX_TURNS:
         conversation_history = conversation_history[-MAX_TURNS:]
 
     history_text = get_db_history_text(session.session_id)
+    cust_name = state.get("customer_name")
+    cust_label = cust_name if cust_name and cust_name != "ગ્રાહક" else "તમે"
     system_prompt = SAMSUNG_LLM_SYSTEM_PROMPT.format(
-        agent_name=agent.name or "Neel",
-        company_name=agent.company_name or "VTech Samsung Cafe",
+        agent_name=agent_name,
+        company_name=company_name,
+        customer_name=cust_label,
         history_text=history_text
     )
 
@@ -179,9 +228,12 @@ def samsung_llm_finalize(response, prep_result):
     session = prep_result["session"]
     conversation_history = prep_result["conversation_history"]
 
-    # Determine next phase dynamically from response
-    if "[END_CALL]" in response or "[BOOKING_CONFIRMED]" in response or "[NOT_INTERESTED]" in response:
+    closing_keywords = ["સંપર્ક કરશે", "આભાર", "હેપ્પી ફેસ્ટિવ શોપિંગ", "happy festive shopping", "દિવસ શુભ રહે", "ચોક્કસ સ્ટોર જણાવશે"]
+    if "[END_CALL]" in response or "[BOOKING_CONFIRMED]" in response or "[NOT_INTERESTED]" in response or any(k in response.lower() for k in closing_keywords):
         state["call_phase"] = "CLOSING"
+        state["auto_disconnect"] = True
+        if "[END_CALL]" not in response:
+            response = response.strip() + " [END_CALL]"
     else:
         state["call_phase"] = "LLM_CONVERSATION"
 
@@ -189,3 +241,4 @@ def samsung_llm_finalize(response, prep_result):
     state["conversation_history"] = conversation_history
     state["last_bot_message"] = response
     save_session(session, state)
+    return response

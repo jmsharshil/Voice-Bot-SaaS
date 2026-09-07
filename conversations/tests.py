@@ -291,21 +291,26 @@ class SamsungStoreStrategyTestCase(TestCase):
         # 1. Step 1: Greeting
         result = prepare_streaming(self.llm_agent, "hello", session_id=session_id)
         self.assertIn("નમસ્તે", result["static_reply"])
-        self.assertIn("હું નીલ છું", result["static_reply"])
 
         session = ConversationSession.objects.get(session_id=session_id)
-        self.assertEqual(session.state["call_phase"], "ASK_CONSENT")
+        self.assertEqual(session.state["call_phase"], "CONFIRM_IDENTITY")
 
-        # 2. Step 2: GREETING_REPLY / ASK_CONSENT -> LLM fallback
+        # 2. Step 2: Customer confirms identity -> returns static pitch reply
         result = prepare_streaming(self.llm_agent, "હા ચોક્કસ વાત કરો", session_id=session_id)
+        self.assertIn("static_reply", result)
+        self.assertIn("VTech Festive Upgrades", result["static_reply"])
+
+        session.refresh_from_db()
+        self.assertEqual(session.state["call_phase"], "ASK_PRODUCT_INTEREST")
+
+        # 3. Step 3: Customer answers product interest -> LLM fallback
+        result = prepare_streaming(self.llm_agent, "હું સ્માર્ટ ફોન લેવાનું વિચારું છું", session_id=session_id)
         self.assertNotIn("static_reply", result)
         self.assertIn("system_prompt", result)
-        self.assertEqual(result["user_message"], "હા ચોક્કસ વાત કરો")
+        self.assertEqual(result["user_message"], "હું સ્માર્ટ ફોન લેવાનું વિચારું છું")
 
-        # Finalize the response with mock LLM reply
-        mock_reply = "સરસ. તો તમે અત્યારે કયો મોબાઈલ વાપરી રહ્યા છો?"
+        mock_reply = "સરસ પસંદગી! તમારું બજેટ કેટલું હશે?"
         finalize_streaming(mock_reply, result)
 
         session.refresh_from_db()
         self.assertEqual(session.state["call_phase"], "LLM_CONVERSATION")
-        self.assertIn("Agent: સરસ. તો તમે અત્યારે કયો મોબાઈલ વાપરી રહ્યા છો?", session.state["conversation_history"])
