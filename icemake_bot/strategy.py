@@ -232,6 +232,10 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
     current_step = state.get("current_step", 0)
     lang = state.get("selected_language", None)
     
+    # ── Universal Spoken Number Word to ASCII Digit Converter ──
+    raw_message = _convert_all_spoken_numbers_to_digits(raw_message, lang or "en")
+    msg = raw_message.lower().strip()
+    
     # ── STEP 0: LANGUAGE SELECTION ──
     if current_step == 0:
         if not state.get("intro_shown"):
@@ -520,14 +524,28 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
 
     # ── STEP 3: Process Address / City & Validate Pincode (Must be 6 digits if provided) ──
     elif prev_step == 3:
-        six_digit_match = re.search(r'\b\d{6}\b', raw_message)
-        digit_matches = re.findall(r'\b\d+\b', raw_message)
-        has_pin_keyword = bool(re.search(r'\b(pin|pincode|pin code)\b', raw_message, re.IGNORECASE))
+        pincode_extracted = _extract_pincode_ai(raw_message, lang)
         
+        pin_patterns = [
+            r'\b(pin|pincode|pin code)\b',
+            r'पिन\s*कोड', r'पिन',           # Hindi / Marathi Devanagari
+            r'પિન\s*કોડ', r'પિન',           # Gujarati
+            r'পিন\s*কোড', r'পিন',           # Bengali
+            r'பின்கோடு', r'பின்\s*கோடு',    # Tamil
+            r'పిన్‌కోడ్', r'పిన్\s*కోడ్',    # Telugu
+            r'പിൻകോഡ്', r'പിൻ\s*കോഡ്',    # Malayalam
+            r'ಪಿನ್‌ಕೋಡ್', r'ಪಿನ್\s*ಕೋಡ್',    # Kannada
+            r'ਪਿੰਨਕੋਡ', r'ਪਿੰਨ\s*ਕੋਡ'       # Punjabi
+        ]
+        has_pin_keyword = any(re.search(p, raw_message, re.IGNORECASE) for p in pin_patterns)
+
+        mapped_msg = _map_regional_digits_to_ascii(raw_message)
+        digit_matches = re.findall(r'\b\d+\b', mapped_msg)
+
         invalid_pincode_attempt = False
-        if six_digit_match:
-            state["pin_code"] = six_digit_match.group(0)
-            state["pincode"] = six_digit_match.group(0)
+        if pincode_extracted:
+            state["pin_code"] = pincode_extracted
+            state["pincode"] = pincode_extracted
         elif has_pin_keyword:
             invalid_pincode_attempt = True
         elif digit_matches:
@@ -580,8 +598,35 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
 
     # ── STEP 4: Process Phone Number & Validate (Must be EXACTLY 10 Digits) ──
     elif prev_step == 4:
-        digits = _extract_phone_number_ai(raw_message, lang)
-        if len(digits) != 10:
+        accumulated = state.get("partial_phone_digits", "")
+        extracted_digits = _extract_phone_number_ai(raw_message, lang)
+        raw_digits = "".join(filter(str.isdigit, raw_message))
+
+        new_digits = extracted_digits if len(extracted_digits) > 0 else raw_digits
+        combined_digits = (accumulated + new_digits).strip()
+
+        valid_phone = ""
+        if len(combined_digits) == 10:
+            valid_phone = combined_digits
+        elif len(combined_digits) in (11, 12) and combined_digits.startswith("91"):
+            valid_phone = combined_digits[-10:]
+        elif len(extracted_digits) == 10:
+            valid_phone = extracted_digits
+
+        if not valid_phone:
+            if 0 < len(combined_digits) < 10:
+                state["partial_phone_digits"] = combined_digits
+                state["current_step"] = 4
+                save_session(session, state)
+                return {
+                    "static_reply": "",
+                    "tts_language": lang,
+                    "skip_output_translation": True,
+                    "strategy_key": STRATEGY_KEY,
+                    "mode": mode,
+                    "session": session,
+                    "state": state
+                }
             if lang == "hi":
                 reply = "आपका नंबर अमान्य लग रहा है। कृपया अपना 10 अंकों का मोबाइल नंबर फिर से बताइए।"
             elif lang == "gu":
@@ -617,8 +662,9 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 "state": state
             }
         else:
-            phone_num = digits
+            phone_num = valid_phone
             state["registered_mobile"] = phone_num
+            state.pop("partial_phone_digits", None)
             next_step = 5
             spoken_num = _format_spoken_number(phone_num, lang)
             if lang == "hi":
@@ -973,6 +1019,175 @@ Name:"""
         logger.warning("AI Name Extraction notice: %s", e)
 
     return cleaned if cleaned else "Not Provided"
+
+def _map_regional_digits_to_ascii(text: str) -> str:
+    """Converts any regional script digits (Devanagari, Gujarati, Bengali, Gurmukhi, Tamil, Telugu, Kannada, Malayalam) in string to ASCII '0'-'9'."""
+    if not text:
+        return ""
+    regional_digit_map = {
+        '०': '0', '१': '1', '२': '2', '३': '3', '४': '4', '५': '5', '६': '6', '७': '7', '८': '8', '९': '9',
+        '૦': '0', '૧': '1', '૨': '2', '૩': '3', '૪': '4', '૫': '5', '૬': '6', '૭': '7', '૮': '8', '૯': '9',
+        '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9',
+        '੦': '0', '੧': '1', '੨': '2', '੩': '3', '੪': '4', '੫': '5', '੬': '6', '੭': '7', '੮': '8', '੯': '9',
+        '௦': '0', '௧': '1', '௨': '2', '௩': '3', '௪': '4', '௫': '5', '௬': '6', '௭': '7', '௮': '8', '௯': '9',
+        '౦': '0', '౧': '1', '౨': '2', '౩': '3', '౪': '4', '౫': '5', '౬': '6', '౭': '7', '౮': '8', '౯': '9',
+        '೦': '0', '೧': '1', '೨': '2', '೩': '3', '೪': '4', '೫': '5', '೬': '6', '೭': '7', '೮': '8', '೯': '9',
+        '൦': '0', '൧': '1', '൨': '2', '൩': '3', '൪': '4', '൫': '5', '൬': '6', '൭': '7', '൮': '8', '൯': '9'
+    }
+    return "".join(regional_digit_map.get(ch, ch) for ch in text)
+
+def _convert_all_spoken_numbers_to_digits(text: str, lang: str = "en") -> str:
+    """
+    Converts spoken number words (single digits, double digits/tens, compound numbers, and regional script digits)
+    across all supported languages (Hindi, Gujarati, Marathi, Tamil, Telugu, Punjabi, Malayalam, Bengali, Kannada, English)
+    into pure ASCII digits ('0'-'9').
+    """
+    if not text or not text.strip():
+        return text
+
+    # Step 1: Convert regional script digits to ASCII digits
+    text = _map_regional_digits_to_ascii(text)
+
+    # Step 2: Comprehensive Dictionary of Spoken Number Words -> ASCII Digits
+    spoken_num_map = {
+        # --- ENGLISH / HINGLISH ---
+        "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4",
+        "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9",
+        "ten": "10", "eleven": "11", "twelve": "12", "thirteen": "13", "fourteen": "14",
+        "fifteen": "15", "sixteen": "16", "seventeen": "17", "eighteen": "18", "nineteen": "19",
+        "twenty": "20", "thirty": "30", "forty": "40", "fifty": "50",
+        "sixty": "60", "seventy": "70", "eighty": "80", "ninety": "90",
+        "hundred": "100", "thousand": "1000",
+
+        # --- HINDI / DEVANAGARI / HINGLISH ---
+        "शून्य": "0", "जीरो": "0", "ज़ीरो": "0", "एक": "1", "दो": "2", "तीन": "3",
+        "चार": "4", "पांच": "5", "पाँच": "5", "छह": "6", "छः": "6", "सात": "7",
+        "आठ": "8", "नौ": "9", "दस": "10", "ग्यारह": "11", "बारह": "12",
+        "तेरह": "13", "चौदह": "14", "पंद्रह": "15", "सोलह": "16", "सत्रह": "17",
+        "अठारह": "18", "उम्मीद": "19", "उन्नीस": "19", "बीस": "20", "तीस": "30",
+        "चालिस": "40", "चालीस": "40", "पचास": "50", "साठ": "60", "सत्तर": "70",
+        "अस्सी": "80", "नब्बे": "90", "सौ": "100", "हजार": "1000",
+
+        # Phonetic English numbers transcribed in Devanagari STT
+        "वन": "1", "टू": "2", "टु": "2", "थ्री": "3", "त्रि": "3", "फोर": "4",
+        "फाइव": "5", "फ़ाइव": "5", "सिक्स": "6", "सेवन": "7", "एट": "8", "एइट": "8", "ऐट": "8", "नाइन": "9", "टेन": "10",
+
+        # Hindi Compounds (90-99)
+        "इक्यानवे": "91", "बान्वे": "92", "तिरान्वे": "93", "चौरान्वे": "94",
+        "पचान्वे": "95", "छियान्वे": "96", "सत्तन्वे": "97", "अठान्वे": "98", "निन्यानवे": "99",
+
+        # --- GUJARATI ---
+        "શૂન્ય": "0", "ઝીરો": "0", "એક": "1", "બે": "2", "ત્રણ": "3",
+        "ચાર": "4", "પાંચ": "5", "છ": "6", "સાત": "7", "આઠ": "8", "નવ": "9", "નવમું": "9",
+        "દસ": "10", "અગિયાર": "11", "બાર": "12", "તેર": "13", "ચૌદ": "14",
+        "પંદર": "15", "સોળ": "16", "સત્તર": "17", "અઢાર": "18", "ઓગણીસ": "19",
+        "વીસ": "20", "ત્રીસ": "30", "ચાલીસ": "40", "પચાસ": "50", "સાઠ": "60",
+        "સિત્તેર": "70", "એંસી": "80", "એસી": "80", "નેવુ": "90", "સો": "100", "હજાર": "1000",
+
+        # Phonetic English numbers transcribed in Gujarati STT
+        "વન": "1", "ટુ": "2", "થ્રી": "3", "ફોર": "4", "ફાઇવ": "5", "ફાઈવ": "5",
+        "સિક્સ": "6", "સેવન": "7", "એઇટ": "8", "નાઇન": "9", "નાઈન": "9", "ટેન": "10",
+
+        # Gujarati Compounds & Words
+        "એકાણું": "91", "બાણું": "92", "ત્રાણું": "93", "ચોરાણું": "94",
+        "પંચાણું": "95", "છિન્નાણું": "96", "સત્તાણું": "97", "અઠ્ઠાણું": "98", "નવ્વાણું": "99",
+        "ચારસો": "400", "બેસો": "200", "ત્રણસો": "300", "પાંચસો": "500",
+
+        # --- MARATHI ---
+        "शून्य": "0", "एक": "1", "दोन": "2", "तीन": "3", "चार": "4",
+        "पाच": "5", "सहा": "6", "सात": "7", "आठ": "8", "नऊ": "9", "दहा": "10",
+
+        # --- TAMIL ---
+        "பூஜ்ஜியம்": "0", "ஒன்று": "1", "இரண்டு": "2", "மூன்று": "3", "நான்கு": "4",
+        "ஐந்து": "5", "ஆறு": "6", "ஏழு": "7", "எட்டு": "8", "ஒன்பது": "9", "பத்து": "10",
+
+        # --- TELUGU ---
+        "సున్నా": "0", "ఒకటి": "1", "రెండు": "2", "మూడు": "3", "నాలుగు": "4",
+        "ఐదు": "5", "ఆరు": "6", "ఏడు": "7", "ఎనిమిది": "8", "తొమ్മിది": "9", "పది": "10",
+
+        # --- PUNJABI ---
+        "ਸਿਫ਼ਰ": "0", "ਜ਼ੀਰੋ": "0", "ਇੱਕ": "1", "ਦੋ": "2", "ਤਿੰਨ": "3", "ਚਾਰ": "4",
+        "ਪੰਜ": "5", "ਛੇ": "6", "ਸੱਤ": "7", "ਅੱਠ": "8", "ਨੌਂ": "9", "ਦੱਸ": "10",
+
+        # --- BENGALI ---
+        "শূন্য": "0", "এক": "1", "দুই": "2", "তিন": "3", "চার": "4",
+        "পাঁচ": "5", "ছয়": "6", "সাত": "7", "আট": "8", "নয়": "9", "দশ": "10",
+
+        # --- KANNADA ---
+        "ಶೂನ್ಯ": "0", "ಒಂದು": "1", "ಎರಡು": "2", "ಮೂರು": "3", "ನಾಲ್ಕು": "4",
+        "ಐದು": "5", "ಆರು": "6", "ಏಳು": "7", "ಎಂಟು": "8", "ಒಂಬತ್ತು": "9", "ಹತ್ತು": "10",
+
+        # --- MALAYALAM ---
+        "പൂജ്യം": "0", "ഒന്ന്": "1", "രണ്ട്": "2", "മൂന്ന്": "3", "നാല്": "4",
+        "അഞ്ച്": "5", "ആറ്": "6", "ഏഴ്": "7", "എട്ട്": "8", "ഒൻപത്": "9", "പത്ത്": "10"
+    }
+
+    sorted_words = sorted(spoken_num_map.keys(), key=lambda x: len(x), reverse=True)
+    result = text
+    for w in sorted_words:
+        digit_val = spoken_num_map[w]
+        pattern = r'(^|\s)' + re.escape(w) + r'(?=\s|[.,!?।]|$)'
+        result = re.sub(pattern, r'\g<1>' + digit_val, result, flags=re.IGNORECASE)
+
+    return result
+
+def _extract_pincode_ai(raw_message: str, lang: str = "en") -> str:
+    """
+    Intelligent 2-tier 6-digit Indian Pincode extraction system across all 10 supported languages:
+    
+    Tier 1: Direct ASCII / Regional Script 6-Digit Match (< 1ms)
+      - Converts regional script digits (Devanagari, Gujarati, etc.) to ASCII.
+      - If regex matches 6 digits, return the 6 digits immediately.
+
+    Tier 2: AI LLM Digit & Spoken Word Pincode Extractor (Azure OpenAI)
+      - Handles mixed digits and spoken words (e.g., "3824 वन एट" -> 382418, "तीन आठ दो चार एक आठ" -> 382418, "3824 એક આઠ" -> 382418).
+      - Returns exact 6 ASCII digits or empty string.
+    """
+    if not raw_message or not raw_message.strip():
+        return ""
+
+    mapped_msg = _map_regional_digits_to_ascii(raw_message)
+    six_match = re.search(r'\b\d{6}\b', mapped_msg)
+    if six_match:
+        return six_match.group(0)
+
+    try:
+        from conversations.services.azure_openai_service import client
+        from django.conf import settings
+
+        prompt = f"""
+You are an expert multi-lingual Indian pincode converter and digit extractor.
+Extract and convert the user's spoken 6-digit Indian postal pincode into EXACTLY 6 ASCII digits.
+
+The input may contain mixed digits and spoken number words in any language (Hindi, Gujarati, Marathi, Tamil, Telugu, Punjabi, Malayalam, Bengali, Kannada, English, Hinglish).
+User input examples:
+- Mixed digits and phonetic words: "3824 वन एट" -> 382418; "3824 एक आठ" -> 382418; "3824 one eight" -> 382418; "38 24 18" -> 382418; "382418".
+- Spoken number words: "तीन आठ दो चार एक आठ" -> 382418; "ત્રણ આઠ બે ચાર એક આઠ" -> 382418.
+
+Rules:
+- Output ONLY the 6 ASCII digits without spaces, hyphens, punctuation, or explanations (e.g., 382418).
+- If no valid 6-digit Indian pincode is spoken or present, output "NONE".
+
+User Input: "{raw_message}"
+6-Digit Pincode:"""
+
+        response = client.chat.completions.create(
+            model=settings.AZURE_OPENAI_DEPLOYMENT,
+            messages=[
+                {"role": "system", "content": "You are an expert pincode extraction assistant for multi-lingual Indian voice calls."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.0,
+            max_tokens=15
+        )
+        ai_digits = response.choices[0].message.content.strip().strip('"').strip("'")
+        ai_clean_digits = "".join(filter(str.isdigit, ai_digits))
+        if len(ai_clean_digits) == 6:
+            return ai_clean_digits
+    except Exception as e:
+        logger.warning("AI Pincode Extraction notice: %s", e)
+
+    return ""
 
 def _extract_phone_number_ai(raw_message: str, lang: str = "en") -> str:
     """

@@ -757,12 +757,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     name_part = customer_name if customer_name else "Customer જી"
                     greeting = f"નમસ્તે! હું નાવ્યા છું. હું VTech Samsung Cafe તરફથી વાત કરી રહી છું. શું મારી વાત {name_part} સાથે થઈ રહી છે?"
                 elif strategy_key == "samsung_llm_strategy":
-                    if customer_name:
-                        greeting = f"નમસ્તે, શું હું {customer_name} સાથે વાત કરી રહી છું?"
-                    else:
-                        greeting = "નમસ્તે! શું હું તમારી સાથે વાત કરી શકું?"
+                    cust_label = f"{customer_name}જી" if customer_name and customer_name.lower() != "user" else "જી"
+                    greeting = f"[excited] હેલ્લો, નમસ્તે {cust_label}! કેમ છો? હું નાવ્યા વાત કરી રહી છું, વીટેક સેમસંગ કેફે અમદાવાદ તરફથી... શું તમારી જોડે ૨ મિનિટ વાત થઈ શકે?"
                 elif strategy_key == "fold8_prereserve_strategy":
-                    greeting = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી સાથે વાત કરી શકું?"
+                    greeting = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી જોડે વાત કરી શકું?"
                 elif strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
                     greeting = "હલો, નમસ્તે જી! હું કેરકે ઇન્શ્યોરન્સમાંથી કેય વાત કરું છું. તમારી ગાડીનો મોટર ઇન્શ્યોરન્સ આવતા અઠવાડિયે એક્સપાયર થઈ રહ્યો છે. તો શું તમારી સાથે ૨ મિનિટ વાત થઈ શકે?"
                 elif strategy_key == "shreyas_gu_strategy":
@@ -1181,48 +1179,30 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
     # ================= FINAL TEXT CONSUMER =================
 
     async def _final_text_consumer(self):
-        phone_buffer = []
-        phone_last_time = 0.0
+        step_buffer = []
+        step_last_time = 0.0
 
         while self.is_connected:
             is_icemake = getattr(self, "strategy_key", None) in ["icemake", "icemake_strategy"]
-            is_phone_step = False
-            if is_icemake:
+            if is_icemake and getattr(self, "recognizer", None):
                 try:
+                    import azure.cognitiveservices.speech as speechsdk
                     from conversations.models import ConversationSession
                     session = await sync_to_async(
                         lambda: ConversationSession.objects.filter(session_id=self.session_id).first()
                     )()
-                    if session and session.state and session.state.get("current_step") == 4:
-                        is_phone_step = True
+                    active_step = session.state.get("current_step") if (session and session.state) else None
+                    if active_step in (3, 4):
+                        self.recognizer.properties.set_property(speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2500")
+                        self.recognizer.properties.set_property(speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "1800")
+                    else:
+                        self.recognizer.properties.set_property(speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "1200")
+                        self.recognizer.properties.set_property(speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "800")
                 except Exception:
                     pass
 
-            # ── Step 4 Phone Number 3-Second Silence Flush ──
-            if is_phone_step and phone_buffer:
-                if time.time() - phone_last_time >= 3.0:
-                    combined_phone_text = " ".join(phone_buffer).strip()
-                    phone_buffer.clear()
-                    phone_last_time = 0.0
-                    if combined_phone_text and not self.is_bot_speaking and not self.is_processing:
-                        print(f"📱 [STEP 4 PHONE 3s SILENCE TIMEOUT]: Dispatching complete phone input: '{combined_phone_text}'")
-                        normalized = _normalize(combined_phone_text)
-                        self.last_dispatched_text = normalized
-                        self.last_dispatch_time = time.time()
-                        self._clear_vad_dispatch()
-                        self.partial_text = ""
-
-                        self.is_processing = True
-                        try:
-                            async with self.processing_lock:
-                                await self.handle_ai_reply(combined_phone_text)
-                        finally:
-                            self.is_processing = False
-                        continue
-
             try:
-                wait_timeout = 0.2 if (is_phone_step and phone_buffer) else 1.0
-                text = await asyncio.wait_for(self.final_text_queue.get(), timeout=wait_timeout)
+                text = await asyncio.wait_for(self.final_text_queue.get(), timeout=1.0)
             except asyncio.TimeoutError:
                 continue
             except Exception:
@@ -1233,14 +1213,6 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
 
             if self.is_bot_speaking or self.is_processing:
                 print("⏭️ Skipped (bot busy):", text)
-                continue
-
-            # ── Step 4 Phone Input Buffering ──
-            if is_phone_step:
-                print(f"📱 [STEP 4 PHONE BUFFERING]: Received chunk '{text}' — waiting for 3s silence...")
-                phone_buffer.append(text)
-                phone_last_time = time.time()
-                self.last_activity_time = time.time()
                 continue
 
             normalized = _normalize(text)
@@ -1422,6 +1394,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         if rms > self.SPEECH_DETECT_RMS:
             self.speech_active = True
             self.silence_start_time = None
+            self._step_last_speech_time = time.time()
         else:
             if self.speech_active:
                 if self.silence_start_time is None:
@@ -2409,13 +2382,40 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             is_eng_reply = is_shreyas_en or ((is_raahi or is_priya_naavya) and (any(clean_text.lower().startswith(w) for w in ["hello", "thank", "great", "alright", "perfect", "in short", "the booking", "should i", "would you", "shall i", "yes"]) or any(w in clean_text.lower() for w in ["guidance", "exporting", "decided", "rupees", "details"])))
             target_lang = (f"{lang}-IN" if lang in ["hi", "gu", "te", "pa", "bn", "mr", "ta", "kn", "ml", "en"] else "hi-IN") if is_icemake else ("en-IN" if is_eng_reply else ("hi-IN" if (is_loan_hi or is_kia_syros or is_raahi or is_priya_naavya) else "gu-IN"))
             speaker = "ishita" if (is_raahi or is_priya_naavya) else ("shreya" if (is_shreyas_en or is_kia_syros or is_icemake) else ("shubh" if is_loan_hi else "ishita"))
-            if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
+            is_samsung_bot = getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]
+            if is_samsung_bot:
                 def_v = (getattr(self, "default_voice", "") or "").lower()
                 valid_speakers = ["shreya", "ishita", "kavya", "aditi", "priya", "vibhuti"]
                 speaker = def_v if def_v in valid_speakers else "shreya"
+
+                # Check for dynamic emotion tags in brackets e.g. [excited], [calm], [empathetic]
+                emotion_match = re.search(r'\[(excited|happy|calm|empathetic|polite|warm|apologetic|urgent|surprised)\]', clean_text, flags=re.IGNORECASE)
+                detected_emotion = emotion_match.group(1).lower() if emotion_match else None
+                # Strip emotion tags so Sarvam never speaks bracket names aloud
+                clean_text = re.sub(r'\[(excited|happy|calm|empathetic|polite|warm|apologetic|urgent|surprised)\]', '', clean_text, flags=re.IGNORECASE).strip()
+
             is_shreyas_gu = getattr(self, "strategy_key", None) == "shreyas_gu_strategy"
-            pace = 1.02 if (is_raahi or is_priya_naavya) else (1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if (is_kia_syros or is_icemake) else (1.1 if is_loan_hi else (1.12 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else 1.15))))))
-            temp = 0.65 if getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"] else None
+            if is_samsung_bot:
+                if detected_emotion in ["excited", "happy"]:
+                    pace = 1.16
+                    temp = 0.85
+                elif detected_emotion in ["calm", "polite", "warm"]:
+                    pace = 1.05
+                    temp = 0.50
+                elif detected_emotion in ["empathetic", "apologetic"]:
+                    pace = 0.98
+                    temp = 0.40
+                elif detected_emotion in ["urgent", "surprised"]:
+                    pace = 1.18
+                    temp = 0.90
+                else:
+                    pace = 1.12
+                    temp = 0.65
+                if detected_emotion:
+                    print(f"🎭 [SAMSUNG BOT EMOTION]: '{detected_emotion}' tag parsed -> pace={pace}, temp={temp}")
+            else:
+                pace = 1.02 if (is_raahi or is_priya_naavya) else (1.16 if is_shreyas_gu else (1.0 if is_shreyas_en else (1.16 if getattr(self, "strategy_key", None) in ["carekay_strategy", "carekay_insurance_strategy"] else (1.05 if (is_kia_syros or is_icemake) else (1.1 if is_loan_hi else 1.15)))))
+                temp = None
 
             # Normalise clean_text for cache key (lowercase, strip punctuation)
             norm_text = re.sub(r'[.,\/#!$%\^&\*;:{}=\-_`~()।!?]', '', clean_text).lower().strip()

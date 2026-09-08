@@ -65,17 +65,15 @@ def samsung_llm_strategy(agent, message, session, **kwargs):
 
     if is_farewell(msg):
         save_session(session, {})
-        return "આવજો! [END_CALL]"
+        return "[warm] આવજો! [END_CALL]"
 
     agent_name = _get_guj_agent_name(agent.name)
     company_name = _get_guj_company_name(agent.company_name)
 
     if not state.get("intro_shown"):
         customer_name = state.get("customer_name")
-        if customer_name and customer_name != "ગ્રાહક":
-            reply = f"નમસ્તે, શું હું {customer_name} સાથે વાત કરી રહી છું?"
-        else:
-            reply = "નમસ્તે! શું હું તમારી સાથે વાત કરી શકું?"
+        cust_label = f"{customer_name}જી" if customer_name and customer_name != "ગ્રાહક" else "જી"
+        reply = f"[excited] હેલ્લો, નમસ્તે {cust_label}! કેમ છો? હું {agent_name} વાત કરી રહી છું, વીટેક સેમસંગ કેફે અમદાવાદ તરફથી... શું તમારી જોડે ૨ મિનિટ વાત થઈ શકે?"
         state["intro_shown"] = True
         state["call_phase"] = "CONFIRM_IDENTITY"
         state["conversation_history"] = [f"Agent: {reply}"]
@@ -84,15 +82,16 @@ def samsung_llm_strategy(agent, message, session, **kwargs):
 
     # Step 2: Handle confirmation of identity after initial greeting
     if state.get("call_phase") in ["CONFIRM_IDENTITY", "ASK_CONSENT", "GREETING_REPLY", "interest_confirmation"] and state.get("call_phase") != "ASK_PRODUCT_INTEREST":
-        negatives = ["ના", "નથી", "નાજી", "no", "not", "busy", "wrong number"]
-        if any(n in msg for n in negatives):
-            reply = "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે. [END_CALL]"
+        permission_rejections = ["busy", "not interested", "wrong number", "તમારો સમય નથી", "નથી વાત કરવી", "પછી કરજો", "રોંગ નંબર", "ટાઇમ નથી"]
+        is_explicit_refusal = any(n in msg for n in permission_rejections) or (msg in ["ના", "no", "not"] and len(msg.split()) <= 2 and not any(w in msg for w in ["ફોન", "phone", "samsung", "સેમસંગ", "વાપર", "લેવ"]))
+        if is_explicit_refusal:
+            reply = "[empathetic] કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે. [END_CALL]"
             state["call_phase"] = "CLOSING"
             state["current_phase"] = "CLOSING"
             save_session(session, state)
             return reply
         else:
-            pitch_reply = f"અરે વાહ! હું {agent_name}, VTech Samsung Café Ahmedabad તરફથી વાત કરી રહી છું! અત્યારે અમારે ત્યાં ચાલી રહી છે 'VTech Festive Upgrades' ની ધમાકેદાર ઑફર! એમાં તમને Smartphone, Laptop, Tablet અને Wearable પર મળી રહ્યા છે શાનદાર Cashback અને Best EMI Options! અને સાથે ખરીદી પર Loyalty Points પણ! આ Festive Seasonમાં તમે કયું Product ખરીદવાનું વિચારી રહ્યા છો — Smartphone, Laptop, Tablet કે Wearable?"
+            pitch_reply = "[excited] અચ્છા! તો સૌ પહેલાં એક નાની વાત પૂછું... શું તમે અત્યારે Samsungનો ફોન વાપરો છો કે બીજો કોઈ?"
             state["call_phase"] = "ASK_PRODUCT_INTEREST"
             state["current_phase"] = "ASK_PRODUCT_INTEREST"
             conversation_history.append(f"User: {raw_message}")
@@ -146,7 +145,7 @@ def samsung_llm_prepare(agent, message, session, detected_language=None, **kwarg
     if is_farewell(msg):
         save_session(session, {})
         return {
-            "static_reply": "આવજો! [END_CALL]",
+            "static_reply": "[warm] આવજો! [END_CALL]",
             "tts_language": detected_lang,
             "auto_disconnect": True
         }
@@ -157,10 +156,8 @@ def samsung_llm_prepare(agent, message, session, detected_language=None, **kwarg
     # Low-latency Greeting (Zero LLM Delay on Connection)
     if not state.get("intro_shown"):
         customer_name = state.get("customer_name")
-        if customer_name and customer_name != "ગ્રાહક":
-            reply = f"નમસ્તે, શું હું {customer_name} સાથે વાત કરી રહી છું?"
-        else:
-            reply = "નમસ્તે! શું હું તમારી સાથે વાત કરી શકું?"
+        cust_label = f"{customer_name}જી" if customer_name and customer_name != "ગ્રાહક" else "જી"
+        reply = f"[excited] હેલ્લો, નમસ્તે {cust_label}! કેમ છો? હું {agent_name} વાત કરી રહી છું, વીટેક સેમસંગ કેફે અમદાવાદ તરફથી... શું તમારી જોડે ૨ મિનિટ વાત થઈ શકે?"
         state["intro_shown"] = True
         state["call_phase"] = "CONFIRM_IDENTITY"
         state["current_phase"] = "CONFIRM_IDENTITY"
@@ -173,9 +170,10 @@ def samsung_llm_prepare(agent, message, session, detected_language=None, **kwarg
 
     # Step 2: Handle confirmation of identity after initial greeting ONLY ONCE
     if state.get("call_phase") in ["CONFIRM_IDENTITY", "ASK_CONSENT", "GREETING_REPLY", "interest_confirmation"] and state.get("call_phase") != "ASK_PRODUCT_INTEREST":
-        negatives = ["ના", "નથી", "નાજી", "no", "not", "busy", "wrong number"]
-        if any(n in msg for n in negatives):
-            reply = "કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે. [END_CALL]"
+        permission_rejections = ["busy", "not interested", "wrong number", "તમારો સમય નથી", "નથી વાત કરવી", "પછી કરજો", "રોંગ નંબર", "ટાઇમ નથી"]
+        is_explicit_refusal = any(n in msg for n in permission_rejections) or (msg in ["ના", "no", "not"] and len(msg.split()) <= 2 and not any(w in msg for w in ["ફોન", "phone", "samsung", "સેમસંગ", "વાપર", "લેવ"]))
+        if is_explicit_refusal:
+            reply = "[empathetic] કોઈ વાંધો નહીં. તમારો સમય આપવા બદલ આભાર. તમારો દિવસ શુભ રહે. [END_CALL]"
             state["call_phase"] = "CLOSING"
             state["current_phase"] = "CLOSING"
             save_session(session, state)
@@ -185,7 +183,7 @@ def samsung_llm_prepare(agent, message, session, detected_language=None, **kwarg
                 "auto_disconnect": True
             }
         else:
-            pitch_reply = f"અરે વાહ! હું {agent_name}, VTech Samsung Café Ahmedabad તરફથી વાત કરી રહી છું! અત્યારે અમારે ત્યાં ચાલી રહી છે 'VTech Festive Upgrades' ની ધમાકેદાર ઑફર! એમાં તમને Smartphone, Laptop, Tablet અને Wearable પર મળી રહ્યા છે શાનદાર Cashback અને Best EMI Options! અને સાથે ખરીદી પર Loyalty Points પણ! આ Festive Seasonમાં તમે કયું Product ખરીદવાનું વિચારી રહ્યા છો — Smartphone, Laptop, Tablet કે Wearable?"
+            pitch_reply = "[excited] અચ્છા! તો સૌ પહેલાં એક નાની વાત પૂછું... શું તમે અત્યારે Samsungનો ફોન વાપરો છો કે બીજો કોઈ?"
             state["call_phase"] = "ASK_PRODUCT_INTEREST"
             state["current_phase"] = "ASK_PRODUCT_INTEREST"
             conversation_history.append(f"User: {raw_message}")
