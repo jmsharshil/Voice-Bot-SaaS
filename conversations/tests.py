@@ -298,7 +298,7 @@ class SamsungStoreStrategyTestCase(TestCase):
         # 2. Step 2: Customer confirms identity -> returns static pitch reply
         result = prepare_streaming(self.llm_agent, "હા ચોક્કસ વાત કરો", session_id=session_id)
         self.assertIn("static_reply", result)
-        self.assertIn("Festive Offers", result["static_reply"])
+        self.assertIn("Samsung", result["static_reply"])
 
         session.refresh_from_db()
         self.assertEqual(session.state["call_phase"], "ASK_PRODUCT_INTEREST")

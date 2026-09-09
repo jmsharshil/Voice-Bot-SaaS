@@ -825,7 +825,9 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         cached_audio = _GREETING_AUDIO_CACHE.get(f"{self.agent_id}_{self.language}")
 
         self.agent_tts_lang, greeting, self.strategy_key, customer_name, is_aaisha, self.default_voice = await db_task
-        if self.strategy_key in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]:
+        if self.strategy_key == "samsung_llm_strategy":
+            self.SILENCE_TRIGGER_SEC = 0.75  # Ultra-fast STT turn detection for low latency
+        elif self.strategy_key in ["samsung_store_strategy", "fold8_prereserve_strategy"]:
             self.SILENCE_TRIGGER_SEC = 1.4  # Give customer extra time to respond
         elif self.strategy_key == "kia_syros_strategy":
             self.SPEECH_DETECT_RMS = 150
@@ -2304,8 +2306,8 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             is_samsung_bot = getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy"]
             if is_samsung_bot:
                 def_v = (getattr(self, "default_voice", "") or "").lower()
-                valid_speakers = ["shreya", "ishita", "kavya", "aditi", "priya", "vibhuti"]
-                speaker = def_v if def_v in valid_speakers else "shreya"
+                valid_speakers = ["kavya", "shreya", "ishita", "aditi", "priya", "vibhuti"]
+                speaker = def_v if (def_v in valid_speakers and def_v != "shreya") else "kavya"
 
                 # Check for dynamic emotion tags in brackets e.g. [excited], [calm], [empathetic]
                 emotion_match = re.search(r'\[(excited|happy|calm|empathetic|polite|warm|apologetic|urgent|surprised)\]', clean_text, flags=re.IGNORECASE)
@@ -2316,20 +2318,24 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             is_shreyas_gu = getattr(self, "strategy_key", None) == "shreyas_gu_strategy"
             if is_samsung_bot:
                 if detected_emotion in ["excited", "happy"]:
-                    pace = 1.16
+                    pace = 1.25
                     temp = 0.85
                 elif detected_emotion in ["calm", "polite", "warm"]:
-                    pace = 1.05
+                    pace = 1.18
                     temp = 0.50
                 elif detected_emotion in ["empathetic", "apologetic"]:
-                    pace = 0.98
+                    pace = 1.12
                     temp = 0.40
                 elif detected_emotion in ["urgent", "surprised"]:
-                    pace = 1.18
+                    pace = 1.28
                     temp = 0.90
                 else:
-                    pace = 1.12
+                    pace = 1.20
                     temp = 0.65
+                # Enhance question intonation for Sarvam TTS pitch elevation
+                if "?" in clean_text:
+                    clean_text = re.sub(r'(?<!\.)\?', '... ?', clean_text)
+
                 if detected_emotion:
                     print(f"🎭 [SAMSUNG BOT EMOTION]: '{detected_emotion}' tag parsed -> pace={pace}, temp={temp}")
             else:

@@ -1639,15 +1639,89 @@ def _send_whatsapp_ticket_confirmation(ticket):
     except Exception as e:
         logger.error("[ICEMAKE WA ERROR] Failed to send WhatsApp confirmation: %s", e)
 
+def _get_engineer_whatsapp_for_state(state_str: str):
+    """
+    Dynamically routes WhatsApp alert to designated Regional Service Engineer based on ticket state.
+    Returns: (engineer_phone_number, engineer_name, region_name)
+    """
+    import os
+    st = (state_str or "").lower().strip()
+
+    # 1. GUJARAT REGION (Mr. Rutvik - 8733004773)
+    gujarat_keywords = [
+        "gujarat", "gujrat", "गिजरात", "गुजरात", "ગુજરાત",
+        "ahmedabad", "gandhinagar", "surat", "vadodara", "rajkot", "bhavnagar", "jamnagar", "junagadh", "anand", "mehsana"
+    ]
+    if any(k in st for k in gujarat_keywords):
+        num = os.getenv("ENGINEER_WHATSAPP_GUJARAT") or "918733004773"
+        return num, "Mr. Rutvik", "Gujarat"
+
+    # 2. NORTH REGION (Mr. Manjit - 9104142402)
+    north_keywords = [
+        "delhi", "दिल्ली", "દિલ્હી", "ncr", "new delhi",
+        "haryana", "हरियाणा", "હરિયાણા", "gurgaon", "gurugram", "faridabad", "ambala",
+        "uttar pradesh", "up", "उत्तर प्रदेश", "उत्तरप्रदेश", "ઉત્તર પ્રદેશ", "lucknow", "noida", "kanpur", "agra", "varanasi", "ghaziabad",
+        "uttarakhand", "उत्तराखंड", "ઉત્તરાખંડ", "dehradun", "haridwar",
+        "himachal", "himachal pradesh", "hp", "हिमाचल", "હિમાચલ", "shimla",
+        "punjab", "पंजाब", "ਪੰਜਾਬ", "ludhiana", "amritsar", "jalandhar", "chandigarh",
+        "j&k", "jk", "jammu", "kashmir", "जम्मू", "कश्मीर", "જમ્મુ"
+    ]
+    if any(k in st for k in north_keywords):
+        num = os.getenv("ENGINEER_WHATSAPP_NORTH") or "919104142402"
+        return num, "Mr. Manjit", "North"
+
+    # 3. EAST REGION (Mr. Mahesh - 9913381306)
+    east_keywords = [
+        "west bengal", "bengal", "kolkata", "kolkatta", "पश्चिम बंगाल", "કોલકાતા", "બંગાળ",
+        "assam", "असम", "અસમ", "guwahati",
+        "bihar", "बिहार", "બિહાર", "patna",
+        "chhattisgarh", "chattisgarh", "छत्तीसगढ़", "છત્તીસગઢ", "raipur",
+        "orissa", "odisha", "उड़ीसा", "ओडिशा", "ઓડિશા", "bhubaneswar",
+        "jharkhand", "झारखंड", "ઝારખંડ", "ranchi"
+    ]
+    if any(k in st for k in east_keywords):
+        num = os.getenv("ENGINEER_WHATSAPP_EAST") or "919913381306"
+        return num, "Mr. Mahesh", "East"
+
+    # 4. WEST REGION (Mr. Ashok - 7490021566)
+    west_keywords = [
+        "maharashtra", "maharastra", "मराठी", "महाराष्ट्र", "મહારાષ્ટ્ર", "mumbai", "pune", "nagpur", "nashik", "thane",
+        "rajasthan", "राजस्थान", "રાજસ્થાન", "jaipur", "jodhpur", "udaipur", "kota",
+        "madhya pradesh", "mp", "madyapradesh", "मध्य प्रदेश", "મધ્ય પ્રદેશ", "indore", "bhopal", "gwalior",
+        "goa", "गोवा", "ગોવા"
+    ]
+    if any(k in st for k in west_keywords):
+        num = os.getenv("ENGINEER_WHATSAPP_WEST") or "917490021566"
+        return num, "Mr. Ashok", "West"
+
+    # 5. SOUTH REGION (Ms. Vaidehi - 9725891156)
+    south_keywords = [
+        "kerala", "केरल", "કેરળ", "kochi", "trivandrum",
+        "tamil nadu", "tamilnadu", "तमिलनाडु", "તમિલનાડુ", "chennai", "coimbatore",
+        "telangana", "telungana", "तेलंगाना", "તેલંગાણા", "hyderabad",
+        "karnataka", "कर्नाटक", "કર્ણાટક", "bengaluru", "bangalore", "mysore",
+        "andhra", "andhra pradesh", "आंध्र प्रदेश", "આંધ્ર પ્રદેશ", "vizag", "vijayawada"
+    ]
+    if any(k in st for k in south_keywords):
+        num = os.getenv("ENGINEER_WHATSAPP_SOUTH") or "919725891156"
+        return num, "Ms. Vaidehi", "South"
+
+    # Fallback Default: Gujarat Engineer (Mr. Rutvik)
+    num = os.getenv("ENGINEER_WHATSAPP_GUJARAT") or os.getenv("ENGINEER_WHATSAPP_NUMBER") or "918733004773"
+    return num, "Mr. Rutvik", "Gujarat"
+
+
 def _send_whatsapp_engineer_notification(ticket):
     """
-    Sends WhatsApp alert to the Service Engineer using ENGINEER_WHATSAPP_NUMBER from .env.
+    Sends WhatsApp alert to the designated Regional Service Engineer based on ticket state.
     """
     try:
         import os
         from bot.services.whatsapp_service import send_whatsapp_message
         
-        engineer_number = os.getenv("ENGINEER_WHATSAPP_NUMBER") or "919913381306"
+        state_str = f"{ticket.city_state or ''} {ticket.company_name or ''}".strip()
+        engineer_number, engineer_name, region_name = _get_engineer_whatsapp_for_state(state_str)
+
         clean_eng = "".join(filter(str.isdigit, str(engineer_number)))
         if len(clean_eng) == 10:
             clean_eng = "91" + clean_eng
@@ -1655,7 +1729,7 @@ def _send_whatsapp_engineer_notification(ticket):
         cust_phone = ticket.registered_mobile or (ticket.conversation.user_number if ticket.conversation else "N/A")
 
         wa_text = (
-            f"🚨 *NEW ICEMAKE SERVICE TICKET ALERT*\n\n"
+            f"🚨 *NEW ICEMAKE SERVICE TICKET ALERT ({region_name.upper()} REGION)*\n\n"
             f"A new complaint ticket has been logged by customer:\n\n"
             f"📋 *Ticket #:* {ticket.ticket_number}\n"
             f"👤 *Customer Name:* {ticket.customer_name or 'N/A'}\n"
@@ -1665,6 +1739,7 @@ def _send_whatsapp_engineer_notification(ticket):
             f"⚙️ *Product Name:* {ticket.machine_model_no or 'N/A'}\n"
             f"🛠️ *Issue Type:* {ticket.issue_type or 'Other'}\n"
             f"📝 *Description:* {ticket.issue_description or 'N/A'}\n\n"
+            f"👤 *Assigned Engineer:* {engineer_name}\n"
             f"Please attend to this issue immediately.\n"
             f"*Ice Make Refrigeration Ltd.*"
         )
@@ -1678,7 +1753,7 @@ def _send_whatsapp_engineer_notification(ticket):
             time.sleep(retry_sec)
             res = send_whatsapp_message(clean_eng, wa_text)
 
-        print(f"🚨 [ENGINEER WA ALERT SUCCESS]: Alert sent to Engineer {clean_eng} for Ticket #{ticket.ticket_number}. Response: {res}")
+        print(f"🚨 [ENGINEER WA ALERT SUCCESS]: Alert sent to {region_name} Engineer {engineer_name} ({clean_eng}) for Ticket #{ticket.ticket_number}. Response: {res}")
     except Exception as e:
         logger.error("[ENGINEER WA ERROR] Failed to send WhatsApp alert to engineer: %s", e)
 
