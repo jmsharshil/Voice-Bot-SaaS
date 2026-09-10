@@ -1305,9 +1305,12 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     if self.user_number and self.user_number != "unknown":
                         agent = await sync_to_async(lambda: self.conversation.agent)()
                         inbound_num = getattr(agent, "inbound_phone_number", "")
-                        if inbound_num:
+                        clean_user = "".join(filter(str.isdigit, str(self.user_number)))[-10:]
+                        known_bot_dids = ["7971019486", "7971019136", "9429390434", "7971017251", "7969016753", "9484959435", "8758007011"]
+                        if clean_user in known_bot_dids:
+                            is_bot_number = True
+                        elif inbound_num:
                             clean_inbound = "".join(filter(str.isdigit, str(inbound_num)))[-10:]
-                            clean_user = "".join(filter(str.isdigit, str(self.user_number)))[-10:]
                             if clean_inbound and clean_user == clean_inbound:
                                 is_bot_number = True
 

@@ -1499,6 +1499,8 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
             "919484959435", "9484959435",
             "8758007011", "918758007011",
             "7971019486", "917971019486",
+            "7971019136", "917971019136",
+            "9429390434", "919429390434",
             "7971017251", "917971017251",
             "7969016753", "917969016753",
             "100259134222", "91100259134222",
@@ -1522,7 +1524,11 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
         has_real_cdr_number = cdr and cdr.phone_number and cdr.phone_number != "unknown" and not is_bot_did(cdr.phone_number)
         if not has_real_cdr_number:
             import time
-            ice_dids = ["7971019486", "917971019486", "+917971019486"]
+            ice_dids = [
+                "7971019486", "917971019486", "+917971019486",
+                "7971019136", "917971019136", "+917971019136",
+                "9429390434", "919429390434", "+919429390434",
+            ]
             for _ in range(4):
                 time.sleep(2)
                 if ticket.conversation:
