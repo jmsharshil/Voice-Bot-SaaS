@@ -1706,9 +1706,9 @@ def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
             from icemake_bot.models import IcemakeTicket
             from icemake_bot.strategy import _append_to_google_sheet
             ticket = IcemakeTicket.objects.filter(conversation=conversation).first()
-            if ticket:
+            if ticket and not ticket.google_sheet_synced:
                 print(f"🎯 [ICEMAKE POST API CDR RECEIVED]: Syncing real SIM caller number '{data.get('phone_number')}' to Google Sheet!")
-                _append_to_google_sheet(ticket, force=True)
+                _append_to_google_sheet(ticket, force=False)
         except Exception as e_resync:
             print(f"⚠️ Ice Make POST API Google Sheet sync error: {e_resync}")
 
