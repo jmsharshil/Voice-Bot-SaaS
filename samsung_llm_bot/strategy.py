@@ -73,7 +73,7 @@ def samsung_llm_strategy(agent, message, session, **kwargs):
     if not state.get("intro_shown"):
         customer_name = state.get("customer_name")
         cust_label = f"{customer_name}જી" if customer_name and customer_name != "ગ્રાહક" else "જી"
-        reply = f"[excited] હેલ્લો, નમસ્તે {cust_label}! કેમ છો? હું {agent_name} વાત કરી રહી છું, વીટેક સેમસંગ કેફે અમદાવાદ તરફથી... શું તમારી જોડે ૨ મિનિટ વાત થઈ શકે?"
+        reply = f"[excited] Hello, નમસ્તે {cust_label}! કેમ છો? હું {agent_name} વાત કરી રહી છું, વીટેક સેમસંગ કેફે અમદાવાદ તરફથી..., શું તમારી જોડે ૨ મિનિટ વાત થઈ શકે ને?"
         state["intro_shown"] = True
         state["call_phase"] = "CONFIRM_IDENTITY"
         state["conversation_history"] = [f"Agent: {reply}"]
@@ -91,7 +91,7 @@ def samsung_llm_strategy(agent, message, session, **kwargs):
             save_session(session, state)
             return reply
         else:
-            pitch_reply = "[excited] અચ્છા! તો સૌ પહેલાં એક નાની વાત પૂછું... શું તમે અત્યારે Samsungનો ફોન વાપરો છો કે બીજો કોઈ?"
+            pitch_reply = "[excited] અચ્છા! તો એ જણાવશો ને, શું તમે અત્યારે Samsungનો ફોન વાપરો છો કે બીજો કોઈ?"
             state["call_phase"] = "ASK_PRODUCT_INTEREST"
             state["current_phase"] = "ASK_PRODUCT_INTEREST"
             conversation_history.append(f"User: {raw_message}")
@@ -157,7 +157,7 @@ def samsung_llm_prepare(agent, message, session, detected_language=None, **kwarg
     if not state.get("intro_shown"):
         customer_name = state.get("customer_name")
         cust_label = f"{customer_name}જી" if customer_name and customer_name != "ગ્રાહક" else "જી"
-        reply = f"[excited] હેલ્લો, નમસ્તે {cust_label}! કેમ છો? હું {agent_name} વાત કરી રહી છું, વીટેક સેમસંગ કેફે અમદાવાદ તરફથી... શું તમારી જોડે ૨ મિનિટ વાત થઈ શકે?"
+        reply = f"[excited] Hello, નમસ્તે {cust_label}! કેમ છો? હું {agent_name} વાત કરી રહી છું, વીટેક સેમસંગ કેફે અમદાવાદ તરફથી..., શું તમારી જોડે ૨ મિનિટ વાત થઈ શકે ને?"
         state["intro_shown"] = True
         state["call_phase"] = "CONFIRM_IDENTITY"
         state["current_phase"] = "CONFIRM_IDENTITY"
@@ -183,7 +183,7 @@ def samsung_llm_prepare(agent, message, session, detected_language=None, **kwarg
                 "auto_disconnect": True
             }
         else:
-            pitch_reply = "[excited] અચ્છા! તો સૌ પહેલાં એક નાની વાત પૂછું... શું તમે અત્યારે Samsungનો ફોન વાપરો છો કે બીજો કોઈ?"
+            pitch_reply = "[excited] અચ્છા! તો એ જણાવશો ને, શું તમે અત્યારે Samsungનો ફોન વાપરો છો કે બીજો કોઈ?"
             state["call_phase"] = "ASK_PRODUCT_INTEREST"
             state["current_phase"] = "ASK_PRODUCT_INTEREST"
             conversation_history.append(f"User: {raw_message}")

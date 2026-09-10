@@ -758,7 +758,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     greeting = f"નમસ્તે! હું નાવ્યા છું. હું VTech Samsung Cafe તરફથી વાત કરી રહી છું. શું મારી વાત {name_part} સાથે થઈ રહી છે?"
                 elif strategy_key == "samsung_llm_strategy":
                     cust_label = f"{customer_name}જી" if customer_name and customer_name.lower() != "user" else "જી"
-                    greeting = f"[excited] હેલ્લો, નમસ્તે {cust_label}! કેમ છો? હું નાવ્યા વાત કરી રહી છું, વીટેક સેમસંગ કેફે અમદાવાદ તરફથી... શું તમારી જોડે ૨ મિનિટ વાત થઈ શકે?"
+                    greeting = f"[excited] Hello, નમસ્તે {cust_label}! કેમ છો? હું નાવ્યા વાત કરી રહી છું, વીટેક સેમસંગ કેફે અમદાવાદ તરફથી..., શું તમારી જોડે ૨ મિનિટ વાત થઈ શકે?"
                 elif strategy_key == "fold8_prereserve_strategy":
                     greeting = "નમસ્તે! હું નાવ્યા છું, વીટેક સેમસંગ સ્ટોરથી બોલું છું. શું હું તમારી જોડે વાત કરી શકું?"
                 elif strategy_key in ["carekay_strategy", "carekay_insurance_strategy"]:
@@ -2396,26 +2396,12 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 # Strip emotion tags so Sarvam never speaks bracket names aloud
                 clean_text = re.sub(r'\[(excited|happy|calm|empathetic|polite|warm|apologetic|urgent|surprised)\]', '', clean_text, flags=re.IGNORECASE).strip()
 
-            is_shreyas_gu = getattr(self, "strategy_key", None) == "shreyas_gu_strategy"
-            if is_samsung_bot:
-                if detected_emotion in ["excited", "happy"]:
-                    pace = 1.25
-                    temp = 0.85
-                elif detected_emotion in ["calm", "polite", "warm"]:
-                    pace = 1.18
-                    temp = 0.50
-                elif detected_emotion in ["empathetic", "apologetic"]:
-                    pace = 1.12
-                    temp = 0.40
-                elif detected_emotion in ["urgent", "surprised"]:
-                    pace = 1.28
-                    temp = 0.90
-                else:
-                    pace = 1.20
-                    temp = 0.65
-                # Enhance question intonation for Sarvam TTS pitch elevation
-                if "?" in clean_text:
-                    clean_text = re.sub(r'(?<!\.)\?', '... ?', clean_text)
+                # Clean up multiple dots/ellipses that cause Sarvam TTS to stretch vowels unnaturally
+                clean_text = re.sub(r'\.{2,}', '', clean_text).strip()
+                clean_text = re.sub(r'\s*\?\s*', '?', clean_text).strip()
+
+                pace = 1.22
+                temp = 0.45
 
                 if detected_emotion:
                     print(f"🎭 [SAMSUNG BOT EMOTION]: '{detected_emotion}' tag parsed -> pace={pace}, temp={temp}")
