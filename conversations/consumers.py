@@ -2277,11 +2277,12 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         is_loan_hi = (lang == "hi" and getattr(self, "strategy_key", None) == "loan_strategy")
         is_kia_syros = (lang == "hi" and getattr(self, "strategy_key", None) == "kia_syros_strategy")
         is_shreyas_en = (lang == "en" and getattr(self, "strategy_key", None) == "shreyas_strategy")
+        is_shreyas_gu = (getattr(self, "strategy_key", None) == "shreyas_gu_strategy")
         is_raahi = (getattr(self, "strategy_key", None) == "raahi_iiiem_strategy")
         is_icemake = (getattr(self, "strategy_key", None) == "icemake")
         is_priya_naavya = (getattr(self, "strategy_key", None) == "priya_naavya_strategy")
 
-        if lang == "gu" or is_loan_hi or is_shreyas_en or is_kia_syros or is_raahi or is_icemake or is_priya_naavya:
+        if lang == "gu" or is_loan_hi or is_shreyas_en or is_shreyas_gu or is_kia_syros or is_raahi or is_icemake or is_priya_naavya:
             import requests
             api_key = os.getenv("SARVAM_API_KEY")
             api_url = "https://api.sarvam.ai/text-to-speech/stream"
