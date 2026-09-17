@@ -1,0 +1,59 @@
+# =========================
+# Python / Virtual Env
+# =========================
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+env
+# =========================
+# Django
+# =========================
+*.log
+db.sqlite3
+*.sqlite3
+local_settings.py
+
+# =========================
+# Environment Variables
+# =========================
+.env
+
+# =========================
+# Media / Uploads
+# =========================
+media/
+knowledge_files/
+
+# =========================
+# Static files (if collected later)
+# =========================
+staticfiles/
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Tests / Coverage
+# =========================
+.coverage
+htmlcov/
+.pytest_cache/
+
+# =========================
+# Build / Packaging
+# =========================
+build/
+dist/
+*.egg-info/

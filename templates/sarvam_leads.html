@@ -1,0 +1,2966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Agent Leads &amp; Screening Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-page: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f8fafc;
+            --accent: #4f46e5;
+            --accent-light: #e0e7ff;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-blue: #3b82f6;
+            --accent-purple: #a855f7;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --border-focus: #4f46e5;
+        }
+
+        *, *::before, *::after {
+            margin: 0; padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-page); }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-container {
+            padding: 20px clamp(14px, 2vw, 32px);
+            width: 100%;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+            padding: 14px clamp(14px, 2vw, 32px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-title h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            letter-spacing: -0.02em;
+        }
+
+        .header-title h1 i { color: var(--accent); font-size: 1rem; }
+
+        .header-title p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .agent-number-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #f0fdf4;
+            color: var(--accent-green);
+            border: 1px solid #bbf7d0;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .header-actions { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+
+        .trigger-call-btn {
+            font-size: 13px; font-weight: 600;
+            padding: 8px 14px; border-radius: 8px;
+            border: none; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--accent-green); color: #fff;
+            transition: all 0.15s ease;
+        }
+        .trigger-call-btn:hover { background: #059669; transform: translateY(-1px); }
+
+        /* ── Profile Dropdown ── */
+        .profile-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .profile-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            border: 2px solid rgba(2, 132, 199, 0.25);
+            transition: box-shadow 0.2s, transform 0.15s;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .profile-avatar:hover {
+            box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.18);
+            transform: scale(1.04);
+        }
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 190px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
+            z-index: 1000;
+            overflow: hidden;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .profile-dropdown.open {
+            display: block;
+        }
+        .pd-header {
+            padding: 12px 16px 10px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #f8fafc;
+        }
+        .pd-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pd-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .pd-logout {
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            padding: 11px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.15s;
+        }
+        .pd-logout:hover {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .refresh-btn {
+            font-size: 13px; font-weight: 600;
+            padding: 8px 14px; border-radius: 8px;
+            border: 1px solid rgba(79,70,229,0.2); cursor: pointer;
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--accent-light); color: var(--accent);
+            transition: all 0.15s ease;
+        }
+        .refresh-btn:hover { background: #c7d2fe; transform: translateY(-1px); }
+
+        /* ── PAGE BODY ── */
+        .page-body { padding: 20px clamp(14px, 2vw, 32px); }
+
+        /* ── STATS GRID ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1100px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 600px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stat-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            animation: fadeIn 0.5s ease both;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            user-select: none;
+            position: relative;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px -6px rgba(0,0,0,0.08);
+            border-color: var(--accent);
+        }
+
+        .stat-card.card-active {
+            transform: translateY(-3px);
+            box-shadow: 0 0 0 2.5px var(--accent), 0 10px 20px -6px rgba(0,0,0,0.1);
+        }
+
+        #statCard1.card-active {
+            border-color: #0284c7;
+            box-shadow: 0 0 0 2.5px #0284c7, 0 10px 20px -6px rgba(2, 132, 199, 0.25);
+            background: #f0f9ff;
+        }
+
+        #statCard2.card-active {
+            border-color: #10b981;
+            box-shadow: 0 0 0 2.5px #10b981, 0 10px 20px -6px rgba(16, 185, 129, 0.25);
+            background: #f0fdf4;
+        }
+
+        #statCard3.card-active {
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 2.5px #f59e0b, 0 10px 20px -6px rgba(245, 158, 11, 0.25);
+            background: #fffbeb;
+        }
+
+        #statCard4.card-active {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 2.5px #ef4444, 0 10px 20px -6px rgba(239, 68, 68, 0.25);
+            background: #fef2f2;
+        }
+
+        .stat-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; flex-shrink: 0;
+        }
+
+        .stat-info h3 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text-primary);
+        }
+        .stat-info p {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        /* ── FILTER SECTION ── */
+        .filter-section {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 260px;
+        }
+        .search-box input {
+            width: 100%;
+            background: var(--bg-page);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px 14px 10px 36px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            outline: none;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .search-box input:focus {
+            background: #fff;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+        }
+        .search-box input::placeholder { color: var(--text-muted); }
+        .search-box i {
+            position: absolute; left: 12px; top: 50%;
+            transform: translateY(-50%); color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .filter-options { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+        .select-filter {
+            background: var(--bg-page);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 9px 32px 9px 12px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            outline: none;
+            cursor: pointer;
+            font-family: inherit;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 14px;
+            transition: all 0.2s;
+        }
+        .select-filter:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+        }
+
+        /* ── PAGINATION ── */
+        .pagination-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-top: 1px solid var(--border);
+            background: #ffffff;
+            border-radius: 0 0 16px 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .pagination-info {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .pagination-info strong {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .page-btn {
+            min-width: 36px;
+            height: 36px;
+            padding: 0 10px;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: #1e293b;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            font-family: inherit;
+            user-select: none;
+        }
+        .page-btn:hover:not(.active):not(:disabled) {
+            border-color: var(--accent, #4f46e5);
+            color: var(--accent, #4f46e5);
+            background: var(--accent-light, #e0e7ff);
+            transform: translateY(-1px);
+        }
+        .page-btn:disabled:not(.active) {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: #f8fafc;
+            border-color: var(--border);
+            color: var(--text-muted);
+        }
+        .page-btn.active,
+        .page-btn.active:disabled {
+            background: var(--accent, #4f46e5) !important;
+            color: #ffffff !important;
+            border-color: var(--accent, #4f46e5) !important;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4) !important;
+            font-weight: 800 !important;
+            opacity: 1 !important;
+            cursor: default !important;
+            transform: none !important;
+        }
+        .page-ellipsis {
+            padding: 0 4px;
+            color: var(--text-muted);
+            font-weight: 600;
+            user-select: none;
+        }
+        .page-size-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-page);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 2px 8px;
+        }
+        .page-size-wrapper label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .page-size-wrapper select {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 6px 20px 6px 4px;
+            outline: none;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 2px center;
+            background-size: 12px;
+        }
+
+        /* ── TABLE ── */
+        .table-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04);
+        }
+        .table-responsive { overflow-x: auto; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+
+        th {
+            background: var(--bg-page);
+            color: var(--text-secondary);
+            font-weight: 700;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.9rem;
+            vertical-align: middle;
+            color: var(--text-primary);
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+
+        .candidate-cell { display: flex; align-items: center; gap: 10px; }
+
+        .avatar {
+            width: 40px; height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #ffffff !important;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.95rem;
+            text-transform: uppercase; flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+            letter-spacing: 0.5px;
+        }
+
+        .candidate-info h4 { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); }
+        .candidate-info p  { font-size: 0.78rem; color: var(--text-secondary); margin-top: 1px; }
+
+        /* ── BADGES ── */
+        .badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.03em;
+        }
+        .badge-green  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .badge-yellow { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+        .badge-red    { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .badge-purple { background: #faf5ff; color: #9333ea; border: 1px solid #e9d5ff; }
+
+        /* ── ACTION BUTTONS ── */
+        .btn-action {
+            background: var(--bg-page);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex; align-items: center; gap: 5px;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+        .btn-action:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        .btn-call-quick {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: var(--accent-green);
+        }
+        .btn-call-quick:hover {
+            background: var(--accent-green);
+            color: #fff;
+            border-color: var(--accent-green);
+        }
+
+        .btn-detail {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #ffffff !important;
+            border: 1px solid #0284c7;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+        .btn-detail:hover {
+            background: linear-gradient(135deg, #0369a1, #075985) !important;
+            color: #ffffff !important;
+            border-color: #0369a1;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+        }
+
+        /* ── MODAL ── */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            display: none; align-items: center; justify-content: center;
+            z-index: 1000; padding: 1.5rem;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            max-width: 820px; width: 100%; max-height: 92vh;
+            display: flex; flex-direction: column;
+            box-shadow: 0 24px 48px -12px rgba(0,0,0,0.18);
+            animation: modalFadeIn 0.25s ease;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h2 {
+            font-size: 1.1rem; font-weight: 700;
+            color: var(--text-primary);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .modal-header h2 i { color: var(--accent); }
+
+        .close-btn {
+            background: var(--bg-page);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.15s;
+        }
+        .close-btn:hover { background: #fee2e2; border-color: #fecaca; color: var(--accent-red); }
+
+        .modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+
+        .detail-group {
+            background: var(--bg-page);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .detail-group h4 {
+            color: var(--accent);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 12px;
+        }
+        .info-item label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            display: block;
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .info-item span {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .audio-player {
+            width: 100%; margin-top: 6px; border-radius: 8px;
+        }
+
+        .transcript-box {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            max-height: 280px;
+            overflow-y: auto;
+            font-family: 'Inter', monospace;
+            font-size: 0.88rem;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+        }
+
+        /* ── LOADING ── */
+        .loading-container {
+            text-align: center; padding: 4rem 0;
+            color: var(--text-secondary);
+        }
+        .spinner {
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            width: 36px; height: 36px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        /* ── DASHBOARD TABS ── */
+        .dashboard-tabs {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 32px 0 32px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0;
+        }
+
+        .dash-tab-btn {
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 10px 18px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+            bottom: -2px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .dash-tab-btn:hover {
+            color: var(--accent);
+            background: rgba(79, 70, 229, 0.05);
+        }
+
+        .dash-tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: #ffffff;
+            font-weight: 700;
+        }
+
+        .campaign-live-indicator {
+            background: #ef4444;
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 10px;
+            letter-spacing: 0.05em;
+            animation: pulseLive 1.5s infinite;
+        }
+
+        @keyframes pulseLive {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.95); }
+        }
+
+        /* ── CAMPAIGNS SECTION ── */
+        .campaigns-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .campaign-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px 26px;
+            box-shadow: 0 2px 8px -2px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+
+        .campaign-card:hover {
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
+            border-color: #cbd5e1;
+        }
+
+        .campaign-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .campaign-title-group h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .campaign-meta {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .campaign-meta span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ── 3-STAGE PIPELINE STEPPER ── */
+        .stage-pipeline {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .stage-box {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .stage-box.stage-active {
+            border-color: var(--accent);
+            background: #f5f3ff;
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+        }
+
+        .stage-box.stage-completed {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+        }
+
+        .stage-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .stage-badge {
+            font-size: 0.7rem;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        .stage-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            text-align: center;
+        }
+
+        .stage-metric-val {
+            font-size: 1.15rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .stage-metric-lbl {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        /* Progress Bar */
+        .campaign-progress-wrap {
+            margin-bottom: 16px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        /* Action bar */
+        .campaign-actions-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding-top: 14px;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .campaign-outcomes-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pill-answered {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .pill-missed {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .btn-excel-full {
+            background: #0284c7;
+            color: #ffffff;
+            border: 1px solid #0369a1;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        .btn-excel-full:hover { background: #0369a1; transform: translateY(-1px); color:#fff; }
+
+        .btn-excel-missed {
+            background: #991b1b;
+            color: #ffffff;
+            border: 1px solid #7f1d1d;
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        .btn-excel-missed:hover { background: #7f1d1d; transform: translateY(-1px); color:#fff; }
+
+        .status-live-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #16a34a;
+            border-radius: 50%;
+            animation: pulseLive 1.5s infinite;
+        }
+
+        .agent-select-nav {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+            outline: none;
+        }
+        .agent-select-nav:focus {
+            border-color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">
+                <h1 id="pageMainHeading"><i class="fa-solid fa-robot"></i> {{ agent_name|default:'Voice AI Agent' }} — Sarvam AI Dashboard</h1>
+                <div id="pageSubHeading" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
+                    <span class="agent-number-badge"><i class="fa-solid fa-phone"></i> Agent Line: <strong>{{ agent_phone|default:'+917971414121' }}</strong></span>
+                    <span class="agent-minutes-badge" id="headerMinutesBadge" title="Call Minutes Balance" style="display:inline-flex; align-items:center; gap:5px; background:{% if is_minutes_exhausted %}#fee2e2; color:#dc2626; border:1px solid #fca5a5{% else %}#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe{% endif %}; padding:3px 10px; border-radius:20px; font-size:0.78rem; font-weight:700;">
+                        <i class="fa-solid fa-bolt" style="color:{% if is_minutes_exhausted %}#dc2626{% else %}#2563eb{% endif %};"></i>
+                        <span>Call Minutes: <strong>{{ remaining_minutes|floatformat:1 }} / {{ allocated_minutes|floatformat:0 }}m</strong></span>
+                    </span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div id="agentSwitcherContainer" style="display:{% if all_agents|length > 1 %}inline-block{% else %}none{% endif %};">
+                    <select id="sarvamAgentSelect" onchange="onAgentSelectChange(this.value)" class="agent-select-nav">
+                        {% for ag in all_agents %}
+                        <option value="{{ ag.slug }}" {% if ag.slug == agent_slug %}selected{% endif %}>{{ ag.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="trigger-call-btn" onclick="openCampaignModal()" style="background: linear-gradient(135deg, #0284c7, #0369a1);">
+                    <i class="fa-solid fa-file-excel"></i> Excel Campaign
+                </button>
+                <button class="trigger-call-btn" onclick="openTriggerCallModal()">
+                    <i class="fa-solid fa-phone-volume"></i> Trigger Call
+                </button>
+                
+                <!-- Profile Dropdown -->
+                <div class="profile-wrap" id="profileWrap">
+                    <div class="profile-avatar" id="profileAvatar" onclick="toggleProfile(event)">?</div>
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <div class="pd-header">
+                            <div class="pd-name" id="pdName">User</div>
+                            <div class="pd-label" id="pdRole">Logged in</div>
+                        </div>
+                        <button class="pd-logout" onclick="logout()">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Section Navigation Tabs -->
+        <div class="dashboard-tabs">
+            <button class="dash-tab-btn active" id="tabScreeningsBtn" onclick="switchDashboardTab('screenings')">
+                <i class="fa-solid fa-list-check"></i> <span id="tabScreeningsLabel">All Calls &amp; Inquiries</span>
+            </button>
+            <button class="dash-tab-btn" id="tabCampaignsBtn" onclick="switchDashboardTab('campaigns')">
+                <i class="fa-solid fa-bullhorn"></i> Campaign
+                <span class="campaign-live-indicator" id="liveCampaignBadge" style="display:none;">LIVE</span>
+            </button>
+        </div>
+
+        <!-- Agent Config: injected by Django for JS to use per-agent API URLs -->
+        <script>
+            const SARVAM_AGENT_SLUG = "{{ agent_slug|default:'default' }}";
+            const SARVAM_AGENT_NAME = "{{ agent_name|default:'Voice AI Agent' }}";
+            const SARVAM_AGENT_PHONE = "{{ agent_phone|default:'' }}";
+            const isSamsungAgent = SARVAM_AGENT_SLUG.includes('samsung') || SARVAM_AGENT_NAME.toLowerCase().includes('samsung') || SARVAM_AGENT_SLUG === 'vtech';
+            const SARVAM_API_PREFIX = SARVAM_AGENT_SLUG && SARVAM_AGENT_SLUG !== 'default'
+                ? `/api/sarvam/${SARVAM_AGENT_SLUG}/leads`
+                : '/api/sarvam/leads';
+            const SARVAM_CAMPAIGN_API_PREFIX = SARVAM_AGENT_SLUG && SARVAM_AGENT_SLUG !== 'default'
+                ? `/api/sarvam/${SARVAM_AGENT_SLUG}/campaigns`
+                : '/api/sarvam/campaigns';
+        </script>
+
+        <!-- SECTION 1: CANDIDATE / CUSTOMER LEADS -->
+        <div id="screeningsSection">
+            <div class="content-container">
+                <!-- Stats Grid - Common for all Sarvam agents -->
+                <div class="stats-grid">
+                    <div class="stat-card" id="statCard1" onclick="filterByStatCard('ALL')" title="Click to show All Leads">
+                        <div class="stat-icon" id="statIcon1" style="background: rgba(2, 132, 199, 0.15); color: #0284c7;">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-total">0</h3>
+                            <p id="stat-total-label">Total Inquiries</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" id="statCard2" onclick="filterByStatCard('INTERVIEW')" title="Click to filter by Interested / High Intent">
+                        <div class="stat-icon" id="statIcon2" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-interviews">0</h3>
+                            <p id="stat-interviews-label">Interested / High Intent</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" id="statCard3" onclick="filterByStatCard('CALLBACK')" title="Click to filter by Callback / Offers Requested">
+                        <div class="stat-icon" id="statIcon3" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                            <i class="fa-solid fa-phone-volume"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-callback">0</h3>
+                            <p id="stat-callback-label">Callback / Offers Requested</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" id="statCard4" onclick="filterByStatCard('NOT_INTERESTED')" title="Click to filter by Not Interested">
+                        <div class="stat-icon" id="statIcon4" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-not-interested">0</h3>
+                            <p id="stat-not-interested-label">Not Interested</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="filter-section">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="searchInput" placeholder="Search customer name, contact, requirement..." onkeyup="filterLeads(true)">
+                    </div>
+                    <div class="filter-options">
+                        <select class="select-filter" id="statusFilter" onchange="filterLeads(true)">
+                            <option value="ALL">All Call Outcomes</option>
+                            <option value="INTERVIEW">Interested / High Intent</option>
+                            <option value="CALLBACK">Callback Requested</option>
+                            <option value="NOT_INTERESTED">Not Interested</option>
+                            <option value="MISMATCH">Requirements Mismatch</option>
+                        </select>
+                        <select class="select-filter" id="daysFilter" onchange="fetchLeadsData()">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                        </select>
+                        <div class="page-size-wrapper" title="Number of inquiries per page">
+                            <label for="pageSizeSelect"><i class="fa-solid fa-list-ol" style="color:var(--accent);"></i> Show:</label>
+                            <select id="pageSizeSelect" onchange="onPageSizeChange(this.value)">
+                                <option value="10" selected>10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                                <option value="50">50</option>
+                                <option value="ALL">All</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Leads Table Card -->
+                <div class="table-card">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr id="tableHeaderRow">
+                                    <th>Customer Details</th>
+                                    <th>Contact Number</th>
+                                    <th>Requirement / Key Details</th>
+                                    <th>Call Outcome</th>
+                                    <th>Call Duration</th>
+                                    <th>Recording</th>
+                                    <th>Date &amp; Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTableBody">
+                                <tr>
+                                    <td colspan="8">
+                                        <div class="loading-container">
+                                            <div class="spinner"></div>
+                                            <p>Fetching Voice Agent Data...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Table Pagination Footer -->
+                    <div class="pagination-bar" id="leadsPaginationBar">
+                        <div class="pagination-info" id="paginationInfo">
+                            Showing <strong>0</strong> to <strong>0</strong> of <strong>0</strong> inquiries
+                        </div>
+                        <div class="pagination-controls" id="paginationControls">
+                            <!-- Dynamic Page Navigation Buttons -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 2: CAMPAIGN -->
+        <div id="campaignsSection" style="display: none;">
+            <div class="content-container">
+                <!-- Campaigns Summary Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(2, 132, 199, 0.15); color: #0284c7;">
+                            <i class="fa-solid fa-rocket"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-campaigns-total">0</h3>
+                            <p>Total Campaigns</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(79, 70, 229, 0.15); color: #4f46e5;">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-campaigns-leads">0</h3>
+                            <p>Total Contacts Processed</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                            <i class="fa-solid fa-phone-flip"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-campaigns-answered">0</h3>
+                            <p>Answered / Picked Up</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                            <i class="fa-solid fa-phone-slash"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-campaigns-missed">0</h3>
+                            <p>Missed (All 3 Retries)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campaign Controls Bar -->
+                <div class="filter-section">
+                    <div style="display:flex; align-items:center; gap: 12px; flex-wrap:wrap;">
+                        <button class="trigger-call-btn" onclick="openCampaignModal()" style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 0.9rem; padding: 10px 18px;">
+                            <i class="fa-solid fa-plus-circle"></i> Launch New Campaign
+                        </button>
+                        <span class="status-live-pill" id="campaignLivePill">
+                            <span class="live-dot"></span> Live Sync Active
+                        </span>
+                    </div>
+                    <div style="display:flex; gap: 10px; flex-wrap:wrap;">
+                        <a href="/api/sarvam/leads/sample-template/" target="_blank" class="refresh-btn" style="text-decoration:none;">
+                            <i class="fa-solid fa-download"></i> Sample Excel Template
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Campaigns List Container -->
+                <div id="campaignsContainer" class="campaigns-container">
+                    <div class="loading-container">
+                        <div class="spinner"></div>
+                        <p>Loading Campaigns...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Detail Modal -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-id-card" style="color: var(--accent-purple);"></i> Customer Interaction Details</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBodyContent">
+                <!-- Dynamic Content Loaded Here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Lead Details Modal -->
+    <div class="modal-overlay" id="campaignDetailModal">
+        <div class="modal-card" style="max-width: 1100px;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-bullhorn" style="color: #0284c7;"></i> <span id="campaignModalTitle">Campaign Leads Breakdown</span></h2>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <a id="modalFullExcelBtn" href="#" class="btn-excel-full" style="font-size:0.78rem; padding: 6px 12px;">
+                        <i class="fa-solid fa-file-excel"></i> Download Full Excel
+                    </a>
+                    <a id="modalMissedExcelBtn" href="#" class="btn-excel-missed" style="font-size:0.78rem; padding: 6px 12px;">
+                        <i class="fa-solid fa-phone-slash"></i> Download Missed Excel
+                    </a>
+                    <button class="close-btn" onclick="closeCampaignDetailModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 16px 24px;">
+                <div class="table-responsive" style="max-height: 60vh; overflow-y:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Customer Name</th>
+                                <th>Contact Number</th>
+                                <th>Stage 1 (Main)</th>
+                                <th>Stage 2 (Retry 1)</th>
+                                <th>Stage 3 (Retry 2)</th>
+                                <th>Final Outcome</th>
+                                <th>Total Attempts</th>
+                                <th>Last Call Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="campaignLeadsTableBody">
+                            <tr>
+                                <td colspan="9" style="text-align:center; padding: 2rem;">Loading lead details...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trigger Call Modal -->
+    <div class="modal-overlay" id="triggerCallModal">
+        <div class="modal-card" style="max-width: 550px;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-phone-volume" style="color: var(--accent-green);"></i> Trigger Outbound AI Call</h2>
+                <button class="close-btn" onclick="closeTriggerCallModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 0.75rem; padding: 0.85rem; font-size: 0.85rem; color: var(--accent-green); display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-headset" style="font-size: 1.1rem;"></i>
+                    <span><strong>Agent Outbound Number:</strong> {{ agent_phone|default:'+917971414121' }}</span>
+                </div>
+
+                <form id="triggerCallForm" onsubmit="handleTriggerCall(event)">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Customer Phone Number *</label>
+                        <input type="text" id="callPhone" placeholder="e.g. 9913381306 or +919913381306" required style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.75rem 1rem; border-radius: 0.75rem; font-size: 0.95rem; outline: none;">
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Customer Name</label>
+                        <input type="text" id="callName" placeholder="e.g. Taksh Patel" style="width: 100%; background: var(--bg-dark); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.75rem 1rem; border-radius: 0.75rem; font-size: 0.95rem; outline: none;">
+                    </div>
+
+                    <div id="callAlert" style="display: none; padding: 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                        <button type="button" class="btn-action" onclick="closeTriggerCallModal()" style="padding: 0.75rem 1.25rem;">Cancel</button>
+                        <button type="submit" id="submitCallBtn" style="background: linear-gradient(135deg, var(--accent-green), #059669); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-paper-plane"></i> Initiate Outbound Call
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel Campaign Modal -->
+    <div class="modal-overlay" id="campaignModal">
+        <div class="modal-card" style="max-width: 580px;">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-file-excel" style="color: #0284c7;"></i> Launch 3-Stage Campaign</h2>
+                <button class="close-btn" onclick="closeCampaignModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.75rem; padding: 0.85rem; font-size: 0.85rem; color: #0369a1; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;">
+                    <div>
+                        <strong style="display:block; margin-bottom: 2px;"><i class="fa-solid fa-circle-info"></i> 3-Stage Automated Campaign</strong>
+                        <span>Upload <code>.xlsx</code> or <code>.csv</code> with <strong>Phone Number</strong> &amp; <strong>Name</strong>. Calls not picked up will automatically be retried 2 times (Total 3 Stages).</span>
+                    </div>
+                    <a href="/api/sarvam/leads/sample-template/" target="_blank" style="background: #ffffff; color: #0284c7; border: 1px solid #7dd3fc; padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 0.78rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;">
+                        <i class="fa-solid fa-download"></i> Sample Template
+                    </a>
+                </div>
+
+                <form id="campaignUploadForm" onsubmit="handleCampaignUpload(event)">
+                    <div style="margin-top: 1rem; margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem;">Campaign Name</label>
+                        <input type="text" id="campaignNameInput" placeholder="e.g. September Admissions Batch #1" style="width: 100%; background: var(--bg-page); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem 1rem; border-radius: 0.75rem; font-size: 0.95rem; outline: none;">
+                    </div>
+
+                    <div style="margin-bottom: 1.25rem;">
+                        <label style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem;">Select Excel File (.xlsx, .xls, .csv) *</label>
+                        <!-- Big Drop Zone Card (Visible when NO file is chosen) -->
+                        <div id="dropZone" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 1.5rem; text-align: center; background: #f8fafc; cursor: pointer; transition: all 0.2s;" onclick="document.getElementById('excelFileInput').click()">
+                            <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: #0284c7; margin-bottom: 0.5rem;"></i>
+                            <p style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);" id="fileNameDisplay">Click to browse or drag &amp; drop spreadsheet file</p>
+                            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;">Supported: .xlsx, .xls, .csv (Name &amp; Phone Number)</p>
+                        </div>
+
+                        <!-- Compact Selected File Card (Visible ONLY when file is selected; dropZone is hidden) -->
+                        <div id="selectedFileBox" style="display: none; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 14px 16px; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.08);">
+                            <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                                <div style="width: 42px; height: 42px; border-radius: 10px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0;">
+                                    <i class="fa-solid fa-file-excel"></i>
+                                </div>
+                                <div style="min-width: 0;">
+                                    <p id="selectedFileName" style="font-size: 0.92rem; font-weight: 700; color: #0f172a; margin: 0; word-break: break-all;"></p>
+                                    <p id="selectedFileSize" style="font-size: 0.78rem; color: #15803d; font-weight: 600; margin: 3px 0 0 0; display: flex; align-items: center; gap: 5px;"></p>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 6px; flex-shrink: 0;">
+                                <button type="button" class="btn-action" onclick="document.getElementById('excelFileInput').click()" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 600; background: #ffffff; color: #0284c7; border-color: #bae6fd;" title="Select a different spreadsheet file">
+                                    <i class="fa-solid fa-arrow-rotate-right"></i> Change
+                                </button>
+                                <button type="button" class="btn-action" onclick="removeSelectedFile()" style="padding: 6px 10px; font-size: 0.8rem; font-weight: 600; background: #ffffff; color: #dc2626; border-color: #fecaca;" title="Remove file">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" required style="display: none;" onchange="updateFileName(this)">
+                    </div>
+
+                    <div id="campaignAlert" style="display: none; padding: 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                        <button type="button" class="btn-action" onclick="closeCampaignModal()" style="padding: 0.75rem 1.25rem;">Cancel</button>
+                        <button type="submit" id="submitCampaignBtn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-rocket"></i> Launch 3-Stage Campaign
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Minutes Exhausted Popup Modal -->
+    <div class="modal-overlay" id="minutesExhaustedModal" style="display:none; z-index:99999;">
+        <div class="modal-card" style="max-width: 480px; text-align: center; padding: 2.2rem 1.8rem; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(220, 38, 38, 0.35); border: 1px solid rgba(239, 68, 68, 0.3);">
+            <div style="width: 76px; height: 76px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin: 0 auto 1.25rem; box-shadow: 0 10px 20px -5px rgba(220, 38, 38, 0.3);">
+                <i class="fa-solid fa-hourglass-end"></i>
+            </div>
+            <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 0.75rem;">Call Minutes Limit Over</h3>
+            <p style="color: #475569; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.25rem;">
+                The allocated call minutes limit for <strong id="exhaustedAgentName" style="color: #0284c7;">{{ agent_name|default:'Voice AI Agent' }}</strong> has been fully reached. Outbound calls and campaigns are temporarily paused.
+            </p>
+            <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; padding: 1rem; margin-bottom: 1.75rem; font-size: 0.9rem; color: #9f1239; text-align: left; display: flex; align-items: flex-start; gap: 0.75rem;">
+                <i class="fa-solid fa-circle-exclamation" style="font-size: 1.2rem; color: #e11d48; margin-top: 2px;"></i>
+                <div>
+                    <strong style="display:block; margin-bottom: 2px;">To Continue Service:</strong>
+                    <span>Please contact <strong>SuperAdmin</strong> to add more minutes to your agent balance.</span>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button type="button" class="btn-action" onclick="closeMinutesExhaustedModal()" style="min-width: 140px; padding: 0.75rem 1.75rem; font-weight: 700; background: #0284c7; color: white; border: none; border-radius: 10px; font-size: 0.95rem; cursor: pointer;">
+                    <i class="fa-solid fa-check"></i> Understood
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        let allLeadsData = [];
+        let currentAgentMinutes = null;
+        let currentPage = 1;
+        let pageSize = 10;
+        let filteredLeadsCache = [];
+
+        function updateMinutesUI(minutesData) {
+            if (!minutesData) return;
+            currentAgentMinutes = minutesData;
+            const remMins = typeof minutesData.remaining_minutes === 'number' ? minutesData.remaining_minutes : 0;
+            const allocMins = typeof minutesData.allocated_minutes === 'number' ? minutesData.allocated_minutes : 5000;
+            const isExhausted = minutesData.is_exhausted || remMins <= 0;
+            const remDisplay = remMins.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
+            const allocDisplay = allocMins.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+
+            // Subtitle Badge only
+            const badge = document.getElementById('headerMinutesBadge');
+            if (badge) {
+                if (isExhausted) {
+                    badge.style.background = '#fee2e2';
+                    badge.style.borderColor = '#fca5a5';
+                    badge.style.color = '#dc2626';
+                    badge.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:#dc2626;"></i> <span>Call Minutes: <strong>0 / ${allocDisplay}m (Limit Over)</strong></span>`;
+                } else {
+                    badge.style.background = '#eff6ff';
+                    badge.style.borderColor = '#bfdbfe';
+                    badge.style.color = '#1d4ed8';
+                    badge.innerHTML = `<i class="fa-solid fa-bolt" style="color:#2563eb;"></i> <span>Call Minutes: <strong>${remDisplay} / ${allocDisplay}m</strong></span>`;
+                }
+            }
+        }
+
+        function openMinutesExhaustedModal() {
+            const modal = document.getElementById('minutesExhaustedModal');
+            if (modal) {
+                const nameEl = document.getElementById('exhaustedAgentName');
+                if (nameEl) nameEl.innerText = SARVAM_AGENT_NAME || 'Voice Agent';
+                modal.style.display = 'flex';
+            }
+        }
+
+        function closeMinutesExhaustedModal() {
+            const modal = document.getElementById('minutesExhaustedModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function syncFromSarvam(days = 30) {
+            const btn = document.getElementById('syncSarvamBtn');
+            const origHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing...';
+            btn.style.opacity = '0.7';
+
+            try {
+                const res = await fetch(`${SARVAM_API_PREFIX}/sync/`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+                    body: JSON.stringify({ days })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    btn.innerHTML = `<i class="fa-solid fa-check"></i> Synced ${data.synced} calls`;
+                    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                    // Refresh the dashboard table
+                    await fetchLeadsData();
+                } else {
+                    btn.innerHTML = `<i class="fa-solid fa-xmark"></i> Sync Failed`;
+                    btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                    alert('Sync error: ' + (data.message || 'Unknown error'));
+                }
+            } catch (e) {
+                btn.innerHTML = `<i class="fa-solid fa-xmark"></i> Error`;
+                btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                console.error('Sync error:', e);
+            } finally {
+                // Reset button after 4 seconds
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = origHTML;
+                    btn.style.background = 'linear-gradient(135deg, #7c3aed, #4f46e5)';
+                    btn.style.opacity = '1';
+                }, 4000);
+            }
+        }
+
+        async function fetchLeadsData(silent = false) {
+            const days = document.getElementById('daysFilter').value;
+            const tbody = document.getElementById('leadsTableBody');
+
+            if (!silent) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            <div class="loading-container">
+                                <div class="spinner"></div>
+                                <p>Fetching Candidate Screening Data...</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            try {
+                const response = await fetch(`${SARVAM_API_PREFIX}/data/?days=${days}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    if (!silent) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--accent-red); padding: 2rem;">Error: ${data.error}</td></tr>`;
+                    return;
+                }
+
+                // Update Agent Minute Balance Widget & Badge
+                if (data.agent_minutes) {
+                    updateMinutesUI(data.agent_minutes);
+                }
+
+                const newLeads = data.leads || [];
+
+                // Smart diff: detect new records or newly added recordings
+                const newSig = newLeads.map(l => `${l.id}:${l.audio_url ? '1' : '0'}:${l.final_status}`).join('|');
+                const oldSig = allLeadsData.map(l => `${l.id}:${l.audio_url ? '1' : '0'}:${l.final_status}`).join('|');
+                const hasChanges = newSig !== oldSig;
+                const hadMoreRecords = newLeads.length > allLeadsData.length;
+                const newRecordings = newLeads.filter(nl => nl.audio_url && !allLeadsData.find(ol => ol.id === nl.id && ol.audio_url)).length;
+
+                allLeadsData = newLeads;
+
+                // Update Stats - Common for all Sarvam agents
+                const totalEl = document.getElementById('stat-total');
+                const interviewEl = document.getElementById('stat-interviews');
+                const callbackEl = document.getElementById('stat-callback');
+                const notIntEl = document.getElementById('stat-not-interested');
+
+                const totalVal = data.stats ? (data.stats.total_calls ?? (data.leads ? data.leads.length : 0)) : (data.leads ? data.leads.length : 0);
+                const highIntentVal = data.stats ? ((data.stats.high_intent || data.stats.interview_scheduled || 0)) : 0;
+                const callbackVal = data.stats ? (data.stats.callback_required || 0) : 0;
+                const notIntVal = data.stats ? ((data.stats.not_interested || 0) + (data.stats.role_mismatch || 0)) : 0;
+
+                if (totalEl) totalEl.innerText = totalVal;
+                if (interviewEl) interviewEl.innerText = highIntentVal;
+                if (callbackEl) callbackEl.innerText = callbackVal;
+                if (notIntEl) notIntEl.innerText = notIntVal;
+
+                if (!silent || hasChanges) {
+                    filterLeads();
+                }
+
+                // Update last-updated time
+                const lastUpdEl = document.getElementById('last-updated-time');
+                if (lastUpdEl) lastUpdEl.innerText = new Date().toLocaleTimeString();
+
+                // Show toast if data changed during silent poll
+                if (silent && hadMoreRecords) {
+                    showToast('📋 New call data received — dashboard updated!', 'info');
+                } else if (silent && newRecordings > 0) {
+                    showToast(`🎧 Recording ready for ${newRecordings} call(s)!`, 'success');
+                }
+
+            } catch (err) {
+                console.error(err);
+                if (!silent) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--accent-red); padding: 2rem;">Failed to fetch leads data.</td></tr>`;
+            }
+        }
+
+        // Toast notification system
+        function showToast(message, type) {
+            const existing = document.getElementById('live-toast');
+            if (existing) existing.remove();
+            const colors = { info: '#6366f1', success: '#10b981', warning: '#f59e0b', error: '#ef4444' };
+            const toast = document.createElement('div');
+            toast.id = 'live-toast';
+            toast.style.cssText = `position:fixed;bottom:2rem;right:2rem;z-index:9999;background:${colors[type]||colors.info};color:white;padding:0.85rem 1.4rem;border-radius:0.75rem;font-size:0.9rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.4);cursor:pointer;animation:slideInToast 0.3s ease;`;
+            toast.innerHTML = message;
+            toast.onclick = () => toast.remove();
+            if (!document.getElementById('toast-anim')) {
+                const s = document.createElement('style');
+                s.id = 'toast-anim';
+                s.textContent = '@keyframes slideInToast{from{transform:translateY(2rem);opacity:0}to{transform:translateY(0);opacity:1}}';
+                document.head.appendChild(s);
+            }
+            document.body.appendChild(toast);
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 5000);
+        }
+
+
+        function getAvatarStyle(name) {
+            const gradients = [
+                'linear-gradient(135deg, #0284c7, #0369a1)', // Sky blue
+                'linear-gradient(135deg, #4f46e5, #4338ca)', // Indigo
+                'linear-gradient(135deg, #7c3aed, #6d28d9)', // Violet
+                'linear-gradient(135deg, #059669, #047857)', // Emerald
+                'linear-gradient(135deg, #d97706, #b45309)', // Amber
+                'linear-gradient(135deg, #e11d48, #be123c)', // Rose
+                'linear-gradient(135deg, #0891b2, #0e7490)', // Cyan
+            ];
+            let hash = 0;
+            const str = name || 'Customer';
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const idx = Math.abs(hash) % gradients.length;
+            return `background: ${gradients[idx]}; color: #ffffff !important;`;
+        }
+
+        function getDirectionBadge(lead) {
+            const isOutbound = (lead.direction === 'outbound') || (lead.call_type && !lead.call_type.toLowerCase().includes('inbound'));
+            if (isOutbound) {
+                const label = (lead.call_direction_display || 'Outbound Call');
+                return `<span class="badge" style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-phone-arrow-up-right"></i> ${escapeHtml(label)}</span>`;
+            } else {
+                return `<span class="badge" style="background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; font-size: 0.72rem; padding: 2px 8px; border-radius: 12px; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-phone-arrow-down-left"></i> Inbound Call</span>`;
+            }
+        }
+
+        function renderLeads(leads) {
+            const tbody = document.getElementById('leadsTableBody');
+
+            if (!leads || leads.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--text-secondary); padding: 3rem;">No voice call interactions found for this period.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = leads.map(lead => {
+                const s = lead.summary || {};
+                let custName = lead.candidate_name && !['Candidate', 'Customer', 'Unknown Candidate', 'Unknown', ''].includes(lead.candidate_name)
+                    ? lead.candidate_name
+                    : (s.user_name || s.customer_name || s.candidate_name || 'Customer');
+                if (custName.toLowerCase() === 'candidate' || custName.toLowerCase() === 'unknown candidate') {
+                    custName = 'Customer';
+                }
+
+                const reqDetails = s.car_model || s.product_interest || s.product_name || s.flat_type || s.loan_type || s.course_name || s.requirement || lead.applied_position || 'General Inquiry';
+                const initials = (custName || 'C').split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2) || 'C';
+                const statusBadge = getStatusBadge(lead.final_status);
+                const formattedDate = lead.attempted_at ? new Date(lead.attempted_at).toLocaleString() : 'N/A';
+                const avatarStyle = getAvatarStyle(custName);
+                const dirBadge = getDirectionBadge(lead);
+                const contactHtml = (lead.contact && lead.contact !== 'N/A' && lead.contact !== 'unknown')
+                    ? `<strong style="color: var(--text-primary); font-size: 0.92rem;">${escapeHtml(lead.contact)}</strong>`
+                    : `<span style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic;">Private Contact</span>`;
+
+                if (isSamsungAgent) {
+                    const product = s.product_interest || s.car_model || s.model || s.product_name || s.interest || (lead.applied_position && !lead.applied_position.includes('Counselor') ? lead.applied_position : 'Samsung phone');
+                    const area = s.customer_area || s.current_location || s.area || s.city || 'N/A';
+                    const store = s.recommended_store || s.store || s.preferred_store || 'N/A';
+
+                    return `
+                        <tr>
+                            <td>
+                                <div class="candidate-cell">
+                                    <div class="avatar" style="${avatarStyle}">${initials}</div>
+                                    <div class="candidate-info">
+                                        <h4>${escapeHtml(custName)}</h4>
+                                        <p><i class="fa-solid fa-language" style="color: #6366f1;"></i> ${formatLanguage(s.detected_language || lead.language)}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>${contactHtml}</div>
+                                <div>${dirBadge}</div>
+                            </td>
+                            <td><span style="font-weight:600; color:#0284c7;"><i class="fa-solid fa-mobile-screen-button"></i> ${escapeHtml(product)}</span></td>
+                            <td><span style="color:#475569;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(area)}</span></td>
+                            <td><span style="font-weight:600; color:#10b981;"><i class="fa-solid fa-store"></i> ${escapeHtml(store)}</span></td>
+                            <td>${statusBadge}</td>
+                            <td><i class="fa-regular fa-clock"></i> ${lead.duration_seconds}s <span style="font-size:0.75rem; color:#64748b; font-weight:600;">(Billed: ${lead.billed_seconds || 0}s)</span></td>
+                            <td>
+                                ${lead.audio_url
+                                    ? `<span style="color:#10b981;font-size:0.8rem;font-weight:600;"><i class="fa-solid fa-headphones"></i> Ready</span>`
+                                    : `<span style="color:#475569;font-size:0.8rem;"><i class="fa-regular fa-clock"></i> Processing</span>`
+                                }
+                            </td>
+                            <td style="font-size: 0.85rem; color: var(--text-secondary);">${formattedDate}</td>
+                            <td>
+                                <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                    <button class="btn-action btn-call-quick" title="Trigger Call to Customer" onclick="openTriggerCallModal('${escapeHtml(lead.contact)}', '${escapeHtml(custName)}')">
+                                        <i class="fa-solid fa-phone"></i> Call
+                                    </button>
+                                    <button class="btn-action btn-detail" title="View Interaction Details" onclick='openModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})'>
+                                        <i class="fa-solid fa-eye"></i> Detail
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+                return `
+                    <tr>
+                        <td>
+                            <div class="candidate-cell">
+                                <div class="avatar" style="${avatarStyle}">${initials}</div>
+                                <div class="candidate-info">
+                                    <h4>${escapeHtml(custName)}</h4>
+                                    <p><i class="fa-solid fa-language" style="color: #6366f1;"></i> ${formatLanguage(s.detected_language || lead.language)}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div>${contactHtml}</div>
+                            <div>${dirBadge}</div>
+                        </td>
+                        <td><span style="font-weight:600; color:#0284c7;"><i class="fa-solid fa-clipboard-list"></i> ${escapeHtml(reqDetails)}</span></td>
+                        <td>${statusBadge}</td>
+                        <td><i class="fa-regular fa-clock"></i> ${lead.duration_seconds || 0}s</td>
+                        <td>
+                            ${lead.audio_url
+                                ? `<span style="color:#10b981;font-size:0.8rem;font-weight:600;"><i class="fa-solid fa-headphones"></i> Ready</span>`
+                                : `<span style="color:#475569;font-size:0.8rem;"><i class="fa-regular fa-clock"></i> Processing</span>`
+                            }
+                        </td>
+                        <td style="font-size: 0.85rem; color: var(--text-secondary);">${formattedDate}</td>
+                        <td>
+                            <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                <button class="btn-action btn-call-quick" title="Trigger Call" onclick="openTriggerCallModal('${escapeHtml(lead.contact)}', '${escapeHtml(custName)}')">
+                                    <i class="fa-solid fa-phone"></i> Call
+                                </button>
+                                <button class="btn-action btn-detail" title="View Interaction Details" onclick='openModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})'>
+                                    <i class="fa-solid fa-eye"></i> Detail
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getStatusBadge(status) {
+            const s = (status || '').toUpperCase();
+            if (s.includes('INTERVIEW') || s.includes('SCHEDULED') || s.includes('PURCHASE') || s.includes('STORE_VISIT') || s.includes('HIGH_INTENT') || s.includes('INTERESTED')) {
+                return `<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> Interested / High Intent</span>`;
+            } else if (s.includes('CALLBACK') || s.includes('WHATSAPP') || s.includes('OFFER')) {
+                return `<span class="badge badge-yellow"><i class="fa-solid fa-phone"></i> Callback Requested</span>`;
+            } else if (s.includes('MISMATCH')) {
+                return `<span class="badge badge-purple"><i class="fa-solid fa-sliders"></i> Requirements Mismatch</span>`;
+            } else if (s.includes('NOT_INTERESTED') || s.includes('NOT INTERESTED') || s.includes('REJECTED') || s.includes('DECLINED')) {
+                return `<span class="badge badge-red"><i class="fa-solid fa-ban"></i> Not Interested</span>`;
+            } else if (s.includes('NO_ANSWER') || s.includes('MISSED') || s.includes('BUSY') || s.includes('FAILED')) {
+                return `<span class="badge badge-red" style="background:#fef2f2; color:#ef4444; border:1px solid #fecaca;"><i class="fa-solid fa-phone-slash"></i> Missed / No Answer</span>`;
+            }
+            return `<span class="badge badge-blue" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;"><i class="fa-solid fa-circle-check"></i> Completed</span>`;
+        }
+
+        let currentCardFilter = 'ALL';
+
+        function filterByStatCard(statusKey) {
+            const statusSelect = document.getElementById('statusFilter');
+
+            if (currentCardFilter === statusKey && statusKey !== 'ALL') {
+                currentCardFilter = 'ALL';
+            } else {
+                currentCardFilter = statusKey;
+            }
+
+            if (statusSelect) {
+                statusSelect.value = currentCardFilter;
+            }
+
+            updateStatCardHighlight(currentCardFilter);
+            filterLeads(true);
+        }
+
+        function updateStatCardHighlight(statusKey) {
+            const cardMap = {
+                'ALL': 'statCard1',
+                'INTERVIEW': 'statCard2',
+                'CALLBACK': 'statCard3',
+                'NOT_INTERESTED': 'statCard4',
+                'MISMATCH': 'statCard4',
+            };
+
+            ['statCard1', 'statCard2', 'statCard3', 'statCard4'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('card-active');
+            });
+
+            const activeId = cardMap[statusKey] || 'statCard1';
+            const activeEl = document.getElementById(activeId);
+            if (activeEl) {
+                activeEl.classList.add('card-active');
+            }
+        }
+
+        function filterLeads(resetPage = false) {
+            const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
+            const statusSelect = document.getElementById('statusFilter');
+            const status = statusSelect ? statusSelect.value : currentCardFilter;
+
+            currentCardFilter = status;
+            updateStatCardHighlight(status);
+
+            const filtered = allLeadsData.filter(lead => {
+                const s = lead.summary || {};
+                const matchesSearch = (lead.candidate_name || '').toLowerCase().includes(search) ||
+                                       (lead.contact || '').toLowerCase().includes(search) ||
+                                       (lead.applied_position || '').toLowerCase().includes(search) ||
+                                       (s.product_interest || '').toLowerCase().includes(search) ||
+                                       (s.customer_area || '').toLowerCase().includes(search) ||
+                                       (s.recommended_store || '').toLowerCase().includes(search);
+
+                let leadStatus = (lead.final_status || '').toUpperCase();
+                if (typeof s === 'object' && s !== null) {
+                    const extraS = (s.final_status || s.status || s.intent || '').toUpperCase();
+                    if (extraS) leadStatus = `${leadStatus} ${extraS}`;
+                }
+
+                let matchesStatus = true;
+
+                if (status === 'INTERVIEW') {
+                    matchesStatus = ['INTERVIEW', 'SCHEDULED', 'PURCHASE', 'STORE_VISIT', 'VISIT', 'HIGH_INTENT', 'CONFIRMED', 'INTERESTED', 'POSITIVE'].some(k => leadStatus.includes(k));
+                } else if (status === 'CALLBACK') {
+                    matchesStatus = ['CALLBACK', 'WHATSAPP', 'FOLLOW_UP', 'FOLLOWUP', 'OFFER', 'REQUEST'].some(k => leadStatus.includes(k));
+                } else if (status === 'NOT_INTERESTED') {
+                    matchesStatus = ['NOT_INTERESTED', 'NOT INTERESTED', 'REJECTED', 'DECLINED', 'NO_ANSWER', 'BUSY', 'MISMATCH'].some(k => leadStatus.includes(k));
+                } else if (status === 'MISMATCH') {
+                    matchesStatus = leadStatus.includes('MISMATCH');
+                }
+
+                return matchesSearch && matchesStatus;
+            });
+
+            filteredLeadsCache = filtered;
+
+            if (resetPage) {
+                currentPage = 1;
+            }
+
+            applyPaginationAndRender();
+        }
+
+        function applyPaginationAndRender() {
+            const total = filteredLeadsCache.length;
+            let effectivePageSize = pageSize === 'ALL' ? total : (parseInt(pageSize, 10) || 10);
+            if (effectivePageSize <= 0) effectivePageSize = 10;
+
+            const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(total / effectivePageSize));
+
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+            if (currentPage < 1) {
+                currentPage = 1;
+            }
+
+            const startIdx = pageSize === 'ALL' ? 0 : (currentPage - 1) * effectivePageSize;
+            const endIdx = pageSize === 'ALL' ? total : Math.min(startIdx + effectivePageSize, total);
+            const pagedLeads = (pageSize === 'ALL') ? filteredLeadsCache : filteredLeadsCache.slice(startIdx, endIdx);
+
+            renderLeads(pagedLeads);
+            renderPaginationControls(total, startIdx, endIdx, totalPages);
+        }
+
+        function onPageSizeChange(newSize) {
+            pageSize = newSize === 'ALL' ? 'ALL' : parseInt(newSize, 10);
+            const sel = document.getElementById('pageSizeSelect');
+            if (sel && sel.value !== String(newSize)) {
+                sel.value = String(newSize);
+            }
+            currentPage = 1;
+            applyPaginationAndRender();
+        }
+
+        function goToPage(pageNum) {
+            currentPage = pageNum;
+            applyPaginationAndRender();
+        }
+
+        function renderPaginationControls(total, startIdx, endIdx, totalPages) {
+            const infoEl = document.getElementById('paginationInfo');
+            const controlsEl = document.getElementById('paginationControls');
+            const paginationBar = document.getElementById('leadsPaginationBar');
+
+            if (!infoEl || !controlsEl) return;
+
+            if (total === 0) {
+                infoEl.innerHTML = `Showing <strong>0</strong> inquiries`;
+                controlsEl.innerHTML = '';
+                if (paginationBar) paginationBar.style.display = 'none';
+                return;
+            }
+
+            if (paginationBar) paginationBar.style.display = 'flex';
+
+            const fromNum = startIdx + 1;
+            const toNum = endIdx;
+            infoEl.innerHTML = `Showing <strong>${fromNum}–${toNum}</strong> of <strong>${total}</strong> inquiries`;
+
+            if (totalPages <= 1) {
+                controlsEl.innerHTML = `
+                    <button class="page-btn active" aria-current="page">1</button>
+                `;
+                return;
+            }
+
+            let buttonsHtml = '';
+
+            // Previous Button
+            buttonsHtml += `
+                <button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})" title="Previous Page">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+            `;
+
+            // Page numbers
+            const pages = [];
+            if (totalPages <= 7) {
+                for (let i = 1; i <= totalPages; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                if (currentPage > 3) {
+                    pages.push('...');
+                }
+                const start = Math.max(2, currentPage - 1);
+                const end = Math.min(totalPages - 1, currentPage + 1);
+                for (let i = start; i <= end; i++) {
+                    if (!pages.includes(i)) pages.push(i);
+                }
+                if (currentPage < totalPages - 2) {
+                    pages.push('...');
+                }
+                if (!pages.includes(totalPages)) pages.push(totalPages);
+            }
+
+            pages.forEach(p => {
+                if (p === '...') {
+                    buttonsHtml += `<span class="page-ellipsis">&hellip;</span>`;
+                } else {
+                    const isActive = p === currentPage;
+                    buttonsHtml += `
+                        <button class="page-btn ${isActive ? 'active' : ''}" ${isActive ? 'aria-current="page"' : `onclick="goToPage(${p})"`} title="Page ${p}">
+                            ${p}
+                        </button>
+                    `;
+                }
+            });
+
+            // Next Button
+            buttonsHtml += `
+                <button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})" title="Next Page">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            `;
+
+            controlsEl.innerHTML = buttonsHtml;
+        }
+
+        function formatLanguage(lang) {
+            if (!lang || lang === 'None' || lang === 'none') return 'Hindi';
+            const l = lang.toString().toLowerCase();
+            if (l.includes('gu') || l.includes('gujarati')) return 'Gujarati';
+            if (l.includes('en') || l.includes('english')) return 'English';
+            if (l.includes('hi') || l.includes('hindi')) return 'Hindi';
+            if (l.includes('ta') || l.includes('tamil')) return 'Tamil';
+            if (l.includes('te') || l.includes('telugu')) return 'Telugu';
+            if (l.includes('mr') || l.includes('marathi')) return 'Marathi';
+            return escapeHtml(lang);
+        }
+
+        function openModal(lead) {
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalBodyContent');
+            const s = (lead && typeof lead.summary === 'object' && lead.summary !== null) ? lead.summary : {};
+
+            // Helper: display "None" / "" / null as N/A
+            function val(v) {
+                if (!v || v === 'None' || v === 'none' || v.toString().trim() === '') return '<span style="color:#64748b">N/A</span>';
+                return escapeHtml(v.toString());
+            }
+
+            let custName = lead.candidate_name && lead.candidate_name !== 'Candidate' && lead.candidate_name !== 'Customer' && lead.candidate_name !== 'Unknown Candidate'
+                ? lead.candidate_name
+                : (s.user_name || s.customer_name || s.candidate_name || (isSamsungAgent ? 'Valued Customer' : 'Customer'));
+            if (custName === 'Unknown Candidate' || custName === 'Candidate') {
+                custName = isSamsungAgent ? 'Valued Customer' : (lead.candidate_name || 'Customer');
+            }
+
+            const formattedDate = lead.attempted_at ? new Date(lead.attempted_at).toLocaleString() : 'N/A';
+            const callDir = lead.call_direction_display || lead.call_type || (lead.direction === 'inbound' ? 'Inbound Call' : 'Outbound Call');
+            const statusBadge = getStatusBadge(lead.final_status);
+
+            let sectionsHtml = `
+                <!-- Lead & Contact Information -->
+                <div class="detail-group" style="border-color: rgba(2, 132, 199, 0.3);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <h4 style="color: #0284c7; margin-bottom:0;"><i class="fa-solid fa-id-card"></i> Lead &amp; Contact Profile</h4>
+                        <button class="btn-action btn-call-quick" onclick="closeModal(); openTriggerCallModal('${escapeHtml(lead.contact)}', '${escapeHtml(custName)}')">
+                            <i class="fa-solid fa-phone"></i> Trigger Call
+                        </button>
+                    </div>
+                    <div class="info-grid" style="margin-top:0.75rem;">
+                        <div class="info-item"><label>Customer Name</label><span>${val(custName)}</span></div>
+                        <div class="info-item"><label>Contact Number</label><span>${val(lead.contact)}</span></div>
+                        <div class="info-item"><label>Requirement / Key Details</label><span style="color:#0284c7;font-weight:600;">${val(s.car_model || s.product_interest || s.product_name || s.flat_type || s.loan_type || s.course_name || s.requirement || lead.applied_position)}</span></div>
+                        <div class="info-item"><label>Language</label><span>${formatLanguage(s.detected_language || lead.language)}</span></div>
+                        <div class="info-item"><label>Call Direction</label><span>${escapeHtml(callDir)}</span></div>
+                        <div class="info-item"><label>Call Duration</label><span>${lead.duration_seconds || 0}s</span></div>
+                        <div class="info-item"><label>Lead Status</label><span>${statusBadge}</span></div>
+                        <div class="info-item"><label>Date &amp; Time</label><span style="font-size:0.85rem;">${formattedDate}</span></div>
+                    </div>
+                </div>
+            `;
+
+            // Retail / Product Profiling (if present)
+            const hasRetail = s.product_interest || s.car_model || s.model || s.product_name || s.recommended_store || s.store || s.customer_area || s.current_phone_brand || s.purchase_budget;
+            if (hasRetail) {
+                sectionsHtml += `
+                    <div class="detail-group" style="border-color: rgba(16, 185, 129, 0.3);">
+                        <h4 style="color: #10b981;"><i class="fa-solid fa-store"></i> Product Interest &amp; Store Routing</h4>
+                        <div class="info-grid">
+                            <div class="info-item"><label>Product Interest / Model</label><span style="font-weight:700; color:#0284c7;">${val(s.product_interest || s.car_model || s.model || s.product_name || (lead.applied_position && !lead.applied_position.includes('Counselor') ? lead.applied_position : 'Samsung phone'))}</span></div>
+                            <div class="info-item"><label>Customer Area / Location</label><span style="color:#0284c7;font-weight:600;">${val(s.customer_area || s.current_location || s.area || s.city)}</span></div>
+                            <div class="info-item"><label>Recommended Store</label><span style="color:#10b981;font-weight:700;">${val(s.recommended_store || s.store || s.preferred_store)}</span></div>
+                            <div class="info-item"><label>WhatsApp Details Consent</label><span style="color:#7c3aed;font-weight:600;">${val(s.whatsapp_permission || s.send_whatsapp || s.whatsapp || 'Confirmed / Send to this number')}</span></div>
+                            <div class="info-item"><label>Current Phone Brand</label><span>${val(s.current_phone_brand || s.current_brand || s.brand)}</span></div>
+                            <div class="info-item"><label>Phone Age / Usage</label><span>${val(s.current_phone_age || s.phone_age || s.tenure)}</span></div>
+                            <div class="info-item"><label>Approximate Budget</label><span style="color:#7c3aed;font-weight:700;">${val(s.purchase_budget || s.budget || s.approximate_budget || s.expected_salary)}</span></div>
+                            <div class="info-item"><label>Planned Purchase Timeline</label><span style="color:#f59e0b;font-weight:700;">${val(s.purchase_timeline || s.timeline || s.purchase_plan)}</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Interview Details (if present)
+            const iDate = s.interview_date, iTime = s.interview_time, iMode = s.interview_mode;
+            if ((iDate && iDate !== 'None') || (iTime && iTime !== 'None') || (iMode && iMode !== 'None')) {
+                sectionsHtml += `
+                    <div class="detail-group" style="border-color: rgba(16,185,129,0.4);">
+                        <h4 style="color:var(--accent-green);"><i class="fa-solid fa-calendar-check"></i> Interview / Appointment Schedule</h4>
+                        <div class="info-grid">
+                            <div class="info-item"><label>Date</label><span>${val(iDate)}</span></div>
+                            <div class="info-item"><label>Time</label><span>${val(iTime)}</span></div>
+                            <div class="info-item"><label>Mode</label><span>${val(iMode)}</span></div>
+                            <div class="info-item"><label>Booking Status</label><span>${val(s.interview_booking_status)}</span></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Assessment (if present)
+            if (s.suitability_summary || s.key_strengths || s.key_concerns) {
+                sectionsHtml += `
+                    <div class="detail-group" style="border-color: rgba(239,68,68,0.3);">
+                        <h4><i class="fa-solid fa-notes-medical"></i> Assessment &amp; Evaluation</h4>
+                        <div class="info-grid" style="margin-bottom:0.75rem;">
+                            <div class="info-item"><label>Key Strengths</label><span>${val(s.key_strengths)}</span></div>
+                            <div class="info-item"><label>Key Concerns</label><span>${val(s.key_concerns)}</span></div>
+                        </div>
+                        ${s.suitability_summary ? `
+                        <div style="margin-bottom:0.5rem;"><label style="font-size:0.75rem;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">Suitability Summary</label></div>
+                        <p style="font-size:0.92rem;line-height:1.6;color:#1e293b;background:#f8fafc;border:1px solid #e2e8f0;padding:0.75rem;border-radius:0.5rem;">${val(s.suitability_summary)}</p>` : ''}
+                    </div>
+                `;
+            }
+
+            // Call Summary (if present)
+            if (s.call_summary && s.call_summary !== 'None' && s.call_summary.toString().trim()) {
+                sectionsHtml += `
+                    <div class="detail-group" style="border-color:rgba(79,70,229,0.2);">
+                        <h4><i class="fa-solid fa-microphone"></i> Call Summary</h4>
+                        <p style="font-size:0.92rem;line-height:1.6;color:#1e293b;background:#f8fafc;padding:0.75rem;border-radius:0.5rem;border:1px solid #e2e8f0;">${val(s.call_summary)}</p>
+                    </div>
+                `;
+            }
+
+            // Audio Recording (if present)
+            if (lead.audio_url) {
+                sectionsHtml += `
+                    <div class="detail-group">
+                        <h4><i class="fa-solid fa-headphones"></i> Audio Recording</h4>
+                        <audio class="audio-player" controls src="/api/proxy-audio/?url=${encodeURIComponent(lead.audio_url)}"></audio>
+                        <p style="font-size:0.75rem;color:#64748b;margin-top:0.4rem;">
+                            <a href="/api/proxy-audio/?url=${encodeURIComponent(lead.audio_url)}" target="_blank" style="color:#4f46e5;font-weight:600;text-decoration:none;">
+                                <i class="fa-solid fa-download"></i> Download Recording
+                            </a>
+                        </p>
+                    </div>
+                `;
+            }
+
+            // Conversation Transcript
+            sectionsHtml += `
+                <div class="detail-group">
+                    <h4><i class="fa-solid fa-file-alt"></i> Conversation Transcript</h4>
+                    <div class="transcript-box" id="modalTranscriptBox">Loading full transcript...</div>
+                </div>
+            `;
+
+            content.innerHTML = sectionsHtml;
+            modal.style.display = 'flex';
+            fetchTranscript(lead.interaction_id);
+        }
+
+        async function fetchTranscript(interactionId) {
+            const box = document.getElementById('modalTranscriptBox');
+            if (!interactionId) {
+                box.innerHTML = '<span style="color:#64748b">Transcript not available (no interaction ID).</span>';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${SARVAM_API_PREFIX}/transcript/${encodeURIComponent(interactionId)}/`);
+                const data = await res.json();
+
+                if (data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+                    // Render as styled chat bubbles
+                    box.innerHTML = data.messages.map(m => {
+                        const isAgent = (m.role || '').toLowerCase() === 'agent' || (m.role || '').toLowerCase() === 'assistant';
+                        const text = escapeHtml(m.en_text || m.text || '');
+                        const role = isAgent ? '🤖 Agent' : '👤 User';
+                        const align = isAgent ? 'left' : 'right';
+                        const bg = isAgent ? '#e0e7ff' : '#dcfce7';
+                        const borderColor = isAgent ? '#c7d2fe' : '#bbf7d0';
+                        const textColor = isAgent ? '#1e1b4b' : '#064e3b';
+                        return `<div style="display:flex; flex-direction:column; align-items:flex-${align}; margin-bottom:0.75rem;">
+                            <span style="font-size:0.7rem;color:#64748b;margin-bottom:0.2rem;font-weight:600;">${role}</span>
+                            <div style="max-width:85%;background:${bg};border:1px solid ${borderColor};border-radius:0.75rem;padding:0.6rem 0.9rem;font-size:0.875rem;line-height:1.5;color:${textColor};font-weight:500;">${text}</div>
+                        </div>`;
+                    }).join('');
+                } else if (data.transcript) {
+                    box.innerText = data.transcript;
+                } else if (data.detail || data.error) {
+                    box.innerHTML = `<span style="color:#64748b;font-size:0.85rem;">Transcript not yet available. Try syncing call records.</span>`;
+                } else {
+                    box.innerText = JSON.stringify(data, null, 2);
+                }
+            } catch (err) {
+                box.innerHTML = '<span style="color:#64748b">Failed to load transcript.</span>';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        function openTriggerCallModal(phone = '', name = '') {
+            if (currentAgentMinutes && currentAgentMinutes.is_exhausted) {
+                openMinutesExhaustedModal();
+                return;
+            }
+            document.getElementById('callPhone').value = phone;
+            document.getElementById('callName').value = name;
+            document.getElementById('callAlert').style.display = 'none';
+            document.getElementById('triggerCallModal').style.display = 'flex';
+        }
+
+        function closeTriggerCallModal() {
+            document.getElementById('triggerCallModal').style.display = 'none';
+        }
+
+        async function handleTriggerCall(event) {
+            event.preventDefault();
+            if (currentAgentMinutes && currentAgentMinutes.is_exhausted) {
+                closeTriggerCallModal();
+                openMinutesExhaustedModal();
+                return;
+            }
+            const phone = document.getElementById('callPhone').value.trim();
+            const name = document.getElementById('callName').value.trim() || 'Candidate';
+            const alertBox = document.getElementById('callAlert');
+            const submitBtn = document.getElementById('submitCallBtn');
+
+            if (!phone) return;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Triggering Call...`;
+            alertBox.style.display = 'none';
+
+            try {
+                const response = await fetch(`${SARVAM_API_PREFIX}/call/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone_number: phone, candidate_name: name })
+                });
+                
+                let data = {};
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    data = { error: `Server returned non-JSON response (${response.status})` };
+                }
+
+                if (data.code === 'MINUTES_EXHAUSTED') {
+                    closeTriggerCallModal();
+                    openMinutesExhaustedModal();
+                    return;
+                }
+
+                if (response.ok && data.status === 'success') {
+                    alertBox.style.background = 'rgba(16, 185, 129, 0.2)';
+                    alertBox.style.color = 'var(--accent-green)';
+                    alertBox.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+                    alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${data.message}`;
+                    alertBox.style.display = 'block';
+
+                    setTimeout(() => {
+                        closeTriggerCallModal();
+                        fetchLeadsData();
+                    }, 2500);
+                } else {
+                    alertBox.style.background = 'rgba(239, 68, 68, 0.2)';
+                    alertBox.style.color = 'var(--accent-red)';
+                    alertBox.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+                    alertBox.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${data.error || 'Failed to trigger call.'}`;
+                    alertBox.style.display = 'block';
+                }
+            } catch (err) {
+                alertBox.style.background = 'rgba(239, 68, 68, 0.2)';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Initiate Outbound Call`;
+            }
+        }
+
+        let currentDashboardTab = 'screenings';
+        let campaignPollingTimer = null;
+
+        function switchDashboardTab(tab) {
+            currentDashboardTab = tab;
+            const screeningsSec = document.getElementById('screeningsSection');
+            const campaignsSec = document.getElementById('campaignsSection');
+            const tabScreeningsBtn = document.getElementById('tabScreeningsBtn');
+            const tabCampaignsBtn = document.getElementById('tabCampaignsBtn');
+
+            if (tab === 'campaigns') {
+                screeningsSec.style.display = 'none';
+                campaignsSec.style.display = 'block';
+                tabScreeningsBtn.classList.remove('active');
+                tabCampaignsBtn.classList.add('active');
+                fetchCampaignsData();
+            } else {
+                screeningsSec.style.display = 'block';
+                campaignsSec.style.display = 'none';
+                tabScreeningsBtn.classList.add('active');
+                tabCampaignsBtn.classList.remove('active');
+                fetchLeadsData();
+            }
+        }
+
+        function refreshCurrentTab() {
+            if (currentDashboardTab === 'campaigns') {
+                fetchCampaignsData();
+            } else {
+                fetchLeadsData();
+            }
+        }
+
+        async function loadUserAssignedAgents() {
+            try {
+                const token = localStorage.getItem('access_token');
+                const headers = {};
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                const res = await fetch('/api/sarvam/agents/', { headers });
+                const data = await res.json();
+                const switcherContainer = document.getElementById('agentSwitcherContainer');
+                const selectEl = document.getElementById('sarvamAgentSelect');
+
+                if (data.status === 'success' && data.agents) {
+                    if (data.agents.length <= 1) {
+                        if (switcherContainer) switcherContainer.style.display = 'none';
+                        if (data.agents.length === 1 && data.agents[0].slug && data.agents[0].slug !== SARVAM_AGENT_SLUG) {
+                            window.location.replace(`/api/sarvam/${data.agents[0].slug}/leads/`);
+                        }
+                    } else {
+                        if (switcherContainer) switcherContainer.style.display = 'inline-block';
+                        if (selectEl) {
+                            let html = '';
+                            data.agents.forEach(a => {
+                                const isSel = a.slug === SARVAM_AGENT_SLUG ? 'selected' : '';
+                                html += `<option value="${escapeHtml(a.slug)}" ${isSel}>${escapeHtml(a.name)}</option>`;
+                            });
+                            selectEl.innerHTML = html;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('User agents load notice:', e);
+            }
+        }
+
+        function onAgentSelectChange(slug) {
+            if (!slug) return;
+            window.location.href = `/api/sarvam/${slug}/leads/`;
+        }
+
+        async function fetchCampaignsData(silent = false) {
+            const container = document.getElementById('campaignsContainer');
+            try {
+                const url = `${SARVAM_CAMPAIGN_API_PREFIX}/list/`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (res.ok && data.status === 'success') {
+                    renderCampaigns(data.campaigns || []);
+                } else if (!silent) {
+                    container.innerHTML = `<div style="text-align:center; padding: 2rem; color: #dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Failed to load campaigns: ${escapeHtml(data.error || 'Unknown error')}</div>`;
+                }
+            } catch (err) {
+                console.error('Campaigns fetch error:', err);
+                if (!silent) {
+                    container.innerHTML = `<div style="text-align:center; padding: 2rem; color: #dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Network error loading campaigns.</div>`;
+                }
+            }
+        }
+
+        function renderCampaigns(campaigns) {
+            const container = document.getElementById('campaignsContainer');
+            if (!campaigns || campaigns.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center; padding: 4rem 1rem; background: #fff; border: 1px dashed #cbd5e1; border-radius: 16px;">
+                        <i class="fa-solid fa-bullhorn" style="font-size: 3rem; color: #94a3b8; margin-bottom: 1rem;"></i>
+                        <h3 style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">No 3-Stage Campaigns Yet</h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; max-width: 520px; margin: 0 auto 1.5rem;">
+                            Upload an Excel or CSV file to start an automated 3-stage campaign (1 Main Batch + 2 Auto-Retries for missed calls).
+                        </p>
+                        <button class="trigger-call-btn" onclick="openCampaignModal()" style="background: linear-gradient(135deg, #0284c7, #0369a1); font-size: 0.9rem; padding: 10px 20px;">
+                            <i class="fa-solid fa-file-excel"></i> Launch First Campaign
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            let hasRunningCampaign = false;
+            let totalContacts = 0;
+            let totalAnswered = 0;
+            let totalMissed = 0;
+
+            const cardsHtml = campaigns.map(c => {
+                totalContacts += (c.total_leads || 0);
+                totalAnswered += (c.answered_count || 0);
+                totalMissed += (c.missed_count || 0);
+
+                const isRunning = c.status && (c.status.startsWith('RUNNING') || c.status.startsWith('WAITING'));
+                if (isRunning) hasRunningCampaign = true;
+
+                let statusBadge = '';
+                if (c.status === 'RUNNING_MAIN') {
+                    statusBadge = `<span class="badge badge-purple"><span class="live-dot" style="width:6px; height:6px;"></span> Stage 1: Main Batch Running</span>`;
+                } else if (c.status === 'WAITING_RETRY_1') {
+                    statusBadge = `<span class="badge badge-yellow" style="background:#fffbeb; color:#b45309; border:1px solid #fef3c7;"><span class="live-dot" style="width:6px; height:6px; background:#f59e0b;"></span> ⏳ 5-Min Gap: Retry #1 in queue</span>`;
+                } else if (c.status === 'RUNNING_RETRY_1') {
+                    statusBadge = `<span class="badge badge-yellow"><span class="live-dot" style="width:6px; height:6px;"></span> Stage 2: Retry #1 Running</span>`;
+                } else if (c.status === 'WAITING_RETRY_2') {
+                    statusBadge = `<span class="badge badge-orange" style="background:#fff7ed; color:#c2410c; border:1px solid #ffedd5;"><span class="live-dot" style="width:6px; height:6px; background:#ea580c;"></span> ⏳ 5-Min Gap: Final Retry in queue</span>`;
+                } else if (c.status === 'RUNNING_RETRY_2') {
+                    statusBadge = `<span class="badge badge-red"><span class="live-dot" style="width:6px; height:6px;"></span> Stage 3: Final Retry Running</span>`;
+                } else if (c.status === 'COMPLETED') {
+                    statusBadge = `<span class="badge badge-green"><i class="fa-solid fa-check-circle"></i> Completed</span>`;
+                } else if (c.status === 'CANCELLED') {
+                    statusBadge = `<span class="badge badge-red"><i class="fa-solid fa-ban"></i> Cancelled</span>`;
+                } else {
+                    statusBadge = `<span class="badge badge-purple">${escapeHtml(c.status)}</span>`;
+                }
+
+                const s1Class = c.current_stage === 1 && isRunning ? 'stage-active' : (c.current_stage > 1 ? 'stage-completed' : '');
+                const s2Class = c.current_stage === 2 && isRunning ? 'stage-active' : (c.current_stage > 2 ? 'stage-completed' : '');
+                const s3Class = c.current_stage === 3 && isRunning ? 'stage-active' : (c.current_stage >= 4 ? 'stage-completed' : '');
+
+                return `
+                    <div class="campaign-card">
+                        <div class="campaign-header">
+                            <div class="campaign-title-group">
+                                <h3>
+                                    <i class="fa-solid fa-bullhorn" style="color: #0284c7;"></i>
+                                    ${escapeHtml(c.name)}
+                                </h3>
+                                <div class="campaign-meta">
+                                    <span><i class="fa-solid fa-robot"></i> ${escapeHtml(c.agent_name)}</span>
+                                    <span><i class="fa-solid fa-file-lines"></i> ${escapeHtml(c.excel_file_name || 'Uploaded Sheet')}</span>
+                                    <span><i class="fa-solid fa-calendar"></i> ${escapeHtml(c.created_at)}</span>
+                                    <span><i class="fa-solid fa-users"></i> <strong>${c.total_leads}</strong> Leads</span>
+                                </div>
+                            </div>
+                            <div>
+                                ${statusBadge}
+                            </div>
+                        </div>
+
+                        <!-- 3-Stage Stepper Grid -->
+                        <div class="stage-pipeline">
+                            <!-- Stage 1 -->
+                            <div class="stage-box ${s1Class}">
+                                <div class="stage-title">
+                                    <span>Stage 1: Main Call</span>
+                                    <span class="stage-badge" style="background:#e0e7ff; color:#4338ca;">Main Batch</span>
+                                </div>
+                                <div class="stage-metrics">
+                                    <div>
+                                        <div class="stage-metric-val" style="color:var(--text-primary);">${c.stage_1.dispatched}</div>
+                                        <div class="stage-metric-lbl">Dispatched</div>
+                                    </div>
+                                    <div>
+                                        <div class="stage-metric-val" style="color:#16a34a;">${c.stage_1.answered}</div>
+                                        <div class="stage-metric-lbl">Answered</div>
+                                    </div>
+                                    <div>
+                                        <div class="stage-metric-val" style="color:#dc2626;">${c.stage_1.missed}</div>
+                                        <div class="stage-metric-lbl">Missed</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stage 2 -->
+                            <div class="stage-box ${s2Class}">
+                                <div class="stage-title">
+                                    <span>Stage 2: Retry #1</span>
+                                    <span class="stage-badge" style="background:#fef3c7; color:#b45309;">Auto-Retry 1</span>
+                                </div>
+                                <div class="stage-metrics">
+                                    <div>
+                                        <div class="stage-metric-val" style="color:var(--text-primary);">${c.stage_2.dispatched}</div>
+                                        <div class="stage-metric-lbl">Dispatched</div>
+                                    </div>
+                                    <div>
+                                        <div class="stage-metric-val" style="color:#16a34a;">${c.stage_2.answered}</div>
+                                        <div class="stage-metric-lbl">Answered</div>
+                                    </div>
+                                    <div>
+                                        <div class="stage-metric-val" style="color:#dc2626;">${c.stage_2.missed}</div>
+                                        <div class="stage-metric-lbl">Missed</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stage 3 -->
+                            <div class="stage-box ${s3Class}">
+                                <div class="stage-title">
+                                    <span>Stage 3: Retry #2 (Final)</span>
+                                    <span class="stage-badge" style="background:#fee2e2; color:#b91c1c;">Final Retry</span>
+                                </div>
+                                <div class="stage-metrics">
+                                    <div>
+                                        <div class="stage-metric-val" style="color:var(--text-primary);">${c.stage_3.dispatched}</div>
+                                        <div class="stage-metric-lbl">Dispatched</div>
+                                    </div>
+                                    <div>
+                                        <div class="stage-metric-val" style="color:#16a34a;">${c.stage_3.answered}</div>
+                                        <div class="stage-metric-lbl">Answered</div>
+                                    </div>
+                                    <div>
+                                        <div class="stage-metric-val" style="color:#dc2626;">${c.stage_3.missed}</div>
+                                        <div class="stage-metric-lbl">Missed</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="campaign-progress-wrap">
+                            <div style="display:flex; justify-content:space-between; font-size:0.78rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">
+                                <span>Campaign Lifecycle Progress</span>
+                                <span>${c.progress_pct}%</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" style="width: ${c.progress_pct}%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Actions Bar -->
+                        <div class="campaign-actions-bar">
+                            <div class="campaign-outcomes-pill">
+                                <span class="pill-answered"><i class="fa-solid fa-check"></i> Answered Total: ${c.answered_count}</span>
+                                <span class="pill-missed"><i class="fa-solid fa-xmark"></i> Missed All 3 Retries: ${c.missed_count}</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap: 8px; flex-wrap:wrap;">
+                                <button class="btn-action" onclick="openCampaignDetailModal(${c.id}, '${escapeHtml(c.name)}')">
+                                    <i class="fa-solid fa-list-ol"></i> View Lead Breakdown
+                                </button>
+                                <a href="/api/sarvam/campaigns/${c.id}/export-full/" class="btn-excel-full" title="Download Full Campaign Excel with all 3 attempts">
+                                    <i class="fa-solid fa-file-excel"></i> Full Campaign Excel
+                                </a>
+                                <a href="/api/sarvam/campaigns/${c.id}/export-missed/" class="btn-excel-missed" title="Download only numbers that missed all 3 retry attempts">
+                                    <i class="fa-solid fa-phone-slash"></i> Missed Numbers Excel
+                                </a>
+                                ${isRunning ? `
+                                <button class="btn-action" onclick="cancelCampaign(${c.id})" style="color:var(--accent-red); border-color:#fecaca; background:#fff5f5;">
+                                    <i class="fa-solid fa-stop"></i> Cancel
+                                </button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = cardsHtml;
+
+            // Update Summary Stats
+            document.getElementById('stat-campaigns-total').innerText = campaigns.length;
+            document.getElementById('stat-campaigns-leads').innerText = totalContacts;
+            document.getElementById('stat-campaigns-answered').innerText = totalAnswered;
+            document.getElementById('stat-campaigns-missed').innerText = totalMissed;
+
+            // Toggle live indicator badge
+            const liveBadge = document.getElementById('liveCampaignBadge');
+            if (liveBadge) liveBadge.style.display = hasRunningCampaign ? 'inline-block' : 'none';
+        }
+
+        async function openCampaignDetailModal(campaignId, campaignName) {
+            const modal = document.getElementById('campaignDetailModal');
+            const titleEl = document.getElementById('campaignModalTitle');
+            const tbody = document.getElementById('campaignLeadsTableBody');
+            const fullBtn = document.getElementById('modalFullExcelBtn');
+            const missedBtn = document.getElementById('modalMissedExcelBtn');
+
+            titleEl.innerText = `Campaign #${campaignId}: ${campaignName || 'Leads'}`;
+            fullBtn.href = `/api/sarvam/campaigns/${campaignId}/export-full/`;
+            missedBtn.href = `/api/sarvam/campaigns/${campaignId}/export-missed/`;
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 2rem;"><div class="spinner"></div><p>Fetching lead attempt outcomes...</p></td></tr>`;
+            modal.style.display = 'flex';
+
+            try {
+                const res = await fetch(`/api/sarvam/campaigns/${campaignId}/detail/`);
+                const data = await res.json();
+
+                if (res.ok && data.status === 'success') {
+                    const leads = data.leads || [];
+                    if (leads.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 2rem; color:var(--text-secondary);">No leads found for this campaign.</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = leads.map((l, idx) => {
+                        let finalBadge = '';
+                        if (l.final_status === 'ANSWERED') {
+                            finalBadge = `<span class="badge badge-green"><i class="fa-solid fa-check"></i> Answered</span>`;
+                        } else if (l.final_status === 'MISSED_ALL_RETRIES') {
+                            finalBadge = `<span class="badge badge-red"><i class="fa-solid fa-phone-slash"></i> Missed All 3</span>`;
+                        } else {
+                            finalBadge = `<span class="badge badge-yellow"><i class="fa-solid fa-spinner fa-spin"></i> In Progress</span>`;
+                        }
+
+                        function formatStageCell(st, dur) {
+                            if (st === 'ANSWERED') {
+                                return `<span style="color:#16a34a; font-weight:700;"><i class="fa-solid fa-check-circle"></i> Answered (${dur}s)</span>`;
+                            } else if (st === 'MISSED') {
+                                return `<span style="color:#dc2626; font-weight:600;"><i class="fa-solid fa-phone-slash"></i> Missed</span>`;
+                            } else if (st === 'SKIPPED') {
+                                return `<span style="color:#94a3b8; font-size:0.8rem;">— Skipped</span>`;
+                            } else if (st === 'PENDING') {
+                                return `<span style="color:#4f46e5; font-size:0.8rem;"><i class="fa-solid fa-spinner fa-spin"></i> Calling</span>`;
+                            }
+                            return `<span style="color:#94a3b8;">—</span>`;
+                        }
+
+                        return `
+                            <tr>
+                                <td>${idx + 1}</td>
+                                <td><strong>${escapeHtml(l.candidate_name)}</strong></td>
+                                <td><code>${escapeHtml(l.phone_number)}</code></td>
+                                <td>${formatStageCell(l.stage_1_status, l.stage_1_duration)}</td>
+                                <td>${formatStageCell(l.stage_2_status, l.stage_2_duration)}</td>
+                                <td>${formatStageCell(l.stage_3_status, l.stage_3_duration)}</td>
+                                <td>${finalBadge}</td>
+                                <td style="text-align:center; font-weight:700;">${l.total_attempts}</td>
+                                <td style="font-size:0.8rem; color:var(--text-secondary);">${escapeHtml(l.last_call_time || 'N/A')}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 2rem; color:#dc2626;">Failed to load lead details: ${escapeHtml(data.error || 'Unknown error')}</td></tr>`;
+                }
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 2rem; color:#dc2626;">Network error loading lead details.</td></tr>`;
+            }
+        }
+
+        function closeCampaignDetailModal() {
+            document.getElementById('campaignDetailModal').style.display = 'none';
+        }
+
+        async function cancelCampaign(campaignId) {
+            if (!confirm(`Are you sure you want to cancel Campaign #${campaignId}? Outbound calls will stop after current attempt.`)) return;
+            try {
+                const res = await fetch(`/api/sarvam/campaigns/${campaignId}/cancel/`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    fetchCampaignsData();
+                } else {
+                    alert('Could not cancel campaign: ' + (data.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Network error while cancelling campaign.');
+            }
+        }
+
+        function openCampaignModal() {
+            if (currentAgentMinutes && currentAgentMinutes.is_exhausted) {
+                openMinutesExhaustedModal();
+                return;
+            }
+            document.getElementById('campaignNameInput').value = '';
+            removeSelectedFile();
+            document.getElementById('campaignAlert').style.display = 'none';
+            document.getElementById('campaignModal').style.display = 'flex';
+        }
+
+        function closeCampaignModal() {
+            document.getElementById('campaignModal').style.display = 'none';
+        }
+
+        function updateFileName(input) {
+            const dropZone = document.getElementById('dropZone');
+            const selectedFileBox = document.getElementById('selectedFileBox');
+            const selectedFileName = document.getElementById('selectedFileName');
+            const selectedFileSize = document.getElementById('selectedFileSize');
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const sizeStr = (file.size / 1024).toFixed(1);
+                if (selectedFileName) selectedFileName.textContent = file.name;
+                if (selectedFileSize) selectedFileSize.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> ${sizeStr} KB &bull; <span style="color:#15803d; font-weight:700;">File Selected &amp; Ready</span>`;
+                
+                if (dropZone) dropZone.style.display = 'none';
+                if (selectedFileBox) selectedFileBox.style.display = 'flex';
+            } else {
+                removeSelectedFile();
+            }
+        }
+
+        function removeSelectedFile() {
+            const fileInput = document.getElementById('excelFileInput');
+            if (fileInput) fileInput.value = '';
+            const dropZone = document.getElementById('dropZone');
+            const selectedFileBox = document.getElementById('selectedFileBox');
+            if (dropZone) dropZone.style.display = 'block';
+            if (selectedFileBox) selectedFileBox.style.display = 'none';
+        }
+
+        async function handleCampaignUpload(event) {
+            event.preventDefault();
+            if (currentAgentMinutes && currentAgentMinutes.is_exhausted) {
+                closeCampaignModal();
+                openMinutesExhaustedModal();
+                return;
+            }
+            const fileInput = document.getElementById('excelFileInput');
+            const campaignName = document.getElementById('campaignNameInput').value.trim();
+            const alertBox = document.getElementById('campaignAlert');
+            const submitBtn = document.getElementById('submitCampaignBtn');
+
+            if (!fileInput.files || !fileInput.files[0]) {
+                alertBox.style.background = '#fef2f2';
+                alertBox.style.color = '#dc2626';
+                alertBox.style.border = '1px solid #fecaca';
+                alertBox.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Please select a valid Excel or CSV file.';
+                alertBox.style.display = 'block';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Launching 3-Stage Campaign...`;
+            alertBox.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('excel_file', fileInput.files[0]);
+            formData.append('campaign_name', campaignName);
+            formData.append('delay_sec', '10');
+
+            try {
+                const response = await fetch(`${SARVAM_API_PREFIX}/upload-campaign/`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.code === 'MINUTES_EXHAUSTED') {
+                    closeCampaignModal();
+                    openMinutesExhaustedModal();
+                    return;
+                }
+
+                if (response.ok && data.status === 'success') {
+                    alertBox.style.background = '#f0fdf4';
+                    alertBox.style.color = '#16a34a';
+                    alertBox.style.border = '1px solid #bbf7d0';
+                    alertBox.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${data.message}`;
+                    alertBox.style.display = 'block';
+
+                    setTimeout(() => {
+                        closeCampaignModal();
+                        switchDashboardTab('campaigns');
+                    }, 1800);
+                } else {
+                    alertBox.style.background = '#fef2f2';
+                    alertBox.style.color = '#dc2626';
+                    alertBox.style.border = '1px solid #fecaca';
+                    alertBox.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${data.error || 'Failed to launch campaign.'}`;
+                    alertBox.style.display = 'block';
+                }
+            } catch (err) {
+                alertBox.style.background = '#fef2f2';
+                alertBox.style.color = '#dc2626';
+                alertBox.style.border = '1px solid #fecaca';
+                alertBox.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Network error: ${err.message}`;
+                alertBox.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-rocket"></i> Launch 3-Stage Campaign`;
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function toggleProfile(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown) dropdown.classList.toggle('open');
+        }
+        document.addEventListener('click', function () {
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown) dropdown.classList.remove('open');
+        });
+
+        function initUserProfile() {
+            const username = localStorage.getItem('username') || '{{ request.user.username|default:"User" }}';
+            const role = localStorage.getItem('role') || 'User';
+            const profilePic = localStorage.getItem('profile_picture');
+            const avatar = document.getElementById('profileAvatar');
+            const pdName = document.getElementById('pdName');
+            const pdRole = document.getElementById('pdRole');
+
+            if (pdName) pdName.textContent = username;
+            if (pdRole) pdRole.textContent = role && role !== 'No Role' ? role : 'Logged in';
+
+            if (avatar) {
+                if (profilePic && profilePic !== 'null' && profilePic !== '') {
+                    avatar.style.backgroundImage = `url('${profilePic}')`;
+                    avatar.textContent = '';
+                } else {
+                    avatar.style.backgroundImage = 'linear-gradient(135deg, #0284c7, #0369a1)';
+                    avatar.textContent = (username.charAt(0) || 'U').toUpperCase();
+                }
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('username');
+            localStorage.removeItem('is_admin');
+            localStorage.removeItem('is_sarvam_user');
+            localStorage.removeItem('assigned_sarvam_agents');
+            localStorage.removeItem('role');
+            localStorage.removeItem('permissions');
+            localStorage.removeItem('assigned_agent_id');
+            localStorage.removeItem('profile_picture');
+            localStorage.removeItem('company_logo');
+            window.location.replace('/accounts/login/');
+        }
+
+        function getAgentType() {
+            const slug = (SARVAM_AGENT_SLUG || '').toLowerCase();
+            const name = (SARVAM_AGENT_NAME || '').toLowerCase();
+            
+            if (slug.includes('samsung') || name.includes('samsung') || slug.includes('vtech') || name.includes('vtech') || slug.includes('retail') || name.includes('retail') || slug.includes('store')) {
+                return 'retail';
+            } else if (slug.includes('support') || name.includes('support') || slug.includes('service') || name.includes('helpdesk')) {
+                return 'support';
+            } else if (slug.includes('sales') || name.includes('sales') || slug.includes('lead')) {
+                return 'sales';
+            }
+            return 'screening';
+        }
+
+        function applyAgentTheme() {
+            const titleEl = document.getElementById('pageMainHeading');
+            const subEl = document.getElementById('pageSubHeading');
+            const tabScreeningsLabel = document.getElementById('tabScreeningsLabel');
+            const searchEl = document.getElementById('searchInput');
+            const statusSel = document.getElementById('statusFilter');
+            const theadTr = document.getElementById('tableHeaderRow');
+
+            // ── Common KPI Cards for ALL Sarvam Agents ──
+            const card1Icon = document.getElementById('statIcon1');
+            const card1Label = document.getElementById('stat-total-label');
+            const card2Icon = document.getElementById('statIcon2');
+            const card2Label = document.getElementById('stat-interviews-label');
+            const card3Icon = document.getElementById('statIcon3');
+            const card3Label = document.getElementById('stat-callback-label');
+            const card4Icon = document.getElementById('statIcon4');
+            const card4Label = document.getElementById('stat-not-interested-label');
+
+            if (card1Icon) { card1Icon.innerHTML = `<i class="fa-solid fa-users"></i>`; card1Icon.style.cssText = 'background: rgba(2, 132, 199, 0.15); color: #0284c7;'; }
+            if (card1Label) card1Label.innerText = 'Total Inquiries';
+
+            if (card2Icon) { card2Icon.innerHTML = `<i class="fa-solid fa-circle-check"></i>`; card2Icon.style.cssText = 'background: rgba(16, 185, 129, 0.15); color: #10b981;'; }
+            if (card2Label) card2Label.innerText = 'Interested / High Intent';
+
+            if (card3Icon) { card3Icon.innerHTML = `<i class="fa-solid fa-phone-volume"></i>`; card3Icon.style.cssText = 'background: rgba(245, 158, 11, 0.15); color: #f59e0b;'; }
+            if (card3Label) card3Label.innerText = 'Callback Requested';
+
+            if (card4Icon) { card4Icon.innerHTML = `<i class="fa-solid fa-circle-xmark"></i>`; card4Icon.style.cssText = 'background: rgba(239, 68, 68, 0.15); color: #ef4444;'; }
+            if (card4Label) card4Label.innerText = 'Not Interested';
+
+            if (statusSel) {
+                statusSel.innerHTML = `
+                    <option value="ALL">All Call Outcomes</option>
+                    <option value="INTERVIEW">Interested / High Intent</option>
+                    <option value="CALLBACK">Callback Requested</option>
+                    <option value="NOT_INTERESTED">Not Interested</option>
+                    <option value="MISMATCH">Requirements Mismatch</option>
+                `;
+            }
+
+            const phoneVal = SARVAM_AGENT_PHONE || '+917971414121';
+            const badgesHtml = `
+                <span class="agent-number-badge"><i class="fa-solid fa-phone"></i> Agent Line: <strong>${escapeHtml(phoneVal)}</strong></span>
+                <span class="agent-minutes-badge" id="headerMinutesBadge" title="Call Minutes Balance" style="display:inline-flex; align-items:center; gap:5px; background:{% if is_minutes_exhausted %}#fee2e2; color:#dc2626; border:1px solid #fca5a5{% else %}#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe{% endif %}; padding:3px 10px; border-radius:20px; font-size:0.78rem; font-weight:700;">
+                    <i class="fa-solid fa-bolt" style="color:{% if is_minutes_exhausted %}#dc2626{% else %}#2563eb{% endif %};"></i>
+                    <span>Call Minutes: <strong>{{ remaining_minutes|floatformat:1 }} / {{ allocated_minutes|floatformat:0 }}m</strong></span>
+                </span>
+            `;
+
+            if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-robot" style="color:#0284c7;"></i> ${escapeHtml(SARVAM_AGENT_NAME)} — Voice Dashboard`;
+            if (subEl) subEl.innerHTML = badgesHtml;
+            if (tabScreeningsLabel) tabScreeningsLabel.innerText = 'All Calls & Inquiries';
+            if (searchEl) searchEl.placeholder = 'Search customer name, contact, requirement...';
+
+            if (theadTr) {
+                theadTr.innerHTML = `
+                    <th>Customer Details</th>
+                    <th>Contact Number</th>
+                    <th>Requirement / Key Details</th>
+                    <th>Call Outcome</th>
+                    <th>Call Duration</th>
+                    <th>Recording</th>
+                    <th>Date &amp; Time</th>
+                    <th>Actions</th>
+                `;
+            }
+
+            const modalH2 = document.querySelector('#detailModal .modal-header h2');
+            if (modalH2) modalH2.innerHTML = `<i class="fa-solid fa-circle-info" style="color: #0284c7;"></i> Lead &amp; Interaction Details`;
+
+            const triggerH2 = document.querySelector('#triggerCallModal .modal-header h2');
+            if (triggerH2) triggerH2.innerHTML = `<i class="fa-solid fa-phone-volume" style="color: var(--accent-green);"></i> Trigger AI Customer Call`;
+
+            if (currentAgentMinutes) {
+                updateMinutesUI(currentAgentMinutes);
+            }
+        }
+
+        // Setup initial UI
+        document.addEventListener('DOMContentLoaded', () => {
+            initUserProfile();
+            applyAgentTheme();
+            loadUserAssignedAgents();
+            fetchLeadsData();
+        });
+
+        // Background Auto-poll: every 10s silently so user doesn't need to manually refresh
+        setInterval(() => {
+            if (currentDashboardTab === 'campaigns') {
+                fetchCampaignsData(true);
+            } else {
+                fetchLeadsData(true);
+            }
+        }, 10000);
+    </script>
+</body>
+</html>
+

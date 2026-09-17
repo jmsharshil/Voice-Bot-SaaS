@@ -1,0 +1,110 @@
+{
+    "global_intents": [],
+    "flow_intents": [
+        {
+            "phase": "ASK_CONSENT",
+            "intents": [
+                {
+                    "intent_name": "consent_granted",
+                    "mp3_file": "fold8_bot/fold8_step2_launch_info.raw",
+                    "next_phase": "LAUNCH_INFO_PITCHED",
+                    "triggers": [
+                        "હા", "હા બોલો", "હા ચોક્કસ", "ચોક્કસ", "હા જી", "હા જરૂર",
+                        "હા કહી શકો છો", "બોલો બોલો", "હા વાત કરી શકો છો", "ચોક્કસ બોલો",
+                        "ok", "okay", "yes", "sure", "talk", "ha", "bol", "bolo", "ha bolo",
+                        "હા ભાઈ", "હા બહેન", "હા વાત કરો", "ઠીક છે", "સારું", "વાંધો નહીં"
+                    ]
+                },
+                {
+                    "intent_name": "consent_denied",
+                    "mp3_file": "fold8_bot/fold8_rejection.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        "ના", "નહીં", "ના જી", "અત્યારે નહીં", "પછી ફોન કરો", "વ્યસ્ત છું",
+                        "કામમાં છું", "ખોટો નંબર", "no", "nope", "nah", "not now", "busy",
+                        "call later", "call back", "na", "nahi", "abhi nahi", "baad mein"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "LAUNCH_INFO_PITCHED",
+            "intents": [
+                {
+                    "intent_name": "excited_yes",
+                    "mp3_file": "fold8_bot/fold8_step3_pitch_reservation.raw",
+                    "next_phase": "RESERVATION_PITCHED",
+                    "triggers": [
+                        "હા", "હા છું", "હા એક્સાઈટેડ છું", "હા ઉત્સુક છું", "ચોક્કસ", "હા જી",
+                        "ખૂબ જ", "હા કેમ નહીં", "yes", "excited", "ha", "ha chhu", "interested",
+                        "નવો ફોન જોવો છે", "હા જોવો છે", "હા બતાવો", "હા સંભળાવો",
+                        "બોલો", "બોલો બોલો", "કહો", "કહો કહો", "વાત કરો", "bol", "bolo", "kaho"
+                    ]
+                },
+                {
+                    "intent_name": "excited_no",
+                    "mp3_file": "fold8_bot/fold8_rejection.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        "ના", "નહીં", "ના નથી", "ના ઉત્સુક નથી", "ના જી", "અત્યારે કોઈ જરૂર નથી",
+                        "નથી જોવો", "ના ભાઈ", "no", "not interested", "no thanks", "na", "nahi"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "RESERVATION_PITCHED",
+            "intents": [
+                {
+                    "intent_name": "reserve_yes",
+                    "mp3_file": "fold8_bot/fold8_step4_ask_area.raw",
+                    "next_phase": "ASK_AREA",
+                    "triggers": [
+                        "હા", "હા કરો", "હા બુક કરી લો", "હા કરી દો", "હા બુક કરાવો",
+                        "ઠીક છે", "વાંધો નહીં", "હા જી", "બુક કરી નાખો", "yes", "book it",
+                        "do it", "sure book", "ha karo", "ha book", "ha kari do", "ha chalse",
+                        "હા ચાલશે", "કરી લો", "બુક કરાવી દો"
+                    ]
+                },
+                {
+                    "intent_name": "reserve_no",
+                    "mp3_file": "fold8_bot/fold8_rejection.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        "ના", "નહીં", "ના જી", "નથી કરવું", "બુક નથી કરવું", "ના ભાઈ",
+                        "ના બહેન", "ના અત્યારે નથી કરવું", "પછી જોઈશું", "હમણાં નહીં",
+                        "no", "don't book", "no reservation", "not now", "na", "nahi",
+                        "nahi karna", "baad mein", "reject", "cancel"
+                    ]
+                },
+                {
+                    "intent_name": "what_is_reservation",
+                    "mp3_file": "fold8_bot/fold8_objection_explanation.raw",
+                    "next_phase": "RESERVATION_PITCHED",
+                    "triggers": [
+                        "પ્રી રિઝર્વેશન એટલે શું", "શું બુક કરવાનું છે", "કેવું બુકિંગ છે",
+                        "શાના પૈસા છે", "નવસો નવાણું શેના આપવાના", "પ્રી-રિઝર્વેશન એટલે હું સમજી નહિ",
+                        "આ શું છે", "સમજાયું નહીં", "શું છે આ ઓફર", "બુકિંગ શું છે",
+                        "what is pre reservation", "what is this booking", "why 999",
+                        "shu book karvanu chhe", "pre reservation etle shu"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "STORE_CONFIRMED",
+            "intents": [
+                {
+                    "intent_name": "store_location_ok",
+                    "mp3_file": "fold8_bot/fold8_step6_ask_name.raw",
+                    "next_phase": "ASK_NAME",
+                    "triggers": [
+                        "હા", "હા ચાલશે", "હા બરાબર છે", "ઠીક છે", "યોગ્ય રહેશે", "ચાલશે",
+                        "હા જી", "બિલકુલ", "ચોક્કસ", "હા એ નજીક પડશે", "yes", "fine",
+                        "okay", "suits me", "ha", "ha chalse", "thik chhe", "barabar"
+                    ]
+                }
+            ]
+        }
+    ]
+}
