@@ -1,0 +1,83 @@
+{
+    "global_intents": [],
+    "flow_intents": [
+        {
+            "phase": "GREETING_REPLY",
+            "intents": [
+                {
+                    "intent_name": "flat_type_answered",
+                    "mp3_file": "temp_real_estate_bot/real_estate_step2_ask_area.raw",
+                    "next_phase": "ASK_AREA",
+                    "triggers": [
+                        "1bhk", "2bhk", "3bhk", "4bhk", "5bhk", "flat", "flats", "apartment", "house", "villa", "bungalow", "tenement", "row house", "bhk",
+                        "one bhk", "two bhk", "three bhk", "four bhk", "1 bhk", "2 bhk", "3 bhk", "4 bhk", "5 bhk",
+                        "2 room kitchen", "3 room kitchen",
+                        "એક બેડરૂમ", "બે બેડરૂમ", "ત્રણ બેડરૂમ", "ચાર બેડરૂમ", "ફ્લેટ", "મકાન", "બંગલો", "રો હાઉસ", "ભાડે", "ખરીદવો", "લેવો છે",
+                        "2બીએચકે", "3બીએચકે", "1બીએચકે", "4બીએચકે",
+                        "do bhk", "teen bhk", "ek bhk", "char bhk",
+                        "do bedroom", "teen bedroom", "ek bedroom",
+                        "દોન બીએચકે", "તીન બીએચકે", "એક બીએચકે",
+                        "commercial", "office", "shop", "showroom", "દુકાન", "ઓફિસ", "શોરૂમ",
+                        "residential", "home", "ghar", "ઘર",
+                        "yes", "ha", "haan", "હા", "હા જી", "ચોક્કસ", "જોઈએ છે", "ખરીદવા છે", "બતાવો"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "ASK_AREA",
+            "intents": [
+                {
+                    "intent_name": "area_answered",
+                    "mp3_file": "temp_real_estate_bot/real_estate_step3_ask_budget.raw",
+                    "next_phase": "ASK_BUDGET",
+                    "triggers": [
+                        "ahmedabad", "gandhinagar", "boda", "bopal", "satellite", "vastrapur", "prahladnagar", "sg highway", "naranpura", "ranip", "chandkheda",
+                        "gota", "new gota", "nikol", "naroda", "maninagar", "thaltej", "sola", "science city", "vejalpur", "paldi", "ellisbridge", "juhapura",
+                        "makarba", "sarkhej", "motera", "sabarmati", "shela", "ghuma", "iscon", "ambawadi", "navrangpura", "usmanpura", "ashram road", "gujarat",
+                        "અમદાવાદ", "ગાંધીનગર", "બોપલ", "સેટેલાઇટ", "વસ્ત્રાપુર", "પ્રહલાદનગર", "નરણપુરા", "રાણીપ", "ચાંદખેડા", "ગોતા", "નિકોલ", "નરોડા",
+                        "મણિનગર", "થલતેજ", "સોલા", "સાયન્સ સીટી", "વેજલપુર", "પાલડી", "એલિસબ્રિજ", "જુહાપુરા", "મકરબા", "સરખેજ", "મોટેરા", "સાબરમતી",
+                        "શીલજ", "શેલા", "ઘુમા", "ઇસ્કોન", "આંબાવાડી", "નવરંગપુરા", "ઉસ્માનપુરા", "આશ્રમ રોડ", "કોઈ પણ", "નજીક", "એરિયા", "વિસ્તાર",
+                        "any area", "good area", "center", "east", "west", "north", "south", "કોઈ પણ વિસ્તાર", "ગમે ત્યાં", "ગમે તે વિસ્તાર",
+                        "here", "there", "local", "નજીકમાં", "અમદાવાદમાં", "ગાંધીનગરમાં"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "ASK_BUDGET",
+            "intents": [
+                {
+                    "intent_name": "budget_answered",
+                    "mp3_file": "temp_real_estate_bot/real_estate_step4_ask_name.raw",
+                    "next_phase": "ASK_NAME",
+                    "triggers": [
+                        "any", "budget", "price", "lakh", "crore", "thousand", "cr", "lk", "cror", "lac", "lacs", "laakh", "crores",
+                        "20 lakh", "30 lakh", "40 lakh", "50 lakh", "60 lakh", "70 lakh", "80 lakh", "90 lakh", "1 crore", "2 crore", "3 crore", "4 crore", "5 crore",
+                        "1 cr", "2 cr", "3 cr", "4 cr", "5 cr", "50 lk", "60 lk", "70 lk", "80 lk",
+                        "લાખ", "કરોડ", "બજેટ", "કિંમત", "પૈસા", "રૂપિયા",
+                        "૨૦ લાખ", "૩૦ લાખ", "૪૦ લાખ", "૫૦ લાખ", "૬૦ લાખ", "૭૦ લાખ", "૮૦ લાખ", "૯૦ લાખ", "૧ કરોડ", "૨ કરોડ", "૩ કરોડ",
+                        "ગમે તે", "ખબર નથી", "બજેટ નથી", "પૂછો", "કોઈ પણ", "કેટલા પણ", "રૂપિયા નથી",
+                        "any budget", "no limit", "limit", "price range", "range", "અંદાજે", "ballpark", "approximately", "approx",
+                        "whatever", "anything", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100"
+                    ]
+                }
+            ]
+        },
+        {
+            "phase": "ASK_NAME",
+            "intents": [
+                {
+                    "intent_name": "name_answered",
+                    "mp3_file": "temp_real_estate_bot/real_estate_step5_closing.raw",
+                    "next_phase": "CLOSING",
+                    "triggers": [
+                        "naam", "name", "naam hai", "bol raha hu", "bol rahi hu", "i am", "my name is", "this is", "અહીં", "નામ છે", "બોલું છું", "હું છું",
+                        "amit", "rahul", "priya", "neha", "jay", "vijay", "ayushi", "rajesh", "suresh", "kamlesh", "harsh", "meet", "taksh", "ayush",
+                        "અમીત", "રાહુલ", "પ્રિયા", "નેહા", "જય", "વિજય", "આયુષી", "રાજેશ", "સુરેશ", "કમલેશ", "હર્ષ", "મીત", "તક્ષ", "આયુષ"
+                    ]
+                }
+            ]
+        }
+    ]
+}

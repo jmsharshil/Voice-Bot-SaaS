@@ -1,0 +1,3347 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.png' %}">
+    <script src="/static/js/auth_helper.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Analysis — Voice Bot Intelligence</title>
+    <meta name="description" content="AI-powered lead analysis dashboard for voice bot conversations.">
+    <!-- Prevent browser from caching this protected page -->
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+            min-height: 100vh;
+            overflow-x: hidden
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-10px);
+                opacity: 0
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1
+            }
+        }
+
+        /* HEADER */
+        .header {
+            padding: 16px 32px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05)
+        }
+
+        .header-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1)
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em
+        }
+        .back-to-dashboard-btn:hover { background: #cbd5e1 !important; color: #0f172a !important; transform: scale(1.05); }
+
+        .header-sub {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+            background: #f8fafc;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid #f1f5f9;
+            margin-left: 8px
+        }
+
+        .header-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .header-link {
+            font-size: 13px;
+            color: #4f46e5;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 8px 16px;
+            background: #f5f3ff;
+            border-radius: 8px;
+            transition: all .2s;
+            border: 1px solid rgba(79, 70, 229, 0.1)
+        }
+
+        .header-link:hover {
+            background: #ede9fe;
+            transform: translateY(-1px)
+        }
+
+        /* Unified Header Navigation styles */
+        .nav-tabs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 8px;
+            border-right: 1px solid #e2e8f0;
+            padding-right: 12px;
+        }
+        .nav-tab {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-tab:hover {
+            color: #4f46e5;
+            background: #f1f5f9;
+        }
+        .nav-tab.active {
+            color: #4f46e5;
+            background: #e0e7ff;
+        }
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-action-btn {
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+        .nav-action-btn:hover {
+            transform: translateY(-1px);
+        }
+        .nav-action-btn-primary {
+            background: #4f46e5;
+            color: #ffffff;
+        }
+        .nav-action-btn-primary:hover {
+            background: #4338ca;
+        }
+        .nav-action-btn-success {
+            background: #10b981;
+            color: #ffffff;
+        }
+        .nav-action-btn-success:hover {
+            background: #059669;
+        }
+        .nav-action-btn-warning {
+            background: #fff7ed;
+            color: #ea580c;
+            border-color: rgba(234,88,12,0.2);
+        }
+        .nav-action-btn-warning:hover {
+            background: #ffedd5;
+        }
+        .nav-action-btn-info {
+            background: #eff6ff;
+            color: #3b82f6;
+            border-color: rgba(59,130,246,0.2);
+        }
+        .nav-action-btn-info:hover {
+            background: #dbeafe;
+        }
+
+        /* STAT CARDS */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding: 24px 32px
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
+            transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            animation: fadeIn 0.5s ease-out both;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03)
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+            border-color: #4f46e5
+        }
+
+        .card.active-filter {
+            border-color: #4f46e5;
+            background: #f5f3ff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1)
+        }
+
+        .card-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 8px
+        }
+
+        .card-value {
+            font-size: 32px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.03em
+        }
+
+        .card:nth-child(1) .card-value {
+            color: #ef4444
+        }
+
+        .card:nth-child(2) .card-value {
+            color: #f59e0b
+        }
+
+        .card:nth-child(3) .card-value {
+            color: #3b82f6
+        }
+
+        .card:nth-child(4) .card-value {
+            color: #64748b
+        }
+
+        .card:nth-child(5) .card-value {
+            color: #a855f7
+        }
+
+        .card-sub {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+            font-weight: 500
+        }
+
+        /* MAIN CONTENT */
+        .main {
+            display: flex;
+            height: calc(100vh - 240px);
+            margin: 0 32px 32px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05)
+        }
+
+        /* SIDEBAR */
+        .lead-list-panel {
+            width: 400px;
+            min-width: 400px;
+            border-right: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            background: #f8fafc
+        }
+
+        .search-box {
+            padding: 20px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            color: #1e293b;
+            font-size: 14px;
+            outline: none;
+            transition: all .2s
+        }
+
+        .search-input:focus {
+            background: #ffffff;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1)
+        }
+
+        .filter-box {
+            padding: 10px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-select {
+            flex: 1;
+            padding: 8px 28px 8px 10px !important;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background-color: #fff;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 12px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            min-width: 0;
+            text-overflow: ellipsis;
+        }
+
+        .filter-select:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        }
+
+        .list-header {
+            padding: 16px 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+            background: #ffffff;
+            display: flex;
+            justify-content: space-between
+        }
+
+        .lead-list {
+            flex: 1;
+            overflow-y: auto
+        }
+
+        .lead-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: all .2s
+        }
+
+        .lead-item:hover {
+            background: #f1f5f9
+        }
+
+        .lead-item.active {
+            background: #ffffff;
+            box-shadow: inset 4px 0 0 #4f46e5
+        }
+
+        .lead-badge {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0
+        }
+
+        .lead-badge.hot {
+            background: #fee2e2;
+            color: #ef4444
+        }
+
+        .lead-badge.warm {
+            background: #fef3c7;
+            color: #f59e0b
+        }
+
+        .lead-badge.cold {
+            background: #dbeafe;
+            color: #3b82f6
+        }
+
+        .lead-badge.not_interested {
+            background: #f1f5f9;
+            color: #64748b
+        }
+
+        .lead-badge.missed {
+            background: #f3e8ff;
+            color: #a855f7
+        }
+
+        .lead-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .lead-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 2px
+        }
+
+        .lead-topic {
+            font-size: 12px;
+            color: #64748b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .lead-meta {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 4px
+        }
+
+        .lead-level-tag {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 20px
+        }
+
+        .lead-level-tag.hot {
+            background: #fee2e2;
+            color: #ef4444
+        }
+
+        .lead-level-tag.warm {
+            background: #fef3c7;
+            color: #f59e0b
+        }
+
+        .lead-level-tag.cold {
+            background: #dbeafe;
+            color: #3b82f6
+        }
+
+        .lead-level-tag.not_interested {
+            background: #f1f5f9;
+            color: #64748b
+        }
+
+        .lead-level-tag.missed {
+            background: #f3e8ff;
+            color: #a855f7
+        }
+
+        .call-type-tag {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .call-type-tag.inbound {
+            background: #e0f2fe;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
+        }
+
+        .call-type-tag.outbound {
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        /* DETAIL PANEL */
+        .detail-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        .detail-header {
+            padding: 14px 20px 10px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            display: none;
+            background: #ffffff
+        }
+
+        .detail-header.show {
+            display: block;
+            animation: fadeIn 0.4s ease-out
+        }
+
+        .dh-top {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 10px
+        }
+
+        .dh-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff
+        }
+
+        .dh-avatar.hot {
+            background: linear-gradient(135deg, #ef4444, #f87171)
+        }
+
+        .dh-avatar.warm {
+            background: linear-gradient(135deg, #f59e0b, #fbbf24)
+        }
+
+        .dh-avatar.cold {
+            background: linear-gradient(135deg, #3b82f6, #60a5fa)
+        }
+
+        .dh-avatar.not_interested {
+            background: linear-gradient(135deg, #64748b, #94a3b8)
+        }
+
+        .dh-avatar.missed {
+            background: linear-gradient(135deg, #a855f7, #c084fc)
+        }
+
+        .dh-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.02em
+        }
+
+        .dh-sub {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 2px
+        }
+
+        .detail-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px
+        }
+
+        .dc {
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            border-radius: 8px;
+            padding: 8px 10px
+        }
+
+        .dc-label {
+            font-size: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin-bottom: 2px;
+            letter-spacing: 0.05em
+        }
+
+        .dc-value {
+            font-size: 12px;
+            font-weight: 600;
+            color: #1e293b;
+            line-height: 1.2
+        }
+
+        .detail-summary {
+            padding: 16px 24px;
+            background: #fdfaff;
+            border-bottom: 1px solid #f1f5f9;
+            display: none
+        }
+
+        .detail-summary.show {
+            display: block
+        }
+
+        .ds-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #7c3aed;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .ds-text {
+            font-size: 13.5px;
+            color: #475569;
+            line-height: 1.6
+        }
+
+        .messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: #ffffff;
+            display: none;
+            flex-direction: column;
+            gap: 10px
+        }
+
+        .messages.show {
+            display: flex
+        }
+
+        .msg {
+            padding: 16px 20px;
+            border-radius: 16px;
+            max-width: 75%;
+            font-size: 14.5px;
+            line-height: 1.6;
+            position: relative;
+            animation: slideIn 0.3s ease-out both
+        }
+
+        .user-msg {
+            background: #f1f5f9;
+            color: #1e293b;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px
+        }
+
+        .bot-msg {
+            background: #4f46e5;
+            color: #ffffff;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2)
+        }
+
+        .msg-label {
+            font-size: 10px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.05em
+        }
+
+        .user-msg .msg-label {
+            color: #64748b
+        }
+
+        .bot-msg .msg-label {
+            color: rgba(255, 255, 255, 0.8)
+        }
+
+        .msg-time {
+            font-size: 10px;
+            margin-top: 8px;
+            opacity: 0.6;
+            text-align: right
+        }
+
+        .detail-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            text-align: center
+        }
+
+        .detail-empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5
+        }
+
+        .loading {
+            padding: 40px;
+            text-align: center;
+            color: #64748b
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f1f5f9;
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+            display: inline-block;
+            margin-right: 10px
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .export-btn {
+            background: #10b981;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all .2s;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2)
+        }
+
+        .export-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3)
+        }
+
+        .export-btn:active {
+            transform: translateY(0)
+        }
+
+        /* CONVERSATION PANEL */
+        .conversation-panel {
+            width: 480px;
+            min-width: 400px;
+            border-left: 1px solid #e2e8f0;
+            display: none;
+            flex-direction: column;
+            background: #ffffff;
+        }
+
+        .conversation-panel.show {
+            display: flex;
+        }
+
+        .conversation-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #ffffff;
+        }
+
+        .ch-icon {
+            font-size: 18px;
+        }
+
+        .ch-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+        }
+
+        @media(max-width:1400px) {
+            .lead-list-panel {
+                width: 350px;
+                min-width: 350px;
+            }
+            .conversation-panel {
+                width: 400px;
+                min-width: 380px;
+            }
+        }
+
+        @media(max-width:1100px) {
+            .lead-list-panel {
+                width: 300px;
+                min-width: 300px;
+            }
+            .conversation-panel {
+                width: 350px;
+                min-width: 320px;
+            }
+            .header { padding: 14px 20px; }
+            .cards { padding: 20px; gap: 14px; }
+            .main { margin: 0 20px 20px; }
+            .nav-tab { padding: 6px 10px; font-size: 12px; }
+            .nav-action-btn { padding: 6px 10px; font-size: 12px; }
+        }
+
+        /* Back to list button styles */
+        .back-to-list-btn {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-right: 12px;
+        }
+        .back-to-list-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        @media(max-width:900px) {
+            .back-to-list-btn {
+                display: inline-flex;
+            }
+            .main {
+                flex-direction: column;
+                height: calc(100vh - 210px);
+                margin: 0 12px 12px;
+                border-radius: 12px;
+            }
+
+            /* Master-Detail Toggle on Mobile */
+            .main:not(.lead-active) .lead-list-panel {
+                display: flex;
+                width: 100%;
+                min-width: unset;
+                height: 100%;
+                max-height: unset;
+                border-right: none;
+            }
+            .main:not(.lead-active) .detail-panel,
+            .main:not(.lead-active) .conversation-panel {
+                display: none;
+            }
+
+            .main.lead-active .lead-list-panel {
+                display: none;
+            }
+            .main.lead-active .detail-panel {
+                display: flex;
+                flex: 1;
+                width: 100%;
+                height: 55%;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .main.lead-active .conversation-panel {
+                display: flex;
+                flex: 1;
+                width: 100%;
+                height: 45%;
+                border-left: none;
+            }
+
+            .cards {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                gap: 12px;
+                padding: 16px;
+                scrollbar-width: none;
+            }
+            .cards::-webkit-scrollbar {
+                display: none;
+            }
+            .card {
+                flex: 0 0 160px;
+                padding: 16px;
+                animation: none;
+            }
+            .card-value { font-size: 26px; }
+        }
+
+        @media(max-width:768px) {
+            .header {
+                display: grid;
+                grid-template-columns: auto 1fr auto auto;
+                align-items: center;
+                gap: 10px 8px;
+                padding: 10px 12px;
+            }
+            .header-logo-icon, .header-company-logo {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .header-title {
+                grid-column: 2;
+                grid-row: 1;
+                font-size: 15px;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .header-sub {
+                display: none;
+            }
+            .header-right {
+                display: contents;
+            }
+            .minutes-badge {
+                grid-column: 3;
+                grid-row: 1;
+                justify-self: end;
+                margin-right: 0 !important;
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+            .profile-wrap {
+                grid-column: 4;
+                grid-row: 1;
+                justify-self: end;
+            }
+            .profile-avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+            }
+            .nav-tabs {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding: 0 0 4px 0;
+                margin: 0;
+                border-right: none;
+                gap: 6px;
+                justify-content: flex-start;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .nav-tabs::-webkit-scrollbar {
+                display: none;
+            }
+            .nav-tab {
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            .nav-actions {
+                grid-column: 1 / -1;
+                grid-row: 3;
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                gap: 6px;
+                justify-content: flex-start;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .nav-actions::-webkit-scrollbar {
+                display: none;
+            }
+            .nav-action-btn {
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .main { border-radius: 10px; }
+            .lead-item { padding: 14px; gap: 12px; }
+            .lead-badge { width: 36px; height: 36px; font-size: 16px; border-radius: 10px; }
+            .lead-name { font-size: 13px; }
+            .lead-topic { font-size: 11px; }
+            .lead-meta { font-size: 10px; }
+            .lead-level-tag { font-size: 9px; padding: 3px 8px; }
+            .detail-header { padding: 16px 18px; }
+            .dh-name { font-size: 17px; }
+            .messages { padding: 16px; }
+            .msg { max-width: 85%; font-size: 13px; padding: 12px 16px; }
+            .export-btn { padding: 6px 12px; font-size: 12px; }
+        }
+
+        @media(max-width:576px) {
+            .nav-tab { padding: 5px 10px; font-size: 11px; }
+            .nav-action-btn { font-size: 11px; padding: 5px 10px; }
+            .minutes-badge { font-size: 10px; padding: 3px 8px; }
+            .profile-avatar { width: 30px; height: 30px; font-size: 12px; }
+            .cards { padding: 10px 8px; gap: 8px; }
+            .card { flex: 0 0 140px; padding: 12px; border-radius: 10px; }
+            .card-value { font-size: 20px; }
+            .card-label { font-size: 9px; }
+            .main { margin: 0 8px 8px; border-radius: 8px; }
+            .lead-item { padding: 12px; gap: 10px; }
+            .lead-badge { width: 32px; height: 32px; font-size: 14px; border-radius: 8px; }
+            .lead-name { font-size: 12px; }
+            .search-box { padding: 12px; }
+            .search-input { padding: 10px 12px; font-size: 13px; }
+            .detail-cards { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+            .dc { padding: 8px 10px; }
+            .dc-label { font-size: 8px; }
+            .dc-value { font-size: 12px; }
+            .messages { padding: 12px 10px; gap: 8px; }
+            .msg { max-width: 90%; font-size: 12.5px; padding: 10px 14px; border-radius: 12px; }
+            .msg-label { font-size: 9px; }
+            .export-btn { padding: 5px 10px; font-size: 11px; gap: 5px; }
+            .filter-box { padding: 10px 12px; gap: 6px; }
+            .filter-select { padding: 8px 6px; font-size: 10.5px; }
+        }
+
+        @media(max-width:480px) {
+            .main { margin: 0 6px 6px; }
+            .filter-box { padding: 8px 8px; gap: 4px; }
+            .filter-select { padding: 6px 4px; font-size: 9.5px; }
+        }
+
+        /* ── Profile Dropdown ── */
+        .profile-wrap {
+            position: relative;
+            display: flex;
+            align-items: center
+        }
+
+        .profile-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            border: 2px solid rgba(79, 70, 229, 0.2);
+            transition: box-shadow .2s;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .profile-avatar:hover {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+        }
+
+        .minutes-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.08));
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #059669;
+            cursor: default;
+            position: relative;
+            margin-right: 10px;
+            transition: all 0.2s;
+        }
+        .minutes-badge:hover {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.14));
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+        .minutes-badge .minutes-icon {
+            font-size: 13px;
+        }
+        .minutes-badge .minutes-tooltip {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 220px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
+            padding: 12px 16px;
+            z-index: 999;
+            font-size: 12px;
+            color: #334155;
+            font-weight: 500;
+        }
+        .minutes-badge:hover .minutes-tooltip {
+            display: block;
+            animation: toastSlideIn .2s ease-out;
+        }
+        .minutes-tooltip .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+        }
+        .minutes-tooltip .tooltip-row.remaining {
+            color: #059669;
+            font-weight: 700;
+            border-top: 1px solid #f1f5f9;
+            margin-top: 4px;
+            padding-top: 8px;
+        }
+        .minutes-badge.warning {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.08));
+            border-color: rgba(245, 158, 11, 0.3);
+            color: #d97706;
+        }
+        .minutes-badge.danger {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.08));
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #dc2626;
+        }
+
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 180px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+            z-index: 999;
+            overflow: hidden;
+            animation: fadeIn .2s ease-out;
+        }
+
+        .profile-dropdown.open {
+            display: block;
+        }
+
+        .pd-header {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .pd-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pd-label {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .pd-logout {
+            width: 100%;
+            padding: 11px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .15s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .pd-logout:hover {
+            background: #fef2f2;
+        }
+
+        /* Quick Call Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 440px;
+            padding: 24px;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
+            transform: scale(0.95) translateY(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 20px;
+            font-weight: 500;
+            color: #64748b;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.15s;
+        }
+
+        .close-modal:hover {
+            color: #ef4444;
+        }
+
+        .modal-body {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            color: #0f172a;
+            outline: none;
+            transition: all 0.15s;
+            background-color: #f8fafc;
+        }
+
+        .form-control:focus {
+            border-color: #4f46e5;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 15px;
+            padding-right: 36px !important;
+            cursor: pointer;
+        }
+
+        select.form-control:focus {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 15px;
+        }
+
+        .update-lead-select {
+            background-color: #ffffff;
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
+            padding: 4px 28px 4px 8px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            width: 100%;
+            font-family: inherit;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 13px;
+            transition: all 0.2s ease;
+        }
+
+        .update-lead-select:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        }
+
+        .modal-btn {
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            color: #ffffff;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 10px -1px rgba(79, 70, 229, 0.3);
+        }
+
+        .modal-btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .modal-alert {
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            display: none;
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        .modal-alert.success {
+            background: #dcfce7;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        .modal-alert.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        /* Custom scrollbar for dialer monitor missed calls list */
+        #dmMissedList::-webkit-scrollbar {
+            width: 4px;
+        }
+        #dmMissedList::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        #dmMissedList::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+        #dmMissedList::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-logo-icon" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="6"></circle>
+                <circle cx="12" cy="12" r="2"></circle>
+            </svg>
+        </div>
+        <img class="header-company-logo" style="height: 32px; max-width: 120px; object-fit: contain; display: none;" alt="Company Logo">
+        <span class="header-title">Lead Intelligence</span>
+        <div class="header-right">
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs">
+                <a href="/dashboard/" id="navLeadAnalysis" class="nav-tab active">🧠 Lead Analysis</a>
+                <a href="/analytics/" id="callAnalyticsBtn" class="nav-tab" style="display:none;">📈 Call Analytics</a>
+                <a href="/bot/campaigns/" id="campaignHistoryBtn" class="nav-tab" style="display:none;">🕒 Campaign History</a>
+                <a href="/bot/dashboard/" id="triggerCallBtn" class="nav-tab" style="display:none;">📞 Trigger-Call</a>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="nav-actions">
+                <a href="#" onclick="openQuickCallModal(event)" class="nav-action-btn nav-action-btn-warning">📞 Quick Call</a>
+                <a href="/accounts/admin-management/" id="adminBtn" class="nav-action-btn nav-action-btn-info" style="display:none;">⚙️ Add Client</a>
+            </div>
+
+            <!-- Minutes Badge -->
+            <div class="minutes-badge" id="minutesBadge" style="display:none;">
+                <span class="minutes-icon">⏱️</span>
+                <span id="minutesText">—/—</span>
+                <div class="minutes-tooltip" id="minutesTooltip"></div>
+            </div>
+
+            <!-- Profile Dropdown -->
+            <div class="profile-wrap" id="profileWrap">
+                <div class="profile-avatar" id="profileAvatar" onclick="toggleProfile(event)">?</div>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="pd-header">
+                        <div class="pd-name" id="pdName">User</div>
+                        <div class="pd-label">Logged in</div>
+                    </div>
+                    <div style="border-bottom: 1px solid #f1f5f9; padding: 4px 0;">
+                        <label for="profilePicInput" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; font-size: 13px; color: #475569; cursor: pointer; transition: background 0.2s; font-weight: 500;" class="pd-item-upload">
+                            📷 Upload Photo
+                        </label>
+                        <input type="file" id="profilePicInput" accept="image/*" style="display: none;" onchange="uploadProfilePicture(event)">
+                    </div>
+                    <a href="/accounts/team-management/" id="teamBtn" style="display:none; text-decoration:none; padding:11px 16px; font-size:13px; font-weight:600; color:#4f46e5; border-bottom:1px solid #f1f5f9; align-items:center; gap:8px;" class="pd-item">👥 Manage Team</a>
+                    <a href="/accounts/support/" style="text-decoration:none; padding:11px 16px; font-size:13px; font-weight:600; color:#4f46e5; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:8px;" class="pd-item">🛠️ Support</a>
+                    <button class="pd-logout" onclick="logout()">🚪 Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Prevent back-button bypass after logout
+        window.addEventListener('pageshow', function (e) {
+            if (!localStorage.getItem('access_token')) {
+                window.location.replace('/accounts/login/');
+            }
+        });
+
+        // Auth guard on initial load
+        if (!localStorage.getItem('access_token')) {
+            window.location.replace('/accounts/login/');
+        } else {
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) { }
+
+            if (!isAdmin && !perms.can_view_leads) {
+                if (perms.can_view_calls) {
+                    window.location.replace('/analytics/');
+                } else if (perms.can_view_campaigns) {
+                    window.location.replace('/bot/campaigns/');
+                } else {
+                    alert('Access Denied: You do not have permission to view any dashboard. Please contact your administrator.');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    localStorage.removeItem('username');
+                    localStorage.removeItem('is_admin');
+                    localStorage.removeItem('permissions');
+                    window.location.replace('/accounts/login/');
+                }
+            }
+
+            // Conditionally show Call Analytics button
+            if (isAdmin || perms.can_view_calls) {
+                const btn = document.getElementById('callAnalyticsBtn');
+                if (btn) btn.style.display = 'inline-flex';
+            }
+        }
+
+        function showMinutesWarningModal(botName, usedMinutes, threshold) {
+            if (document.getElementById('minutesWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'minutesWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(4px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2rem';
+            content.style.borderRadius = '16px';
+            content.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+            content.style.maxWidth = '450px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '64px';
+            iconContainer.style.height = '64px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.style.marginRight = 'auto';
+            iconContainer.style.marginLeft = 'auto';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Minutes Usage Warning';
+            title.style.fontSize = '1.4rem';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.5';
+            msg.style.marginBottom = '1.5rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `Your voice bot <strong style="color: #f8f8f2;">${botName}</strong> has crossed the <strong style="color: #ef4444;">${threshold} minutes</strong> usage threshold.<br><br>Total used minutes: <span style="font-size: 1.15rem; font-weight: bold; color: #f8f8f2; background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">${usedMinutes} minutes</span>.`;
+
+            const btn = document.createElement('button');
+            btn.innerText = 'Acknowledge';
+            btn.style.width = '100%';
+            btn.style.padding = '0.75rem 1rem';
+            btn.style.backgroundColor = '#ef4444';
+            btn.style.color = '#ffffff';
+            btn.style.border = 'none';
+            btn.style.borderRadius = '8px';
+            btn.style.fontWeight = '600';
+            btn.style.cursor = 'pointer';
+            btn.style.transition = 'background-color 0.2s ease, transform 0.1s ease';
+            
+            btn.onmouseover = () => btn.style.backgroundColor = '#dc2626';
+            btn.onmouseout = () => btn.style.backgroundColor = '#ef4444';
+            btn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            content.appendChild(btn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function showLowMinutesWarningModal(botName, remainingMinutes) {
+            if (document.getElementById('lowMinutesWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'lowMinutesWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(4px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2rem';
+            content.style.borderRadius = '16px';
+            content.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+            content.style.maxWidth = '450px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '64px';
+            iconContainer.style.height = '64px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.style.marginRight = 'auto';
+            iconContainer.style.marginLeft = 'auto';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Critical Quota Warning';
+            title.style.fontSize = '1.4rem';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.5';
+            msg.style.marginBottom = '1.5rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `Your voice bot <strong style="color: #f8f8f2;">${botName}</strong> is running extremely low on minutes.<br><br>Remaining minutes: <span style="font-size: 1.15rem; font-weight: bold; color: #f8f8f2; background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">${remainingMinutes} minutes</span>.<br><br>Please contact us to add more minutes and avoid any disruption.`;
+
+            // Contact Us Button
+            const contactBtn = document.createElement('a');
+            contactBtn.href = 'mailto:support@example.com?subject=Voice%20Bot%20Recharge%20Request';
+            contactBtn.innerText = '📧 Contact Support';
+            contactBtn.style.display = 'block';
+            contactBtn.style.width = '100%';
+            contactBtn.style.padding = '0.75rem 1rem';
+            contactBtn.style.backgroundColor = '#4f46e5';
+            contactBtn.style.color = '#ffffff';
+            contactBtn.style.borderRadius = '8px';
+            contactBtn.style.fontWeight = '600';
+            contactBtn.style.textAlign = 'center';
+            contactBtn.style.textDecoration = 'none';
+            contactBtn.style.marginBottom = '0.75rem';
+            contactBtn.style.transition = 'background-color 0.2s ease';
+            contactBtn.onmouseover = () => contactBtn.style.backgroundColor = '#4338ca';
+            contactBtn.onmouseout = () => contactBtn.style.backgroundColor = '#4f46e5';
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.innerText = 'Dismiss';
+            dismissBtn.style.width = '100%';
+            dismissBtn.style.padding = '0.75rem 1rem';
+            dismissBtn.style.backgroundColor = 'transparent';
+            dismissBtn.style.color = '#a6adc8';
+            dismissBtn.style.border = '1px solid #45475a';
+            dismissBtn.style.borderRadius = '8px';
+            dismissBtn.style.fontWeight = '600';
+            dismissBtn.style.cursor = 'pointer';
+            dismissBtn.style.transition = 'background-color 0.2s ease, color 0.2s ease';
+            dismissBtn.onmouseover = () => {
+                dismissBtn.style.backgroundColor = '#313244';
+                dismissBtn.style.color = '#f8f8f2';
+            };
+            dismissBtn.onmouseout = () => {
+                dismissBtn.style.backgroundColor = 'transparent';
+                dismissBtn.style.color = '#a6adc8';
+            };
+            dismissBtn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            content.appendChild(contactBtn);
+            content.appendChild(dismissBtn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function showQuotaExhaustedWarningModal(botName) {
+            if (document.getElementById('quotaExhaustedWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'quotaExhaustedWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.65)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(6px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2.5rem 2rem';
+            content.style.borderRadius = '20px';
+            content.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
+            content.style.maxWidth = '460px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '72px';
+            iconContainer.style.height = '72px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Call Quota Exhausted';
+            title.style.fontSize = '1.5rem';
+            title.style.fontWeight = '700';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.6';
+            msg.style.marginBottom = '2rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `All allocated call credits for your bot <strong style="color: #f8f8f2;">${botName}</strong> have been fully utilized.<br><br>Please contact support to add more credits to resume making calls.`;
+
+            const contactBtn = document.createElement('a');
+            contactBtn.href = 'mailto:support@example.com?subject=Voice%20Bot%20Recharge%20Request';
+            contactBtn.innerText = '📞 Request More Credits';
+            contactBtn.style.display = 'block';
+            contactBtn.style.width = '100%';
+            contactBtn.style.padding = '0.85rem 1rem';
+            contactBtn.style.backgroundColor = '#ef4444';
+            contactBtn.style.color = '#ffffff';
+            contactBtn.style.borderRadius = '10px';
+            contactBtn.style.fontWeight = '600';
+            contactBtn.style.textAlign = 'center';
+            contactBtn.style.textDecoration = 'none';
+            contactBtn.style.marginBottom = '0.75rem';
+            contactBtn.style.transition = 'background-color 0.2s ease';
+            contactBtn.onmouseover = () => contactBtn.style.backgroundColor = '#dc2626';
+            contactBtn.onmouseout = () => contactBtn.style.backgroundColor = '#ef4444';
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.innerText = 'Dismiss';
+            dismissBtn.style.width = '100%';
+            dismissBtn.style.padding = '0.85rem 1rem';
+            dismissBtn.style.backgroundColor = 'transparent';
+            dismissBtn.style.color = '#a6adc8';
+            dismissBtn.style.border = '1px solid #45475a';
+            dismissBtn.style.borderRadius = '10px';
+            dismissBtn.style.fontWeight = '600';
+            dismissBtn.style.cursor = 'pointer';
+            dismissBtn.style.transition = 'background-color 0.2s ease, color 0.2s ease';
+            dismissBtn.onmouseover = () => {
+                dismissBtn.style.backgroundColor = '#313244';
+                dismissBtn.style.color = '#f8f8f2';
+            };
+            dismissBtn.onmouseout = () => {
+                dismissBtn.style.backgroundColor = 'transparent';
+                dismissBtn.style.color = '#a6adc8';
+            };
+            dismissBtn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            // content.appendChild(contactBtn);
+            content.appendChild(dismissBtn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function checkRemainingMinutesThreshold(data) {
+            if (!data || data.is_admin || !data.bot_id) return;
+            const remaining = parseFloat(data.remaining_minutes) || 0;
+            if (remaining <= 0) {
+                const key = 'shown_exhausted_warning_' + data.bot_id;
+                if (!localStorage.getItem(key)) {
+                    showQuotaExhaustedWarningModal(data.bot_name || 'Bot');
+                    localStorage.setItem(key, 'true');
+                }
+            } else if (remaining <= 100) {
+                const key = 'shown_low_minutes_warning_' + data.bot_id;
+                if (!localStorage.getItem(key)) {
+                    showLowMinutesWarningModal(data.bot_name || 'Bot', remaining);
+                    localStorage.setItem(key, 'true');
+                }
+            } else {
+                localStorage.removeItem('shown_low_minutes_warning_' + data.bot_id);
+                localStorage.removeItem('shown_exhausted_warning_' + data.bot_id);
+            }
+        }
+
+        function checkMinutesUsageThreshold(data) {
+            if (!data || data.is_admin || !data.bot_id) return;
+            const used = parseFloat(data.used_minutes) || 0;
+            const threshold = Math.floor(used / 500) * 500;
+            if (threshold >= 500) {
+                const key = 'shown_warning_threshold_' + data.bot_id;
+                const lastShown = parseInt(localStorage.getItem(key) || '0', 10);
+                if (threshold > lastShown) {
+                    showMinutesWarningModal(data.bot_name || 'Bot', used, threshold);
+                    localStorage.setItem(key, threshold.toString());
+                }
+            }
+        }
+
+        // Load minutes usage
+        async function loadMinutesUsage() {
+            try {
+                const res = await fetch('/api/minutes-usage/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const badge = document.getElementById('minutesBadge');
+                const text = document.getElementById('minutesText');
+                const tooltip = document.getElementById('minutesTooltip');
+                if (!badge) return;
+
+                if (data.is_admin) {
+                    badge.style.display = 'none';
+                    return;
+                } else {
+                    if (data.quota_minutes === 0 && !data.bot_name) {
+                        badge.style.display = 'none';
+                        return;
+                    }
+                    text.textContent = `${data.used_minutes}/${data.quota_minutes} min`;
+                    let tooltipHtml = `<div class="tooltip-row"><span>Bot</span><span>${data.bot_name || '—'}</span></div>`;
+                    tooltipHtml += `<div class="tooltip-row"><span>Used</span><span>${data.used_minutes} min</span></div>`;
+                    tooltipHtml += `<div class="tooltip-row remaining"><span>⏳ Remaining</span><span>${data.remaining_minutes} min</span></div>`;
+                    tooltip.innerHTML = tooltipHtml;
+
+                    const pct = data.quota_minutes > 0 ? (data.used_minutes / data.quota_minutes) * 100 : 0;
+                    badge.classList.remove('warning', 'danger');
+                    if (pct >= 90 || (data.remaining_minutes <= 100)) badge.classList.add('danger');
+                    else if (pct >= 70) badge.classList.add('warning');
+
+                    // Check for threshold warning popups
+                    checkMinutesUsageThreshold(data);
+                    checkRemainingMinutesThreshold(data);
+                }
+                badge.style.display = 'inline-flex';
+            } catch (e) {
+                console.error('Failed to load minutes usage', e);
+            }
+        }
+        loadMinutesUsage();
+
+        async function uploadProfilePicture(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const avatar = document.getElementById('profileAvatar');
+            const originalText = avatar.textContent;
+            avatar.textContent = '...';
+
+            const formData = new FormData();
+            formData.append('profile_picture', file);
+
+            try {
+                const response = await fetch('/api/accounts/profile/upload-picture/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('profile_picture', data.profile_picture || '');
+                    if (avatar) {
+                        avatar.style.backgroundImage = `url('${data.profile_picture}')`;
+                        avatar.textContent = '';
+                    }
+                } else {
+                    const err = await response.json();
+                    alert('Failed to upload profile picture: ' + (err.error || 'Unknown error'));
+                    avatar.textContent = originalText;
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error uploading profile picture.');
+                avatar.textContent = originalText;
+            }
+        }
+
+        // Set profile avatar & name from localStorage & sync from API
+        (async function () {
+            const username = localStorage.getItem('username') || 'User';
+            const avatar = document.getElementById('profileAvatar');
+            const pdName = document.getElementById('pdName');
+            if (pdName) pdName.textContent = username;
+
+            const updateAvatar = (picUrl) => {
+                if (avatar) {
+                    const currentUsername = localStorage.getItem('username') || 'User';
+                    if (picUrl && picUrl !== 'null' && picUrl !== '') {
+                        avatar.style.backgroundImage = `url('${picUrl}')`;
+                        avatar.textContent = '';
+                    } else {
+                        avatar.style.backgroundImage = 'linear-gradient(135deg, #4f46e5, #7c3aed)';
+                        avatar.textContent = currentUsername.charAt(0).toUpperCase();
+                    }
+                }
+            };
+
+            const updateCompanyLogo = (logoUrl) => {
+                const logoIcon = document.querySelector('.header-logo-icon');
+                const companyLogoImg = document.querySelector('.header-company-logo');
+                if (logoIcon && companyLogoImg) {
+                    if (logoUrl && logoUrl !== 'null' && logoUrl !== '') {
+                        logoIcon.style.display = 'none';
+                        companyLogoImg.src = logoUrl;
+                        companyLogoImg.style.display = 'block';
+                    } else {
+                        logoIcon.style.display = 'inline-flex';
+                        companyLogoImg.style.display = 'none';
+                        companyLogoImg.src = '';
+                    }
+                }
+            };
+
+            // First load from localStorage for instant display
+            updateAvatar(localStorage.getItem('profile_picture'));
+            updateCompanyLogo(localStorage.getItem('company_logo'));
+
+            // Then fetch from server to sync and ensure it is always up to date
+            try {
+                const res = await fetch('/api/accounts/me/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('profile_picture', data.profile_picture || '');
+                    localStorage.setItem('company_logo', data.company_logo || '');
+                    localStorage.setItem('username', data.username);
+                    localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
+                    localStorage.setItem('is_admin', data.permissions?.is_admin ? 'true' : 'false');
+                    localStorage.setItem('role', data.role || '');
+                    localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
+                    if (pdName) pdName.textContent = data.username;
+                    updateAvatar(data.profile_picture);
+                    updateCompanyLogo(data.company_logo);
+                }
+            } catch (e) {
+                console.error('Failed to sync profile', e);
+            }
+
+            // Show Admin Panel button & Campaign History button if user is admin
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            if (isAdmin) {
+                document.getElementById('adminBtn').style.display = 'inline-flex';
+            }
+
+            // Show Campaign History button if user is admin OR has can_view_campaigns permission
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) {}
+            if (isAdmin || perms.can_view_campaigns) {
+                const campaignBtn = document.getElementById('campaignHistoryBtn');
+                if (campaignBtn) campaignBtn.style.display = 'inline-flex';
+                const triggerBtn = document.getElementById('triggerCallBtn');
+                if (triggerBtn) triggerBtn.style.display = 'inline-flex';
+            }
+
+            // Show Team Management button if user has permission (but hide for superadmin)
+            if (!isAdmin && perms.can_manage_team) {
+                const teamBtn = document.getElementById('teamBtn');
+                if (teamBtn) teamBtn.style.display = 'flex';
+            }
+
+            // Hide the bot filter dropdown if the user is not an admin
+            if (!isAdmin) {
+                const agentSelect = document.getElementById('filterAgent');
+                if (agentSelect) agentSelect.style.display = 'none';
+            }
+
+            // Append access token to export button
+            const token = localStorage.getItem('access_token');
+            const exportBtn = document.querySelector('.export-btn');
+            if (exportBtn && token) {
+                exportBtn.href = `/bot/export/leads/?token=${token}`;
+            }
+        })();
+
+        function toggleProfile(e) {
+            e.stopPropagation();
+            document.getElementById('profileDropdown').classList.toggle('open');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function () {
+            document.getElementById('profileDropdown').classList.remove('open');
+        });
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('username');
+            // replace() removes this page from history — back button will skip it
+            window.location.replace('/accounts/login/');
+        }
+        function getAuthHeaders() {
+            return {
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token'),
+                'Content-Type': 'application/json'
+            };
+        }
+    </script>
+
+    <!-- STAT CARDS (clickable filters) -->
+    <div class="cards">
+        <div class="card" onclick="filterByLevel('hot')" id="cardHot">
+            <div class="card-label">🔥 Hot Leads</div>
+            <div class="card-value" id="statHot">—</div>
+            <div class="card-sub">Ready to buy</div>
+        </div>
+        <div class="card" onclick="filterByLevel('warm')" id="cardWarm">
+            <div class="card-label">🌤 Warm Leads</div>
+            <div class="card-value" id="statWarm">—</div>
+            <div class="card-sub">Mid-level interest</div>
+        </div>
+        <div class="card" onclick="filterByLevel('cold')" id="cardCold">
+            <div class="card-label">❄️ Cold Leads</div>
+            <div class="card-value" id="statCold">—</div>
+            <div class="card-sub">Low interest</div>
+        </div>
+        <div class="card" onclick="filterByLevel('not_interested')" id="cardNot">
+            <div class="card-label">⛔ Not Interested</div>
+            <div class="card-value" id="statNot">—</div>
+            <div class="card-sub">Declined</div>
+        </div>
+
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+        <!-- LEAD LIST -->
+        <div class="lead-list-panel">
+            <div class="search-box">
+                <input class="search-input" type="text" placeholder="🔍 Search name, email, topic…"
+                    oninput="filterSearch(this.value)" id="searchInput">
+            </div>
+            <div class="filter-box">
+                <select id="filterLeadLevel" onchange="applyAdvancedFilters()" class="filter-select">
+                    <option value="">🎯 All Leads</option>
+                    <option value="hot">🔥 Hot Leads</option>
+                    <option value="warm">🤝 Warm Leads</option>
+                    <option value="cold">❄️ Cold Leads</option>
+                    <option value="not_interested">🚫 Not Interested</option>
+
+                </select>
+                <select id="filterAgent" onchange="applyAdvancedFilters()" class="filter-select" style="max-width: 110px;">
+                    <option value="">🤖 All Bots</option>
+                </select>
+                <div style="display: inline-flex; align-items: center; gap: 6px; position: relative;">
+                    <select id="filterDate" onchange="handleDateFilterChange()" class="filter-select">
+                        <option value="">📅 Date Range</option>
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="custom">📅 Custom Date...</option>
+                    </select>
+                    <input type="date" id="customDatePicker" onchange="handleCalendarDateSelect(this.value)" style="position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; border: none; padding: 0; margin: 0; left: 0; bottom: 0;" />
+                </div>
+            </div>
+            <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div>
+                    <span>All Leads</span>
+                    <span id="leadCount" style="margin-left: 6px;">0 leads</span>
+                </div>
+                <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                    <select id="filterCallType" onchange="applyAdvancedFilters()" class="filter-select" style="width: auto; padding: 4px 24px 4px 8px; font-size: 11px; height: 28px; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; font-weight: 600; color: #475569; border: 1px solid #cbd5e1; outline: none;">
+                        <option value="">📞 All Calls</option>
+                        <option value="INBOUND">📥 Inbound</option>
+                        <option value="OUTBOUND">📤 Outbound</option>
+                    </select>
+                    <a href="/bot/export/leads/" class="export-btn" download style="text-decoration: none; padding: 6px 12px; font-size: 11.5px; background: #10b981; color: #fff; border-radius: 6px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #059669; transition: all 0.2s;">
+                        📗 Export
+                    </a>
+                </div>
+            </div>
+            <div class="lead-list" id="leadList">
+                <div class="loading">
+                    <div class="spinner"></div> Loading leads…
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAIL PANEL -->
+        <div class="detail-panel">
+            <div class="detail-header" id="detailHeader">
+                <div class="dh-top">
+                    <button class="back-to-list-btn" onclick="goBackToList(event)">← Back</button>
+                    <div class="dh-avatar" id="dhAvatar">?</div>
+                    <div class="dh-info">
+                        <div class="dh-name" id="dhName">—</div>
+                        <div class="dh-sub" id="dhSub">—</div>
+                    </div>
+                    <div class="dh-tags" id="dhTags"></div>
+                </div>
+                <div class="detail-cards" id="detailCards"></div>
+                <div id="recordingBox"></div>
+            </div>
+
+            <div class="detail-summary" id="detailSummary">
+                <div class="ds-label">📋 AI Analysis Summary</div>
+                <div class="ds-text" id="dsSummaryText">—</div>
+            </div>
+
+            <div class="detail-empty" id="detailEmpty">
+                <div class="detail-empty-icon">🎯</div>
+                <div class="detail-empty-title">Select a lead to view analysis</div>
+                <div class="detail-empty-sub">Click on any lead from the list to see full details and conversation</div>
+            </div>
+        </div>
+
+        <!-- CONVERSATION PANEL -->
+        <div class="conversation-panel" id="conversationPanel">
+            <div class="conversation-header">
+                <span class="ch-icon">💬</span>
+                <span class="ch-title">Conversation History</span>
+            </div>
+            <div class="messages" id="messagesBox"></div>
+        </div>
+
+    </div>
+
+    <!-- DIALER MONITOR (Floating & Draggable) -->
+    <div id="dialerMonitor"
+        style="position:fixed; bottom:24px; right:24px; width:240px; background:#0f172a; border-radius:12px; padding:12px 14px; color:#fff; box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:9999; display:none; font-family:sans-serif; user-select:none;">
+        
+        <!-- Drag Handle Bar -->
+        <div class="drag-header" style="width: 100%; cursor: move; display: flex; flex-direction: column; align-items: center; margin-bottom: 8px;">
+            <div style="width: 32px; height: 4px; background: rgba(255,255,255,0.25); border-radius: 2px; margin-bottom: 8px;"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; width: 100%;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <div id="dmIndicator"
+                        style="width:6px; height:6px; background:#10b981; border-radius:50%; box-shadow:0 0 6px #10b981;">
+                    </div>
+                    <span id="dmTitle"
+                        style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">Campaign Active</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="dmStatus" style="font-size:9px; opacity:0.6;">Running</span>
+                    <button onclick="closeMonitor()"
+                        style="background:none; border:none; color:#fff; cursor:pointer; font-size:14px; opacity:0.5; padding:0; line-height:1;">&times;</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dmSuspendedBanner" style="background:#fef3c7; color:#d97706; border-radius:6px; padding:6px; font-size:9px; font-weight:600; margin-bottom:8px; display:none; border: 1px solid #fde68a; line-height:1.2;">
+            ⏰ Outbound hours closed. Campaign will auto-resume tomorrow at 09:30 AM.
+        </div>
+
+        <div
+            style="height:4px; background:rgba(255,255,255,0.1); border-radius:10px; margin-bottom:8px; overflow:hidden;">
+            <div id="dmProgressFill" style="height:100%; width:0%; background:#4f46e5; transition:width 0.5s;"></div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:10px; opacity: 0.9;">
+            <span>Progress: <b id="dmProgressText">0/0</b></span>
+            <span>Missed: <b id="dmMissedCount">0</b></span>
+        </div>
+
+        <div id="dmActiveBox" style="margin-bottom:8px; display:none;">
+            <div style="font-size:9px; text-transform:uppercase; opacity:0.5; margin-bottom:4px;">Current Calls</div>
+            <div id="dmActiveList" style="display:flex; flex-wrap:wrap; gap:4px;"></div>
+        </div>
+
+        <div id="dmMissedBox" style="display:none;">
+            <div style="font-size:9px; text-transform:uppercase; color:#f87171; margin-bottom:4px;">No Answer</div>
+            <div id="dmMissedList" style="display:flex; flex-wrap:wrap; gap:4px; max-height:90px; overflow-y:auto; padding-right:4px;"></div>
+        </div>
+    </div>
+    <script>
+        // Make the DIV element draggable:
+        function dragElement(elmnt) {
+            var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            var header = elmnt.querySelector(".drag-header") || elmnt;
+
+            header.onmousedown = dragMouseDown;
+            header.ontouchstart = dragTouchStart;
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                if (e.target.closest('button')) return;
+                e.preventDefault();
+                initDrag(e.clientX, e.clientY);
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+            }
+
+            function dragTouchStart(e) {
+                if (e.target.closest('button')) return;
+                var touch = e.touches[0];
+                initDrag(touch.clientX, touch.clientY);
+                document.ontouchend = closeDragElement;
+                document.ontouchmove = elementTouchDrag;
+            }
+
+            function initDrag(clientX, clientY) {
+                const rect = elmnt.getBoundingClientRect();
+                elmnt.style.top = rect.top + "px";
+                elmnt.style.left = rect.left + "px";
+                elmnt.style.bottom = "auto";
+                elmnt.style.right = "auto";
+                pos3 = clientX;
+                pos4 = clientY;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                updatePosition(e.clientX, e.clientY);
+            }
+
+            function elementTouchDrag(e) {
+                var touch = e.touches[0];
+                updatePosition(touch.clientX, touch.clientY);
+            }
+
+            function updatePosition(clientX, clientY) {
+                pos1 = pos3 - clientX;
+                pos2 = pos4 - clientY;
+                pos3 = clientX;
+                pos4 = clientY;
+
+                let newTop = elmnt.offsetTop - pos2;
+                let newLeft = elmnt.offsetLeft - pos1;
+
+                const maxLeft = window.innerWidth - elmnt.offsetWidth;
+                const maxTop = window.innerHeight - elmnt.offsetHeight;
+
+                if (newLeft < 0) newLeft = 0;
+                if (newLeft > maxLeft) newLeft = maxLeft;
+                if (newTop < 0) newTop = 0;
+                if (newTop > maxTop) newTop = maxTop;
+
+                elmnt.style.top = newTop + "px";
+                elmnt.style.left = newLeft + "px";
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+                document.ontouchend = null;
+                document.ontouchmove = null;
+            }
+        }
+        dragElement(document.getElementById("dialerMonitor"));
+
+        let allLeads = [];
+        let activeFilter = null;
+        let activeLeadSession = null;
+        let searchQuery = "";
+        let monitorClosedManually = false;
+        let lastCampaignId = null; // Track if it's a new campaign to reset close state
+        let missedNumbers = []; // Store unpicked numbers for the main dashboard section
+
+        function closeMonitor() {
+            monitorClosedManually = true;
+            document.getElementById("dialerMonitor").style.display = "none";
+        }
+
+        const LEVEL_EMOJI = { hot: "🔥", warm: "🌤", cold: "❄️", not_interested: "⛔", missed: "📞" };
+        const LEVEL_LABEL = { hot: "Hot", warm: "Warm", cold: "Cold", not_interested: "Not Interested", missed: "Missed" };
+
+        /* ── Helpers ────────────────────────────── */
+        function fmtTime(iso) {
+            if (!iso) return "";
+            return new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+        }
+        function fmtDate(iso) {
+            if (!iso) return "";
+            return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+        }
+        function fmtDateTime(iso) {
+            return iso ? fmtDate(iso) + " " + fmtTime(iso) : "—";
+        }
+        function timeAgo(iso) {
+            if (!iso) return "";
+            const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+            if (diff < 60) return "Just now";
+            if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+            if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+            return Math.floor(diff / 86400) + "d ago";
+        }
+        function escHtml(t) {
+            if (!t) return "";
+            return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+        }
+
+        /* ── Animations ─────────────────────────── */
+        function animateCount(id, target) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const start = parseInt(el.textContent.replace(/[^0-9]/g, '')) || 0;
+            const duration = 1500;
+            const startTime = performance.now();
+
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeOutQuad = t => t * (2 - t);
+                const current = Math.floor(start + (target - start) * easeOutQuad(progress));
+                el.textContent = current;
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
+
+        /* ── Load Data ──────────────────────────── */
+         async function loadLeads() {
+            try {
+                let url = "/api/lead-analysis/data/";
+                const res = await fetch(url, { headers: getAuthHeaders() });
+                const data = await res.json();
+
+                animateCount("statHot", data.stats.hot);
+                animateCount("statWarm", data.stats.warm);
+                animateCount("statCold", data.stats.cold);
+                animateCount("statNot", data.stats.not_interested);
+
+                allLeads = data.leads || [];
+
+                // Dynamically populate bot agent filter (only for admin)
+                const agentSelect = document.getElementById("filterAgent");
+                if (agentSelect) {
+                    const isAdmin = localStorage.getItem('is_admin') === 'true';
+                    if (isAdmin) {
+                        try {
+                            const agentsRes = await fetch("/api/agents/my/", { headers: getAuthHeaders() });
+                            if (agentsRes.ok) {
+                                const agentsList = await agentsRes.json();
+                                const currentVal = agentSelect.value;
+                                agentSelect.innerHTML = '<option value="">🤖 All Bots</option>';
+                                agentsList.forEach(agent => {
+                                    const opt = document.createElement("option");
+                                    opt.value = agent.name;
+                                    opt.textContent = agent.name;
+                                    if (agent.name === currentVal) opt.selected = true;
+                                    agentSelect.appendChild(opt);
+                                });
+                            }
+                        } catch (err) {
+                            console.error("Error fetching agents for filter:", err);
+                        }
+                    } else {
+                        agentSelect.style.display = 'none';
+                    }
+                }
+
+                renderLeads();
+
+                // Auto-select the newest lead if a call just started (summary === "Call started...")
+                // or if it was created very recently and no lead is selected yet.
+                if (allLeads.length > 0) {
+                    const newestLead = allLeads[0];
+                    const leadAgeSeconds = (Date.now() - new Date(newestLead.analyzed_at).getTime()) / 1000;
+                    if (!activeLeadSession && leadAgeSeconds < 30) {
+                        console.log("Auto-selecting brand new lead:", newestLead.session_id);
+                        openLead(newestLead);
+                    } else if (newestLead.summary === "Call started..." && activeLeadSession !== newestLead.session_id && leadAgeSeconds < 15) {
+                        console.log("Auto-switching to starting call:", newestLead.session_id);
+                        openLead(newestLead);
+                    }
+                }
+            } catch (e) {
+                console.error("Lead load error:", e);
+            }
+        }
+
+        /* ── Filter by Level (card click) ───────── */
+        function filterByLevel(level) {
+            if (activeFilter === level) {
+                activeFilter = null;
+            } else {
+                activeFilter = level;
+            }
+
+            // Sync dropdown value with the card click
+            const selectEl = document.getElementById("filterLeadLevel");
+            if (selectEl) {
+                selectEl.value = activeFilter || "";
+            }
+
+            // Update card active state
+            document.querySelectorAll(".card").forEach(c => c.classList.remove("active-filter"));
+            if (activeFilter) {
+                const cardMap = {
+                    hot: "cardHot",
+                    warm: "cardWarm",
+                    cold: "cardCold",
+                    not_interested: "cardNot"
+                };
+                document.getElementById(cardMap[activeFilter])?.classList.add("active-filter");
+            }
+            renderLeads();
+        }
+
+        /* ── Filter by Search ───────────────────── */
+        function filterSearch(query) {
+            searchQuery = query.toLowerCase();
+            renderLeads();
+        }
+
+        /* ── Render Lead List ───────────────────── */
+        function renderLeads() {
+            let filtered = allLeads;
+            if (activeFilter) {
+                filtered = filtered.filter(l => l.lead_level === activeFilter);
+            }
+            if (searchQuery) {
+                const queryDigits = searchQuery.replace(/\D/g, "");
+                filtered = filtered.filter(l => {
+                    const nameMatch = (l.user_name || "").toLowerCase().includes(searchQuery);
+                    const emailMatch = (l.user_email || "").toLowerCase().includes(searchQuery);
+                    const topicMatch = (l.interest_topic || "").toLowerCase().includes(searchQuery);
+                    const agentMatch = (l.agent_name || "").toLowerCase().includes(searchQuery);
+                    
+                    const rawUserNum = (l.user_number || "").toLowerCase();
+                    const rawCustNum = (l.customer_number || "").toLowerCase();
+                    const userNumMatch = rawUserNum.includes(searchQuery);
+                    const custNumMatch = rawCustNum.includes(searchQuery);
+                    
+                    let digitMatch = false;
+                    if (queryDigits.length > 0) {
+                        const userDigits = rawUserNum.replace(/\D/g, "");
+                        const custDigits = rawCustNum.replace(/\D/g, "");
+                        digitMatch = userDigits.includes(queryDigits) || custDigits.includes(queryDigits);
+                    }
+                    
+                    return nameMatch || emailMatch || topicMatch || agentMatch || userNumMatch || custNumMatch || digitMatch;
+                });
+            }
+
+            // Apply advanced filters (except lead_level, which is handled by activeFilter)
+            const selAgent = document.getElementById("filterAgent")?.value || "";
+            const selDate = document.getElementById("filterDate")?.value || "";
+            if (selAgent) {
+                filtered = filtered.filter(l => l.agent_name === selAgent);
+            }
+            const selCallType = document.getElementById("filterCallType")?.value || "";
+            if (selCallType) {
+                filtered = filtered.filter(l => (l.call_type || "OUTBOUND") === selCallType);
+            }
+            if (selDate) {
+                const now = new Date();
+                const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
+
+                filtered = filtered.filter(l => {
+                    const lTime = new Date(l.analyzed_at || l.call_started_at).getTime();
+                    if (selDate === "today") return lTime >= todayStart;
+                    if (selDate === "yesterday") return lTime >= yesterdayStart && lTime < todayStart;
+                    if (selDate.startsWith("custom_")) {
+                        const customVal = selDate.substring(7); // Extract "YYYY-MM-DD"
+                        const parts = customVal.split("-");
+                        const customStart = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getTime();
+                        const customEnd = customStart + 24 * 60 * 60 * 1000;
+                        return lTime >= customStart && lTime < customEnd;
+                    }
+                    return true;
+                });
+            }
+
+            const list = document.getElementById("leadList");
+            document.getElementById("leadCount").textContent = filtered.length + " leads";
+
+            if (!filtered.length) {
+                list.innerHTML = '<div style="padding:30px 16px;text-align:center;color:#475569;font-size:13px;">No leads found.<br>Try adjusting your search or filters.</div>';
+                return;
+            }
+
+            list.innerHTML = "";
+            filtered.forEach(lead => {
+                const item = document.createElement("div");
+                item.className = "lead-item" + (activeLeadSession === lead.session_id ? " active" : "");
+                const emoji = LEVEL_EMOJI[lead.lead_level] || "❓";
+                const langLabel = { en: "English", hi: "Hindi", gu: "Gujarati" }[lead.language || "en"] || "English";
+
+                item.innerHTML = `
+            <div class="lead-badge ${lead.lead_level}">${emoji}</div>
+            <div class="lead-info">
+                <div class="lead-name" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span>${escHtml(lead.customer_number || lead.user_number || lead.user_name || "Unknown Caller")}</span>
+                    <span class="call-type-tag ${(lead.call_type || 'OUTBOUND').toLowerCase()}">
+                        ${lead.call_type === 'INBOUND' ? '📥 Inbound' : '📤 Outbound'}
+                    </span>
+                </div>
+                <div class="lead-topic">${escHtml(lead.interest_topic || "General Interest")} · ${escHtml(lead.agent_name)} · <span style="font-weight:600; opacity:0.8; color:#6366f1;">🌐 ${langLabel}</span></div>
+                <div class="lead-meta">${timeAgo(lead.analyzed_at)} · 👤 ${escHtml(lead.user_name || "No Name")}</div>
+            </div>
+            <div class="lead-level-tag ${lead.lead_level}">${LEVEL_LABEL[lead.lead_level] || "?"}</div>
+        `;
+                item.onclick = () => openLead(lead);
+                list.appendChild(item);
+            });
+            updateExportUrl();
+        }
+
+        function updateExportUrl() {
+            const token = localStorage.getItem('access_token');
+            const exportBtn = document.querySelector('.export-btn');
+            if (!exportBtn || !token) return;
+
+            let url = `/bot/export/leads/?token=${token}`;
+
+            let level = activeFilter || "";
+            const selLeadLevel = document.getElementById("filterLeadLevel")?.value || "";
+            if (!level && selLeadLevel) {
+                level = selLeadLevel;
+            }
+            if (level) {
+                url += `&lead_level=${encodeURIComponent(level)}`;
+            }
+
+            const selAgent = document.getElementById("filterAgent")?.value || "";
+            if (selAgent) {
+                url += `&agent=${encodeURIComponent(selAgent)}`;
+            }
+
+            const selCallType = document.getElementById("filterCallType")?.value || "";
+            if (selCallType) {
+                url += `&call_type=${encodeURIComponent(selCallType)}`;
+            }
+
+            const selDate = document.getElementById("filterDate")?.value || "";
+            if (selDate) {
+                url += `&date_filter=${encodeURIComponent(selDate)}`;
+            }
+
+            exportBtn.href = url;
+        }
+
+        function applyAdvancedFilters() {
+            const selLeadLevel = document.getElementById("filterLeadLevel")?.value || "";
+            activeFilter = selLeadLevel || null;
+
+            // Update card active state to match
+            document.querySelectorAll(".card").forEach(c => c.classList.remove("active-filter"));
+            if (activeFilter) {
+                const cardMap = {
+                    hot: "cardHot",
+                    warm: "cardWarm",
+                    cold: "cardCold",
+                    not_interested: "cardNot"
+                };
+                document.getElementById(cardMap[activeFilter])?.classList.add("active-filter");
+            }
+            renderLeads();
+        }
+
+        function handleCalendarDateSelect(val) {
+            if (!val) return;
+            const filterDateSelect = document.getElementById("filterDate");
+            if (!filterDateSelect) return;
+            
+            const parts = val.split("-");
+            const year = parts[0];
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const month = monthNames[parseInt(parts[1]) - 1];
+            const day = parseInt(parts[2]);
+            const formattedDate = `${month} ${day}, ${year}`;
+
+            let customOption = document.querySelector('#filterDate option.temp-custom-option');
+            if (!customOption) {
+                customOption = document.createElement("option");
+                customOption.className = "temp-custom-option";
+                const customTriggerOpt = document.querySelector('#filterDate option[value="custom"]');
+                if (customTriggerOpt) {
+                    filterDateSelect.insertBefore(customOption, customTriggerOpt);
+                } else {
+                    filterDateSelect.appendChild(customOption);
+                }
+            }
+            customOption.value = "custom_" + val;
+            customOption.textContent = "📅 " + formattedDate;
+            filterDateSelect.value = "custom_" + val;
+            filterDateSelect.dataset.currentValue = "custom_" + val;
+
+            applyAdvancedFilters();
+        }
+
+        function handleDateFilterChange() {
+            const select = document.getElementById("filterDate");
+            const picker = document.getElementById("customDatePicker");
+            if (!select) return;
+
+            if (select.value === "custom") {
+                if (picker) {
+                    picker.showPicker ? picker.showPicker() : picker.focus();
+                }
+                select.value = select.dataset.currentValue || "";
+            } else {
+                const tempOpt = document.querySelector('#filterDate option.temp-custom-option');
+                if (tempOpt) {
+                    tempOpt.remove();
+                }
+                if (picker) {
+                    picker.value = "";
+                }
+                select.dataset.currentValue = select.value;
+                applyAdvancedFilters();
+            }
+        }
+
+        function goBackToList(event) {
+            if (event) event.preventDefault();
+            const mainContainer = document.querySelector(".main");
+            if (mainContainer) mainContainer.classList.remove("lead-active");
+            activeLeadSession = null;
+            renderLeads();
+            
+            const header = document.getElementById("detailHeader");
+            const summary = document.getElementById("detailSummary");
+            const empty = document.getElementById("detailEmpty");
+            const box = document.getElementById("messagesBox");
+            const convPanel = document.getElementById("conversationPanel");
+            
+            if (header) header.classList.remove("show");
+            if (summary) summary.classList.remove("show");
+            if (empty) empty.style.display = "flex";
+            if (box) box.classList.remove("show");
+            if (convPanel) convPanel.classList.remove("show");
+        }
+
+        /* ── Open Lead Detail ───────────────────── */
+        async function openLead(lead) {
+            activeLeadSession = lead.session_id;
+            renderLeads(); // Update active state
+
+            const mainContainer = document.querySelector(".main");
+            if (mainContainer) mainContainer.classList.add("lead-active");
+
+            const header = document.getElementById("detailHeader");
+            const summary = document.getElementById("detailSummary");
+            const empty = document.getElementById("detailEmpty");
+            const box = document.getElementById("messagesBox");
+            const convPanel = document.getElementById("conversationPanel");
+
+            // Show header
+            header.classList.add("show");
+            summary.classList.add("show");
+            empty.style.display = "none";
+            box.classList.add("show");
+            if (convPanel) convPanel.classList.add("show");
+
+            // Avatar
+            const avatar = document.getElementById("dhAvatar");
+            avatar.className = "dh-avatar " + lead.lead_level;
+            avatar.textContent = (lead.customer_number || lead.user_number) ? "📱" : "👤";
+
+            // Name & sub
+            document.getElementById("dhName").textContent = lead.customer_number || lead.user_number || lead.user_name || "Unknown Caller";
+            document.getElementById("dhSub").textContent = `${lead.agent_name} · ${fmtDateTime(lead.call_started_at)}`;
+
+            // Tags
+            document.getElementById("dhTags").innerHTML = `
+        <span class="lead-level-tag ${lead.lead_level}">${LEVEL_EMOJI[lead.lead_level]} ${LEVEL_LABEL[lead.lead_level]}</span>
+        <span class="call-type-tag ${(lead.call_type || 'OUTBOUND').toLowerCase()}" style="margin-left: 6px;">
+            ${lead.call_type === 'INBOUND' ? '📥 Inbound' : '📤 Outbound'}
+        </span>
+    `;
+
+            // Detail cards
+            const cards = document.getElementById("detailCards");
+            cards.innerHTML = `
+        <div class="dc"><div class="dc-label">Name</div><div class="dc-value">${escHtml(lead.user_name || "—")}</div></div>
+        <div class="dc"><div class="dc-label">Email</div><div class="dc-value">${escHtml(lead.user_email || "—")}</div></div>
+        <div class="dc"><div class="dc-label">Customer Phone</div><div class="dc-value" style="color:#22d3ee; font-weight:700">${escHtml(lead.customer_number || lead.user_number || "—")}</div></div>
+        <div class="dc"><div class="dc-label">Interest</div><div class="dc-value">${escHtml(lead.interest_topic || "—")}</div></div>
+        <div class="dc"><div class="dc-label">Appointment / Visit Date</div><div class="dc-value" style="color:#a855f7; font-weight:700">${escHtml(lead.appointment_date || "—")}</div></div>
+        <div class="dc"><div class="dc-label">Duration (Sec)</div><div class="dc-value">${lead.actual_duration || "—"}s</div></div>
+        <div class="dc"><div class="dc-label">Call Status</div><div class="dc-value" style="color:#fbbf24">${escHtml(lead.disposition || "Waiting CDR...")}</div></div>
+        <div class="dc">
+            <div class="dc-label">Update Status</div>
+            <div class="dc-value" style="margin-top: 2px;">
+                <select id="updateLeadLevelSelect" class="update-lead-select" onchange="updateLeadLevel('${lead.session_id}', this.value)">
+                    <option value="hot" ${lead.lead_level === 'hot' ? 'selected' : ''}>🔥 Hot</option>
+                    <option value="warm" ${lead.lead_level === 'warm' ? 'selected' : ''}>⚡ Warm</option>
+                    <option value="cold" ${lead.lead_level === 'cold' ? 'selected' : ''}>❄️ Cold</option>
+                    <option value="not_interested" ${lead.lead_level === 'not_interested' ? 'selected' : ''}>⏹ Not Interested</option>
+                </select>
+            </div>
+        </div>
+        <div class="dc"><div class="dc-label">Bot Line (DID)</div><div class="dc-value" style="font-size:11px; opacity:0.8">${escHtml(lead.bot_number || "—")}</div></div>
+        <div class="dc"><div class="dc-label">Analyzed</div><div class="dc-value">${fmtDateTime(lead.analyzed_at)}</div></div>
+    `;
+
+            // Recording Player
+            const recBox = document.getElementById("recordingBox");
+            recBox.style.padding = "10px 0 0 0";
+            recBox.style.marginTop = "10px";
+            recBox.style.borderTop = "1px solid #f1f5f9";
+
+            if (lead.recording_url) {
+                recBox.innerHTML = `
+            <div class="ds-label" style="color: #4f46e5; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                <span style="animation: pulse 2s infinite;">🎵</span> Call Recording
+            </div>
+            <audio controls style="width: 100%; height: 40px; border-radius: 8px; background: #f8fafc;">
+                <source src="/api/proxy-audio/?url=${encodeURIComponent(lead.recording_url)}" type="audio/wav">
+                Your browser does not support audio.
+            </audio>
+        `;
+            } else {
+                recBox.innerHTML = `
+            <div style="padding: 12px; background: #f1f5f9; border-radius: 10px; color: #64748b; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                <span>⏳</span> Recording not available yet (Waiting for telecom data...)
+            </div>
+        `;
+            }
+
+            // Summary
+            document.getElementById("dsSummaryText").textContent = lead.is_missed_mock ? "This call was not picked up by the customer." : (lead.summary || "No summary available.");
+
+            if (lead.is_missed_mock) {
+                box.innerHTML = '<div style="padding:40px;text-align:center;color:#64748b;font-size:14px;"><div style="font-size:32px;margin-bottom:12px;">📞</div>The customer did not answer the call. There is no conversation to display.</div>';
+                return;
+            }
+
+            // Load conversation
+            box.innerHTML = '<div class="loading"><div class="spinner"></div> Loading conversation…</div>';
+
+            try {
+                const res = await fetch(`/api/lead-analysis/detail/${lead.session_id}/`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                renderMessages(data.messages || []);
+            } catch (e) {
+                box.innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;font-size:13px;">Failed to load conversation</div>';
+            }
+        }
+
+        /* ── Render Messages ────────────────────── */
+        function renderMessages(messages) {
+            const box = document.getElementById("messagesBox");
+            box.innerHTML = "";
+
+            if (!messages.length) {
+                box.innerHTML = '<div style="padding:30px;text-align:center;color:#475569;font-size:13px;">No messages in this session.</div>';
+                return;
+            }
+
+            messages.forEach(m => {
+                const div = document.createElement("div");
+                div.className = "msg " + (m.role === "user" ? "user-msg" : "bot-msg");
+                div.innerHTML = `<span class="msg-label">${m.role === "user" ? "👤 User" : "🤖 Bot"}</span>${escHtml(m.text)}<div class="msg-time">${fmtTime(m.created_at)}</div>`;
+                box.appendChild(div);
+            });
+
+            box.scrollTop = box.scrollHeight;
+        }
+
+        /* ── Auto Refresh ───────────────────────── */
+        async function pollCampaign() {
+            try {
+                const res = await fetch("/bot/auto-campaign/status/", { headers: getAuthHeaders() });
+                const data = await res.json();
+                const monitor = document.getElementById("dialerMonitor");
+
+                // Reset closed state if a new campaign starts (based on total or start time)
+                if (data.active && lastCampaignId !== data.started_at) {
+                    monitorClosedManually = false;
+                    lastCampaignId = data.started_at;
+                }
+
+                // Hide if:
+                // 1. Manually closed AND campaign is NOT active
+                // 2. No campaign data at all
+                if ((monitorClosedManually && !data.active) || (!data.active && data.total === 0)) {
+                    monitor.style.display = "none";
+                    return;
+                }
+
+                // Show if active OR if not manually closed and has missed calls
+                if (data.active || (!monitorClosedManually && data.total > 0)) {
+                    monitor.style.display = "block";
+                } else {
+                    monitor.style.display = "none";
+                    return;
+                }
+
+                const indicator = document.getElementById("dmIndicator");
+                const title = document.getElementById("dmTitle");
+                const suspendedBanner = document.getElementById("dmSuspendedBanner");
+
+                if (data.suspended_due_to_hours) {
+                    indicator.style.background = "#d97706";
+                    indicator.style.boxShadow = "0 0 8px #d97706";
+                    title.textContent = "Campaign Suspended";
+                    document.getElementById("dmStatus").textContent = "Suspended";
+                    if (suspendedBanner) suspendedBanner.style.display = "block";
+                } else {
+                    if (suspendedBanner) suspendedBanner.style.display = "none";
+                    if (data.active) {
+                        indicator.style.background = "#10b981";
+                        indicator.style.boxShadow = "0 0 8px #10b981";
+                        title.textContent = "Campaign Active";
+                        document.getElementById("dmStatus").textContent = "Running";
+                    } else {
+                        indicator.style.background = "#94a3b8";
+                        indicator.style.boxShadow = "none";
+                        title.textContent = "Campaign Finished";
+                        document.getElementById("dmStatus").textContent = "Done";
+                    }
+                }
+
+                const pct = data.total > 0 ? (data.completed / data.total) * 100 : 0;
+                document.getElementById("dmProgressFill").style.width = pct + "%";
+                document.getElementById("dmProgressText").textContent = `${data.completed}/${data.total}`;
+                document.getElementById("dmMissedCount").textContent = data.no_answer_count || 0;
+
+                // NEW: Update main dashboard stat card and list
+                missedNumbers = data.no_answer_list || [];
+
+                const activeBox = document.getElementById("dmActiveBox");
+                const activeList = document.getElementById("dmActiveList");
+                if (data.active_calls_detail && data.active_calls_detail.length > 0) {
+                    activeBox.style.display = "block";
+                    activeList.innerHTML = data.active_calls_detail.map(item => {
+                        const color = item.is_connected ? "#10b981" : "#4f46e5";
+                        const text = item.phone + (item.is_connected ? " (Connected)" : " (Dialing...)");
+                        return `<span style="font-size:9px; padding:2px 6px; background:${color}; border-radius:4px; margin-right:4px;">${text}</span>`;
+                    }).join("");
+                } else if (data.active_calls && data.active_calls.length > 0) {
+                    activeBox.style.display = "block";
+                    activeList.innerHTML = data.active_calls.map(n => `<span style="font-size:9px; padding:2px 6px; background:#4f46e5; border-radius:4px; margin-right:4px;">${n}</span>`).join("");
+                } else {
+                    activeBox.style.display = "none";
+                }
+
+                const missedBox = document.getElementById("dmMissedBox");
+                const missedList = document.getElementById("dmMissedList");
+                if (data.no_answer_list && data.no_answer_list.length > 0) {
+                    missedBox.style.display = "block";
+                    missedList.innerHTML = data.no_answer_list.map(n => `<span style="font-size:9px; padding:2px 6px; background:#ef4444; border-radius:4px;">${n}</span>`).join("");
+                } else {
+                    missedBox.style.display = "none";
+                }
+            } catch (e) { }
+        }
+
+        async function refreshActiveLeadMessages() {
+            if (!activeLeadSession) return;
+            if (activeLeadSession.startsWith("missed-")) return;
+
+            try {
+                const res = await fetch(`/api/lead-analysis/detail/${activeLeadSession}/`, { headers: getAuthHeaders() });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (activeLeadSession === data.lead.session_id) {
+                    const messages = data.messages || [];
+                    const box = document.getElementById("messagesBox");
+
+                    // Compare count to avoid cursor jump or screen flashing
+                    const currentMsgCount = box.querySelectorAll(".msg").length;
+                    if (messages.length !== currentMsgCount || box.querySelector(".loading")) {
+                        const wasScrolledToBottom = box.scrollHeight - box.clientHeight <= box.scrollTop + 50;
+                        renderMessages(messages);
+                        if (wasScrolledToBottom || currentMsgCount === 0) {
+                            box.scrollTop = box.scrollHeight;
+                        }
+                    }
+
+                    // Update summary
+                    const summaryTextEl = document.getElementById("dsSummaryText");
+                    if (summaryTextEl && data.lead.summary && summaryTextEl.textContent !== data.lead.summary) {
+                        summaryTextEl.textContent = data.lead.summary;
+                    }
+
+                    // Update duration card, call status card, bot line (DID), and other fields
+                    const detailCards = document.getElementById("detailCards");
+                    if (detailCards) {
+                        const cards = detailCards.querySelectorAll(".dc");
+                        cards.forEach(card => {
+                            const lbl = card.querySelector(".dc-label");
+                            if (lbl && lbl.textContent === "Duration (Sec)") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = (data.lead.actual_duration || "—") + "s";
+                            }
+                            if (lbl && lbl.textContent === "Call Status") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.disposition || "Waiting CDR...";
+                            }
+                            if (lbl && lbl.textContent === "Bot Line (DID)") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.bot_number || "—";
+                            }
+                            if (lbl && lbl.textContent === "Name") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.user_name || "—";
+                            }
+                            if (lbl && lbl.textContent === "Email") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.user_email || "—";
+                            }
+                            if (lbl && lbl.textContent === "Interest") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.interest_topic || "—";
+                            }
+                            if (lbl && lbl.textContent === "Appointment / Visit Date") {
+                                const val = card.querySelector(".dc-value");
+                                if (val) val.textContent = data.lead.appointment_date || "—";
+                            }
+                        });
+                    }
+
+                    // Update Recording Player Box
+                    const recBox = document.getElementById("recordingBox");
+                    if (recBox) {
+                        const hasAudioEl = recBox.querySelector("audio") !== null;
+                        if (data.lead.recording_url) {
+                            const proxyUrl = `/api/proxy-audio/?url=${encodeURIComponent(data.lead.recording_url)}`;
+                            if (!hasAudioEl) {
+                                recBox.innerHTML = `
+                                    <div class="ds-label" style="color: #4f46e5; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                                        <span style="animation: pulse 2s infinite;">🎵</span> Call Recording
+                                    </div>
+                                    <audio controls style="width: 100%; height: 40px; border-radius: 8px; background: #f8fafc;">
+                                        <source src="${proxyUrl}" type="audio/wav">
+                                        Your browser does not support audio.
+                                    </audio>
+                                `;
+                            } else {
+                                const sourceEl = recBox.querySelector("source");
+                                const proxyUrl = `/api/proxy-audio/?url=${encodeURIComponent(data.lead.recording_url)}`;
+                                if (sourceEl && sourceEl.getAttribute("src") !== proxyUrl) {
+                                    sourceEl.setAttribute("src", proxyUrl);
+                                    recBox.querySelector("audio").load();
+                                }
+                            }
+                        } else {
+                            if (hasAudioEl || recBox.innerHTML.trim() === "" || recBox.querySelector("span")?.textContent !== "⏳") {
+                                recBox.innerHTML = `
+                                    <div style="padding: 12px; background: #f1f5f9; border-radius: 10px; color: #64748b; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+                                        <span>⏳</span> Recording not available yet (Waiting for telecom data...)
+                                    </div>
+                                `;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error auto-refreshing messages:", e);
+            }
+        }
+
+        async function updateLeadLevel(sessionId, newLevel) {
+            try {
+                const res = await fetch(`/api/lead-analysis/update-level/${sessionId}/`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ lead_level: newLevel })
+                });
+                if (res.ok) {
+                    await loadLeads();
+                    const updatedLead = allLeads.find(l => l.session_id === sessionId);
+                    if (updatedLead) {
+                        openLead(updatedLead);
+                    }
+                } else {
+                    const err = await res.json();
+                    alert("Failed to update status: " + (err.error || "Unknown error"));
+                }
+            } catch (e) {
+                console.error("Error updating lead level:", e);
+                alert("Network error updating status.");
+            }
+        }
+
+        setInterval(loadLeads, 10000);
+        setInterval(pollCampaign, 10000);
+        setInterval(refreshActiveLeadMessages, 10000);
+
+        /* ── Quick Call Modal Functions ── */
+        let agentsLoadedForQuickCall = false;
+
+        async function openQuickCallModal(e) {
+            if (e) e.preventDefault();
+            const overlay = document.getElementById('quickCallOverlay');
+            overlay.classList.add('active');
+            document.getElementById('quickCallPhone').focus();
+
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+            const role = localStorage.getItem('role') || '';
+            const assignedAgentId = localStorage.getItem('assigned_agent_id');
+            const isSuperAdmin = isSuperuser || 
+                                 (role.toLowerCase() === 'super admin' || role.toLowerCase() === 'superadmin') || 
+                                 (isAdmin && (!assignedAgentId || assignedAgentId === 'null' || assignedAgentId === ''));
+
+            const agentGroup = document.getElementById('quickCallAgentGroup');
+            if (isSuperAdmin && agentGroup) {
+                agentGroup.style.display = 'block';
+                if (!agentsLoadedForQuickCall) {
+                    try {
+                        const selectEl = document.getElementById('quickCallAgent');
+                        if (selectEl) selectEl.innerHTML = '<option value="">Loading bots...</option>';
+                        
+                        const res = await fetch("/api/agents/my/", { headers: getAuthHeaders() });
+                        if (res.ok) {
+                            const agentsList = await res.json();
+                            if (selectEl) {
+                                selectEl.innerHTML = '<option value="">Choose a Bot...</option>';
+                                agentsList.forEach(agent => {
+                                    const opt = document.createElement('option');
+                                    opt.value = agent.id;
+                                    opt.textContent = `${agent.name} (${agent.industry_name || 'Generic'})`;
+                                    selectEl.appendChild(opt);
+                                });
+                                agentsLoadedForQuickCall = true;
+                            }
+                        } else {
+                            if (selectEl) selectEl.innerHTML = '<option value="">Failed to load bots</option>';
+                        }
+                    } catch (err) {
+                        console.error("Error fetching agents for quick call:", err);
+                        const selectEl = document.getElementById('quickCallAgent');
+                        if (selectEl) selectEl.innerHTML = '<option value="">Error loading bots</option>';
+                    }
+                }
+            } else if (agentGroup) {
+                agentGroup.style.display = 'none';
+            }
+        }
+
+        function closeQuickCallModal() {
+            const overlay = document.getElementById('quickCallOverlay');
+            overlay.classList.remove('active');
+            document.getElementById('quickCallPhone').value = '';
+            const selectEl = document.getElementById('quickCallAgent');
+            if (selectEl) selectEl.value = '';
+            const alertBox = document.getElementById('quickCallAlert');
+            alertBox.style.display = 'none';
+            alertBox.innerText = '';
+        }
+
+        // Close modal when clicking on overlay background
+        document.addEventListener('click', function(e) {
+            const overlay = document.getElementById('quickCallOverlay');
+            if (e.target === overlay) {
+                closeQuickCallModal();
+            }
+        });
+
+        function handleQuickCallKeydown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                triggerQuickCall();
+            }
+        }
+
+        async function triggerQuickCall() {
+            const phoneInput = document.getElementById('quickCallPhone');
+            const nameInput = document.getElementById('quickCallName');
+            const submitBtn = document.getElementById('quickCallSubmitBtn');
+            const alertBox = document.getElementById('quickCallAlert');
+            
+            const phone = phoneInput.value.trim();
+            const name = nameInput ? nameInput.value.trim() : '';
+            const language = 'hi';
+            
+            if (!phone) {
+                alertBox.className = 'modal-alert error';
+                alertBox.innerText = 'Please enter a valid phone number.';
+                alertBox.style.display = 'block';
+                return;
+            }
+
+            const digitsOnly = phone.replace(/\D/g, '');
+            if (digitsOnly.length < 10) {
+                alertBox.className = 'modal-alert error';
+                alertBox.innerText = 'Error: Phone number must be at least 10 digits.';
+                alertBox.style.display = 'block';
+                alert('Warning: Phone number must be at least 10 digits.');
+                return;
+            }
+
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+            const role = localStorage.getItem('role') || '';
+            const assignedAgentId = localStorage.getItem('assigned_agent_id');
+            const isSuperAdmin = isSuperuser || 
+                                 (role.toLowerCase() === 'super admin' || role.toLowerCase() === 'superadmin') || 
+                                 (isAdmin && (!assignedAgentId || assignedAgentId === 'null' || assignedAgentId === ''));
+
+            let agentIdToSend = null;
+            if (isSuperAdmin) {
+                const selectEl = document.getElementById('quickCallAgent');
+                agentIdToSend = selectEl ? selectEl.value : null;
+                if (!agentIdToSend) {
+                    alertBox.className = 'modal-alert error';
+                    alertBox.innerText = 'Please select a Voice Bot.';
+                    alertBox.style.display = 'block';
+                    return;
+                }
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Triggering...';
+            alertBox.style.display = 'none';
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
+                const requestPayload = { phone: phone,name: name, language: language };
+                if (agentIdToSend) {
+                    requestPayload.agent_id = agentIdToSend;
+                }
+                
+                const response = await fetch('/bot/trigger-call/', {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(requestPayload)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alertBox.className = 'modal-alert success';
+                    alertBox.innerText = 'Call successfully triggered!';
+                    alertBox.style.display = 'block';
+                    setTimeout(() => {
+                        closeQuickCallModal();
+                    }, 2000);
+                } else {
+                    alertBox.className = 'modal-alert error';
+                    alertBox.innerText = `Error: ${data.error || 'Failed to trigger call'}`;
+                    alertBox.style.display = 'block';
+                }
+            } catch (err) {
+                console.error(err);
+                alertBox.className = 'modal-alert error';
+                alertBox.innerText = 'Network error occurred while triggering the call.';
+                alertBox.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Trigger Call
+                `;
+            }
+        }
+
+        async function initScopedUI() {
+            const assignedAgentId = localStorage.getItem('assigned_agent_id');
+            if (assignedAgentId && assignedAgentId !== 'null') {
+                const filterAgent = document.getElementById("filterAgent");
+                if (filterAgent) filterAgent.style.display = "none";
+                
+                try {
+                    const res = await fetch("/api/call-analytics/per-bot/", { headers: getAuthHeaders() });
+                    const botData = await res.json();
+                    if (botData.bots && botData.bots.length > 0) {
+                        const b = botData.bots[0];
+                        const displayName = b.company && b.company !== '—' ? `${b.company} Leads` : `${b.bot_name} Leads`;
+                        document.title = `${displayName} — Lead Intelligence`;
+                        const titleEl = document.querySelector(".header-title");
+                        if (titleEl) titleEl.textContent = displayName;
+                    }
+                } catch (e) {
+                    console.error("Error fetching bot details:", e);
+                }
+            }
+        }
+
+        /* ── Init ────────────────────────────────── */
+        window.onload = () => {
+            initScopedUI();
+            loadLeads();
+            pollCampaign();
+        };
+    </script>
+
+    <!-- Quick Call Modal Overlay -->
+    <div class="modal-overlay" id="quickCallOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    Trigger Quick Call
+                </span>
+                <button class="close-modal" onclick="closeQuickCallModal()">&times;</button>
+            </div>
+            
+            <div class="modal-alert" id="quickCallAlert"></div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="quickCallPhone">Phone Number</label>
+                    <input type="text" id="quickCallPhone" class="form-control" placeholder="e.g. 0123456789" required onkeydown="handleQuickCallKeydown(event)">
+                </div>
+                <div class="form-group">
+                    <label for="quickCallName">Customer Name (Optional)</label>
+                    <input type="text" id="quickCallName" class="form-control" placeholder="e.g. Rajesh Kumar" onkeydown="handleQuickCallKeydown(event)">
+                </div>
+                <div class="form-group" id="quickCallAgentGroup" style="display: none;">
+                    <label for="quickCallAgent">Select Voice Bot</label>
+                    <select id="quickCallAgent" class="form-control">
+                        <option value="">Choose a Bot...</option>
+                    </select>
+                </div>
+                
+                <button class="modal-btn" id="quickCallSubmitBtn" onclick="triggerQuickCall()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Trigger Call
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

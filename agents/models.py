@@ -1,0 +1,103 @@
+
+# Create your models here.
+import uuid
+from django.db import models
+from django.contrib.auth.models import User
+
+
+class Industry(models.Model):
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+
+    def __str__(self):
+        return self.name
+
+
+class AgentRoleTemplate(models.Model):
+    industry = models.ForeignKey(Industry, on_delete=models.CASCADE, related_name="roles")
+    role_name = models.CharField(max_length=100)
+    description = models.TextField()
+    system_prompt_template = models.TextField()
+    default_tone = models.CharField(max_length=50)
+    default_voice = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"{self.industry.name} - {self.role_name}"
+
+
+class VoiceAgent(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="agents"
+    )
+
+    industry = models.ForeignKey(
+        Industry,
+        on_delete=models.CASCADE,
+        related_name="agents"
+    )
+
+    role_template = models.ForeignKey(
+        AgentRoleTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="agents"
+    )
+
+    name = models.CharField(max_length=100)
+    company_name = models.CharField(max_length=100, blank=True)
+    # ✅ ADD THIS
+    summary = models.TextField(blank=True, null=True)
+    inbound_phone_number = models.CharField(
+        max_length=20, 
+        blank=True, 
+        null=True, 
+        unique=True, 
+        help_text="Twilio/Telnyx DID number (normalized) assigned to this bot"
+    )
+
+    api_key = models.UUIDField(default=uuid.uuid4, unique=True)
+    is_demo = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    minutes_quota = models.IntegerField(default=5000, help_text="Total allocated call minutes for this bot")
+    extra_used_minutes = models.FloatField(default=0.0, help_text="Manual adjustment added to auto-calculated call duration")
+    max_concurrent_calls = models.IntegerField(default=2, help_text="Maximum concurrent calls for campaigns using this bot.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def used_minutes(self):
+        from conversations.models import Conversation
+        import math
+        completed = Conversation.objects.filter(agent=self, ended_at__isnull=False)
+        total_billed = 0.0
+        for c in completed:
+            raw_seconds = (c.ended_at - c.started_at).total_seconds()
+            if raw_seconds > 0:
+                shifted_seconds = raw_seconds + 1
+                rounded_intervals = math.ceil(shifted_seconds / 30)
+                total_billed += rounded_intervals * 30 / 60.0
+        return round(total_billed + (self.extra_used_minutes or 0.0), 1)
+
+    # 🔥 Dynamic prompt resolution
+    @property
+    def resolved_prompt(self):
+        if not self.role_template:
+            return ""
+
+        return self.role_template.system_prompt_template.format(
+            agent_name=self.name,
+            company_name=self.company_name or "the organization"
+        )
+
+    # 🔒 Validation to prevent wrong role-industry pairing
+    def save(self, *args, **kwargs):
+        if self.role_template and self.role_template.industry != self.industry:
+            raise ValueError("Selected role does not belong to chosen industry")
+
+        super().save(*args, **kwargs)

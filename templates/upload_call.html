@@ -1,0 +1,2216 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.png' %}">
+    <script src="/static/js/auth_helper.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Call File — Call Bot</title>
+    <meta name="description" content="Upload customer Excel files to trigger automated AI voice calls via Call Bot.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===== RESET & BASE ===== */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: #e8eaf0;
+            color: #111b21;
+            min-height: 100vh;
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        /* ===== KEYFRAMES ===== */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulseGlow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 8px rgba(59, 130, 246, .3);
+            }
+
+            50% {
+                box-shadow: 0 0 18px rgba(59, 130, 246, .55);
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes toastSlideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes toastSlideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-8px);
+            }
+        }
+
+        /* ===== HEADER / NAVBAR ===== */
+        .header {
+            padding: 16px 32px;
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+        }
+        .back-to-dashboard-btn:hover { background: #cbd5e1 !important; color: #0f172a !important; transform: scale(1.05); }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .header-sub {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+            background: #f8fafc;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid #f1f5f9;
+            margin-left: 8px;
+        }
+
+        .header-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Unified Header Navigation styles */
+        .nav-tabs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 8px;
+            border-right: 1px solid #e2e8f0;
+            padding-right: 12px;
+        }
+        .nav-tab {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-tab:hover {
+            color: #4f46e5;
+            background: #f1f5f9;
+        }
+        .nav-tab.active {
+            color: #4f46e5;
+            background: #e0e7ff;
+        }
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-action-btn {
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+        .nav-action-btn:hover {
+            transform: translateY(-1px);
+        }
+        .nav-action-btn-primary {
+            background: #4f46e5;
+            color: #ffffff;
+        }
+        .nav-action-btn-primary:hover {
+            background: #4338ca;
+        }
+        .nav-action-btn-success {
+            background: #10b981;
+            color: #ffffff;
+        }
+        .nav-action-btn-success:hover {
+            background: #059669;
+        }
+        .nav-action-btn-warning {
+            background: #fff7ed;
+            color: #ea580c;
+            border-color: rgba(234,88,12,0.2);
+        }
+        .nav-action-btn-warning:hover {
+            background: #ffedd5;
+        }
+        .nav-action-btn-info {
+            background: #eff6ff;
+            color: #3b82f6;
+            border-color: rgba(59,130,246,0.2);
+        }
+        .nav-action-btn-info:hover {
+            background: #dbeafe;
+        }
+
+        /* Profile Dropdown */
+        .profile-wrap {
+            position: relative;
+            display: flex;
+            align-items: center
+        }
+
+        .profile-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            border: 2px solid rgba(255, 255, 255, 0.35);
+            transition: box-shadow .2s;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .profile-avatar:hover {
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.15)
+        }
+
+        .minutes-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; background:linear-gradient(135deg,rgba(255,255,255,0.15),rgba(255,255,255,0.08)); border:1px solid rgba(255,255,255,0.25); border-radius:20px; font-size:12px; font-weight:600; color:#fff; cursor:default; position:relative; margin-right:10px; transition:all .2s; }
+        .minutes-badge:hover { background:linear-gradient(135deg,rgba(255,255,255,0.22),rgba(255,255,255,0.14)); border-color:rgba(255,255,255,0.4); }
+        .minutes-badge .minutes-icon { font-size:13px; }
+        .minutes-badge .minutes-tooltip { display:none; position:absolute; top:calc(100% + 8px); right:0; min-width:220px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 12px 32px rgba(15,23,42,0.15); padding:12px 16px; z-index:999; font-size:12px; color:#334155; font-weight:500; }
+        .minutes-badge:hover .minutes-tooltip { display:block; }
+        .minutes-tooltip .tooltip-row { display:flex; justify-content:space-between; padding:4px 0; }
+        .minutes-tooltip .tooltip-row.remaining { color:#059669; font-weight:700; border-top:1px solid #f1f5f9; margin-top:4px; padding-top:8px; }
+        .minutes-badge.warning { border-color:rgba(245,158,11,0.5); color:#fbbf24; }
+        .minutes-badge.danger { border-color:rgba(239,68,68,0.5); color:#fca5a5; }
+
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 180px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+            z-index: 999;
+            overflow: hidden
+        }
+
+        .profile-dropdown.open {
+            display: block;
+            animation: toastSlideIn .2s ease-out
+        }
+
+        .pd-header {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid #f1f5f9
+        }
+
+        .pd-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .pd-label {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px
+        }
+
+        .pd-logout {
+            width: 100%;
+            padding: 11px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .15s;
+            font-family: 'Inter', sans-serif
+        }
+
+        .pd-logout:hover {
+            background: #fef2f2
+        }
+
+        /* ===== LOADING OVERLAY ===== */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 52px;
+            height: 52px;
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .loading-text {
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .loading-progress {
+            color: rgba(255, 255, 255, 0.85);
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+            display: none;
+        }
+
+        .loading-progress.show {
+            display: block;
+        }
+
+        .progress-bar-wrapper {
+            width: 260px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 3px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar-wrapper.show {
+            display: block;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #3b82f6, #1e3a5f);
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+
+        /* ===== TOAST ALERT ===== */
+        .toast-alert {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 22px;
+            background: #ffffff;
+            border-left: 4px solid #f59e0b;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #111b21;
+            animation: toastSlideIn 0.4s ease-out forwards;
+            pointer-events: auto;
+        }
+
+        .toast-alert.hide {
+            animation: toastSlideOut 0.35s ease-in forwards;
+        }
+
+        .toast-alert .toast-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .toast-alert .toast-close {
+            margin-left: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #8696a0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: background 0.2s, color 0.2s;
+            text-transform: none;
+            letter-spacing: 0;
+            font-weight: 400;
+        }
+
+        .toast-alert .toast-close:hover {
+            background: #f0f2f5;
+            color: #111b21;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* ===== PAGE LAYOUT ===== */
+        .page-content {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 54px);
+            overflow: hidden;
+        }
+
+        /* ===== WORKFLOW BAR (horizontal) ===== */
+        .workflow-bar {
+            background: #ffffff;
+            border-bottom: 1px solid #e0e5eb;
+            padding: 16px 24px;
+            animation: fadeInUp 0.4s ease-out both;
+        }
+
+        .workflow-bar .bar-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8696a0;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .workflow-bar .bar-title span {
+            font-size: 14px;
+        }
+
+        .workflow-steps {
+            display: flex;
+            align-items: center;
+            gap: 0;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f9fa;
+            border: 1px solid #e0e5eb;
+            border-radius: 10px;
+            padding: 10px 14px;
+            flex: 1;
+            min-width: 0;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+        }
+
+        .step-item:hover {
+            border-color: #bfdbfe;
+            box-shadow: 0 3px 12px rgba(59, 130, 246, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .step-number {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+            color: #fff;
+        }
+
+        .step-number.orange {
+            background: linear-gradient(135deg, #f59e0b, #f97316);
+        }
+
+        .step-number.blue {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .step-number.indigo {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+        }
+
+        .step-number.sky {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        }
+
+        .step-number.gray {
+            background: linear-gradient(135deg, #8696a0, #54656f);
+        }
+
+        .step-label {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #111b21;
+            line-height: 1.3;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .step-connector {
+            width: 24px;
+            height: 2px;
+            background: linear-gradient(90deg, #c4ccd5, #3b82f6);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        /* ===== BOTTOM ROW (upload + excel) ===== */
+        .bottom-row {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+            padding: 20px 24px;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .upload-card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+            padding: 36px 36px;
+            flex: 1;
+            min-width: 0;
+            animation: fadeInUp 0.5s ease-out both;
+            text-align: center;
+            border: 1px solid #e0e5eb;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .upload-icon {
+            font-size: 42px;
+            margin-bottom: 4px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .upload-card h1 {
+            font-size: 19px;
+            font-weight: 700;
+            color: #111b21;
+            margin-bottom: 4px;
+            letter-spacing: -0.3px;
+        }
+
+        .upload-card p {
+            font-size: 12.5px;
+            color: #8696a0;
+            margin-bottom: 22px;
+            line-height: 1.5;
+            font-weight: 400;
+        }
+
+        /* Drop zone */
+        .drop-zone {
+            border: 2px dashed #c4ccd5;
+            border-radius: 12px;
+            padding: 24px 20px;
+            cursor: pointer;
+            transition: border-color 0.3s ease, background 0.3s ease;
+            margin-bottom: 18px;
+            position: relative;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .drop-zone-icon {
+            font-size: 28px;
+            color: #8696a0;
+            margin-bottom: 8px;
+            transition: color 0.3s ease;
+        }
+
+        .drop-zone:hover .drop-zone-icon {
+            color: #3b82f6;
+        }
+
+        .drop-zone-text {
+            font-size: 13px;
+            font-weight: 500;
+            color: #54656f;
+        }
+
+        .drop-zone-text span {
+            color: #3b82f6;
+            font-weight: 600;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .drop-zone-hint {
+            font-size: 11px;
+            color: #8696a0;
+            margin-top: 6px;
+            font-weight: 400;
+        }
+
+        .file-input-hidden {
+            display: none;
+        }
+
+        /* File selected state */
+        .file-info {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 18px;
+            animation: fadeInUp 0.3s ease-out both;
+        }
+
+        .file-info.show {
+            display: flex;
+        }
+
+        .file-info-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .file-info-details {
+            flex: 1;
+            text-align: left;
+        }
+
+        .file-info-name {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #111b21;
+            word-break: break-all;
+        }
+
+        .file-info-size {
+            font-size: 11px;
+            color: #8696a0;
+            margin-top: 2px;
+        }
+
+        .file-info-remove {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: #8696a0;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .file-info-remove:hover {
+            background: #fde8e8;
+            color: #e53e3e;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Upload button */
+        .upload-btn {
+            width: 100%;
+            padding: 12px 24px;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+            box-shadow: 0 3px 12px rgba(59, 130, 246, .25);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .upload-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, .35);
+        }
+
+        .upload-btn:active {
+            transform: scale(0.97);
+        }
+
+        .upload-btn.uploading {
+            background: #6b7a80;
+            cursor: not-allowed;
+            pointer-events: none;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .upload-btn.uploading .btn-spinner {
+            display: inline-block;
+        }
+
+        .btn-spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2.5px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        /* Back link */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 14px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #8696a0;
+            text-decoration: none;
+            width: 100%;
+            text-align: center;
+            transition: color 0.2s ease;
+        }
+
+        .back-link:hover {
+            color: #3b82f6;
+        }
+
+        /* ===== EXCEL FORMAT SECTION ===== */
+        .excel-section {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+            padding: 28px 30px;
+            flex: 1;
+            min-width: 0;
+            border: 1px solid #e0e5eb;
+            animation: fadeInUp 0.5s ease-out 0.15s both;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .excel-section .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #111b21;
+            margin-bottom: 4px;
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-sample-btn:hover {
+            background: #1e3a5f !important;
+            color: #ffffff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 58, 95, 0.15);
+        }
+
+        .excel-section .section-title .title-icon {
+            font-size: 18px;
+        }
+
+        .excel-section .section-subtitle {
+            font-size: 12px;
+            color: #8696a0;
+            margin-bottom: 18px;
+            line-height: 1.4;
+        }
+
+        .excel-table-wrapper {
+            border-radius: 10px;
+            overflow-x: auto;
+            border: 1px solid #e0e5e8;
+        }
+
+        .excel-table-wrapper::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .excel-table-wrapper::-webkit-scrollbar-track {
+            background: #f0f2f5;
+            border-radius: 2px;
+        }
+
+        .excel-table-wrapper::-webkit-scrollbar-thumb {
+            background: #c4ccd5;
+            border-radius: 2px;
+        }
+
+        .excel-table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #8696a0;
+        }
+
+        .excel-table {
+            min-width: 420px;
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .excel-table thead th {
+            background: #1e3a5f;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 10px 14px;
+            text-align: left;
+            border: none;
+        }
+
+        .excel-table tbody td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #f0f2f5;
+            color: #54656f;
+            font-weight: 500;
+            font-size: 12.5px;
+        }
+
+        .excel-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .excel-table tbody tr {
+            transition: background 0.2s ease;
+        }
+
+        .excel-table tbody tr:hover {
+            background: #eff6ff;
+        }
+
+        .excel-table tbody tr:nth-child(even) {
+            background: #fafbfc;
+        }
+
+        .excel-table tbody tr:nth-child(even):hover {
+            background: #eff6ff;
+        }
+
+        .format-note {
+            margin-top: 12px;
+            font-size: 11.5px;
+            color: #8696a0;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+            line-height: 1.4;
+        }
+
+        .format-note .note-icon {
+            flex-shrink: 0;
+            font-size: 13px;
+        }
+
+        /* ===== RESULT BADGE ===== */
+        #result {
+            min-height: 0;
+            margin-top: 0;
+            text-align: center;
+            font-size: 0;
+            font-weight: 500;
+            border-radius: 10px;
+            padding: 0;
+            transition: all 0.35s ease;
+            color: #8696a0;
+        }
+
+        #result.loading {
+            font-size: 12.5px;
+            color: #f59e0b;
+            padding: 10px 16px;
+            margin-top: 14px;
+            background: #fffbeb;
+            border: 1px solid #fef3c7;
+        }
+
+        #result.success {
+            font-size: 12.5px;
+            color: #16a34a;
+            padding: 10px 16px;
+            margin-top: 14px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+        }
+
+        #result.error {
+            font-size: 12.5px;
+            color: #dc2626;
+            padding: 10px 16px;
+            margin-top: 14px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 960px) {
+            .page-content {
+                height: auto;
+                overflow-y: auto;
+            }
+
+            .workflow-steps {
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .step-connector {
+                display: none;
+            }
+
+            .step-item {
+                flex: 0 0 calc(50% - 4px);
+            }
+
+            .bottom-row {
+                flex-direction: column;
+                overflow-y: visible;
+            }
+
+            .upload-card {
+                padding: 28px 22px;
+            }
+
+            .excel-section {
+                padding: 24px 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                display: grid;
+                grid-template-columns: auto 1fr auto auto;
+                align-items: center;
+                gap: 10px 8px;
+                padding: 10px 12px;
+            }
+            .header-logo-icon, .header-company-logo {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .header-title {
+                grid-column: 2;
+                grid-row: 1;
+                font-size: 15px;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .header-sub {
+                display: none;
+            }
+            .header-right {
+                display: contents;
+            }
+            .minutes-badge {
+                grid-column: 3;
+                grid-row: 1;
+                justify-self: end;
+                margin-right: 0 !important;
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+            .profile-wrap {
+                grid-column: 4;
+                grid-row: 1;
+                justify-self: end;
+            }
+            .profile-avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+            }
+            .nav-tabs {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding: 0 0 4px 0;
+                margin: 0;
+                border-right: none;
+                gap: 6px;
+                justify-content: flex-start;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .nav-tabs::-webkit-scrollbar {
+                display: none;
+            }
+            .nav-tab {
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            .nav-actions {
+                grid-column: 1 / -1;
+                grid-row: 3;
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                gap: 6px;
+                justify-content: flex-start;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .nav-actions::-webkit-scrollbar {
+                display: none;
+            }
+            .nav-action-btn {
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .workflow-bar { padding: 14px 16px; }
+            .step-item { padding: 9px 12px; gap: 8px; }
+            .bottom-row { padding: 16px; gap: 16px; }
+            .upload-card { padding: 24px 20px; }
+            .upload-card h1 { font-size: 17px; }
+            .upload-card p { font-size: 12px; }
+            .excel-section { padding: 22px 18px; }
+            .bot-select-group { padding: 12px; }
+        }
+
+        @media (max-width: 600px) {
+            .nav-tab { padding: 5px 10px; font-size: 11px; }
+            .nav-action-btn { font-size: 11px; padding: 5px 10px; }
+            .minutes-badge { font-size: 10px; padding: 3px 8px; }
+            .profile-avatar { width: 30px; height: 30px; font-size: 12px; }
+            .workflow-bar { padding: 12px 14px; }
+            .step-item { flex: 0 0 100%; }
+            .bottom-row { padding: 14px; }
+            .upload-card { padding: 20px 16px; border-radius: 12px; }
+            .upload-card h1 { font-size: 16px; }
+            .upload-card p { font-size: 11.5px; }
+            .drop-zone { padding: 18px 14px; }
+            .upload-btn { padding: 10px 18px; font-size: 12px; }
+            .excel-section { padding: 18px 14px; border-radius: 12px; }
+            .excel-table { min-width: 350px; }
+            .bot-select-group { padding: 10px; margin-bottom: 14px; }
+            .bot-select { padding: 10px 12px; font-size: 12.5px; }
+        }
+
+        @media (max-width: 480px) {
+            .header-right { gap: 4px; }
+            .nav-tabs { gap: 2px; }
+            .bottom-row { padding: 10px 8px; }
+            .upload-card { padding: 18px 14px; }
+            .upload-card h1 { font-size: 15px; }
+            .drop-zone { padding: 16px 12px; }
+            .upload-btn { padding: 10px 14px; font-size: 11.5px; }
+            .excel-section { padding: 16px 12px; }
+        }
+
+        /* Bot select dropdown styles */
+        .bot-select-group {
+            text-align: left;
+            margin-bottom: 20px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1.5px solid #e2e8f0;
+        }
+
+        .bot-select-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #4f46e5;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .bot-select {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #1e293b;
+            background: #ffffff;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .bot-select:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <!-- LOADING OVERLAY -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Triggering calls…</div>
+        <div class="loading-progress" id="loadingProgress">Processing numbers…</div>
+        <div class="progress-bar-wrapper" id="progressBarWrapper">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+    </div>
+
+    <!-- HEADER / NAVBAR -->
+    <div class="header">
+        <div class="header-logo-icon" style="background: rgba(37, 211, 102, 0.15); color: #25d366; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+        </div>
+        <img class="header-company-logo" style="height: 32px; max-width: 120px; object-fit: contain; display: none;" alt="Company Logo">
+        <span class="header-title">Trigger-Call</span>
+        <span class="header-sub">Initiate bot conversations</span>
+        <div class="header-right">
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs">
+                <a href="/dashboard/" id="navLeadAnalysis" class="nav-tab">🧠 Lead Analysis</a>
+                <a href="/analytics/" id="callAnalyticsBtn" class="nav-tab" style="display:none;">📈 Call Analytics</a>
+                <a href="/bot/campaigns/" id="campaignHistoryBtn" class="nav-tab" style="display:none;">🕒 Campaign History</a>
+                <a href="/bot/dashboard/" id="triggerCallBtn" class="nav-tab active">📞 Trigger-Call</a>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="nav-actions">
+                <a href="/accounts/admin-management/" id="adminBtn" class="nav-action-btn nav-action-btn-info" style="display:none;">⚙️ Add Client</a>
+            </div>
+
+            <!-- Minutes Badge -->
+            <div class="minutes-badge" id="minutesBadge" style="display:none;">
+                <span class="minutes-icon">⏱️</span>
+                <span id="minutesText">—/—</span>
+                <div class="minutes-tooltip" id="minutesTooltip"></div>
+            </div>
+
+            <!-- Profile Dropdown -->
+            <div class="profile-wrap">
+                <div class="profile-avatar" id="profileAvatar" onclick="toggleProfile(event)">?</div>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="pd-header">
+                        <div class="pd-name" id="pdName">User</div>
+                        <div class="pd-label">Logged in</div>
+                    </div>
+                    <div style="border-bottom: 1px solid #f1f5f9; padding: 4px 0;">
+                        <label for="profilePicInput" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; font-size: 13px; color: #475569; cursor: pointer; transition: background 0.2s; font-weight: 500;" class="pd-item-upload">
+                            📷 Upload Photo
+                        </label>
+                        <input type="file" id="profilePicInput" accept="image/*" style="display: none;" onchange="uploadProfilePicture(event)">
+                    </div>
+                    <a href="/accounts/team-management/" id="teamBtn" style="display:none; text-decoration:none; padding:11px 16px; font-size:13px; font-weight:600; color:#4f46e5; border-bottom:1px solid #f1f5f9; align-items:center; gap:8px;" class="pd-item">👥 Manage Team</a>
+                    <a href="/accounts/support/" style="text-decoration:none; padding:11px 16px; font-size:13px; font-weight:600; color:#4f46e5; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:8px;" class="pd-item">🛠️ Support</a>
+                    <button class="pd-logout" onclick="logoutUser()">🚪 Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (!localStorage.getItem('access_token')) {
+            window.location.replace('/accounts/login/');
+        } else {
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) { }
+
+            if (!isAdmin && !perms.can_view_campaigns) {
+                if (perms.can_view_leads) {
+                    window.location.replace('/dashboard/');
+                } else if (perms.can_view_calls) {
+                    window.location.replace('/analytics/');
+                } else {
+                    alert('Access Denied: You do not have permission to view any dashboard. Please contact your administrator.');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    localStorage.removeItem('username');
+                    localStorage.removeItem('is_admin');
+                    localStorage.removeItem('permissions');
+                    window.location.replace('/accounts/login/');
+                }
+            }
+        }
+
+        async function uploadProfilePicture(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const avatar = document.getElementById('profileAvatar');
+            const originalText = avatar.textContent;
+            avatar.textContent = '...';
+
+            const formData = new FormData();
+            formData.append('profile_picture', file);
+
+            try {
+                const response = await fetch('/api/accounts/profile/upload-picture/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('profile_picture', data.profile_picture || '');
+                    if (avatar) {
+                        avatar.style.backgroundImage = `url('${data.profile_picture}')`;
+                        avatar.textContent = '';
+                    }
+                } else {
+                    const err = await response.json();
+                    alert('Failed to upload profile picture: ' + (err.error || 'Unknown error'));
+                    avatar.textContent = originalText;
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error uploading profile picture.');
+                avatar.textContent = originalText;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            const u = localStorage.getItem('username') || 'User';
+            const avatar = document.getElementById('profileAvatar');
+            const pdName = document.getElementById('pdName');
+            if (pdName) pdName.textContent = u;
+
+            const updateAvatar = (picUrl) => {
+                if (avatar) {
+                    const currentUsername = localStorage.getItem('username') || 'User';
+                    if (picUrl && picUrl !== 'null' && picUrl !== '') {
+                        avatar.style.backgroundImage = `url('${picUrl}')`;
+                        avatar.textContent = '';
+                    } else {
+                        avatar.style.backgroundImage = 'linear-gradient(135deg, #4f46e5, #7c3aed)';
+                        avatar.textContent = currentUsername.charAt(0).toUpperCase();
+                    }
+                }
+            };
+
+            const updateCompanyLogo = (logoUrl) => {
+                const logoIcon = document.querySelector('.header-logo-icon');
+                const companyLogoImg = document.querySelector('.header-company-logo');
+                if (logoIcon && companyLogoImg) {
+                    if (logoUrl && logoUrl !== 'null' && logoUrl !== '') {
+                        logoIcon.style.display = 'none';
+                        companyLogoImg.src = logoUrl;
+                        companyLogoImg.style.display = 'block';
+                    } else {
+                        logoIcon.style.display = 'inline-flex';
+                        companyLogoImg.style.display = 'none';
+                        companyLogoImg.src = '';
+                    }
+                }
+            };
+
+            // Initial load from localStorage
+            updateAvatar(localStorage.getItem('profile_picture'));
+            updateCompanyLogo(localStorage.getItem('company_logo'));
+
+            // Sync with server
+            try {
+                const res = await fetch('/api/accounts/me/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('profile_picture', data.profile_picture || '');
+                    localStorage.setItem('company_logo', data.company_logo || '');
+                    localStorage.setItem('username', data.username);
+                    localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
+                    localStorage.setItem('is_admin', data.permissions?.is_admin ? 'true' : 'false');
+                    localStorage.setItem('role', data.role || '');
+                    localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
+                    if (pdName) pdName.textContent = data.username;
+                    updateAvatar(data.profile_picture);
+                    updateCompanyLogo(data.company_logo);
+
+                    // Re-run bot selector initialization with fresh data
+                    if (typeof checkAndInitBotSelector === 'function') {
+                        await checkAndInitBotSelector();
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to sync profile', e);
+            }
+
+            // Show Admin Panel button & Campaign History button if user is admin
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            if (isAdmin) {
+                const adminBtn = document.getElementById('adminBtn');
+                if (adminBtn) adminBtn.style.display = 'inline-flex';
+            }
+
+            // Show Call Analytics button if user is admin OR has can_view_calls permission
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) {}
+            if (isAdmin || perms.can_view_calls) {
+                const callAnalyticsBtn = document.getElementById('callAnalyticsBtn');
+                if (callAnalyticsBtn) callAnalyticsBtn.style.display = 'inline-flex';
+            }
+
+            // Show Campaign History button & Trigger-Call button if user is admin OR has can_view_campaigns permission
+            if (isAdmin || perms.can_view_campaigns) {
+                const campaignBtn = document.getElementById('campaignHistoryBtn');
+                if (campaignBtn) campaignBtn.style.display = 'inline-flex';
+                const triggerBtn = document.getElementById('triggerCallBtn');
+                if (triggerBtn) triggerBtn.style.display = 'inline-flex';
+            }
+
+            // Show Team Management button if user has permission (but hide for superadmin)
+            if (!isAdmin && perms.can_manage_team) {
+                const teamBtn = document.getElementById('teamBtn');
+                if (teamBtn) teamBtn.style.display = 'flex';
+            }
+
+        function showMinutesWarningModal(botName, usedMinutes, threshold) {
+            if (document.getElementById('minutesWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'minutesWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(4px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2rem';
+            content.style.borderRadius = '16px';
+            content.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+            content.style.maxWidth = '450px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '64px';
+            iconContainer.style.height = '64px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.style.marginRight = 'auto';
+            iconContainer.style.marginLeft = 'auto';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Minutes Usage Warning';
+            title.style.fontSize = '1.4rem';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.5';
+            msg.style.marginBottom = '1.5rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `Your voice bot <strong style="color: #f8f8f2;">${botName}</strong> has crossed the <strong style="color: #ef4444;">${threshold} minutes</strong> usage threshold.<br><br>Total used minutes: <span style="font-size: 1.15rem; font-weight: bold; color: #f8f8f2; background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">${usedMinutes} minutes</span>.`;
+
+            const btn = document.createElement('button');
+            btn.innerText = 'Acknowledge';
+            btn.style.width = '100%';
+            btn.style.padding = '0.75rem 1rem';
+            btn.style.backgroundColor = '#ef4444';
+            btn.style.color = '#ffffff';
+            btn.style.border = 'none';
+            btn.style.borderRadius = '8px';
+            btn.style.fontWeight = '600';
+            btn.style.cursor = 'pointer';
+            btn.style.transition = 'background-color 0.2s ease, transform 0.1s ease';
+            
+            btn.onmouseover = () => btn.style.backgroundColor = '#dc2626';
+            btn.onmouseout = () => btn.style.backgroundColor = '#ef4444';
+            btn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            content.appendChild(btn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function showLowMinutesWarningModal(botName, remainingMinutes) {
+            if (document.getElementById('lowMinutesWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'lowMinutesWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(4px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2rem';
+            content.style.borderRadius = '16px';
+            content.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+            content.style.maxWidth = '450px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '64px';
+            iconContainer.style.height = '64px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.style.marginRight = 'auto';
+            iconContainer.style.marginLeft = 'auto';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Critical Quota Warning';
+            title.style.fontSize = '1.4rem';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.5';
+            msg.style.marginBottom = '1.5rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `Your voice bot <strong style="color: #f8f8f2;">${botName}</strong> is running extremely low on minutes.<br><br>Remaining minutes: <span style="font-size: 1.15rem; font-weight: bold; color: #f8f8f2; background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">${remainingMinutes} minutes</span>.<br><br>Please contact us to add more minutes and avoid any disruption.`;
+
+            // Contact Us Button
+            const contactBtn = document.createElement('a');
+            contactBtn.href = 'mailto:support@example.com?subject=Voice%20Bot%20Recharge%20Request';
+            contactBtn.innerText = '📧 Contact Support';
+            contactBtn.style.display = 'block';
+            contactBtn.style.width = '100%';
+            contactBtn.style.padding = '0.75rem 1rem';
+            contactBtn.style.backgroundColor = '#4f46e5';
+            contactBtn.style.color = '#ffffff';
+            contactBtn.style.borderRadius = '8px';
+            contactBtn.style.fontWeight = '600';
+            contactBtn.style.textAlign = 'center';
+            contactBtn.style.textDecoration = 'none';
+            contactBtn.style.marginBottom = '0.75rem';
+            contactBtn.style.transition = 'background-color 0.2s ease';
+            contactBtn.onmouseover = () => contactBtn.style.backgroundColor = '#4338ca';
+            contactBtn.onmouseout = () => contactBtn.style.backgroundColor = '#4f46e5';
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.innerText = 'Dismiss';
+            dismissBtn.style.width = '100%';
+            dismissBtn.style.padding = '0.75rem 1rem';
+            dismissBtn.style.backgroundColor = 'transparent';
+            dismissBtn.style.color = '#a6adc8';
+            dismissBtn.style.border = '1px solid #45475a';
+            dismissBtn.style.borderRadius = '8px';
+            dismissBtn.style.fontWeight = '600';
+            dismissBtn.style.cursor = 'pointer';
+            dismissBtn.style.transition = 'background-color 0.2s ease, color 0.2s ease';
+            dismissBtn.onmouseover = () => {
+                dismissBtn.style.backgroundColor = '#313244';
+                dismissBtn.style.color = '#f8f8f2';
+            };
+            dismissBtn.onmouseout = () => {
+                dismissBtn.style.backgroundColor = 'transparent';
+                dismissBtn.style.color = '#a6adc8';
+            };
+            dismissBtn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            content.appendChild(contactBtn);
+            content.appendChild(dismissBtn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function showQuotaExhaustedWarningModal(botName) {
+            if (document.getElementById('quotaExhaustedWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'quotaExhaustedWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.65)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(6px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2.5rem 2rem';
+            content.style.borderRadius = '20px';
+            content.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
+            content.style.maxWidth = '460px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '72px';
+            iconContainer.style.height = '72px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Call Quota Exhausted';
+            title.style.fontSize = '1.5rem';
+            title.style.fontWeight = '700';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.6';
+            msg.style.marginBottom = '2rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `All allocated call credits for your bot <strong style="color: #f8f8f2;">${botName}</strong> have been fully utilized.<br><br>Please contact support to add more credits to resume making calls.`;
+
+            const contactBtn = document.createElement('a');
+            contactBtn.href = 'mailto:support@example.com?subject=Voice%20Bot%20Recharge%20Request';
+            contactBtn.innerText = '📞 Request More Credits';
+            contactBtn.style.display = 'block';
+            contactBtn.style.width = '100%';
+            contactBtn.style.padding = '0.85rem 1rem';
+            contactBtn.style.backgroundColor = '#ef4444';
+            contactBtn.style.color = '#ffffff';
+            contactBtn.style.borderRadius = '10px';
+            contactBtn.style.fontWeight = '600';
+            contactBtn.style.textAlign = 'center';
+            contactBtn.style.textDecoration = 'none';
+            contactBtn.style.marginBottom = '0.75rem';
+            contactBtn.style.transition = 'background-color 0.2s ease';
+            contactBtn.onmouseover = () => contactBtn.style.backgroundColor = '#dc2626';
+            contactBtn.onmouseout = () => contactBtn.style.backgroundColor = '#ef4444';
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.innerText = 'Dismiss';
+            dismissBtn.style.width = '100%';
+            dismissBtn.style.padding = '0.85rem 1rem';
+            dismissBtn.style.backgroundColor = 'transparent';
+            dismissBtn.style.color = '#a6adc8';
+            dismissBtn.style.border = '1px solid #45475a';
+            dismissBtn.style.borderRadius = '10px';
+            dismissBtn.style.fontWeight = '600';
+            dismissBtn.style.cursor = 'pointer';
+            dismissBtn.style.transition = 'background-color 0.2s ease, color 0.2s ease';
+            dismissBtn.onmouseover = () => {
+                dismissBtn.style.backgroundColor = '#313244';
+                dismissBtn.style.color = '#f8f8f2';
+            };
+            dismissBtn.onmouseout = () => {
+                dismissBtn.style.backgroundColor = 'transparent';
+                dismissBtn.style.color = '#a6adc8';
+            };
+            dismissBtn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            // content.appendChild(contactBtn);
+            content.appendChild(dismissBtn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function checkRemainingMinutesThreshold(data) {
+            if (!data || data.is_admin || !data.bot_id) return;
+            const remaining = parseFloat(data.remaining_minutes) || 0;
+            if (remaining <= 0) {
+                const key = 'shown_exhausted_warning_' + data.bot_id;
+                if (!localStorage.getItem(key)) {
+                    showQuotaExhaustedWarningModal(data.bot_name || 'Bot');
+                    localStorage.setItem(key, 'true');
+                }
+            } else if (remaining <= 100) {
+                const key = 'shown_low_minutes_warning_' + data.bot_id;
+                if (!localStorage.getItem(key)) {
+                    showLowMinutesWarningModal(data.bot_name || 'Bot', remaining);
+                    localStorage.setItem(key, 'true');
+                }
+            } else {
+                localStorage.removeItem('shown_low_minutes_warning_' + data.bot_id);
+                localStorage.removeItem('shown_exhausted_warning_' + data.bot_id);
+            }
+        }
+
+        function checkMinutesUsageThreshold(data) {
+            if (!data || data.is_admin || !data.bot_id) return;
+            const used = parseFloat(data.used_minutes) || 0;
+            const threshold = Math.floor(used / 500) * 500;
+            if (threshold >= 500) {
+                const key = 'shown_warning_threshold_' + data.bot_id;
+                const lastShown = parseInt(localStorage.getItem(key) || '0', 10);
+                if (threshold > lastShown) {
+                    showMinutesWarningModal(data.bot_name || 'Bot', used, threshold);
+                    localStorage.setItem(key, threshold.toString());
+                }
+            }
+        }
+
+        async function loadMinutesUsage() {
+            try {
+                const mRes = await fetch('/api/minutes-usage/', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') } });
+                if (mRes.ok) {
+                    const data = await mRes.json();
+                    const badge = document.getElementById('minutesBadge'), mText = document.getElementById('minutesText'), tooltip = document.getElementById('minutesTooltip');
+                    if (badge) {
+                        if (data.is_admin) {
+                            badge.style.display = 'none';
+                        } else {
+                            if (data.quota_minutes === 0 && !data.bot_name) { badge.style.display='none'; } else {
+                                mText.textContent = `${data.used_minutes}/${data.quota_minutes} min`;
+                                let h = `<div class="tooltip-row"><span>Bot</span><span>${data.bot_name||'—'}</span></div><div class="tooltip-row"><span>Used</span><span>${data.used_minutes} min</span></div>`;
+                                h += `<div class="tooltip-row remaining"><span>⏳ Remaining</span><span>${data.remaining_minutes} min</span></div>`; tooltip.innerHTML = h;
+                                const pct = data.quota_minutes > 0 ? (data.used_minutes / data.quota_minutes) * 100 : 0;
+                                badge.classList.remove('warning','danger'); if (pct >= 90 || (data.remaining_minutes <= 100)) badge.classList.add('danger'); else if (pct >= 70) badge.classList.add('warning');
+                                if (badge.style.display !== 'none') badge.style.display = 'inline-flex';
+
+                                // Check for threshold warning popups
+                                checkMinutesUsageThreshold(data);
+                                checkRemainingMinutesThreshold(data);
+                            }
+                        }
+                    }
+                }
+            } catch (e) { console.error('Failed to load minutes usage', e); }
+        }
+        loadMinutesUsage();
+
+            async function checkAndInitBotSelector() {
+                const isAdmin = localStorage.getItem('is_admin') === 'true';
+                const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+                const role = localStorage.getItem('role') || '';
+                const assignedAgentId = localStorage.getItem('assigned_agent_id');
+                const isSuperAdmin = isSuperuser || 
+                                     (role.toLowerCase() === 'super admin' || role.toLowerCase() === 'superadmin') || 
+                                     (isAdmin && (!assignedAgentId || assignedAgentId === 'null' || assignedAgentId === ''));
+
+                const group = document.getElementById('botSelectorGroup');
+                const select = document.getElementById('botSelect');
+                if (isSuperAdmin && group && select) {
+                    group.style.display = 'block';
+                    select.required = true;
+                    
+                    try {
+                        const token = localStorage.getItem('access_token');
+                        const res = await fetch("/api/agents/my/", {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        if (res.ok) {
+                            const agents = await res.json();
+                            select.innerHTML = '<option value="">-- Choose a Voice Bot --</option>';
+                            agents.forEach(agent => {
+                                const opt = document.createElement('option');
+                                opt.value = agent.id;
+                                opt.textContent = agent.name;
+                                select.appendChild(opt);
+                            });
+                        } else {
+                            select.innerHTML = '<option value="">Failed to load bots</option>';
+                        }
+                    } catch (err) {
+                        console.error("Error loading bots:", err);
+                        select.innerHTML = '<option value="">Error loading bots</option>';
+                    }
+                } else if (group) {
+                    group.style.display = 'none';
+                    if (select) select.required = false;
+                }
+            }
+
+            // Run initial check
+            await checkAndInitBotSelector();
+        });
+
+        function toggleProfile(e) {
+            e.stopPropagation();
+            document.getElementById('profileDropdown').classList.toggle('open');
+        }
+        document.addEventListener('click', function () {
+            document.getElementById('profileDropdown').classList.remove('open');
+        });
+        function logoutUser() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('username');
+            localStorage.removeItem('is_admin');
+            window.location.replace('/accounts/login/');
+        }
+    </script>
+
+    <div class="page-content">
+
+        <!-- WORKFLOW BAR -->
+        <div class="workflow-bar">
+            <div class="bar-title"><span>📞</span> How It Works</div>
+            <div class="workflow-steps">
+                <div class="step-item">
+                    <div class="step-number orange">1</div>
+                    <div class="step-label">Upload Customer Excel</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item">
+                    <div class="step-number blue">2</div>
+                    <div class="step-label">System Reads Phone Numbers</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item">
+                    <div class="step-number indigo">3</div>
+                    <div class="step-label">AI Voice Bot Dials Calls</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item">
+                    <div class="step-number sky">4</div>
+                    <div class="step-label">Bot Handles Conversations</div>
+                </div>
+                <div class="step-connector"></div>
+                <div class="step-item">
+                    <div class="step-number gray">5</div>
+                    <div class="step-label">CRM Logs Call Results</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM ROW: Upload + Excel Format -->
+        <div class="bottom-row">
+
+            <!-- UPLOAD CARD -->
+            <div class="upload-card">
+                <div class="upload-icon">📞</div>
+                <h1>Upload Call File</h1>
+                <p>Upload your Excel file containing phone numbers to trigger AI voice call campaigns automatically.</p>
+
+                <form id="callForm">    
+                    <!-- Campaign Name Field -->
+                    <div style="text-align: left; margin-bottom: 18px;">
+                        <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #4f46e5; margin-bottom: 8px; letter-spacing: 0.5px;">
+                            Campaign Name
+                        </label>
+                        <input
+                            type="text"
+                            id="campaignName"
+                            name="campaign_name"
+                            placeholder="e.g. Summer Outreach 2025"
+                            required
+                            style="width: 100%; padding: 12px 14px; font-size: 13.5px; font-weight: 500; color: #1e293b; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; outline: none; font-family: 'Inter', sans-serif; transition: all 0.2s;"
+                            onfocus="this.style.borderColor='#4f46e5'; this.style.boxShadow='0 0 0 4px rgba(79,70,229,0.1)';"
+                            onblur="this.style.borderColor='#cbd5e1'; this.style.boxShadow='none';"
+                        >
+                    </div>
+                    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                        <div class="drop-zone-icon">☁️</div>
+                        <div class="drop-zone-text">Drag & drop your file here or <span>browse</span></div>
+                        <div class="drop-zone-hint">Supports .xlsx, .xls files</div>
+                    </div>
+
+                    <input type="file" name="file" id="fileInput" class="file-input-hidden" accept=".xlsx,.xls"
+                        required>
+
+                    <div class="file-info" id="fileInfo">
+                        <span class="file-info-icon">📄</span>
+                        <div class="file-info-details">
+                            <div class="file-info-name" id="fileName">—</div>
+                            <div class="file-info-size" id="fileSize">—</div>
+                        </div>
+                        <button type="button" class="file-info-remove" onclick="removeFile()"
+                            title="Remove file">✕</button>
+                    </div>
+
+                    <!-- Bot selector dropdown for superadmin -->
+                    <div class="bot-select-group" id="botSelectorGroup" style="display: none;">
+                        <label class="bot-select-label" for="botSelect">Select Bot for Campaign</label>
+                        <select class="bot-select" id="botSelect" name="agent_id">
+                            <option value="">-- Choose a Voice Bot --</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="upload-btn" id="uploadBtn">
+                        <span class="btn-spinner"></span>
+                        <span class="btn-icon">📞</span>
+                        <span class="btn-text">Upload & Trigger Calls</span>
+                    </button>
+                </form>
+
+                <p id="result"></p>
+
+                <a href="/dashboard/" class="back-link">🧠 Back to Lead Analysis</a>
+            </div>
+
+            <!-- EXCEL FORMAT -->
+            <div class="excel-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; flex-wrap: wrap; gap: 8px;">
+                    <div class="section-title" style="margin-bottom: 0;">
+                        <span class="title-icon">📋</span> Required Excel Format
+                    </div>
+                    <a href="/bot/download-sample/" class="download-sample-btn" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: #1e3a5f; text-decoration: none; padding: 6px 12px; border-radius: 8px; border: 1px solid #1e3a5f; background: transparent; transition: all 0.2s; cursor: pointer;">
+                        📥 Download Sample Excel
+                    </a>
+                </div>
+                <div class="section-subtitle">Your Excel file must contain <strong>name</strong> and <strong>phone</strong> columns.</div>
+
+                <div class="excel-table-wrapper">
+                    <table class="excel-table">
+                        <thead>
+                            <tr>
+                                <th>name</th>
+                                <th>phone</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>abc</td>
+                                <td>99798xxxxx</td>
+                            </tr>
+                            <tr>
+                                <td>abc</td>
+                                <td>972777xxxx</td>
+                            </tr>
+                            <tr>
+                                <td>abc</td>
+                                <td>9825385135</td>
+                            </tr>
+                            <tr>
+                                <td>abc</td>
+                                <td>9825223052</td>
+                            </tr>
+                            <tr>
+                                <td>abc</td>
+                                <td>9825223154</td>
+                            </tr>
+                            <tr>
+                                <td>abc</td>
+                                <td>9727770273</td>
+                            </tr>
+                            <tr>
+                                <td>abc</td>
+                                <td>9099019819</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="format-note">
+                    <span class="note-icon">💡</span>
+                    <span>The <strong>name</strong> and <strong>phone</strong> columns are required to initiate AI voice call campaigns. Download the reference file above for the correct structure.</span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        /* FILE INPUT CHANGE */
+        const fileInput = document.getElementById('fileInput');
+        const dropZone = document.getElementById('dropZone');
+        const fileInfo = document.getElementById('fileInfo');
+
+        fileInput.addEventListener('change', function () {
+            if (this.files.length > 0) {
+                showFileInfo(this.files[0]);
+            }
+        });
+
+        /* DRAG & DROP */
+        dropZone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', function () {
+            this.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                showFileInfo(files[0]);
+            }
+        });
+
+        /* SHOW FILE INFO */
+        function showFileInfo(file) {
+            document.getElementById('fileName').textContent = file.name;
+            const sizeKB = (file.size / 1024).toFixed(1);
+            document.getElementById('fileSize').textContent = sizeKB > 1024
+                ? (sizeKB / 1024).toFixed(2) + ' MB'
+                : sizeKB + ' KB';
+            fileInfo.classList.add('show');
+            dropZone.style.display = 'none';
+        }
+
+        /* REMOVE FILE */
+        function removeFile() {
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            dropZone.style.display = '';
+        }
+
+        /* TOAST ALERT HELPER */
+        function showToast(message, type) {
+            const existing = document.querySelector('.toast-alert');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-alert';
+
+            const icon = type === 'success' ? '✅' : '⚠️';
+            if (type === 'success') {
+                toast.style.borderLeftColor = '#3b82f6';
+            }
+
+            toast.innerHTML = `
+        <span class="toast-icon">${icon}</span>
+        <span>${message}</span>
+        <button class="toast-close" onclick="dismissToast(this)">✕</button>
+    `;
+
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.classList.add('hide');
+                    setTimeout(() => toast.remove(), 350);
+                }
+            }, 4000);
+        }
+
+        function dismissToast(btn) {
+            const toast = btn.closest('.toast-alert');
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 350);
+        }
+
+        /* ===== ORIGINAL FORM SUBMIT LOGIC (preserved) ===== */
+        document.getElementById("callForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const file = fileInput.files[0];
+            if (!file) {
+                showToast('Please select an Excel file before uploading.', 'warning');
+                return;
+            }
+
+            // Validate bot selection for superadmin
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            const isSuperuser = localStorage.getItem('is_superuser') === 'true';
+            const role = localStorage.getItem('role') || '';
+            const assignedAgentId = localStorage.getItem('assigned_agent_id');
+            const isSuperAdmin = isSuperuser || 
+                                 (role.toLowerCase() === 'super admin' || role.toLowerCase() === 'superadmin') || 
+                                 (isAdmin && (!assignedAgentId || assignedAgentId === 'null' || assignedAgentId === ''));
+
+            const botSelect = document.getElementById('botSelect');
+            if (isSuperAdmin && botSelect && !botSelect.value) {
+                showToast('Please select a Voice Bot before uploading.', 'warning');
+                botSelect.focus();
+                return;
+            }
+
+            const formData = new FormData(this);
+            const resultEl = document.getElementById("result");
+            const btn = document.getElementById("uploadBtn");
+            const overlay = document.getElementById("loadingOverlay");
+
+            // Show loading states
+            resultEl.className = 'loading';
+            resultEl.innerText = "⏳ Uploading and processing…";
+            btn.classList.add('uploading');
+            btn.querySelector('.btn-icon').style.display = 'none';
+            btn.querySelector('.btn-text').textContent = 'Triggering Calls…';
+            overlay.classList.add('active');
+
+            const token = localStorage.getItem('access_token');
+            const headers = {};
+            if (token) {
+                headers['Authorization'] = 'Bearer ' + token;
+            }
+
+            try {
+                const res = await fetch("/bot/upload-call/", {
+                    method: "POST",
+                    headers: headers,
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    resultEl.className = 'error';
+                    resultEl.innerText = "❌ " + (data.error || 'Upload failed.');
+                    showToast(data.error || 'Upload failed.', 'warning');
+                    return;
+                }
+
+                resultEl.className = 'success';
+                resultEl.innerText = "✅ Calls triggered: " + data.total + ". Redirecting to Campaign History…";
+                showToast('Calls triggered! Redirecting…', 'success');
+
+                // Reset file & redirect to Campaign History after 2s
+                removeFile();
+                setTimeout(() => {
+                    window.location.href = '/bot/campaigns/';
+                }, 2000);
+
+            } catch (err) {
+                resultEl.className = 'error';
+                resultEl.innerText = "❌ Error! Something went wrong.";
+                showToast('Failed to trigger calls. Please try again.', 'warning');
+            } finally {
+                overlay.classList.remove('active');
+                btn.classList.remove('uploading');
+                btn.querySelector('.btn-icon').style.display = '';
+                btn.querySelector('.btn-text').textContent = 'Upload & Trigger Calls';
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>

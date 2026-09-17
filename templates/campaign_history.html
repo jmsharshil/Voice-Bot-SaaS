@@ -1,0 +1,1841 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/x-icon" href="{% static 'favicon.png' %}">
+    <script src="/static/js/auth_helper.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign History — Admin Dashboard</title>
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box }
+        body { font-family:'Inter',system-ui,sans-serif; background:#f1f5f9; color:#1e293b; min-height:100vh }
+        ::-webkit-scrollbar { width:6px }
+        ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+        .header { padding:16px 32px; background:#fff; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; box-shadow:0 1px 3px rgba(0,0,0,.05) }
+        .header-dot { width:10px; height:10px; border-radius:50%; background:#4f46e5; box-shadow:0 0 0 4px rgba(79,70,229,.1) }
+        .header-title { font-size:18px; font-weight:700; color:#0f172a }
+        .header-sub { font-size:12px; color:#64748b; font-weight:500; background:#f8fafc; padding:4px 10px; border-radius:20px; border:1px solid #f1f5f9; margin-left:8px }
+        .header-right { margin-left:auto; display:flex; align-items:center; gap:12px }
+        .header-link { font-size:13px; color:#4f46e5; font-weight:600; text-decoration:none; padding:8px 16px; background:#f5f3ff; border-radius:8px; transition:all .2s; border:1px solid rgba(79,70,229,.1) }
+        .header-link:hover { background:#ede9fe; transform:translateY(-1px) }
+        .back-to-dashboard-btn:hover { background: #cbd5e1 !important; color: #0f172a !important; transform: scale(1.05); }
+
+        /* Unified Header Navigation styles */
+        .nav-tabs {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-right: 8px;
+            border-right: 1px solid #e2e8f0;
+            padding-right: 12px;
+        }
+        .nav-tab {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-tab:hover {
+            color: #4f46e5;
+            background: #f1f5f9;
+        }
+        .nav-tab.active {
+            color: #4f46e5;
+            background: #e0e7ff;
+        }
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .nav-action-btn {
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid transparent;
+            cursor: pointer;
+        }
+        .nav-action-btn:hover {
+            transform: translateY(-1px);
+        }
+        .nav-action-btn-primary {
+            background: #4f46e5;
+            color: #ffffff;
+        }
+        .nav-action-btn-primary:hover {
+            background: #4338ca;
+        }
+        .nav-action-btn-success {
+            background: #10b981;
+            color: #ffffff;
+        }
+        .nav-action-btn-success:hover {
+            background: #059669;
+        }
+        .nav-action-btn-warning {
+            background: #fff7ed;
+            color: #ea580c;
+            border-color: rgba(234,88,12,0.2);
+        }
+        .nav-action-btn-warning:hover {
+            background: #ffedd5;
+        }
+        .nav-action-btn-info {
+            background: #eff6ff;
+            color: #3b82f6;
+            border-color: rgba(59,130,246,0.2);
+        }
+        .nav-action-btn-info:hover {
+            background: #dbeafe;
+        }
+
+        /* PROFILE DROPDOWN */
+        .profile-wrap {
+            position: relative;
+            display: flex;
+            align-items: center
+        }
+
+        .profile-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            border: 2px solid rgba(79, 70, 229, 0.2);
+            transition: box-shadow .2s;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .profile-avatar:hover {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+        }
+
+        .minutes-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(5,150,105,0.08)); border:1px solid rgba(16,185,129,0.25); border-radius:20px; font-size:12px; font-weight:600; color:#059669; cursor:default; position:relative; margin-right:10px; transition:all .2s; }
+        .minutes-badge:hover { background:linear-gradient(135deg,rgba(16,185,129,0.18),rgba(5,150,105,0.14)); border-color:rgba(16,185,129,0.4); }
+        .minutes-badge .minutes-icon { font-size:13px; }
+        .minutes-badge .minutes-tooltip { display:none; position:absolute; top:calc(100% + 8px); right:0; min-width:220px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 12px 32px rgba(15,23,42,0.15); padding:12px 16px; z-index:999; font-size:12px; color:#334155; font-weight:500; }
+        .minutes-badge:hover .minutes-tooltip { display:block; }
+        .minutes-tooltip .tooltip-row { display:flex; justify-content:space-between; padding:4px 0; }
+        .minutes-tooltip .tooltip-row.remaining { color:#059669; font-weight:700; border-top:1px solid #f1f5f9; margin-top:4px; padding-top:8px; }
+        .minutes-badge.warning { background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(217,119,6,0.08)); border-color:rgba(245,158,11,0.3); color:#d97706; }
+        .minutes-badge.danger { background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(220,38,38,0.08)); border-color:rgba(239,68,68,0.3); color:#dc2626; }
+
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 180px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+            z-index: 999;
+            overflow: hidden;
+            animation: fadeIn .2s ease-out;
+        }
+
+        .profile-dropdown.open {
+            display: block;
+        }
+
+        .pd-header {
+            padding: 14px 16px 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .pd-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pd-label {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .pd-logout {
+            width: 100%;
+            padding: 11px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #ef4444;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background .15s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .pd-logout:hover {
+            background: #fef2f2;
+        }
+
+        .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; padding:24px 32px }
+        .card { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; transition:all .3s; animation:fadeIn .5s ease-out both; box-shadow:0 1px 2px rgba(0,0,0,.03) }
+        .card:hover { transform:translateY(-4px); box-shadow:0 12px 24px -8px rgba(0,0,0,.1); border-color:#4f46e5 }
+        .card-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#64748b; margin-bottom:8px }
+        .card-value { font-size:32px; font-weight:800; letter-spacing:-.03em }
+        .card:nth-child(1) .card-value { color:#4f46e5 }
+        .card:nth-child(2) .card-value { color:#3b82f6 }
+        .card:nth-child(3) .card-value { color:#10b981 }
+        .card:nth-child(4) .card-value { color:#ef4444 }
+
+        .container { padding:0 32px 32px }
+        .section-title { font-size:15px; font-weight:700; color:#0f172a; margin-bottom:16px; display:flex; align-items:center; gap:8px }
+
+        .campaign-list { display:flex; flex-direction:column; gap:16px }
+        .campaign-card { background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; animation:fadeIn .5s ease-out both; transition:all .3s }
+        .campaign-card:hover { box-shadow:0 8px 24px -8px rgba(0,0,0,.08); border-color:#cbd5e1 }
+
+        .campaign-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px }
+        .campaign-name { font-size:16px; font-weight:700; color:#0f172a }
+        .campaign-id { font-size:12px; color:#94a3b8; font-weight:500; margin-left:8px }
+        .campaign-badge { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:.05em }
+        .badge-active { background:#dcfce7; color:#16a34a; border:1px solid #bbf7d0 }
+        .badge-completed { background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0 }
+        .badge-pending { background:#fef3c7; color:#d97706; border:1px solid #fde68a }
+
+        .campaign-stats { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:16px }
+        .stat-item { text-align:center }
+        .stat-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#94a3b8; margin-bottom:4px }
+        .stat-value { font-size:20px; font-weight:800; color:#0f172a }
+        .stat-value.answered { color:#10b981 }
+        .stat-value.missed { color:#ef4444 }
+
+        .campaign-time { display:flex; gap:24px; padding-top:12px; border-top:1px solid #f1f5f9 }
+        .time-item { font-size:12px; color:#64748b }
+        .time-item strong { color:#334155; font-weight:600 }
+
+        .progress-bar { width:100%; height:6px; background:#f1f5f9; border-radius:3px; margin:12px 0; overflow:hidden }
+        .progress-fill { height:100%; border-radius:3px; transition:width .5s ease }
+        .progress-answered { background:linear-gradient(90deg,#10b981,#34d399) }
+        .progress-missed { background:linear-gradient(90deg,#ef4444,#f87171) }
+
+        .phone-toggle { font-size:12px; color:#4f46e5; font-weight:600; cursor:pointer; border:none; background:none; padding:4px 0; margin-top:8px }
+        .phone-toggle:hover { text-decoration:underline }
+        .phone-list { display:none; margin-top:12px; padding:12px; background:#f8fafc; border-radius:8px; font-size:12px; color:#475569; line-height:1.8; max-height:200px; overflow-y:auto }
+        .phone-list.open { display:block }
+        .phone-chip { display:inline-block; background:#fff; border:1px solid #e2e8f0; border-radius:6px; padding:2px 8px; margin:2px; font-size:11px; font-weight:500 }
+        .phone-chip.missed { background:#fef2f2; border-color:#fecaca; color:#dc2626 }
+        .phone-chip.final-missed { background:#fff1f2; border-color:#fda4af; color:#e11d48; font-weight:700; border-width:1.5px; box-shadow:0 1px 2px rgba(225,29,72,0.1) }
+        .phone-chip.final-missed:hover { border-color:#e11d48 !important; background:#ffe4e6 !important; color:#be123c !important }
+
+        .empty-state { text-align:center; padding:80px 32px; color:#94a3b8 }
+        .empty-state h2 { font-size:20px; font-weight:700; margin-bottom:8px; color:#64748b }
+        .empty-state p { font-size:14px }
+        .loading { text-align:center; padding:60px; color:#94a3b8; font-size:14px }
+
+        @media(max-width:768px) {
+            .header {
+                display: grid;
+                grid-template-columns: auto 1fr auto auto;
+                align-items: center;
+                gap: 10px 8px;
+                padding: 10px 12px;
+            }
+            .header-logo-icon, .header-company-logo {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .header-title {
+                grid-column: 2;
+                grid-row: 1;
+                font-size: 15px;
+                font-weight: 700;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .header-sub {
+                display: none;
+            }
+            .header-right {
+                display: contents;
+            }
+            .minutes-badge {
+                grid-column: 3;
+                grid-row: 1;
+                justify-self: end;
+                margin-right: 0 !important;
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+            .profile-wrap {
+                grid-column: 4;
+                grid-row: 1;
+                justify-self: end;
+            }
+            .profile-avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+            }
+            .nav-tabs {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                padding: 0 0 4px 0;
+                margin: 0;
+                border-right: none;
+                gap: 6px;
+                justify-content: flex-start;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .nav-tabs::-webkit-scrollbar {
+                display: none;
+            }
+            .nav-tab {
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            .nav-actions {
+                grid-column: 1 / -1;
+                grid-row: 3;
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                gap: 6px;
+                justify-content: flex-start;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .nav-actions::-webkit-scrollbar {
+                display: none;
+            }
+            .nav-action-btn {
+                flex-shrink: 0;
+                white-space: nowrap;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .cards {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                gap: 12px;
+                padding: 16px;
+                scrollbar-width: none;
+            }
+            .cards::-webkit-scrollbar {
+                display: none;
+            }
+            .card {
+                flex: 0 0 160px;
+                padding: 16px;
+                animation: none;
+            }
+            .card-value { font-size: 26px; }
+            .campaign-stats { grid-template-columns: repeat(3,1fr); gap: 12px; }
+            .campaign-time { flex-direction: column; gap: 8px; }
+            .container { padding: 0 16px 16px; }
+            .campaign-header { flex-wrap: wrap; gap: 8px; }
+            .campaign-name { font-size: 14px; }
+            .stat-value { font-size: 18px; }
+            .drawer { width: 360px; right: -360px; }
+        }
+
+        @media(max-width:576px) {
+            .nav-tab { padding: 5px 10px; font-size: 11px; }
+            .nav-action-btn { font-size: 11px; padding: 5px 10px; }
+            .minutes-badge { font-size: 10px; padding: 3px 8px; }
+            .profile-avatar { width: 30px; height: 30px; font-size: 12px; }
+            .cards { padding: 10px 8px; gap: 8px; }
+            .card { flex: 0 0 140px; padding: 12px; border-radius: 10px; }
+            .card-value { font-size: 22px; }
+            .card-label { font-size: 10px; }
+            .container { padding: 0 8px 12px; }
+            .campaign-card { padding: 16px; border-radius: 12px; }
+            .campaign-stats { grid-template-columns: repeat(2,1fr); gap: 10px; }
+            .stat-value { font-size: 16px; }
+            .stat-label { font-size: 9px; }
+            .campaign-name { font-size: 13px; }
+            .campaign-id { font-size: 11px; }
+            .time-item { font-size: 11px; }
+            .phone-toggle { font-size: 11px; }
+            .phone-chip { font-size: 10px; padding: 2px 6px; }
+            .btn-ctrl { font-size: 10px; padding: 5px 10px; }
+            .drawer { width: 100%; right: -100%; }
+            .drawer-header { padding: 14px; }
+            .drawer-title { font-size: 14px; }
+            .drawer-content { padding: 14px; }
+            .chat-bubble { font-size: 12px; padding: 10px 14px; }
+        }
+
+        @media(max-width:480px) {
+            .campaign-stats { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* Dynamic Campaign Controls */
+        .campaign-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
+        }
+        .btn-ctrl {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all .2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-pause { background: #fef3c7; color: #d97706; border-color: #fde68a }
+        .btn-pause:hover { background: #fde68a }
+        .btn-resume { background: #dcfce7; color: #15803d; border-color: #bbf7d0 }
+        .btn-resume:hover { background: #bbf7d0 }
+        .btn-stop { background: #fde8e8; color: #c53030; border-color: #fecaca }
+        .btn-stop:hover { background: #fecaca }
+        .btn-export { background: #e0f2fe; color: #0284c7; border-color: #bae6fd }
+        .btn-export:hover { background: #bae6fd }
+        .btn-export:disabled {
+            background: #f1f5f9 !important;
+            color: #94a3b8 !important;
+            border-color: #cbd5e1 !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+        }
+
+        /* Auto-Refresh Toggle Switch Style */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 38px;
+            height: 20px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        input:checked + .slider {
+            background-color: #10b981;
+        }
+        input:checked + .slider:before {
+            transform: translateX(18px);
+        }
+        
+        .pulse-active {
+            animation: pulse-green 1.5s infinite;
+        }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Clickable phone chips */
+        .phone-chip {
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .phone-chip:hover {
+            border-color: #4f46e5;
+            background: #f5f3ff;
+            color: #4f46e5;
+            transform: translateY(-1px);
+        }
+        .phone-chip.missed:hover {
+            border-color: #ef4444;
+            background: #fef2f2;
+            color: #ef4444;
+        }
+
+        /* Sidebar/Drawer for Lead Conversation */
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: 420px;
+            height: 100%;
+            background: #fff;
+            box-shadow: -4px 0 24px rgba(0,0,0,.15);
+            z-index: 1000;
+            transition: right .3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #e2e8f0;
+        }
+        .drawer.open {
+            right: 0;
+        }
+        .drawer-header {
+            padding: 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .drawer-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .drawer-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #64748b;
+            padding: 4px;
+            line-height: 1;
+            transition: color .2s;
+        }
+        .drawer-close:hover { color: #0f172a }
+        
+        .drawer-meta {
+            padding: 12px 20px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 12px;
+            color: #475569;
+        }
+        .lead-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .badge-hot { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca }
+        .badge-warm { background: #fffbeb; color: #d97706; border: 1px solid #fde68a }
+        .badge-cold { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe }
+        .badge-not_interested { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0 }
+        .badge-unknown { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0 }
+
+        .drawer-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: #f8fafc;
+        }
+        .chat-bubble {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 13px;
+            line-height: 1.5;
+            animation: fadeIn .3s ease-out;
+        }
+        .bubble-bot {
+            align-self: flex-start;
+            background: #fff;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+            border-top-left-radius: 4px;
+        }
+        .bubble-user {
+            align-self: flex-end;
+            background: #4f46e5;
+            color: #fff;
+            border-top-right-radius: 4px;
+        }
+        .bubble-time {
+            font-size: 10px;
+            color: #94a3b8;
+            margin-top: 4px;
+            display: block;
+            text-align: right;
+        }
+        .bubble-user .bubble-time { color: rgba(255,255,255,.7) }
+
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15,23,42,.4);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .3s;
+        }
+        .drawer-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-logo-icon" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        </div>
+        <img class="header-company-logo" style="height: 32px; max-width: 120px; object-fit: contain; display: none;" alt="Company Logo">
+        <span class="header-title">Campaign History</span>
+        <div class="header-right">
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs">
+                <a href="/dashboard/" id="navLeadAnalysis" class="nav-tab">🧠 Lead Analysis</a>
+                <a href="/analytics/" id="callAnalyticsBtn" class="nav-tab" style="display:none;">📈 Call Analytics</a>
+                <a href="/bot/campaigns/" id="campaignHistoryBtn" class="nav-tab active">🕒 Campaign History</a>
+                <a href="/bot/dashboard/" id="triggerCallBtn" class="nav-tab" style="display:none;">📞 Trigger-Call</a>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="nav-actions">
+                <a href="/accounts/admin-management/" id="adminBtn" class="nav-action-btn nav-action-btn-info" style="display:none;">⚙️ Add Client</a>
+            </div>
+
+            <!-- Live Indicator -->
+            <div style="display: flex; align-items: center; gap: 6px; margin-right: 4px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 10px;">
+                <span id="refreshIndicator" style="width: 8px; height: 8px; border-radius: 50%; background-color: #10b981; display: inline-block; transition: all 0.3s;" class="pulse-active" title="System Online"></span>
+                <span style="font-size: 11px; font-weight: 600; color: #64748b;" id="refreshStatus">Live</span>
+            </div>
+
+            <!-- Minutes Badge -->
+            <div class="minutes-badge" id="minutesBadge" style="display:none;">
+                <span class="minutes-icon">⏱️</span>
+                <span id="minutesText">—/—</span>
+                <div class="minutes-tooltip" id="minutesTooltip"></div>
+            </div>
+
+            <!-- Profile Dropdown -->
+            <div class="profile-wrap" id="profileWrap" style="margin-left: 12px;">
+                <div class="profile-avatar" id="profileAvatar" onclick="toggleProfile(event)">?</div>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="pd-header">
+                        <div class="pd-name" id="pdName">User</div>
+                        <div class="pd-label">Logged in</div>
+                    </div>
+                    <div style="border-bottom: 1px solid #f1f5f9; padding: 4px 0;">
+                        <label for="profilePicInput" style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; font-size: 13px; color: #475569; cursor: pointer; transition: background 0.2s; font-weight: 500;" class="pd-item-upload">
+                            📷 Upload Photo
+                        </label>
+                        <input type="file" id="profilePicInput" accept="image/*" style="display: none;" onchange="uploadProfilePicture(event)">
+                    </div>
+                    <a href="/accounts/team-management/" id="teamBtn" style="display:none; text-decoration:none; padding:11px 16px; font-size:13px; font-weight:600; color:#4f46e5; border-bottom:1px solid #f1f5f9; align-items:center; gap:8px;" class="pd-item">👥 Manage Team</a>
+                    <a href="/accounts/support/" style="text-decoration:none; padding:11px 16px; font-size:13px; font-weight:600; color:#4f46e5; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:8px;" class="pd-item">🛠️ Support</a>
+                    <button class="pd-logout" onclick="logout()">🚪 Logout</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTH CHECK -->
+    <script>
+        if (!localStorage.getItem('access_token')) {
+            window.location.replace('/accounts/login/');
+        } else {
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) {}
+            if (!isAdmin && !perms.can_view_campaigns) {
+                alert('Access Denied: You do not have permission to view Campaign History.');
+                window.location.replace('/dashboard/');
+            }
+        }
+    </script>
+
+    <!-- STAT CARDS -->
+    <div class="cards">
+        <div class="card">
+            <div class="card-label">Total Campaigns</div>
+            <div class="card-value" id="statCampaigns">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Calls</div>
+            <div class="card-value" id="statCalls">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Answered</div>
+            <div class="card-value" id="statAnswered">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Missed</div>
+            <div class="card-value" id="statMissed">—</div>
+        </div>
+    </div>
+
+    <!-- CAMPAIGN LIST -->
+    <div class="container">
+        <div class="section-title">All Campaigns</div>
+        <div class="campaign-list" id="campaignList">
+            <div class="loading">Loading campaigns...</div>
+        </div>
+    </div>
+
+    <!-- DRAWER OVERLAY -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+    <!-- CONVERSATION DRAWER -->
+    <div class="drawer" id="conversationDrawer">
+        <div class="drawer-header">
+            <span class="drawer-title" id="drawerTitle">Conversation</span>
+            <button class="drawer-close" onclick="closeDrawer()">✕</button>
+        </div>
+        <div class="drawer-meta" id="drawerMeta"></div>
+        <div class="drawer-content" id="drawerContent">
+            <div class="loading">Select a phone number to view conversation...</div>
+        </div>
+    </div>
+
+    <script>
+        if (!localStorage.getItem('access_token')) {
+            window.location.replace('/accounts/login/');
+        } else {
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) { }
+
+            if (!isAdmin && !perms.can_view_campaigns) {
+                if (perms.can_view_leads) {
+                    window.location.replace('/dashboard/');
+                } else if (perms.can_view_calls) {
+                    window.location.replace('/analytics/');
+                } else {
+                    alert('Access Denied: You do not have permission to view any dashboard. Please contact your administrator.');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    localStorage.removeItem('username');
+                    localStorage.removeItem('is_admin');
+                    localStorage.removeItem('permissions');
+                    window.location.replace('/accounts/login/');
+                }
+            }
+        }
+
+        const token = localStorage.getItem('access_token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+        let _refreshInterval = null;
+        let _currentRefreshRate = null; // 'fast' (10s) or 'slow' (20s)
+        let _activeConversation = null; // { campaignId, phone }
+        let _conversationInterval = null;
+        let _isFirstLoad = true;
+
+        function startAutoRefresh(rate) {
+            if (_currentRefreshRate === rate) return;
+            if (_refreshInterval) clearInterval(_refreshInterval);
+            
+            const ms = rate === 'fast' ? 10000 : 20000;
+            _refreshInterval = setInterval(loadCampaigns, ms);
+            _currentRefreshRate = rate;
+
+            const indicator = document.getElementById('refreshIndicator');
+            const statusText = document.getElementById('refreshStatus');
+            if (indicator && statusText) {
+                if (rate === 'fast') {
+                    indicator.style.backgroundColor = '#10b981';
+                    indicator.classList.add('pulse-active');
+                    statusText.textContent = 'Live (Active)';
+                } else {
+                    indicator.style.backgroundColor = '#64748b';
+                    indicator.classList.remove('pulse-active');
+                    statusText.textContent = 'Live';
+                }
+            }
+        }
+
+        async function loadCampaigns() {
+            try {
+                // Capture which phone lists are open to preserve their state after reload
+                const openLists = [];
+                document.querySelectorAll('.phone-list.open').forEach(el => {
+                    openLists.push(el.id);
+                });
+
+                const res = await fetch('/bot/campaigns/data/', { headers });
+                if (res.status === 401) { window.location.replace('/accounts/login/'); return; }
+                const data = await res.json();
+
+                // Update stat cards
+                document.getElementById('statCampaigns').textContent = data.stats.total_campaigns;
+                document.getElementById('statCalls').textContent = data.stats.total_calls;
+                document.getElementById('statAnswered').textContent = data.stats.total_answered;
+                document.getElementById('statMissed').textContent = data.stats.total_missed;
+                const totalBadge = document.getElementById('totalBadge');
+                if (totalBadge) {
+                    totalBadge.textContent = `${data.stats.total_campaigns} campaigns`;
+                }
+
+                const list = document.getElementById('campaignList');
+
+                if (!data.campaigns.length) {
+                    list.innerHTML = `<div class="empty-state"><h2>No Campaigns Yet</h2><p>Start your first campaign from the Upload & Call page.</p></div>`;
+                    return;
+                }
+
+                list.innerHTML = data.campaigns.map((c, i) => {
+                    const startDate = c.started_at ? new Date(c.started_at) : null;
+                    const endDate = c.ended_at ? new Date(c.ended_at) : null;
+                    const fmtDate = d => d ? d.toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) : '—';
+                    const fmtTime = d => d ? d.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+
+                    const duration = c.duration_seconds
+                        ? (c.duration_seconds >= 3600
+                            ? `${Math.floor(c.duration_seconds/3600)}h ${Math.floor((c.duration_seconds%3600)/60)}m`
+                            : `${Math.floor(c.duration_seconds/60)}m ${c.duration_seconds%60}s`)
+                        : (c.is_active ? 'In Progress' : '—');
+
+                    const answeredPct = c.total_count ? Math.round((c.answered_count / c.total_count) * 100) : 0;
+                    const missedPct = c.total_count ? Math.round((c.missed_count / c.total_count) * 100) : 0;
+
+                    // Phone chips — clickable to open conversation drawer
+                    const phoneChips = c.phone_list.map(p => {
+                        const isMissed = c.missed_list.includes(p);
+                        return `<span class="phone-chip ${isMissed ? 'missed' : ''}" onclick="openConversation(${c.id}, '${p}', event)">${p}${isMissed ? ' (Missed)' : ''}</span>`;
+                    }).join('');
+
+                    const missedChips = c.missed_list.map(p =>
+                        `<span class="phone-chip missed" onclick="openConversation(${c.id}, '${p}', event)">${p}</span>`
+                    ).join('');
+
+                    // Campaign controls for active campaigns
+                    const controlsHtml = c.is_active ? `
+                        <div class="campaign-controls" id="controls-${c.id}">
+                            <button class="btn-ctrl btn-stop" onclick="stopCampaign(${c.id})">⏹ Stop/End</button>
+                        </div>` : '';
+                    
+                    // Locked state: if either parent or sub-campaign is active
+                    const isLocked = c.is_active || (c.sub_campaigns && c.sub_campaigns.some(sub => sub.is_active));
+                    const exportBtnHtml = `
+                        <button class="btn-ctrl btn-export" onclick="exportCampaignExcel(${c.id})" ${isLocked ? 'disabled title="Export is locked while campaign dialing is in progress"' : ''} style="font-size: 10px; padding: 4px 8px;">
+                            📥 Export Excel
+                        </button>
+                    `;
+
+                    // Check if campaign was suspended due to daily time limits
+                    const hoursSuspendedBanner = c.suspended_due_to_hours ? `
+                        <div style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; font-size: 12px; font-weight: 600; margin-top: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                            ⏰ Daily calling window closed. The remaining calls in this campaign queue are scheduled to automatically resume tomorrow at 09:30 AM.
+                        </div>
+                    ` : '';
+                    
+                    const animStyle = _isFirstLoad ? `style="animation-delay:${i*0.05}s"` : `style="animation: none;"`;
+
+                    return `
+                    <div class="campaign-card" ${animStyle}>
+                        <div class="campaign-header">
+                            <div>
+                                <span class="campaign-name">${c.name || 'Untitled Campaign'}</span>
+                                <span class="campaign-id">#${c.id}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="campaign-badge ${c.is_active ? 'badge-active' : (c.ended_at ? 'badge-completed' : 'badge-pending')}">
+                                    ${c.is_active ? 'Active' : (c.ended_at ? 'Completed' : 'Pending')}
+                                </span>
+                                ${exportBtnHtml}
+                            </div>
+                        </div>
+
+                        <div class="campaign-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">Total</div>
+                                <div class="stat-value">${c.total_count}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Completed</div>
+                                <div class="stat-value">${c.completed_count}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Answered</div>
+                                <div class="stat-value answered">${c.answered_count}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Missed</div>
+                                <div class="stat-value missed">${c.missed_count}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Duration</div>
+                                <div class="stat-value" style="font-size:16px;color:#334155">${duration}</div>
+                            </div>
+                        </div>
+
+                        <div class="progress-bar">
+                            <div class="progress-fill progress-answered" style="width:${answeredPct}%"></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px">
+                            <span>Answered ${answeredPct}%</span>
+                            <span>Missed ${missedPct}%</span>
+                        </div>
+
+                        ${hoursSuspendedBanner}
+
+                        <div class="campaign-time">
+                            ${c.created_by ? `<div class="time-item"><strong>Triggered By:</strong> ${c.created_by}</div>` : ''}
+                            ${c.bot_name ? `<div class="time-item"><strong>Voice Bot:</strong> ${c.bot_name}</div>` : ''}
+                            <div class="time-item"><strong>Started:</strong> ${fmtDate(startDate)} at ${fmtTime(startDate)}</div>
+                            <div class="time-item"><strong>Ended:</strong> ${endDate ? fmtDate(endDate) + ' at ' + fmtTime(endDate) : (c.is_active ? 'Running...' : '—')}</div>
+                            <div class="time-item"><strong>Total Duration:</strong> ${duration}</div>
+                        </div>
+
+                        ${c.phone_list.length ? `<button class="phone-toggle" onclick="togglePhones(this, 'all', ${c.id})">View All Numbers (${c.phone_list.length})</button><div class="phone-list" id="phone-list-all-${c.id}">${phoneChips}</div>` : ''}
+                        ${c.missed_list.length ? `<button class="phone-toggle" onclick="togglePhones(this, 'missed', ${c.id})" style="color:#ef4444">View Missed Numbers (${c.missed_list.length})</button><div class="phone-list" id="phone-list-missed-${c.id}">${missedChips}</div>` : ''}
+
+                        ${controlsHtml}
+
+                        ${(() => {
+                            if (!c.sub_campaigns || !c.sub_campaigns.length) return '';
+                            return `
+                            <div class="sub-campaigns-section" style="margin-top: 16px; padding-top: 16px; border-top: 1.5px solid #f1f5f9;">
+                                <h4 style="font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                    🔄 Auto-Retries (${c.sub_campaigns.length})
+                                </h4>
+                                <div style="display: flex; flex-direction: column; gap: 16px; padding-left: 16px; border-left: 2px solid #e2e8f0; margin-left: 8px;">
+                                    ${c.sub_campaigns.map(sub => {
+                                        const subStartDate = sub.started_at ? new Date(sub.started_at) : null;
+                                        const subEndDate = sub.ended_at ? new Date(sub.ended_at) : null;
+                                        const subDuration = sub.duration_seconds
+                                            ? (sub.duration_seconds >= 3600
+                                                ? `${Math.floor(sub.duration_seconds/3600)}h ${Math.floor((sub.duration_seconds%3600)/60)}m`
+                                                : `${Math.floor(sub.duration_seconds/60)}m ${sub.duration_seconds%60}s`)
+                                            : (sub.is_active ? 'In Progress' : '—');
+                                        
+                                        const subAnsweredPct = sub.total_count ? Math.round((sub.answered_count / sub.total_count) * 100) : 0;
+                                        const subMissedPct = sub.total_count ? Math.round((sub.missed_count / sub.total_count) * 100) : 0;
+                                        
+                                        const isFinalCampaign = sub.retry_count === 5;
+                                        const subPhoneChips = sub.phone_list.map(p => {
+                                            const isMissed = sub.missed_list.includes(p);
+                                            const isFinalMissed = isMissed && isFinalCampaign;
+                                            return `<span class="phone-chip ${isFinalMissed ? 'final-missed' : (isMissed ? 'missed' : '')}" onclick="openConversation(${sub.id}, '${p}', event)">${p}${isFinalMissed ? ' (Still Missed ⚠️)' : (isMissed ? ' (Missed)' : '')}</span>`;
+                                        }).join('');
+                                        
+                                        const subMissedChips = sub.missed_list.map(p => {
+                                            const isFinalMissed = isFinalCampaign;
+                                            return `<span class="phone-chip ${isFinalMissed ? 'final-missed' : 'missed'}" onclick="openConversation(${sub.id}, '${p}', event)">${p}${isFinalMissed ? ' (Still Missed ⚠️)' : ''}</span>`;
+                                        }).join('');
+
+                                        const subControlsHtml = sub.is_active ? `
+                                            <div class="campaign-controls" id="controls-${sub.id}" style="margin-top: 8px; border-top: none; padding-top: 0;">
+                                                <button class="btn-ctrl btn-stop" onclick="stopCampaign(${sub.id})">⏹ Stop/End</button>
+                                            </div>` : '';
+
+                                        return `
+                                            <div class="sub-campaign-item" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+                                                <div class="campaign-header" style="margin-bottom: 12px;">
+                                                    <div>
+                                                        <span class="campaign-name" style="font-size: 13px; color: #334155;">Retry Attempt #${sub.retry_count} (${sub.name || 'Untitled'})</span>
+                                                        <span class="campaign-id">#${sub.id}</span>
+                                                    </div>
+                                                    <span class="campaign-badge ${sub.is_active ? 'badge-active' : (sub.ended_at ? 'badge-completed' : 'badge-pending')}" style="font-size: 10px; padding: 2px 8px;">
+                                                        ${sub.is_active ? 'Active' : (sub.ended_at ? 'Completed' : 'Pending')}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div class="campaign-stats" style="grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px;">
+                                                    <div class="stat-item">
+                                                        <div class="stat-label" style="font-size: 9px;">Total</div>
+                                                        <div class="stat-value" style="font-size: 15px;">${sub.total_count}</div>
+                                                    </div>
+                                                    <div class="stat-item">
+                                                        <div class="stat-label" style="font-size: 9px;">Completed</div>
+                                                        <div class="stat-value" style="font-size: 15px;">${sub.completed_count}</div>
+                                                    </div>
+                                                    <div class="stat-item">
+                                                        <div class="stat-label" style="font-size: 9px;">Answered</div>
+                                                        <div class="stat-value answered" style="font-size: 15px;">${sub.answered_count}</div>
+                                                    </div>
+                                                    <div class="stat-item">
+                                                        <div class="stat-label" style="font-size: 9px;">Missed</div>
+                                                        <div class="stat-value missed" style="font-size: 15px;">${sub.missed_count}</div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="progress-bar" style="height: 4px; margin: 8px 0;">
+                                                    <div class="progress-fill progress-answered" style="width:${subAnsweredPct}%"></div>
+                                                </div>
+                                                <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8;margin-bottom:8px">
+                                                    <span>Answered ${subAnsweredPct}%</span>
+                                                    <span>Missed ${subMissedPct}%</span>
+                                                </div>
+                                                
+                                                <div class="campaign-time" style="padding-top: 8px; font-size: 11px; flex-wrap: wrap; gap: 8px 16px;">
+                                                    <div class="time-item" style="font-size: 11px; margin-bottom: 0;"><strong>Started:</strong> ${fmtDate(subStartDate)} at ${fmtTime(subStartDate)}</div>
+                                                    <div class="time-item" style="font-size: 11px; margin-bottom: 0;"><strong>Ended:</strong> ${subEndDate ? fmtDate(subEndDate) + ' at ' + fmtTime(subEndDate) : (sub.is_active ? 'Running...' : '—')}</div>
+                                                </div>
+                                                
+                                                ${sub.phone_list.length ? `<button class="phone-toggle" onclick="togglePhones(this, 'all', ${sub.id})" style="font-size:11px;">View All Numbers (${sub.phone_list.length})</button><div class="phone-list" id="phone-list-all-${sub.id}">${subPhoneChips}</div>` : ''}
+                                                ${sub.missed_list.length ? `<button class="phone-toggle" onclick="togglePhones(this, 'missed', ${sub.id})" style="color:#ef4444;font-size:11px;">View Missed Numbers (${sub.missed_list.length})</button><div class="phone-list" id="phone-list-missed-${sub.id}">${subMissedChips}</div>` : ''}
+                                                
+                                                ${subControlsHtml}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>`;
+                        })()}
+                    </div>`;
+                }).join('');
+
+                // Restore open list states
+                openLists.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.add('open');
+                        const btn = el.previousElementSibling;
+                        if (btn) {
+                            btn.textContent = btn.textContent.replace('View', 'Hide');
+                        }
+                    }
+                });
+
+                // Start or adjust auto-refresh based on whether any campaign is active
+                const hasActive = data.campaigns.some(c => c.is_active);
+                if (hasActive) {
+                    startAutoRefresh('fast');
+                } else {
+                    startAutoRefresh('slow');
+                }
+
+                _isFirstLoad = false;
+
+            } catch (err) {
+                console.error('Failed to load campaigns:', err);
+                document.getElementById('campaignList').innerHTML = `<div class="empty-state"><h2>Error Loading Data</h2><p>${err.message}</p></div>`;
+                startAutoRefresh('slow');
+            }
+        }
+
+        function togglePhones(btn, type, campaignId) {
+            const list = document.getElementById(`phone-list-${type}-${campaignId}`);
+            if (!list) return;
+            list.classList.toggle('open');
+            if (list.classList.contains('open')) {
+                btn.textContent = btn.textContent.replace('View', 'Hide');
+            } else {
+                btn.textContent = btn.textContent.replace('Hide', 'View');
+            }
+        }
+
+        // ── Campaign Controls ──────────────────────────────────
+        async function pauseCampaign(campaignId) {
+            try {
+                const res = await fetch('/bot/auto-campaign/pause/', {
+                    method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    const pauseBtn = document.getElementById(`pauseBtn-${campaignId}`);
+                    const resumeBtn = document.getElementById(`resumeBtn-${campaignId}`);
+                    if (pauseBtn) pauseBtn.style.display = 'none';
+                    if (resumeBtn) resumeBtn.style.display = '';
+                }
+            } catch (e) { console.error('Pause failed:', e); }
+        }
+
+        async function resumeCampaign(campaignId) {
+            try {
+                const res = await fetch('/bot/auto-campaign/resume/', {
+                    method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }
+                });
+                if (res.ok) {
+                    const pauseBtn = document.getElementById(`pauseBtn-${campaignId}`);
+                    const resumeBtn = document.getElementById(`resumeBtn-${campaignId}`);
+                    if (pauseBtn) pauseBtn.style.display = '';
+                    if (resumeBtn) resumeBtn.style.display = 'none';
+                }
+            } catch (e) { console.error('Resume failed:', e); }
+        }
+
+        async function stopCampaign(campaignId) {
+            if (!confirm('Are you sure you want to stop this campaign? Remaining numbers will be cancelled.')) return;
+            try {
+                await fetch('/bot/auto-campaign/stop/', {
+                    method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }
+                });
+                loadCampaigns();
+            } catch (e) { console.error('Stop failed:', e); }
+        }
+
+        function exportCampaignExcel(campaignId) {
+            const token = localStorage.getItem('access_token');
+            window.open(`/bot/export/campaign/${campaignId}/?token=${token}`, '_blank');
+        }
+
+        // ── Conversation Drawer ────────────────────────────────
+        async function refreshOpenConversation() {
+            if (!_activeConversation) return;
+            const { campaignId, phone } = _activeConversation;
+            const content = document.getElementById('drawerContent');
+            const meta = document.getElementById('drawerMeta');
+            try {
+                const res = await fetch(`/api/conversations/campaign-lead/?campaign_id=${campaignId}&phone=${phone}`, { headers });
+                if (!res.ok) return;
+                const data = await res.json();
+
+                // Check again to ensure user hasn't selected another conversation or closed the drawer
+                if (!_activeConversation || _activeConversation.campaignId !== campaignId || _activeConversation.phone !== phone) {
+                    return;
+                }
+
+                // Render meta info
+                const startTime = data.started_at ? new Date(data.started_at).toLocaleString('en-IN') : '—';
+                const endTime = data.ended_at ? new Date(data.ended_at).toLocaleString('en-IN') : 'Ongoing';
+                const badgeClass = `badge-${data.lead_level || 'unknown'}`;
+                const levelLabel = (data.lead_level || 'unknown').replace('_', ' ');
+
+                meta.innerHTML = `
+                    <div><strong>Phone:</strong> ${data.user_number} &nbsp;|&nbsp; <strong>Campaign:</strong> #${campaignId}</div>
+                    <div style="margin-top:4px"><strong>Started:</strong> ${startTime} &nbsp;|&nbsp; <strong>Ended:</strong> ${endTime}</div>
+                    <div style="margin-top:6px">
+                        <span class="lead-badge ${badgeClass}">${levelLabel}</span>
+                        ${data.lead_summary ? `<span style="margin-left:8px;font-size:11px;color:#64748b">${data.lead_summary}</span>` : ''}
+                    </div>
+                `;
+
+                // Render messages
+                if (!data.messages || data.messages.length === 0) {
+                    content.innerHTML = '<div class="loading">No messages recorded for this call.</div>';
+                    return;
+                }
+
+                const wasAtBottom = (content.scrollHeight - content.scrollTop - content.clientHeight) < 40;
+
+                const newHtml = data.messages.map(m => {
+                    const isBot = m.role === 'bot';
+                    const time = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true}) : '';
+                    return `
+                        <div class="chat-bubble ${isBot ? 'bubble-bot' : 'bubble-user'}">
+                            ${m.text}
+                            <span class="bubble-time">${isBot ? '🤖 Bot' : '👤 User'} · ${time}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                if (content.innerHTML !== newHtml) {
+                    content.innerHTML = newHtml;
+                    if (wasAtBottom) {
+                        content.scrollTop = content.scrollHeight;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to refresh open conversation:', err);
+            }
+        }
+
+        async function openConversation(campaignId, phone, event) {
+            if (event) event.stopPropagation();
+
+            const drawer = document.getElementById('conversationDrawer');
+            const overlay = document.getElementById('drawerOverlay');
+            const content = document.getElementById('drawerContent');
+            const meta = document.getElementById('drawerMeta');
+            const title = document.getElementById('drawerTitle');
+
+            title.textContent = `📞 ${phone}`;
+            meta.innerHTML = '<span style="color:#94a3b8">Loading conversation...</span>';
+            content.innerHTML = '<div class="loading">Fetching messages...</div>';
+
+            drawer.classList.add('open');
+            overlay.classList.add('active');
+
+            _activeConversation = { campaignId, phone };
+            if (_conversationInterval) clearInterval(_conversationInterval);
+
+            try {
+                const res = await fetch(`/api/conversations/campaign-lead/?campaign_id=${campaignId}&phone=${phone}`, { headers });
+                if (!res.ok) {
+                    const err = await res.json();
+                    content.innerHTML = `<div class="loading" style="color:#ef4444">${err.error || 'No conversation found for this number.'}</div>`;
+                    meta.innerHTML = `<div>Campaign #${campaignId}</div>`;
+                    return;
+                }
+
+                const data = await res.json();
+
+                if (!_activeConversation || _activeConversation.campaignId !== campaignId || _activeConversation.phone !== phone) {
+                    return;
+                }
+
+                // Render meta info
+                const startTime = data.started_at ? new Date(data.started_at).toLocaleString('en-IN') : '—';
+                const endTime = data.ended_at ? new Date(data.ended_at).toLocaleString('en-IN') : 'Ongoing';
+                const badgeClass = `badge-${data.lead_level || 'unknown'}`;
+                const levelLabel = (data.lead_level || 'unknown').replace('_', ' ');
+
+                meta.innerHTML = `
+                    <div><strong>Phone:</strong> ${data.user_number} &nbsp;|&nbsp; <strong>Campaign:</strong> #${campaignId}</div>
+                    <div style="margin-top:4px"><strong>Started:</strong> ${startTime} &nbsp;|&nbsp; <strong>Ended:</strong> ${endTime}</div>
+                    <div style="margin-top:6px">
+                        <span class="lead-badge ${badgeClass}">${levelLabel}</span>
+                        ${data.lead_summary ? `<span style="margin-left:8px;font-size:11px;color:#64748b">${data.lead_summary}</span>` : ''}
+                    </div>
+                `;
+
+                // Render messages
+                if (!data.messages || data.messages.length === 0) {
+                    content.innerHTML = '<div class="loading">No messages recorded for this call.</div>';
+                } else {
+                    content.innerHTML = data.messages.map(m => {
+                        const isBot = m.role === 'bot';
+                        const time = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true}) : '';
+                        return `
+                            <div class="chat-bubble ${isBot ? 'bubble-bot' : 'bubble-user'}">
+                                ${m.text}
+                                <span class="bubble-time">${isBot ? '🤖 Bot' : '👤 User'} · ${time}</span>
+                            </div>
+                        `;
+                    }).join('');
+                    content.scrollTop = content.scrollHeight;
+                }
+
+                // Start polling interval for this conversation to make it real-time
+                _conversationInterval = setInterval(refreshOpenConversation, 2000);
+
+            } catch (err) {
+                console.error('Failed to load conversation:', err);
+                content.innerHTML = `<div class="loading" style="color:#ef4444">Failed to load conversation: ${err.message}</div>`;
+            }
+        }
+
+        function closeDrawer() {
+            _activeConversation = null;
+            if (_conversationInterval) {
+                clearInterval(_conversationInterval);
+                _conversationInterval = null;
+            }
+            document.getElementById('conversationDrawer').classList.remove('open');
+            document.getElementById('drawerOverlay').classList.remove('active');
+        }
+
+        // Close drawer on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeDrawer();
+        });
+
+        // ── Profile & Auth ─────────────────────────────────────
+        async function uploadProfilePicture(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const avatar = document.getElementById('profileAvatar');
+            const originalText = avatar.textContent;
+            avatar.textContent = '...';
+
+            const formData = new FormData();
+            formData.append('profile_picture', file);
+
+            try {
+                const response = await fetch('/api/accounts/profile/upload-picture/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('profile_picture', data.profile_picture || '');
+                    if (avatar) {
+                        avatar.style.backgroundImage = `url('${data.profile_picture}')`;
+                        avatar.textContent = '';
+                    }
+                } else {
+                    const err = await response.json();
+                    alert('Failed to upload profile picture: ' + (err.error || 'Unknown error'));
+                    avatar.textContent = originalText;
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error uploading profile picture.');
+                avatar.textContent = originalText;
+            }
+        }
+
+        // Set profile avatar & name from localStorage & sync from API
+        (async function () {
+            const username = localStorage.getItem('username') || 'User';
+            const avatar = document.getElementById('profileAvatar');
+            const pdName = document.getElementById('pdName');
+            if (pdName) pdName.textContent = username;
+
+            const updateAvatar = (picUrl) => {
+                if (avatar) {
+                    const currentUsername = localStorage.getItem('username') || 'User';
+                    if (picUrl && picUrl !== 'null' && picUrl !== '') {
+                        avatar.style.backgroundImage = `url('${picUrl}')`;
+                        avatar.textContent = '';
+                    } else {
+                        avatar.style.backgroundImage = 'linear-gradient(135deg, #4f46e5, #7c3aed)';
+                        avatar.textContent = currentUsername.charAt(0).toUpperCase();
+                    }
+                }
+            };
+
+            const updateCompanyLogo = (logoUrl) => {
+                const logoIcon = document.querySelector('.header-logo-icon');
+                const companyLogoImg = document.querySelector('.header-company-logo');
+                if (logoIcon && companyLogoImg) {
+                    if (logoUrl && logoUrl !== 'null' && logoUrl !== '') {
+                        logoIcon.style.display = 'none';
+                        companyLogoImg.src = logoUrl;
+                        companyLogoImg.style.display = 'block';
+                    } else {
+                        logoIcon.style.display = 'inline-flex';
+                        companyLogoImg.style.display = 'none';
+                        companyLogoImg.src = '';
+                    }
+                }
+            };
+
+            // First load from localStorage for instant display
+            updateAvatar(localStorage.getItem('profile_picture'));
+            updateCompanyLogo(localStorage.getItem('company_logo'));
+
+            // Then fetch from server to sync and ensure it is always up to date
+            try {
+                const res = await fetch('/api/accounts/me/', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('profile_picture', data.profile_picture || '');
+                    localStorage.setItem('company_logo', data.company_logo || '');
+                    localStorage.setItem('username', data.username);
+                    localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
+                    localStorage.setItem('is_admin', data.permissions?.is_admin ? 'true' : 'false');
+                    localStorage.setItem('role', data.role || '');
+                    localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
+                    if (pdName) pdName.textContent = data.username;
+                    updateAvatar(data.profile_picture);
+                    updateCompanyLogo(data.company_logo);
+                }
+            } catch (e) {
+                console.error('Failed to sync profile', e);
+            }
+
+            // Show Admin Panel button & Campaign History button if user is admin
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            if (isAdmin) {
+                const adminBtn = document.getElementById('adminBtn');
+                if (adminBtn) adminBtn.style.display = 'inline-flex';
+            }
+
+            // Show Call Analytics button if user is admin OR has can_view_calls permission
+            let perms = {};
+            try { perms = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch (e) {}
+            if (isAdmin || perms.can_view_calls) {
+                const callAnalyticsBtn = document.getElementById('callAnalyticsBtn');
+                if (callAnalyticsBtn) callAnalyticsBtn.style.display = 'inline-flex';
+            }
+
+            // Show Campaign History button & Trigger-Call button if user is admin OR has can_view_campaigns permission
+            if (isAdmin || perms.can_view_campaigns) {
+                const campaignBtn = document.getElementById('campaignHistoryBtn');
+                if (campaignBtn) campaignBtn.style.display = 'inline-flex';
+                const triggerBtn = document.getElementById('triggerCallBtn');
+                if (triggerBtn) triggerBtn.style.display = 'inline-flex';
+            }
+
+            // Show Team Management button if user has permission (but hide for superadmin)
+            if (!isAdmin && perms.can_manage_team) {
+                const teamBtn = document.getElementById('teamBtn');
+                if (teamBtn) teamBtn.style.display = 'flex';
+            }
+        })();
+
+        function showMinutesWarningModal(botName, usedMinutes, threshold) {
+            if (document.getElementById('minutesWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'minutesWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(4px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2rem';
+            content.style.borderRadius = '16px';
+            content.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+            content.style.maxWidth = '450px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '64px';
+            iconContainer.style.height = '64px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.style.marginRight = 'auto';
+            iconContainer.style.marginLeft = 'auto';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Minutes Usage Warning';
+            title.style.fontSize = '1.4rem';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.5';
+            msg.style.marginBottom = '1.5rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `Your voice bot <strong style="color: #f8f8f2;">${botName}</strong> has crossed the <strong style="color: #ef4444;">${threshold} minutes</strong> usage threshold.<br><br>Total used minutes: <span style="font-size: 1.15rem; font-weight: bold; color: #f8f8f2; background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">${usedMinutes} minutes</span>.`;
+
+            const btn = document.createElement('button');
+            btn.innerText = 'Acknowledge';
+            btn.style.width = '100%';
+            btn.style.padding = '0.75rem 1rem';
+            btn.style.backgroundColor = '#ef4444';
+            btn.style.color = '#ffffff';
+            btn.style.border = 'none';
+            btn.style.borderRadius = '8px';
+            btn.style.fontWeight = '600';
+            btn.style.cursor = 'pointer';
+            btn.style.transition = 'background-color 0.2s ease, transform 0.1s ease';
+            
+            btn.onmouseover = () => btn.style.backgroundColor = '#dc2626';
+            btn.onmouseout = () => btn.style.backgroundColor = '#ef4444';
+            btn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            content.appendChild(btn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function showLowMinutesWarningModal(botName, remainingMinutes) {
+            if (document.getElementById('lowMinutesWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'lowMinutesWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(4px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2rem';
+            content.style.borderRadius = '16px';
+            content.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+            content.style.maxWidth = '450px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '64px';
+            iconContainer.style.height = '64px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.style.marginRight = 'auto';
+            iconContainer.style.marginLeft = 'auto';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Critical Quota Warning';
+            title.style.fontSize = '1.4rem';
+            title.style.fontWeight = '600';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.5';
+            msg.style.marginBottom = '1.5rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `Your voice bot <strong style="color: #f8f8f2;">${botName}</strong> is running extremely low on minutes.<br><br>Remaining minutes: <span style="font-size: 1.15rem; font-weight: bold; color: #f8f8f2; background: rgba(239, 68, 68, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">${remainingMinutes} minutes</span>.<br><br>Please contact us to add more minutes and avoid any disruption.`;
+
+            // Contact Us Button
+            const contactBtn = document.createElement('a');
+            contactBtn.href = 'mailto:support@example.com?subject=Voice%20Bot%20Recharge%20Request';
+            contactBtn.innerText = '📧 Contact Support';
+            contactBtn.style.display = 'block';
+            contactBtn.style.width = '100%';
+            contactBtn.style.padding = '0.75rem 1rem';
+            contactBtn.style.backgroundColor = '#4f46e5';
+            contactBtn.style.color = '#ffffff';
+            contactBtn.style.borderRadius = '8px';
+            contactBtn.style.fontWeight = '600';
+            contactBtn.style.textAlign = 'center';
+            contactBtn.style.textDecoration = 'none';
+            contactBtn.style.marginBottom = '0.75rem';
+            contactBtn.style.transition = 'background-color 0.2s ease';
+            contactBtn.onmouseover = () => contactBtn.style.backgroundColor = '#4338ca';
+            contactBtn.onmouseout = () => contactBtn.style.backgroundColor = '#4f46e5';
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.innerText = 'Dismiss';
+            dismissBtn.style.width = '100%';
+            dismissBtn.style.padding = '0.75rem 1rem';
+            dismissBtn.style.backgroundColor = 'transparent';
+            dismissBtn.style.color = '#a6adc8';
+            dismissBtn.style.border = '1px solid #45475a';
+            dismissBtn.style.borderRadius = '8px';
+            dismissBtn.style.fontWeight = '600';
+            dismissBtn.style.cursor = 'pointer';
+            dismissBtn.style.transition = 'background-color 0.2s ease, color 0.2s ease';
+            dismissBtn.onmouseover = () => {
+                dismissBtn.style.backgroundColor = '#313244';
+                dismissBtn.style.color = '#f8f8f2';
+            };
+            dismissBtn.onmouseout = () => {
+                dismissBtn.style.backgroundColor = 'transparent';
+                dismissBtn.style.color = '#a6adc8';
+            };
+            dismissBtn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            content.appendChild(contactBtn);
+            content.appendChild(dismissBtn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function showQuotaExhaustedWarningModal(botName) {
+            if (document.getElementById('quotaExhaustedWarningModal')) return;
+            const modal = document.createElement('div');
+            modal.id = 'quotaExhaustedWarningModal';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.65)';
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.zIndex = '99999';
+            modal.style.backdropFilter = 'blur(6px)';
+            modal.style.transition = 'opacity 0.3s ease';
+
+            const content = document.createElement('div');
+            content.style.backgroundColor = '#1e1e2e';
+            content.style.color = '#f8f8f2';
+            content.style.padding = '2.5rem 2rem';
+            content.style.borderRadius = '20px';
+            content.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
+            content.style.maxWidth = '460px';
+            content.style.width = '90%';
+            content.style.textAlign = 'center';
+            content.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+            content.style.transform = 'scale(0.9)';
+            content.style.transition = 'transform 0.3s ease';
+
+            const iconContainer = document.createElement('div');
+            iconContainer.style.width = '72px';
+            iconContainer.style.height = '72px';
+            iconContainer.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+            iconContainer.style.color = '#ef4444';
+            iconContainer.style.borderRadius = '50%';
+            iconContainer.style.display = 'inline-flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.justifyContent = 'center';
+            iconContainer.style.marginBottom = '1.5rem';
+            iconContainer.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+            `;
+
+            const title = document.createElement('h3');
+            title.innerText = 'Call Quota Exhausted';
+            title.style.fontSize = '1.5rem';
+            title.style.fontWeight = '700';
+            title.style.marginBottom = '1rem';
+            title.style.color = '#ef4444';
+
+            const msg = document.createElement('p');
+            msg.style.fontSize = '1rem';
+            msg.style.lineHeight = '1.6';
+            msg.style.marginBottom = '2rem';
+            msg.style.color = '#a6adc8';
+            msg.innerHTML = `All allocated call credits for your bot <strong style="color: #f8f8f2;">${botName}</strong> have been fully utilized.<br><br>Please contact support to add more credits to resume making calls.`;
+
+            const contactBtn = document.createElement('a');
+            contactBtn.href = 'mailto:support@example.com?subject=Voice%20Bot%20Recharge%20Request';
+            contactBtn.innerText = '📞 Request More Credits';
+            contactBtn.style.display = 'block';
+            contactBtn.style.width = '100%';
+            contactBtn.style.padding = '0.85rem 1rem';
+            contactBtn.style.backgroundColor = '#ef4444';
+            contactBtn.style.color = '#ffffff';
+            contactBtn.style.borderRadius = '10px';
+            contactBtn.style.fontWeight = '600';
+            contactBtn.style.textAlign = 'center';
+            contactBtn.style.textDecoration = 'none';
+            contactBtn.style.marginBottom = '0.75rem';
+            contactBtn.style.transition = 'background-color 0.2s ease';
+            contactBtn.onmouseover = () => contactBtn.style.backgroundColor = '#dc2626';
+            contactBtn.onmouseout = () => contactBtn.style.backgroundColor = '#ef4444';
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.innerText = 'Dismiss';
+            dismissBtn.style.width = '100%';
+            dismissBtn.style.padding = '0.85rem 1rem';
+            dismissBtn.style.backgroundColor = 'transparent';
+            dismissBtn.style.color = '#a6adc8';
+            dismissBtn.style.border = '1px solid #45475a';
+            dismissBtn.style.borderRadius = '10px';
+            dismissBtn.style.fontWeight = '600';
+            dismissBtn.style.cursor = 'pointer';
+            dismissBtn.style.transition = 'background-color 0.2s ease, color 0.2s ease';
+            dismissBtn.onmouseover = () => {
+                dismissBtn.style.backgroundColor = '#313244';
+                dismissBtn.style.color = '#f8f8f2';
+            };
+            dismissBtn.onmouseout = () => {
+                dismissBtn.style.backgroundColor = 'transparent';
+                dismissBtn.style.color = '#a6adc8';
+            };
+            dismissBtn.onclick = () => {
+                modal.style.opacity = '0';
+                content.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                }, 300);
+            };
+
+            content.appendChild(iconContainer);
+            content.appendChild(title);
+            content.appendChild(msg);
+            // content.appendChild(contactBtn);
+            content.appendChild(dismissBtn);
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                content.style.transform = 'scale(1)';
+            }, 50);
+        }
+
+        function checkRemainingMinutesThreshold(data) {
+            if (!data || data.is_admin || !data.bot_id) return;
+            const remaining = parseFloat(data.remaining_minutes) || 0;
+            if (remaining <= 0) {
+                const key = 'shown_exhausted_warning_' + data.bot_id;
+                if (!localStorage.getItem(key)) {
+                    showQuotaExhaustedWarningModal(data.bot_name || 'Bot');
+                    localStorage.setItem(key, 'true');
+                }
+            } else if (remaining <= 100) {
+                const key = 'shown_low_minutes_warning_' + data.bot_id;
+                if (!localStorage.getItem(key)) {
+                    showLowMinutesWarningModal(data.bot_name || 'Bot', remaining);
+                    localStorage.setItem(key, 'true');
+                }
+            } else {
+                localStorage.removeItem('shown_low_minutes_warning_' + data.bot_id);
+                localStorage.removeItem('shown_exhausted_warning_' + data.bot_id);
+            }
+        }
+
+        function checkMinutesUsageThreshold(data) {
+            if (!data || data.is_admin || !data.bot_id) return;
+            const used = parseFloat(data.used_minutes) || 0;
+            const threshold = Math.floor(used / 500) * 500;
+            if (threshold >= 500) {
+                const key = 'shown_warning_threshold_' + data.bot_id;
+                const lastShown = parseInt(localStorage.getItem(key) || '0', 10);
+                if (threshold > lastShown) {
+                    showMinutesWarningModal(data.bot_name || 'Bot', used, threshold);
+                    localStorage.setItem(key, threshold.toString());
+                }
+            }
+        }
+
+        // Load minutes usage
+        async function loadMinutesUsage() {
+            try {
+                const res = await fetch('/api/minutes-usage/', { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('access_token') } });
+                if (!res.ok) return;
+                const data = await res.json();
+                const badge = document.getElementById('minutesBadge'), text = document.getElementById('minutesText'), tooltip = document.getElementById('minutesTooltip');
+                if (!badge) return;
+                if (data.is_admin) {
+                    badge.style.display = 'none';
+                    return;
+                } else {
+                    if (data.quota_minutes === 0 && !data.bot_name) { badge.style.display='none'; return; }
+                    text.textContent = `${data.used_minutes}/${data.quota_minutes} min`;
+                    let h = `<div class="tooltip-row"><span>Bot</span><span>${data.bot_name||'—'}</span></div><div class="tooltip-row"><span>Used</span><span>${data.used_minutes} min</span></div>`;
+                    h += `<div class="tooltip-row remaining"><span>⏳ Remaining</span><span>${data.remaining_minutes} min</span></div>`; tooltip.innerHTML = h;
+                    const pct = data.quota_minutes > 0 ? (data.used_minutes / data.quota_minutes) * 100 : 0;
+                    badge.classList.remove('warning','danger'); if (pct >= 90 || (data.remaining_minutes <= 100)) badge.classList.add('danger'); else if (pct >= 70) badge.classList.add('warning');
+
+                    // Check for threshold warning popups
+                    checkMinutesUsageThreshold(data);
+                    checkRemainingMinutesThreshold(data);
+                }
+                badge.style.display = 'inline-flex';
+            } catch (e) { console.error('Failed to load minutes usage', e); }
+        }
+        loadMinutesUsage();
+
+        function toggleProfile(e) {
+            e.stopPropagation();
+            document.getElementById('profileDropdown').classList.toggle('open');
+        }
+
+        document.addEventListener('click', function () {
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown) dropdown.classList.remove('open');
+        });
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('username');
+            localStorage.removeItem('is_admin');
+            window.location.replace('/accounts/login/');
+        }
+
+        // Initialize campaign load
+        loadCampaigns();
+    </script>
+</body>
+</html>
