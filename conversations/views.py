@@ -2874,16 +2874,6 @@ def sarvam_leads_data(request, agent_slug=None):
                 r.status = "NO_ANSWER"
                 r.save(update_fields=["status"])
 
-        if r.interaction_id and not r.audio_url and "/" in r.interaction_id:
-            rec_result = SarvamAgentService.fetch_interaction_recording(r.interaction_id)
-            if rec_result:
-                if isinstance(rec_result, str) and rec_result.startswith("http"):
-                    r.audio_url = rec_result
-                elif isinstance(rec_result, dict):
-                    r.audio_url = rec_result.get("recording_url") or rec_result.get("audio_url") or rec_result.get("url")
-                if r.audio_url:
-                    r.save(update_fields=["audio_url"])
-
         rec_id = r.interaction_id or r.attempt_id or f"local_{r.id}"
         seen_ids.add(rec_id)
         if r.phone_number:
@@ -2923,6 +2913,18 @@ def sarvam_leads_data(request, agent_slug=None):
         if not lead_cand_name or lead_cand_name.lower() in ["candidate", "unknown candidate", "unknown", "none", "null", ""]:
             lead_cand_name = "Customer"
 
+        # On-demand proxy audio URL fallback if audio_url not stored in DB yet
+        rec_audio_url = r.audio_url
+        if not rec_audio_url and r.interaction_id and "/" in r.interaction_id:
+            from urllib.parse import quote
+            ag_obj = r.sarvam_agent or sarvam_agent
+            org_id = (ag_obj.org_id if ag_obj else "") or os.getenv("SARVAM_ORG_ID", "")
+            ws_id = (ag_obj.workspace_id if ag_obj else "") or os.getenv("SARVAM_WORKSPACE_ID", "")
+            app_id = (ag_obj.app_id if ag_obj else "") or os.getenv("SARVAM_AGENT_APP_ID", "")
+            if org_id and ws_id and app_id:
+                analytics_rec_url = f"https://apps.sarvam.ai/api/analytics/v1/{org_id}/{ws_id}/{app_id}/recordings/{r.interaction_id}"
+                rec_audio_url = f"/conversations/proxy-audio/?url={quote(analytics_rec_url)}"
+
         processed_leads.append({
             "interaction_id": rec_id,
             "contact": r.phone_number,
@@ -2935,7 +2937,7 @@ def sarvam_leads_data(request, agent_slug=None):
             "billed_seconds": r.billed_seconds or int(math.ceil(float(r.duration_seconds or 0) / 30.0) * 30),
             "language": r.language or "Hindi",
             "attempted_at": r.start_time.strftime("%Y-%m-%dT%H:%M:%SZ") if getattr(r, "start_time", None) else r.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "audio_url": r.audio_url,
+            "audio_url": rec_audio_url,
             "final_status": r.status,
             "summary": r.summary or {},
             "transcript": r.transcript or "",
