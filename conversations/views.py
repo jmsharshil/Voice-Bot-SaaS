@@ -1603,6 +1603,14 @@ def sarvam_cdr_webhook(request):
             or 0
         )
 
+        # Estimate duration if Sarvam didn't send an explicit duration field but transcript or answered disposition exists
+        if not duration or duration <= 0:
+            if transcript:
+                turn_count = len(raw_data.get("call_transcript", [])) if isinstance(raw_data.get("call_transcript"), list) else 3
+                duration = max(10.0, float(turn_count * 6.0))
+            elif final_status and str(final_status).upper() not in ["NO_ANSWER", "BUSY", "FAILED", "UNREACHABLE", "CANCELLED", "MISSED", "QUEUED", "DIALING", "UNANSWERED", "REJECTED", "NOT_ANSWERED", "TIMEOUT", "IN_PROGRESS", "PENDING"]:
+                duration = 10.0
+
         # Build summary from all rich fields in the root payload
         if not output_vars and raw_data:
             ignored_keys = {"call", "metadata", "interaction_id", "interactionId", "call_id", "callId", "attempt_id", "attemptId",
@@ -1681,7 +1689,12 @@ def sarvam_cdr_webhook(request):
                             2 if c_lead.stage_2_call_id == rec.id else 3
                         )
                     )
-                    is_ans = (rec.duration_seconds >= 3.0 and str(rec.status).upper() not in CDR_MISSED_STATUSES)
+                    has_tx = bool(rec.transcript and len(str(rec.transcript).strip()) > 5)
+                    has_sum = bool(isinstance(rec.summary, dict) and any(rec.summary.values()))
+                    is_ans = (
+                        (rec.duration_seconds >= 3.0 or has_tx or has_sum)
+                        and str(rec.status).upper() not in CDR_MISSED_STATUSES
+                    )
 
                     if stage_num == 1:
                         c_lead.stage_1_call = rec
@@ -3543,8 +3556,17 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
         "QUEUED", "DIALING", "UNANSWERED", "REJECTED", "NOT_ANSWERED", "TIMEOUT", "IN_PROGRESS", "PENDING"
     }
 
-    # If call record has valid completed duration >= 3 seconds and is not in missed status -> Answered
-    if call_rec.duration_seconds >= 3.0 and status_upper not in MISSED_STATUSES:
+    has_tx = bool(call_rec.transcript and len(str(call_rec.transcript).strip()) > 5)
+    has_sum = bool(isinstance(call_rec.summary, dict) and any(call_rec.summary.values()))
+    is_ans_status = bool(status_upper and status_upper not in MISSED_STATUSES)
+
+    # If call record has transcript, summary, duration >= 3s, or answered disposition -> Answered
+    if (call_rec.duration_seconds >= 3.0 or has_tx or has_sum or is_ans_status) and status_upper not in {
+        "NO_ANSWER", "BUSY", "FAILED", "UNREACHABLE", "CANCELLED", "MISSED", "REJECTED", "NOT_ANSWERED", "TIMEOUT"
+    }:
+        if call_rec.duration_seconds < 3.0:
+            call_rec.duration_seconds = 10.0
+            call_rec.save(update_fields=["duration_seconds"])
         return True
 
     # Try matching with remote Sarvam Analytics API with strict checks
@@ -3613,13 +3635,22 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
     # Re-evaluate
     call_rec.refresh_from_db()
     status_upper = str(call_rec.status or "").upper()
-    if call_rec.duration_seconds >= 3.0 and status_upper not in MISSED_STATUSES:
+    has_tx = bool(call_rec.transcript and len(str(call_rec.transcript).strip()) > 5)
+    has_sum = bool(isinstance(call_rec.summary, dict) and any(call_rec.summary.values()))
+    is_ans_status = bool(status_upper and status_upper not in MISSED_STATUSES)
+
+    if (call_rec.duration_seconds >= 3.0 or has_tx or has_sum or is_ans_status) and status_upper not in {
+        "NO_ANSWER", "BUSY", "FAILED", "UNREACHABLE", "CANCELLED", "MISSED", "REJECTED", "NOT_ANSWERED", "TIMEOUT"
+    }:
+        if call_rec.duration_seconds < 3.0:
+            call_rec.duration_seconds = 10.0
+            call_rec.save(update_fields=["duration_seconds"])
         return True
 
-    # Mark as NO_ANSWER if still unsettled or 0s duration
+    # Mark as NO_ANSWER if still unsettled or 0s duration without transcript
     if call_rec.status in ["DIALING", "PENDING", "IN_PROGRESS", ""]:
         call_rec.status = "NO_ANSWER"
-        if call_rec.duration_seconds < 3.0:
+        if call_rec.duration_seconds < 3.0 and not has_tx:
             call_rec.duration_seconds = 0.0
         call_rec.save(update_fields=["status", "duration_seconds"])
 
@@ -3814,7 +3845,8 @@ def _run_multi_stage_campaign(campaign_id):
         if lead.stage_1_status != "ANSWERED":
             if lead.stage_1_call:
                 lead.stage_1_call.refresh_from_db()
-                if lead.stage_1_call.duration_seconds >= 3.0 and str(lead.stage_1_call.status).upper() not in MISSED_STATUSES:
+                has_tx = bool(lead.stage_1_call.transcript and len(str(lead.stage_1_call.transcript).strip()) > 5)
+                if (lead.stage_1_call.duration_seconds >= 3.0 or has_tx) and str(lead.stage_1_call.status).upper() not in MISSED_STATUSES:
                     lead.stage_1_status = "ANSWERED"
                     lead.stage_2_status = "SKIPPED"
                     lead.stage_3_status = "SKIPPED"
@@ -3950,7 +3982,8 @@ def _run_multi_stage_campaign(campaign_id):
         if lead.stage_2_status != "ANSWERED":
             if lead.stage_2_call:
                 lead.stage_2_call.refresh_from_db()
-                if lead.stage_2_call.duration_seconds >= 3.0 and str(lead.stage_2_call.status).upper() not in MISSED_STATUSES:
+                has_tx = bool(lead.stage_2_call.transcript and len(str(lead.stage_2_call.transcript).strip()) > 5)
+                if (lead.stage_2_call.duration_seconds >= 3.0 or has_tx) and str(lead.stage_2_call.status).upper() not in MISSED_STATUSES:
                     lead.stage_2_status = "ANSWERED"
                     lead.stage_3_status = "SKIPPED"
                     lead.final_status = "ANSWERED"
