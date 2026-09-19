@@ -1558,40 +1558,13 @@ def sarvam_cdr_webhook(request):
                 from datetime import timedelta
                 from django.utils import timezone
                 recent_threshold = timezone.now() - timedelta(minutes=30)
-                rec = SarvamCallRecord.objects.filter(
+                rec_qs = SarvamCallRecord.objects.filter(
                     phone_number__icontains=clean_p,
                     created_at__gte=recent_threshold
-                ).order_by("-created_at").first()
-
-        # Fallback 1: Match by candidate_name if present on recent active calls for this agent
-        if not rec and candidate_name and candidate_name not in ["Customer", "Valued Customer", "Candidate"]:
-            from datetime import timedelta
-            from django.utils import timezone
-            recent_threshold = timezone.now() - timedelta(minutes=30)
-            rec_qs = SarvamCallRecord.objects.filter(
-                candidate_name__icontains=candidate_name,
-                created_at__gte=recent_threshold
-            )
-            if webhook_sarvam_agent:
-                rec_qs = rec_qs.filter(sarvam_agent=webhook_sarvam_agent)
-            rec = rec_qs.order_by("-created_at").first()
-            if rec:
-                print(f"✅ [SARVAM CDR LOGS]: Mapped webhook payload to recent call #{rec.id} ({rec.phone_number}) via candidate_name '{candidate_name}'.")
-
-        # Fallback 2: Match to most recent DIALING / IN_PROGRESS / INITIATED / PENDING call for this agent
-        if not rec:
-            from datetime import timedelta
-            from django.utils import timezone
-            recent_threshold = timezone.now() - timedelta(minutes=30)
-            rec_qs = SarvamCallRecord.objects.filter(
-                status__in=["DIALING", "IN_PROGRESS", "INITIATED", "PENDING"],
-                created_at__gte=recent_threshold
-            )
-            if webhook_sarvam_agent:
-                rec_qs = rec_qs.filter(sarvam_agent=webhook_sarvam_agent)
-            rec = rec_qs.order_by("-created_at").first()
-            if rec:
-                print(f"⚠️ [SARVAM CDR LOGS]: Mapped webhook payload to recent active call #{rec.id} ({rec.phone_number}) via status fallback.")
+                )
+                if webhook_sarvam_agent:
+                    rec_qs = rec_qs.filter(sarvam_agent=webhook_sarvam_agent)
+                rec = rec_qs.order_by("-created_at").first()
         language_val = (
             raw_data.get("detected_language")
             or raw_data.get("language")
