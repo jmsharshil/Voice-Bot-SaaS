@@ -1557,14 +1557,36 @@ def sarvam_cdr_webhook(request):
             if clean_p:
                 from datetime import timedelta
                 from django.utils import timezone
-                recent_threshold = timezone.now() - timedelta(minutes=30)
+                recent_threshold = timezone.now() - timedelta(minutes=45)
                 rec_qs = SarvamCallRecord.objects.filter(
                     phone_number__icontains=clean_p,
                     created_at__gte=recent_threshold
                 )
-                if webhook_sarvam_agent:
+                # Only filter by agent if agent was EXPLICITLY provided in payload via app_id or agent_phone
+                if webhook_sarvam_agent and (cdr_app_id or cdr_agent_phone):
                     rec_qs = rec_qs.filter(sarvam_agent=webhook_sarvam_agent)
                 rec = rec_qs.order_by("-created_at").first()
+
+        # ✅ FALLBACK MATCH BY CANDIDATE NAME: When Sarvam sends empty attempt_id & empty phone_number
+        if not rec and candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]:
+            from datetime import timedelta
+            from django.utils import timezone
+            from django.db.models import Q
+            recent_threshold = timezone.now() - timedelta(minutes=45)
+            rec_name_qs = SarvamCallRecord.objects.filter(
+                created_at__gte=recent_threshold
+            ).filter(
+                Q(candidate_name__iexact=candidate_name.strip()) | Q(candidate_name__icontains=candidate_name.strip())
+            )
+            # Only filter by agent if agent was EXPLICITLY provided in payload via app_id or agent_phone
+            if webhook_sarvam_agent and (cdr_app_id or cdr_agent_phone):
+                rec_name_qs = rec_name_qs.filter(sarvam_agent=webhook_sarvam_agent)
+
+            # Prefer matching a record that is currently in DIALING / PENDING / IN_PROGRESS status
+            rec = rec_name_qs.filter(status__in=["DIALING", "PENDING", "IN_PROGRESS", "QUEUED"]).order_by("-created_at").first() or rec_name_qs.order_by("-created_at").first()
+            if rec:
+                print(f"🎯 [CDR MATCH]: Matched incoming webhook for candidate '{candidate_name}' to existing call record #{rec.id} (Phone: {rec.phone_number}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'})")
+
         language_val = (
             raw_data.get("detected_language")
             or raw_data.get("language")
@@ -1611,10 +1633,10 @@ def sarvam_cdr_webhook(request):
             if webhook_sarvam_agent and not rec.sarvam_agent:
                 rec.sarvam_agent = webhook_sarvam_agent
             rec.save()
-            print(f"✅ [SARVAM CDR LOGS]: Updated local SarvamCallRecord ID #{rec.id} for {rec.phone_number} -> Status: {final_status}, Recording: {'YES' if rec.audio_url else 'NO'}, Transcript: {'YES' if rec.transcript else 'NO'}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'}")
+            print(f"✅ [SARVAM CDR LOGS]: Updated local SarvamCallRecord ID #{rec.id} for {rec.phone_number} ({rec.candidate_name}) -> Status: {final_status}, Recording: {'YES' if rec.audio_url else 'NO'}, Transcript: {'YES' if rec.transcript else 'NO'}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'}")
         else:
-            if not user_phone and not interaction_id:
-                print(f"⚠️ [SARVAM CDR LOGS]: Ignored dummy webhook payload (No user_phone or interaction_id).")
+            if not user_phone and not interaction_id and not (candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]):
+                print(f"⚠️ [SARVAM CDR LOGS]: Ignored dummy webhook payload (No user_phone, interaction_id, or candidate_name).")
             else:
                 is_inbound = bool(call_obj.get("direction") == "inbound" or raw_data.get("direction") == "inbound" or not attempt_id)
                 rec_call_type = "Inbound Call" if is_inbound else "Outbound Call"
@@ -1650,6 +1672,8 @@ def sarvam_cdr_webhook(request):
                 if not c_lead and rec.campaign:
                     clean_p = "".join(filter(str.isdigit, str(rec.phone_number)))[-10:]
                     c_lead = rec.campaign.leads.filter(phone_number__icontains=clean_p).first()
+                if not c_lead and rec.candidate_name and rec.candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]:
+                    c_lead = SarvamCampaignLead.objects.filter(candidate_name__iexact=rec.candidate_name.strip()).order_by("-id").first()
 
                 if c_lead:
                     stage_num = rec.campaign_stage or (
