@@ -2578,33 +2578,31 @@ def ranged_media_serve(request, path):
 # SARVAM AI AGENT LEADS & SCREENING DASHBOARD
 # ======================================================
 
+def _get_user_allowed_sarvam_agents(user):
+    """
+    Helper for multi-tenant Sarvam agent access control.
+    - Superusers (is_superuser=True) get access to all active Sarvam agents.
+    - Regular users with assigned_sarvam_agents get access ONLY to those assigned agents.
+    - Regular users with no assigned_sarvam_agents get no access (empty QuerySet).
+    """
+    from conversations.models import SarvamAgent
+    if not user or not user.is_authenticated:
+        return False, SarvamAgent.objects.filter(is_active=True)
+    if user.is_superuser:
+        return True, SarvamAgent.objects.filter(is_active=True)
+    if hasattr(user, 'profile') and user.profile:
+        assigned = user.profile.assigned_sarvam_agents.filter(is_active=True)
+        if assigned.exists():
+            return False, assigned
+    return False, SarvamAgent.objects.none()
+
+
 def sarvam_leads_page(request, agent_slug=None):
     """Renders Sarvam AI Agent Leads & Candidate Screening Dashboard."""
     from conversations.models import SarvamAgent
     
-    user = request.user if request.user.is_authenticated else None
-    
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
-
-    # If user is a regular user with assigned Sarvam agents, restrict to their assigned agents
-    if user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True).order_by("name")
-        if assigned_qs.exists():
-            all_agent_objs = assigned_qs
-        else:
-            all_agent_objs = SarvamAgent.objects.filter(is_active=True).order_by("name")
-    else:
-        all_agent_objs = SarvamAgent.objects.filter(is_active=True).order_by("name")
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
+    all_agent_objs = allowed_agent_objs.order_by("name")
 
     # Resolve sarvam_agent for this page
     sarvam_agent = None
@@ -2626,7 +2624,7 @@ def sarvam_leads_page(request, agent_slug=None):
         })
 
     context = {
-        "agent_slug": sarvam_agent.slug if sarvam_agent else "default",
+        "agent_slug": sarvam_agent.slug if sarvam_agent else (agent_slug or "default"),
         "agent_name": sarvam_agent.name if sarvam_agent else "Voice AI Agent",
         "agent_phone": sarvam_agent.agent_phone if sarvam_agent else "",
         "all_agents": all_agents,
@@ -2737,33 +2735,18 @@ def sarvam_leads_data(request, agent_slug=None):
 
     # Resolve which sarvam agent to use
     slug = agent_slug or request.GET.get("agent")
-    user = request.user if request.user.is_authenticated else None
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
 
     sarvam_agent = None
-    if user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True)
-        if assigned_qs.exists():
-            if slug and assigned_qs.filter(slug=slug).exists():
-                sarvam_agent = assigned_qs.filter(slug=slug).first()
-            else:
-                sarvam_agent = assigned_qs.first()
-
+    if slug:
+        sarvam_agent = allowed_agent_objs.filter(slug=slug).first()
+        if not sarvam_agent and not is_superuser:
+            return Response({"error": "Access denied for requested agent."}, status=403)
     if not sarvam_agent:
-        if slug:
-            sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
-        if not sarvam_agent:
-            sarvam_agent = SarvamAgent.objects.filter(is_active=True).first()
+        sarvam_agent = allowed_agent_objs.first()
+
+    if not sarvam_agent and not is_superuser:
+        return Response({"total": 0, "stats": {}, "leads": []}, status=200)
 
     # Use agent credentials (or fall back to env)
     if sarvam_agent:
@@ -2797,9 +2780,7 @@ def sarvam_leads_data(request, agent_slug=None):
     processed_leads = []
     seen_ids = set()
 
-    # ✅ ANTI-LEAK FIX: Pre-load all phone numbers & interaction_ids from OTHER agents' records.
-    # This blocks remote API items from appearing on the wrong agent's dashboard,
-    # even when a shared API key returns cross-org data from the Sarvam Analytics API.
+    # Pre-load all phone numbers & interaction_ids from OTHER agents' records.
     if sarvam_agent:
         other_agent_records = SarvamCallRecord.objects.exclude(sarvam_agent=sarvam_agent)
     else:
@@ -2814,11 +2795,13 @@ def sarvam_leads_data(request, agent_slug=None):
         if iid:
             seen_ids.add(iid)
 
-    # Filter local records scoped to this agent
+    # Filter local records scoped strictly to this agent (or user's allowed agents)
     if sarvam_agent:
         local_records = SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent).order_by("-created_at")
-    else:
+    elif is_superuser:
         local_records = SarvamCallRecord.objects.all().order_by("-created_at")
+    else:
+        local_records = SarvamCallRecord.objects.filter(sarvam_agent__in=allowed_agent_objs).order_by("-created_at")
 
     for r in local_records:
         # 🟥 FIX: Skip and merge orphaned dummy webhook records with unknown phone number into valid sibling records
@@ -3017,22 +3000,30 @@ def sarvam_leads_data(request, agent_slug=None):
         item_user_id = item.get("user_identifier") or ""
         item_agent_p = item.get("agent_phone_number") or ""
 
-        # ANTI-LEAK FILTER: Match by interaction_id prefix, agent phone, user_identifier, or known contact
+        # ANTI-LEAK FILTER: Strictly match remote items to current sarvam_agent
         is_owner = False
         if sarvam_agent:
-            if sarvam_agent.agent_phone and item_agent_p and sarvam_agent.agent_phone in item_agent_p:
+            if sarvam_agent.agent_phone and item_agent_p and _normalize_phone(sarvam_agent.agent_phone) == _normalize_phone(item_agent_p):
                 is_owner = True
             elif sarvam_agent.app_id and item.get("app_id") and sarvam_agent.app_id == item.get("app_id"):
                 is_owner = True
+            elif iid and SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent, interaction_id=iid).exists():
+                is_owner = True
             elif clean_item_p and clean_item_p in local_contacts:
                 is_owner = True
-            elif item_user_id and _normalize_phone(item_user_id) in local_contacts:
-                is_owner = True
-            elif not local_contacts:
-                # If no local records exist yet, accept items from this agent's API response
-                is_owner = True
-        else:
+        elif is_superuser:
             is_owner = True
+
+        # Reject item if it explicitly belongs to another active agent
+        if is_owner and sarvam_agent:
+            other_agents = SarvamAgent.objects.exclude(id=sarvam_agent.id).filter(is_active=True)
+            for oa in other_agents:
+                if oa.agent_phone and item_agent_p and _normalize_phone(oa.agent_phone) == _normalize_phone(item_agent_p):
+                    is_owner = False
+                    break
+                if oa.app_id and item.get("app_id") and oa.app_id == item.get("app_id"):
+                    is_owner = False
+                    break
 
         if not is_owner:
             continue
@@ -3356,33 +3347,18 @@ def sarvam_trigger_call_api(request, agent_slug=None):
 
     # Resolve which sarvam agent to use
     slug = agent_slug or data.get("agent_slug")
-    user = request.user if request.user.is_authenticated else None
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
 
     sarvam_agent = None
-    if user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True)
-        if assigned_qs.exists():
-            if slug and assigned_qs.filter(slug=slug).exists():
-                sarvam_agent = assigned_qs.filter(slug=slug).first()
-            else:
-                sarvam_agent = assigned_qs.first()
-
+    if slug:
+        sarvam_agent = allowed_agent_objs.filter(slug=slug).first()
+        if not sarvam_agent and not is_superuser:
+            return Response({"error": "Access denied for requested agent."}, status=403)
     if not sarvam_agent:
-        if slug:
-            sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
-        if not sarvam_agent:
-            sarvam_agent = SarvamAgent.objects.filter(is_active=True).first()
+        sarvam_agent = allowed_agent_objs.first()
+
+    if not sarvam_agent and not is_superuser:
+        return Response({"error": "No assigned Sarvam agent found for this account."}, status=400)
 
     if not phone_number:
         return Response({"error": "Phone number is required"}, status=400)
@@ -3506,52 +3482,13 @@ def sarvam_user_agents_api(request):
     from conversations.models import SarvamAgent
     
     user = request.user if request.user.is_authenticated else None
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
+    fetch_all = (request.GET.get("all") in ["true", "1"]) and is_superuser
+
     assigned = []
-    
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
+    agent_qs = SarvamAgent.objects.filter(is_active=True) if fetch_all else allowed_agent_objs
 
-    fetch_all = (request.GET.get("all") in ["true", "1"]) and is_admin
-    
-    if not fetch_all and user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True).order_by("name")
-        if assigned_qs.exists():
-            for a in assigned_qs:
-                assigned.append({
-                    "id": a.id,
-                    "name": a.name,
-                    "slug": a.slug,
-                    "agent_phone": a.agent_phone,
-                    "description": a.description or "Outbound Calling & Screening",
-                    "allocated_minutes": a.allocated_minutes,
-                    "used_minutes": a.total_used_minutes,
-                    "remaining_minutes": a.remaining_minutes,
-                    "is_exhausted": a.is_minutes_exhausted,
-                    "is_active": a.is_active,
-                    "type": "sarvam",
-                })
-            return Response({
-                "status": "success",
-                "total": len(assigned),
-                "agents": assigned
-            }, status=200)
-
-    # For admin or unrestricted requests
-    if request.GET.get("all") in ["true", "1"] or is_admin:
-        all_agents = SarvamAgent.objects.all().order_by("name")
-    else:
-        all_agents = SarvamAgent.objects.filter(is_active=True).order_by("name")
-        
-    for a in all_agents:
+    for a in agent_qs.order_by("name"):
         assigned.append({
             "id": a.id,
             "name": a.name,
@@ -3565,7 +3502,7 @@ def sarvam_user_agents_api(request):
             "is_active": a.is_active,
             "type": "sarvam",
         })
-        
+
     return Response({
         "status": "success",
         "total": len(assigned),
@@ -4147,33 +4084,18 @@ def sarvam_upload_campaign_api(request, agent_slug=None):
 
     # Resolve agent
     slug = agent_slug or request.data.get("agent_slug")
-    user = request.user if request.user.is_authenticated else None
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
 
     sarvam_agent = None
-    if user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True)
-        if assigned_qs.exists():
-            if slug and assigned_qs.filter(slug=slug).exists():
-                sarvam_agent = assigned_qs.filter(slug=slug).first()
-            else:
-                sarvam_agent = assigned_qs.first()
-
+    if slug:
+        sarvam_agent = allowed_agent_objs.filter(slug=slug).first()
+        if not sarvam_agent and not is_superuser:
+            return Response({"error": "Access denied for requested agent."}, status=403)
     if not sarvam_agent:
-        if slug:
-            sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
-        if not sarvam_agent:
-            sarvam_agent = SarvamAgent.objects.filter(is_active=True).first()
+        sarvam_agent = allowed_agent_objs.first()
+
+    if not sarvam_agent and not is_superuser:
+        return Response({"error": "No assigned Sarvam agent found for this account."}, status=400)
 
     if sarvam_agent and getattr(sarvam_agent, "is_minutes_exhausted", False):
         return Response({
@@ -4392,39 +4314,20 @@ def sarvam_campaigns_list_api(request, agent_slug=None):
     from conversations.models import SarvamCampaign, SarvamAgent
 
     slug = agent_slug or request.GET.get("agent")
-    user = request.user if request.user.is_authenticated else None
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
 
     sarvam_agent = None
-    qs = SarvamCampaign.objects.all().order_by("-created_at")
-    if user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True)
-        if assigned_qs.exists():
-            if slug and assigned_qs.filter(slug=slug).exists():
-                sarvam_agent = assigned_qs.filter(slug=slug).first()
-                qs = qs.filter(sarvam_agent=sarvam_agent)
-            else:
-                qs = qs.filter(sarvam_agent__in=assigned_qs)
-        else:
-            if slug:
-                sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
-            if sarvam_agent:
-                qs = qs.filter(sarvam_agent=sarvam_agent)
+    if slug:
+        sarvam_agent = allowed_agent_objs.filter(slug=slug).first()
+        if not sarvam_agent and not is_superuser:
+            return Response({"error": "Access denied for requested agent."}, status=403)
+
+    if sarvam_agent:
+        qs = SarvamCampaign.objects.filter(sarvam_agent=sarvam_agent).order_by("-created_at")
+    elif is_superuser:
+        qs = SarvamCampaign.objects.all().order_by("-created_at")
     else:
-        if slug:
-            sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
-        if sarvam_agent:
-            qs = qs.filter(sarvam_agent=sarvam_agent)
+        qs = SarvamCampaign.objects.filter(sarvam_agent__in=allowed_agent_objs).order_by("-created_at")
 
     campaigns_data = []
     for c in qs:
