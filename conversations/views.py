@@ -3396,8 +3396,6 @@ def sarvam_trigger_call_api(request, agent_slug=None):
             "remaining_minutes": 0,
         }, status=400)
 
-<<<<<<< HEAD
-=======
     extra_vars = {}
     if isinstance(data, dict):
         for k, v in data.items():
@@ -3418,7 +3416,6 @@ def sarvam_trigger_call_api(request, agent_slug=None):
             if car_candidate and str(car_candidate).strip() != "":
                 extra_vars["car_model"] = str(car_candidate).strip()
 
->>>>>>> acb66c8ba60b1b313ff957602b3b28882a7e6cd7
     from conversations.services.kylas_sarvam_bridge import SarvamAgentService
     result = SarvamAgentService.trigger_outbound_call(
         phone_number=str(phone_number),
@@ -3426,10 +3423,7 @@ def sarvam_trigger_call_api(request, agent_slug=None):
         customer_name=candidate_name,
         language=language,
         sarvam_agent=sarvam_agent,
-<<<<<<< HEAD
-=======
         extra_variables=extra_vars,
->>>>>>> acb66c8ba60b1b313ff957602b3b28882a7e6cd7
     )
 
     if isinstance(result, dict) and (result.get("code") == "MINUTES_EXHAUSTED" or result.get("status") == "error"):
