@@ -1,8 +1,11 @@
 import os
+import time
 import logging
 import requests
 
 logger = logging.getLogger(__name__)
+
+_SARVAM_RATE_LIMITED_UNTIL = 0
 
 # Kylas CRM Configuration
 KYLAS_API_BASE_URL = os.getenv("KYLAS_API_BASE_URL", "https://api.kylas.io/v1")
@@ -349,42 +352,7 @@ class SarvamAgentService:
                     except Exception:
                         pass
 
-                # Fetch recording URL
-                audio_url = item.get("audio_url")
-                if not audio_url:
-                    audio_url = cls.fetch_interaction_recording(interaction_id=interaction_id)
-                if isinstance(audio_url, dict):
-                    audio_url = (
-                        audio_url.get("recording_url")
-                        or audio_url.get("audio_url")
-                        or audio_url.get("url")
-                        or None
-                    )
-
-                # Fetch transcript
-                transcript_text = ""
-                transcript_res = cls.fetch_interaction_transcript(interaction_id=interaction_id)
-                if isinstance(transcript_res, list):
-                    transcript_text = "\n\n".join([
-                        f"{t.get('role', 'Speaker').upper()}: {t.get('text', '') or t.get('content', '')}"
-                        for t in transcript_res
-                    ])
-                elif isinstance(transcript_res, dict):
-                    if "messages" in transcript_res:
-                        msgs = transcript_res.get("messages") or []
-                        transcript_text = "\n\n".join([
-                            f"{m.get('role', 'Speaker').upper()}: {m.get('content', '') or m.get('text', '')}"
-                            for m in msgs
-                        ])
-                    else:
-                        transcript_text = (
-                            transcript_res.get("transcript")
-                            or transcript_res.get("text")
-                            or transcript_res.get("raw_text")
-                            or ""
-                        )
-
-                # Upsert into local DB
+                # Check if record already exists in local DB
                 rec = SarvamCallRecord.objects.filter(interaction_id=interaction_id).first()
                 if not rec and attempt_id_item:
                     rec = SarvamCallRecord.objects.filter(attempt_id=attempt_id_item).first()
@@ -394,6 +362,42 @@ class SarvamAgentService:
                     if sarvam_agent:
                         qs = qs.filter(sarvam_agent=sarvam_agent)
                     rec = qs.filter(Q(interaction_id__isnull=True) | Q(interaction_id="")).order_by("-created_at").first()
+
+                # Fetch recording URL only if missing on existing record
+                audio_url = item.get("audio_url") or (rec.audio_url if rec else None)
+                if not audio_url and time.time() > _SARVAM_RATE_LIMITED_UNTIL:
+                    audio_url = cls.fetch_interaction_recording(interaction_id=interaction_id, sarvam_agent=sarvam_agent)
+                if isinstance(audio_url, dict):
+                    audio_url = (
+                        audio_url.get("recording_url")
+                        or audio_url.get("audio_url")
+                        or audio_url.get("url")
+                        or None
+                    )
+
+                # Fetch transcript only if missing on existing record
+                transcript_text = (rec.transcript if rec and rec.transcript else "")
+                if not transcript_text and time.time() > _SARVAM_RATE_LIMITED_UNTIL:
+                    transcript_res = cls.fetch_interaction_transcript(interaction_id=interaction_id, sarvam_agent=sarvam_agent)
+                    if isinstance(transcript_res, list):
+                        transcript_text = "\n\n".join([
+                            f"{t.get('role', 'Speaker').upper()}: {t.get('text', '') or t.get('content', '')}"
+                            for t in transcript_res
+                        ])
+                    elif isinstance(transcript_res, dict):
+                        if "messages" in transcript_res:
+                            msgs = transcript_res.get("messages") or []
+                            transcript_text = "\n\n".join([
+                                f"{m.get('role', 'Speaker').upper()}: {m.get('content', '') or m.get('text', '')}"
+                                for m in msgs
+                            ])
+                        else:
+                            transcript_text = (
+                                transcript_res.get("transcript")
+                                or transcript_res.get("text")
+                                or transcript_res.get("raw_text")
+                                or ""
+                            )
 
                 if rec:
                     rec.interaction_id = interaction_id
@@ -447,6 +451,11 @@ class SarvamAgentService:
         Fetches interaction transcript using Sarvam AI Analytics API.
         Accepts optional sarvam_agent for multi-agent credential switching.
         """
+        global _SARVAM_RATE_LIMITED_UNTIL
+        if time.time() < _SARVAM_RATE_LIMITED_UNTIL:
+            logger.warning(f"⏳ [SARVAM TRANSCRIPTS API] Paused requests due to rate limit backoff ({interaction_id})")
+            return {"status": "paused", "message": "Rate limited backoff active"}
+
         org_id, workspace_id, app_id, api_key, _, _, _ = cls._creds(sarvam_agent)
 
         if not (org_id and workspace_id and app_id and api_key):
@@ -467,6 +476,9 @@ class SarvamAgentService:
             interactions_url = f"{SARVAM_API_BASE_URL}/api/analytics/v1/{org_id}/{workspace_id}/{app_id}/interactions"
             try:
                 res = requests.get(interactions_url, headers=headers, params={"start_datetime": start_dt, "end_datetime": end_dt}, timeout=10)
+                if res.status_code in (429, 403):
+                    _SARVAM_RATE_LIMITED_UNTIL = time.time() + 60
+                    return {"status": "rate_limited", "message": "Rate limit / WAF block"}
                 items = res.json().get("items", [])
                 if items:
                     interaction_id = items[0].get("interaction_id")
@@ -480,6 +492,10 @@ class SarvamAgentService:
         transcript_url = f"{SARVAM_API_BASE_URL}/api/analytics/v1/{org_id}/{workspace_id}/{app_id}/transcripts/{interaction_id}"
         try:
             transcript_res = requests.get(transcript_url, headers=headers, timeout=10)
+            if transcript_res.status_code in (429, 403):
+                _SARVAM_RATE_LIMITED_UNTIL = time.time() + 60
+                logger.warning(f"⚠️ [SARVAM TRANSCRIPTS API]: Status {transcript_res.status_code} for {interaction_id} — Backing off API requests for 60s.")
+                return {"status": "rate_limited", "message": "Rate limit / WAF block"}
             if not transcript_res.content:
                 logger.warning(f"⚠️ [SARVAM TRANSCRIPTS API]: Empty body for {interaction_id}")
                 return {"status": "empty", "message": "No transcript content returned"}
@@ -498,6 +514,11 @@ class SarvamAgentService:
         Fetches interaction audio recording using Sarvam AI Analytics Recordings API.
         Accepts optional sarvam_agent for multi-agent credential switching.
         """
+        global _SARVAM_RATE_LIMITED_UNTIL
+        if time.time() < _SARVAM_RATE_LIMITED_UNTIL:
+            logger.warning(f"⏳ [SARVAM RECORDINGS API] Paused requests due to rate limit backoff ({interaction_id})")
+            return None
+
         org_id, workspace_id, app_id, api_key, _, _, _ = cls._creds(sarvam_agent)
 
         if not (org_id and workspace_id and app_id and api_key and interaction_id):
@@ -510,6 +531,11 @@ class SarvamAgentService:
 
             # First attempt WITHOUT following redirects so we can capture the Location header
             res = requests.get(url, headers=headers, timeout=10, allow_redirects=False)
+
+            if res.status_code in (429, 403):
+                _SARVAM_RATE_LIMITED_UNTIL = time.time() + 60
+                logger.warning(f"⚠️ [SARVAM RECORDINGS API]: Status {res.status_code} for {interaction_id} — Backing off API requests for 60s.")
+                return None
 
             # Case 1: Redirect → Location header IS the audio file URL
             if res.status_code in (301, 302, 303, 307, 308):

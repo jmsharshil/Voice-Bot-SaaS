@@ -1557,41 +1557,36 @@ def sarvam_cdr_webhook(request):
             if clean_p:
                 from datetime import timedelta
                 from django.utils import timezone
-                recent_threshold = timezone.now() - timedelta(minutes=30)
-                rec = SarvamCallRecord.objects.filter(
+                recent_threshold = timezone.now() - timedelta(minutes=45)
+                rec_qs = SarvamCallRecord.objects.filter(
                     phone_number__icontains=clean_p,
                     created_at__gte=recent_threshold
-                ).order_by("-created_at").first()
+                )
+                # Only filter by agent if agent was EXPLICITLY provided in payload via app_id or agent_phone
+                if webhook_sarvam_agent and (cdr_app_id or cdr_agent_phone):
+                    rec_qs = rec_qs.filter(sarvam_agent=webhook_sarvam_agent)
+                rec = rec_qs.order_by("-created_at").first()
 
-        # Fallback 1: Match by candidate_name if present on recent active calls for this agent
-        if not rec and candidate_name and candidate_name not in ["Customer", "Valued Customer", "Candidate"]:
+        # ✅ FALLBACK MATCH BY CANDIDATE NAME: When Sarvam sends empty attempt_id & empty phone_number
+        if not rec and candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]:
             from datetime import timedelta
             from django.utils import timezone
-            recent_threshold = timezone.now() - timedelta(minutes=30)
-            rec_qs = SarvamCallRecord.objects.filter(
-                candidate_name__icontains=candidate_name,
+            from django.db.models import Q
+            recent_threshold = timezone.now() - timedelta(minutes=45)
+            rec_name_qs = SarvamCallRecord.objects.filter(
                 created_at__gte=recent_threshold
+            ).filter(
+                Q(candidate_name__iexact=candidate_name.strip()) | Q(candidate_name__icontains=candidate_name.strip())
             )
-            if webhook_sarvam_agent:
-                rec_qs = rec_qs.filter(sarvam_agent=webhook_sarvam_agent)
-            rec = rec_qs.order_by("-created_at").first()
-            if rec:
-                print(f"✅ [SARVAM CDR LOGS]: Mapped webhook payload to recent call #{rec.id} ({rec.phone_number}) via candidate_name '{candidate_name}'.")
+            # Only filter by agent if agent was EXPLICITLY provided in payload via app_id or agent_phone
+            if webhook_sarvam_agent and (cdr_app_id or cdr_agent_phone):
+                rec_name_qs = rec_name_qs.filter(sarvam_agent=webhook_sarvam_agent)
 
-        # Fallback 2: Match to most recent DIALING / IN_PROGRESS / INITIATED / PENDING call for this agent
-        if not rec:
-            from datetime import timedelta
-            from django.utils import timezone
-            recent_threshold = timezone.now() - timedelta(minutes=30)
-            rec_qs = SarvamCallRecord.objects.filter(
-                status__in=["DIALING", "IN_PROGRESS", "INITIATED", "PENDING"],
-                created_at__gte=recent_threshold
-            )
-            if webhook_sarvam_agent:
-                rec_qs = rec_qs.filter(sarvam_agent=webhook_sarvam_agent)
-            rec = rec_qs.order_by("-created_at").first()
+            # Prefer matching a record that is currently in DIALING / PENDING / IN_PROGRESS status
+            rec = rec_name_qs.filter(status__in=["DIALING", "PENDING", "IN_PROGRESS", "QUEUED"]).order_by("-created_at").first() or rec_name_qs.order_by("-created_at").first()
             if rec:
-                print(f"⚠️ [SARVAM CDR LOGS]: Mapped webhook payload to recent active call #{rec.id} ({rec.phone_number}) via status fallback.")
+                print(f"🎯 [CDR MATCH]: Matched incoming webhook for candidate '{candidate_name}' to existing call record #{rec.id} (Phone: {rec.phone_number}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'})")
+
         language_val = (
             raw_data.get("detected_language")
             or raw_data.get("language")
@@ -1601,12 +1596,35 @@ def sarvam_cdr_webhook(request):
             or (output_vars.get("language") if isinstance(output_vars, dict) else None)
             or "hi-IN"
         )
-        duration = call_length or float(
-            raw_data.get("duration")
-            or raw_data.get("duration_in_seconds")
-            or call_obj.get("duration")
-            or 0
+        # Comprehensive duration extraction from all possible Sarvam payload locations
+        duration = (
+            float(raw_data.get("duration_in_seconds") or 0)
+            or float(raw_data.get("duration") or 0)
+            or float(raw_data.get("call_duration") or 0)
+            or float(raw_data.get("call_length") or 0)
+            or float(raw_data.get("duration_seconds") or 0)
+            or float(call_obj.get("duration_in_seconds") or 0)
+            or float(call_obj.get("duration") or 0)
+            or float(call_obj.get("call_duration") or 0)
+            or float(call_obj.get("call_length") or 0)
+            or float(metadata.get("duration_in_seconds") or 0)
+            or float(metadata.get("duration") or 0)
+            or float((raw_data.get("analytics") or {}).get("duration_in_seconds") or 0)
+            or float((raw_data.get("telemetry") or {}).get("duration_in_seconds") or 0)
+            or call_length
+            or 0.0
         )
+
+        # If duration was not explicitly sent, calculate from start and end timestamps if available
+        if duration <= 0 and call_start_time and call_end_time:
+            try:
+                from django.utils.dateparse import parse_datetime
+                st_dt = parse_datetime(str(call_start_time).replace("Z", "+00:00"))
+                en_dt = parse_datetime(str(call_end_time).replace("Z", "+00:00"))
+                if st_dt and en_dt and en_dt > st_dt:
+                    duration = (en_dt - st_dt).total_seconds()
+            except Exception:
+                pass
 
         # Build summary from all rich fields in the root payload
         if not output_vars and raw_data:
@@ -1638,10 +1656,10 @@ def sarvam_cdr_webhook(request):
             if webhook_sarvam_agent and not rec.sarvam_agent:
                 rec.sarvam_agent = webhook_sarvam_agent
             rec.save()
-            print(f"✅ [SARVAM CDR LOGS]: Updated local SarvamCallRecord ID #{rec.id} for {rec.phone_number} -> Status: {final_status}, Recording: {'YES' if rec.audio_url else 'NO'}, Transcript: {'YES' if rec.transcript else 'NO'}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'}")
+            print(f"✅ [SARVAM CDR LOGS]: Updated local SarvamCallRecord ID #{rec.id} for {rec.phone_number} ({rec.candidate_name}) -> Status: {final_status}, Recording: {'YES' if rec.audio_url else 'NO'}, Transcript: {'YES' if rec.transcript else 'NO'}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'}")
         else:
-            if not user_phone and not interaction_id:
-                print(f"⚠️ [SARVAM CDR LOGS]: Ignored dummy webhook payload (No user_phone or interaction_id).")
+            if not user_phone and not interaction_id and not (candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]):
+                print(f"⚠️ [SARVAM CDR LOGS]: Ignored dummy webhook payload (No user_phone, interaction_id, or candidate_name).")
             else:
                 is_inbound = bool(call_obj.get("direction") == "inbound" or raw_data.get("direction") == "inbound" or not attempt_id)
                 rec_call_type = "Inbound Call" if is_inbound else "Outbound Call"
@@ -1677,6 +1695,8 @@ def sarvam_cdr_webhook(request):
                 if not c_lead and rec.campaign:
                     clean_p = "".join(filter(str.isdigit, str(rec.phone_number)))[-10:]
                     c_lead = rec.campaign.leads.filter(phone_number__icontains=clean_p).first()
+                if not c_lead and rec.candidate_name and rec.candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]:
+                    c_lead = SarvamCampaignLead.objects.filter(candidate_name__iexact=rec.candidate_name.strip()).order_by("-id").first()
 
                 if c_lead:
                     stage_num = rec.campaign_stage or (
@@ -1684,7 +1704,18 @@ def sarvam_cdr_webhook(request):
                             2 if c_lead.stage_2_call_id == rec.id else 3
                         )
                     )
-                    is_ans = (rec.duration_seconds >= 3.0 and str(rec.status).upper() not in CDR_MISSED_STATUSES)
+                    has_tx = bool(rec.transcript and len(str(rec.transcript).strip()) > 10)
+                    has_real_sum = False
+                    if isinstance(rec.summary, dict):
+                        if rec.summary.get("call_summary") or str(rec.summary.get("final_status") or "").upper() in {"ANSWERED", "COMPLETED", "INTERESTED", "HIGH_INTENT", "NOT_INTERESTED", "CALLBACK"}:
+                            has_real_sum = True
+
+                    is_ans = (
+                        (rec.duration_seconds >= 3.0 and str(rec.status).upper() not in CDR_MISSED_STATUSES)
+                        or (str(rec.status).upper() in {"ANSWERED", "COMPLETED", "INTERESTED", "HIGH_INTENT", "NOT_INTERESTED", "CALLBACK"} and rec.duration_seconds > 0)
+                        or (has_tx and str(rec.status).upper() not in CDR_MISSED_STATUSES)
+                        or (has_real_sum and rec.duration_seconds >= 2.0)
+                    )
 
                     if stage_num == 1:
                         c_lead.stage_1_call = rec
@@ -1694,7 +1725,7 @@ def sarvam_cdr_webhook(request):
                             c_lead.stage_3_status = "SKIPPED"
                             c_lead.final_status = "ANSWERED"
                             print(f"🎯 [SARVAM CAMPAIGN SYNC]: Lead #{c_lead.id} ({c_lead.candidate_name}) marked ANSWERED ({rec.duration_seconds:.1f}s) in Stage 1 via Webhook.")
-                        elif str(rec.status).upper() in CDR_MISSED_STATUSES:
+                        else:
                             c_lead.stage_1_status = "MISSED"
                             if c_lead.final_status != "ANSWERED":
                                 c_lead.final_status = "IN_PROGRESS"
@@ -1707,7 +1738,7 @@ def sarvam_cdr_webhook(request):
                             c_lead.stage_3_status = "SKIPPED"
                             c_lead.final_status = "ANSWERED"
                             print(f"🎯 [SARVAM CAMPAIGN SYNC]: Lead #{c_lead.id} ({c_lead.candidate_name}) marked ANSWERED ({rec.duration_seconds:.1f}s) in Stage 2 (Retry 1) via Webhook.")
-                        elif str(rec.status).upper() in CDR_MISSED_STATUSES:
+                        else:
                             c_lead.stage_2_status = "MISSED"
                             if c_lead.final_status != "ANSWERED":
                                 c_lead.final_status = "IN_PROGRESS"
@@ -1719,7 +1750,7 @@ def sarvam_cdr_webhook(request):
                             c_lead.stage_3_status = "ANSWERED"
                             c_lead.final_status = "ANSWERED"
                             print(f"🎯 [SARVAM CAMPAIGN SYNC]: Lead #{c_lead.id} ({c_lead.candidate_name}) marked ANSWERED ({rec.duration_seconds:.1f}s) in Stage 3 (Final Retry) via Webhook.")
-                        elif str(rec.status).upper() in CDR_MISSED_STATUSES:
+                        else:
                             c_lead.stage_3_status = "MISSED"
                             if c_lead.final_status != "ANSWERED":
                                 c_lead.final_status = "MISSED_ALL_RETRIES"
@@ -2578,33 +2609,31 @@ def ranged_media_serve(request, path):
 # SARVAM AI AGENT LEADS & SCREENING DASHBOARD
 # ======================================================
 
+def _get_user_allowed_sarvam_agents(user):
+    """
+    Helper for multi-tenant Sarvam agent access control.
+    - Superusers (is_superuser=True) get access to all active Sarvam agents.
+    - Regular users with assigned_sarvam_agents get access ONLY to those assigned agents.
+    - Regular users with no assigned_sarvam_agents get no access (empty QuerySet).
+    """
+    from conversations.models import SarvamAgent
+    if not user or not user.is_authenticated:
+        return False, SarvamAgent.objects.filter(is_active=True)
+    if user.is_superuser:
+        return True, SarvamAgent.objects.filter(is_active=True)
+    if hasattr(user, 'profile') and user.profile:
+        assigned = user.profile.assigned_sarvam_agents.filter(is_active=True)
+        if assigned.exists():
+            return False, assigned
+    return False, SarvamAgent.objects.none()
+
+
 def sarvam_leads_page(request, agent_slug=None):
     """Renders Sarvam AI Agent Leads & Candidate Screening Dashboard."""
     from conversations.models import SarvamAgent
     
-    user = request.user if request.user.is_authenticated else None
-    
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
-
-    # If user is a regular user with assigned Sarvam agents, restrict to their assigned agents
-    if user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True).order_by("name")
-        if assigned_qs.exists():
-            all_agent_objs = assigned_qs
-        else:
-            all_agent_objs = SarvamAgent.objects.filter(is_active=True).order_by("name")
-    else:
-        all_agent_objs = SarvamAgent.objects.filter(is_active=True).order_by("name")
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
+    all_agent_objs = allowed_agent_objs.order_by("name")
 
     # Resolve sarvam_agent for this page
     sarvam_agent = None
@@ -2626,7 +2655,7 @@ def sarvam_leads_page(request, agent_slug=None):
         })
 
     context = {
-        "agent_slug": sarvam_agent.slug if sarvam_agent else "default",
+        "agent_slug": sarvam_agent.slug if sarvam_agent else (agent_slug or "default"),
         "agent_name": sarvam_agent.name if sarvam_agent else "Voice AI Agent",
         "agent_phone": sarvam_agent.agent_phone if sarvam_agent else "",
         "all_agents": all_agents,
@@ -2737,33 +2766,18 @@ def sarvam_leads_data(request, agent_slug=None):
 
     # Resolve which sarvam agent to use
     slug = agent_slug or request.GET.get("agent")
-    user = request.user if request.user.is_authenticated else None
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
 
     sarvam_agent = None
-    if user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True)
-        if assigned_qs.exists():
-            if slug and assigned_qs.filter(slug=slug).exists():
-                sarvam_agent = assigned_qs.filter(slug=slug).first()
-            else:
-                sarvam_agent = assigned_qs.first()
-
+    if slug:
+        sarvam_agent = allowed_agent_objs.filter(slug=slug).first()
+        if not sarvam_agent and not is_superuser:
+            return Response({"error": "Access denied for requested agent."}, status=403)
     if not sarvam_agent:
-        if slug:
-            sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
-        if not sarvam_agent:
-            sarvam_agent = SarvamAgent.objects.filter(is_active=True).first()
+        sarvam_agent = allowed_agent_objs.first()
+
+    if not sarvam_agent and not is_superuser:
+        return Response({"total": 0, "stats": {}, "leads": []}, status=200)
 
     # Use agent credentials (or fall back to env)
     if sarvam_agent:
@@ -2797,9 +2811,7 @@ def sarvam_leads_data(request, agent_slug=None):
     processed_leads = []
     seen_ids = set()
 
-    # ✅ ANTI-LEAK FIX: Pre-load all phone numbers & interaction_ids from OTHER agents' records.
-    # This blocks remote API items from appearing on the wrong agent's dashboard,
-    # even when a shared API key returns cross-org data from the Sarvam Analytics API.
+    # Pre-load all phone numbers & interaction_ids from OTHER agents' records.
     if sarvam_agent:
         other_agent_records = SarvamCallRecord.objects.exclude(sarvam_agent=sarvam_agent)
     else:
@@ -2814,11 +2826,13 @@ def sarvam_leads_data(request, agent_slug=None):
         if iid:
             seen_ids.add(iid)
 
-    # Filter local records scoped to this agent
+    # Filter local records scoped strictly to this agent (or user's allowed agents)
     if sarvam_agent:
         local_records = SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent).order_by("-created_at")
-    else:
+    elif is_superuser:
         local_records = SarvamCallRecord.objects.all().order_by("-created_at")
+    else:
+        local_records = SarvamCallRecord.objects.filter(sarvam_agent__in=allowed_agent_objs).order_by("-created_at")
 
     for r in local_records:
         # 🟥 FIX: Skip and merge orphaned dummy webhook records with unknown phone number into valid sibling records
@@ -2918,16 +2932,6 @@ def sarvam_leads_data(request, agent_slug=None):
                 r.status = "NO_ANSWER"
                 r.save(update_fields=["status"])
 
-        if r.interaction_id and not r.audio_url and "/" in r.interaction_id:
-            rec_result = SarvamAgentService.fetch_interaction_recording(r.interaction_id)
-            if rec_result:
-                if isinstance(rec_result, str) and rec_result.startswith("http"):
-                    r.audio_url = rec_result
-                elif isinstance(rec_result, dict):
-                    r.audio_url = rec_result.get("recording_url") or rec_result.get("audio_url") or rec_result.get("url")
-                if r.audio_url:
-                    r.save(update_fields=["audio_url"])
-
         rec_id = r.interaction_id or r.attempt_id or f"local_{r.id}"
         seen_ids.add(rec_id)
         if r.phone_number:
@@ -2967,6 +2971,18 @@ def sarvam_leads_data(request, agent_slug=None):
         if not lead_cand_name or lead_cand_name.lower() in ["candidate", "unknown candidate", "unknown", "none", "null", ""]:
             lead_cand_name = "Customer"
 
+        # On-demand proxy audio URL fallback if audio_url not stored in DB yet
+        rec_audio_url = r.audio_url
+        if not rec_audio_url and r.interaction_id and "/" in r.interaction_id:
+            from urllib.parse import quote
+            ag_obj = r.sarvam_agent or sarvam_agent
+            org_id = (ag_obj.org_id if ag_obj else "") or os.getenv("SARVAM_ORG_ID", "")
+            ws_id = (ag_obj.workspace_id if ag_obj else "") or os.getenv("SARVAM_WORKSPACE_ID", "")
+            app_id = (ag_obj.app_id if ag_obj else "") or os.getenv("SARVAM_AGENT_APP_ID", "")
+            if org_id and ws_id and app_id:
+                analytics_rec_url = f"https://apps.sarvam.ai/api/analytics/v1/{org_id}/{ws_id}/{app_id}/recordings/{r.interaction_id}"
+                rec_audio_url = f"/conversations/proxy-audio/?url={quote(analytics_rec_url)}"
+
         processed_leads.append({
             "interaction_id": rec_id,
             "contact": r.phone_number,
@@ -2979,7 +2995,7 @@ def sarvam_leads_data(request, agent_slug=None):
             "billed_seconds": r.billed_seconds or int(math.ceil(float(r.duration_seconds or 0) / 30.0) * 30),
             "language": r.language or "Hindi",
             "attempted_at": r.start_time.strftime("%Y-%m-%dT%H:%M:%SZ") if getattr(r, "start_time", None) else r.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "audio_url": r.audio_url,
+            "audio_url": rec_audio_url,
             "final_status": r.status,
             "summary": r.summary or {},
             "transcript": r.transcript or "",
@@ -3017,22 +3033,30 @@ def sarvam_leads_data(request, agent_slug=None):
         item_user_id = item.get("user_identifier") or ""
         item_agent_p = item.get("agent_phone_number") or ""
 
-        # ANTI-LEAK FILTER: Match by interaction_id prefix, agent phone, user_identifier, or known contact
+        # ANTI-LEAK FILTER: Strictly match remote items to current sarvam_agent
         is_owner = False
         if sarvam_agent:
-            if sarvam_agent.agent_phone and item_agent_p and sarvam_agent.agent_phone in item_agent_p:
+            if sarvam_agent.agent_phone and item_agent_p and _normalize_phone(sarvam_agent.agent_phone) == _normalize_phone(item_agent_p):
                 is_owner = True
             elif sarvam_agent.app_id and item.get("app_id") and sarvam_agent.app_id == item.get("app_id"):
                 is_owner = True
+            elif iid and SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent, interaction_id=iid).exists():
+                is_owner = True
             elif clean_item_p and clean_item_p in local_contacts:
                 is_owner = True
-            elif item_user_id and _normalize_phone(item_user_id) in local_contacts:
-                is_owner = True
-            elif not local_contacts:
-                # If no local records exist yet, accept items from this agent's API response
-                is_owner = True
-        else:
+        elif is_superuser:
             is_owner = True
+
+        # Reject item if it explicitly belongs to another active agent
+        if is_owner and sarvam_agent:
+            other_agents = SarvamAgent.objects.exclude(id=sarvam_agent.id).filter(is_active=True)
+            for oa in other_agents:
+                if oa.agent_phone and item_agent_p and _normalize_phone(oa.agent_phone) == _normalize_phone(item_agent_p):
+                    is_owner = False
+                    break
+                if oa.app_id and item.get("app_id") and oa.app_id == item.get("app_id"):
+                    is_owner = False
+                    break
 
         if not is_owner:
             continue
@@ -3356,33 +3380,18 @@ def sarvam_trigger_call_api(request, agent_slug=None):
 
     # Resolve which sarvam agent to use
     slug = agent_slug or data.get("agent_slug")
-    user = request.user if request.user.is_authenticated else None
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
 
     sarvam_agent = None
-    if user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True)
-        if assigned_qs.exists():
-            if slug and assigned_qs.filter(slug=slug).exists():
-                sarvam_agent = assigned_qs.filter(slug=slug).first()
-            else:
-                sarvam_agent = assigned_qs.first()
-
+    if slug:
+        sarvam_agent = allowed_agent_objs.filter(slug=slug).first()
+        if not sarvam_agent and not is_superuser:
+            return Response({"error": "Access denied for requested agent."}, status=403)
     if not sarvam_agent:
-        if slug:
-            sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
-        if not sarvam_agent:
-            sarvam_agent = SarvamAgent.objects.filter(is_active=True).first()
+        sarvam_agent = allowed_agent_objs.first()
+
+    if not sarvam_agent and not is_superuser:
+        return Response({"error": "No assigned Sarvam agent found for this account."}, status=400)
 
     if not phone_number:
         return Response({"error": "Phone number is required"}, status=400)
@@ -3506,52 +3515,13 @@ def sarvam_user_agents_api(request):
     from conversations.models import SarvamAgent
     
     user = request.user if request.user.is_authenticated else None
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
+    fetch_all = (request.GET.get("all") in ["true", "1"]) and is_superuser
+
     assigned = []
-    
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
+    agent_qs = SarvamAgent.objects.filter(is_active=True) if fetch_all else allowed_agent_objs
 
-    fetch_all = (request.GET.get("all") in ["true", "1"]) and is_admin
-    
-    if not fetch_all and user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True).order_by("name")
-        if assigned_qs.exists():
-            for a in assigned_qs:
-                assigned.append({
-                    "id": a.id,
-                    "name": a.name,
-                    "slug": a.slug,
-                    "agent_phone": a.agent_phone,
-                    "description": a.description or "Outbound Calling & Screening",
-                    "allocated_minutes": a.allocated_minutes,
-                    "used_minutes": a.total_used_minutes,
-                    "remaining_minutes": a.remaining_minutes,
-                    "is_exhausted": a.is_minutes_exhausted,
-                    "is_active": a.is_active,
-                    "type": "sarvam",
-                })
-            return Response({
-                "status": "success",
-                "total": len(assigned),
-                "agents": assigned
-            }, status=200)
-
-    # For admin or unrestricted requests
-    if request.GET.get("all") in ["true", "1"] or is_admin:
-        all_agents = SarvamAgent.objects.all().order_by("name")
-    else:
-        all_agents = SarvamAgent.objects.filter(is_active=True).order_by("name")
-        
-    for a in all_agents:
+    for a in agent_qs.order_by("name"):
         assigned.append({
             "id": a.id,
             "name": a.name,
@@ -3565,7 +3535,7 @@ def sarvam_user_agents_api(request):
             "is_active": a.is_active,
             "type": "sarvam",
         })
-        
+
     return Response({
         "status": "success",
         "total": len(assigned),
@@ -3604,33 +3574,48 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
 
     MISSED_STATUSES = {
         "NO_ANSWER", "BUSY", "FAILED", "UNREACHABLE", "CANCELLED", "MISSED",
-        "QUEUED", "DIALING", "UNANSWERED", "REJECTED", "NOT_ANSWERED", "TIMEOUT", "IN_PROGRESS", "PENDING"
+        "QUEUED", "DIALING", "UNANSWERED", "REJECTED", "NOT_ANSWERED", "TIMEOUT", "IN_PROGRESS", "PENDING", ""
+    }
+    ANSWERED_STATUSES = {
+        "ANSWERED", "COMPLETED", "INTERESTED", "HIGH_INTENT", "NOT_INTERESTED", "CALLBACK", "CALL_DISCONNECTED"
     }
 
-    # If call record has valid completed duration >= 3 seconds and is not in missed status -> Answered
-    if call_rec.duration_seconds >= 3.0 and status_upper not in MISSED_STATUSES:
-        return True
+    has_tx = bool(call_rec.transcript and len(str(call_rec.transcript).strip()) > 10)
+    has_real_sum = False
+    if isinstance(call_rec.summary, dict):
+        if call_rec.summary.get("call_summary") or str(call_rec.summary.get("final_status") or "").upper() in ANSWERED_STATUSES:
+            has_real_sum = True
 
-    # Try matching with remote Sarvam Analytics API with strict checks
+    # Try matching with remote Sarvam Analytics API to fetch exact telecom duration and recording
     try:
-        res = SarvamAgentService.list_interactions(sarvam_agent=sarvam_agent)
+        from datetime import timedelta
+        from django.utils import timezone
+        start_filter = (timezone.now() - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00Z")
+        res = SarvamAgentService.list_interactions(start_datetime=start_filter, sarvam_agent=sarvam_agent)
         remote_items = res.get("items", []) if isinstance(res, dict) else []
         clean_rec_p = "".join(filter(str.isdigit, str(call_rec.phone_number)))[-10:]
 
         matched_item = None
-        for item in remote_items:
-            ijob = item.get("job_id") or item.get("jobId") or item.get("attempt_id") or item.get("attemptId")
-            
-            # Rule 1: Exact attempt_id match (preferred)
-            if call_rec.attempt_id and ijob and str(ijob).strip() == str(call_rec.attempt_id).strip():
-                matched_item = item
-                break
+        # Rule 1: Match by exact interaction_id if already known
+        if call_rec.interaction_id:
+            for item in remote_items:
+                item_iid = item.get("interaction_id") or item.get("id")
+                if item_iid and (item_iid == call_rec.interaction_id or str(item_iid).endswith(str(call_rec.interaction_id).split("/")[-1])):
+                    matched_item = item
+                    break
 
-        # Rule 2: Strict Proximity fallback ONLY if attempt_id didn't match
+        # Rule 2: Match by exact attempt_id / job_id
+        if not matched_item and call_rec.attempt_id:
+            for item in remote_items:
+                ijob = item.get("job_id") or item.get("jobId") or item.get("attempt_id") or item.get("attemptId")
+                if ijob and str(ijob).strip() == str(call_rec.attempt_id).strip():
+                    matched_item = item
+                    break
+
+        # Rule 3: Proximity match by phone number within 15 minutes of call creation
         if not matched_item and clean_rec_p:
             for item in remote_items:
                 item_iid = item.get("interaction_id") or item.get("id")
-                # Do NOT match an interaction that is already linked to another CallRecord
                 if item_iid and SarvamCallRecord.objects.filter(interaction_id=item_iid).exclude(id=call_rec.id).exists():
                     continue
 
@@ -3643,10 +3628,10 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
                             from django.utils.dateparse import parse_datetime
                             dt_val = parse_datetime(str(item_start))
                             if dt_val:
-                                rec_created_naive = call_rec.created_at.replace(tzinfo=None)
-                                item_start_naive = dt_val.replace(tzinfo=None)
-                                sec_diff = (item_start_naive - rec_created_naive).total_seconds()
-                                if -20 <= sec_diff <= 300:
+                                if dt_val.tzinfo is None:
+                                    dt_val = timezone.make_aware(dt_val, timezone.utc)
+                                sec_diff = abs((dt_val - call_rec.created_at).total_seconds())
+                                if sec_diff <= 900:
                                     matched_item = item
                                     break
                         except Exception:
@@ -3661,12 +3646,11 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
             call_sum = agent_vars.get("call_summary") or {}
             
             remote_status = str(matched_item.get("status") or (call_sum.get("final_status") if isinstance(call_sum, dict) else "") or "").upper()
-            if remote_status and remote_status not in ["DIALING", "IN_PROGRESS", "PENDING"]:
-                call_rec.status = remote_status
-            elif dur >= 3.0:
-                call_rec.status = "COMPLETED"
+            if dur >= 3.0 or remote_status in ANSWERED_STATUSES:
+                call_rec.status = remote_status if remote_status in ANSWERED_STATUSES else "COMPLETED"
             else:
-                call_rec.status = "NO_ANSWER"
+                call_rec.status = remote_status if remote_status in {"NO_ANSWER", "BUSY", "FAILED", "UNREACHABLE", "CANCELLED", "MISSED", "REJECTED", "NOT_ANSWERED", "TIMEOUT"} else "NO_ANSWER"
+                call_rec.duration_seconds = 0.0
                 
             if isinstance(call_sum, dict) and call_sum:
                 call_rec.summary = call_sum
@@ -3677,14 +3661,22 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
     # Re-evaluate
     call_rec.refresh_from_db()
     status_upper = str(call_rec.status or "").upper()
-    if call_rec.duration_seconds >= 3.0 and status_upper not in MISSED_STATUSES:
+    has_tx = bool(call_rec.transcript and len(str(call_rec.transcript).strip()) > 10)
+    has_real_sum = False
+    if isinstance(call_rec.summary, dict):
+        if call_rec.summary.get("call_summary") or str(call_rec.summary.get("final_status") or "").upper() in ANSWERED_STATUSES:
+            has_real_sum = True
+
+    if (call_rec.duration_seconds >= 3.0 and status_upper not in MISSED_STATUSES) or \
+       (status_upper in ANSWERED_STATUSES and call_rec.duration_seconds > 0) or \
+       (has_tx and status_upper not in MISSED_STATUSES) or \
+       (has_real_sum and call_rec.duration_seconds >= 2.0):
         return True
 
-    # Mark as NO_ANSWER if still unsettled or 0s duration
-    if call_rec.status in ["DIALING", "PENDING", "IN_PROGRESS", ""]:
+    # Mark as NO_ANSWER if still unsettled or 0s duration without transcript
+    if status_upper in ["DIALING", "PENDING", "IN_PROGRESS", ""]:
         call_rec.status = "NO_ANSWER"
-        if call_rec.duration_seconds < 3.0:
-            call_rec.duration_seconds = 0.0
+        call_rec.duration_seconds = 0.0
         call_rec.save(update_fields=["status", "duration_seconds"])
 
     return False
@@ -3795,7 +3787,7 @@ def _run_multi_stage_campaign(campaign_id):
                 applied_position=lead.applied_position,
                 status="DIALING",
                 call_type=f"Campaign #{campaign.id}: Main (Stage 1)",
-                summary=dict(lead.extra_data) if lead.extra_data else {}
+                summary={}
             )
             lead.stage_1_call = call_rec
             lead.last_call_record = call_rec
@@ -3876,23 +3868,13 @@ def _run_multi_stage_campaign(campaign_id):
     for lead in all_leads:
         lead.refresh_from_db()
         if lead.stage_1_status != "ANSWERED":
-            if lead.stage_1_call:
-                lead.stage_1_call.refresh_from_db()
-                if lead.stage_1_call.duration_seconds >= 3.0 and str(lead.stage_1_call.status).upper() not in MISSED_STATUSES:
-                    lead.stage_1_status = "ANSWERED"
-                    lead.stage_2_status = "SKIPPED"
-                    lead.stage_3_status = "SKIPPED"
-                    lead.final_status = "ANSWERED"
-                    lead.save()
-                    print(f"  ✅ [STAGE 1 RE-SYNC]: Lead {lead.phone_number} ({lead.candidate_name}) answered ({lead.stage_1_call.duration_seconds:.1f}s) during cooldown!")
-                else:
-                    if _sync_lead_call_outcome(lead, 1, agent):
-                        lead.stage_1_status = "ANSWERED"
-                        lead.stage_2_status = "SKIPPED"
-                        lead.stage_3_status = "SKIPPED"
-                        lead.final_status = "ANSWERED"
-                        lead.save()
-                        print(f"  ✅ [STAGE 1 RE-SYNC]: Lead {lead.phone_number} ({lead.candidate_name}) verified as ANSWERED.")
+            if _sync_lead_call_outcome(lead, 1, agent):
+                lead.stage_1_status = "ANSWERED"
+                lead.stage_2_status = "SKIPPED"
+                lead.stage_3_status = "SKIPPED"
+                lead.final_status = "ANSWERED"
+                lead.save()
+                print(f"  ✅ [STAGE 1 RE-SYNC]: Lead {lead.phone_number} ({lead.candidate_name}) verified as ANSWERED.")
 
     campaign.stage_1_answered = campaign.leads.filter(stage_1_status="ANSWERED").count()
     campaign.stage_1_missed = campaign.leads.filter(stage_1_status="MISSED").count()
@@ -3935,7 +3917,7 @@ def _run_multi_stage_campaign(campaign_id):
                 applied_position=lead.applied_position,
                 status="DIALING",
                 call_type=f"Campaign #{campaign.id}: Retry #1 (Stage 2)",
-                summary=dict(lead.extra_data) if lead.extra_data else {}
+                summary={}
             )
             lead.stage_2_call = call_rec
             lead.last_call_record = call_rec
@@ -4012,21 +3994,12 @@ def _run_multi_stage_campaign(campaign_id):
     for lead in missed_s1_leads:
         lead.refresh_from_db()
         if lead.stage_2_status != "ANSWERED":
-            if lead.stage_2_call:
-                lead.stage_2_call.refresh_from_db()
-                if lead.stage_2_call.duration_seconds >= 3.0 and str(lead.stage_2_call.status).upper() not in MISSED_STATUSES:
-                    lead.stage_2_status = "ANSWERED"
-                    lead.stage_3_status = "SKIPPED"
-                    lead.final_status = "ANSWERED"
-                    lead.save()
-                    print(f"  ✅ [STAGE 2 RE-SYNC]: Lead {lead.phone_number} ({lead.candidate_name}) answered ({lead.stage_2_call.duration_seconds:.1f}s) during cooldown!")
-                else:
-                    if _sync_lead_call_outcome(lead, 2, agent):
-                        lead.stage_2_status = "ANSWERED"
-                        lead.stage_3_status = "SKIPPED"
-                        lead.final_status = "ANSWERED"
-                        lead.save()
-                        print(f"  ✅ [STAGE 2 RE-SYNC]: Lead {lead.phone_number} ({lead.candidate_name}) verified as ANSWERED.")
+            if _sync_lead_call_outcome(lead, 2, agent):
+                lead.stage_2_status = "ANSWERED"
+                lead.stage_3_status = "SKIPPED"
+                lead.final_status = "ANSWERED"
+                lead.save()
+                print(f"  ✅ [STAGE 2 RE-SYNC]: Lead {lead.phone_number} ({lead.candidate_name}) verified as ANSWERED.")
 
     campaign.stage_2_answered = campaign.leads.filter(stage_2_status="ANSWERED").count()
     campaign.stage_2_missed = campaign.leads.filter(stage_2_status="MISSED").count()
@@ -4069,7 +4042,7 @@ def _run_multi_stage_campaign(campaign_id):
                 applied_position=lead.applied_position,
                 status="DIALING",
                 call_type=f"Campaign #{campaign.id}: Final Retry #2 (Stage 3)",
-                summary=dict(lead.extra_data) if lead.extra_data else {}
+                summary={}
             )
             lead.stage_3_call = call_rec
             lead.last_call_record = call_rec
@@ -4147,33 +4120,18 @@ def sarvam_upload_campaign_api(request, agent_slug=None):
 
     # Resolve agent
     slug = agent_slug or request.data.get("agent_slug")
-    user = request.user if request.user.is_authenticated else None
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
 
     sarvam_agent = None
-    if user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True)
-        if assigned_qs.exists():
-            if slug and assigned_qs.filter(slug=slug).exists():
-                sarvam_agent = assigned_qs.filter(slug=slug).first()
-            else:
-                sarvam_agent = assigned_qs.first()
-
+    if slug:
+        sarvam_agent = allowed_agent_objs.filter(slug=slug).first()
+        if not sarvam_agent and not is_superuser:
+            return Response({"error": "Access denied for requested agent."}, status=403)
     if not sarvam_agent:
-        if slug:
-            sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
-        if not sarvam_agent:
-            sarvam_agent = SarvamAgent.objects.filter(is_active=True).first()
+        sarvam_agent = allowed_agent_objs.first()
+
+    if not sarvam_agent and not is_superuser:
+        return Response({"error": "No assigned Sarvam agent found for this account."}, status=400)
 
     if sarvam_agent and getattr(sarvam_agent, "is_minutes_exhausted", False):
         return Response({
@@ -4392,39 +4350,20 @@ def sarvam_campaigns_list_api(request, agent_slug=None):
     from conversations.models import SarvamCampaign, SarvamAgent
 
     slug = agent_slug or request.GET.get("agent")
-    user = request.user if request.user.is_authenticated else None
-    is_admin = False
-    if user:
-        if user.is_superuser:
-            is_admin = True
-        elif hasattr(user, 'profile') and user.profile and user.profile.role:
-            perms = user.profile.role.permissions
-            if perms.get('is_admin', False):
-                is_admin = True
-        if hasattr(user, 'profile') and user.profile and user.profile.custom_permissions:
-            if user.profile.custom_permissions.get('is_admin', False):
-                is_admin = True
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
 
     sarvam_agent = None
-    qs = SarvamCampaign.objects.all().order_by("-created_at")
-    if user and not is_admin and hasattr(user, 'profile') and user.profile:
-        assigned_qs = user.profile.assigned_sarvam_agents.filter(is_active=True)
-        if assigned_qs.exists():
-            if slug and assigned_qs.filter(slug=slug).exists():
-                sarvam_agent = assigned_qs.filter(slug=slug).first()
-                qs = qs.filter(sarvam_agent=sarvam_agent)
-            else:
-                qs = qs.filter(sarvam_agent__in=assigned_qs)
-        else:
-            if slug:
-                sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
-            if sarvam_agent:
-                qs = qs.filter(sarvam_agent=sarvam_agent)
+    if slug:
+        sarvam_agent = allowed_agent_objs.filter(slug=slug).first()
+        if not sarvam_agent and not is_superuser:
+            return Response({"error": "Access denied for requested agent."}, status=403)
+
+    if sarvam_agent:
+        qs = SarvamCampaign.objects.filter(sarvam_agent=sarvam_agent).order_by("-created_at")
+    elif is_superuser:
+        qs = SarvamCampaign.objects.all().order_by("-created_at")
     else:
-        if slug:
-            sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
-        if sarvam_agent:
-            qs = qs.filter(sarvam_agent=sarvam_agent)
+        qs = SarvamCampaign.objects.filter(sarvam_agent__in=allowed_agent_objs).order_by("-created_at")
 
     campaigns_data = []
     for c in qs:

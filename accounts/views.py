@@ -169,8 +169,8 @@ def login_view(request):
     elif permissions.get("is_sarvam_user") or permissions.get("can_view_sarvam"):
         is_sarvam_user = True
 
-    # If is_sarvam_user is True (or superuser), provide all active Sarvam agents if none specifically assigned
-    if (is_sarvam_user or user.is_superuser) and not assigned_sarvam_agents:
+    # If user is superuser and no specific Sarvam agents are assigned, provide all active Sarvam agents
+    if user.is_superuser and not assigned_sarvam_agents:
         try:
             from conversations.models import SarvamAgent
             all_s_agents = SarvamAgent.objects.filter(is_active=True)

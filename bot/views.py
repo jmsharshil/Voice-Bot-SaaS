@@ -1696,6 +1696,9 @@ def auto_resume_suspended_campaigns():
             # Check every 60 seconds
             time.sleep(60)
             
+            from django.db import close_old_connections
+            close_old_connections()
+
             is_open = is_within_calling_hours()
             
             # If calling hours are open and we have a suspended campaign

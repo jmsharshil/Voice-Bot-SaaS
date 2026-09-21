@@ -2590,6 +2590,7 @@
             // Toggle live indicator badge
             const liveBadge = document.getElementById('liveCampaignBadge');
             if (liveBadge) liveBadge.style.display = hasRunningCampaign ? 'inline-block' : 'none';
+            isCampaignActive = hasRunningCampaign;
         }
 
         async function openCampaignDetailModal(campaignId, campaignName) {
@@ -2952,14 +2953,20 @@
             fetchLeadsData();
         });
 
-        // Background Auto-poll: every 10s silently so user doesn't need to manually refresh
-        setInterval(() => {
+        let isCampaignActive = false;
+
+        function runDynamicPoll() {
             if (currentDashboardTab === 'campaigns') {
                 fetchCampaignsData(true);
             } else {
                 fetchLeadsData(true);
             }
-        }, 10000);
+            // Ultra-fast 3s live polling when campaign is active/dialing, else 10s
+            const nextPollMs = isCampaignActive ? 3000 : 10000;
+            setTimeout(runDynamicPoll, nextPollMs);
+        }
+
+        setTimeout(runDynamicPoll, 5000);
     </script>
 </body>
 </html>
