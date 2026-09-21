@@ -70,6 +70,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://multivoicebot-d3eyanb4h2g4crhh.centralindia-01.azurewebsites.net",
     "https://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net",
     "https://renav-ch.on-forge.com",
+    "https://naavya.ai",
+    "https://www.naavya.ai",
 ]
 # Application definition
 
