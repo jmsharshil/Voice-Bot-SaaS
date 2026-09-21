@@ -1735,6 +1735,8 @@ def auto_resume_suspended_campaigns():
                     
                     dial_next_from_queue()
         except Exception as e:
+            from django.db import close_old_connections
+            close_old_connections()
             print(f"❌ Error in background calling hours scheduler: {e}")
             traceback.print_exc()
 

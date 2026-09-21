@@ -193,6 +193,7 @@ else:
                 'USER': conn_str_params.get('user'),
                 'PASSWORD': conn_str_params.get('password'),
                 'PORT': conn_str_params.get('port', '5432'),
+                'CONN_MAX_AGE': 60,
                 'OPTIONS': {
                     'sslmode': 'require',
                 }
