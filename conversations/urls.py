@@ -9,6 +9,7 @@ from .views import (
     icemake_dashboard_page, icemake_dashboard_data,
     proxy_audio,
     sarvam_leads_page, sarvam_leads_data, sarvam_transcript_detail, sarvam_trigger_call_api, sarvam_sync_from_api,
+    public_trigger_sarvam_call_api, public_list_sarvam_agents_api,
     sarvam_upload_campaign_api, sarvam_sample_template_api,
     sarvam_user_agents_api, sarvam_campaigns_list_api, sarvam_campaign_detail_api,
     sarvam_campaign_export_full_api, sarvam_campaign_export_missed_api, sarvam_campaign_cancel_api,
@@ -17,6 +18,15 @@ from .views import (
 from django.urls import path, re_path
 
 urlpatterns = [
+    # ── PUBLIC REST API FOR REACT FRONTEND INTEGRATION ────────────────
+    path("v1/trigger-call/", public_trigger_sarvam_call_api, name="api-v1-trigger-call"),
+    path("v1/agents/", public_list_sarvam_agents_api, name="api-v1-list-agents"),
+    path("api/v1/trigger-call/", public_trigger_sarvam_call_api),
+    path("api/v1/agents/", public_list_sarvam_agents_api),
+    path("sarvam/public/trigger-call/", public_trigger_sarvam_call_api, name="sarvam-public-trigger-call"),
+    path("sarvam/public/agents/", public_list_sarvam_agents_api, name="sarvam-public-agents"),
+    path("sarvam/<slug:agent_slug>/public-call/", public_trigger_sarvam_call_api, name="sarvam-agent-public-call"),
+    path("sarvam/agent/<int:agent_id>/public-call/", public_trigger_sarvam_call_api, name="sarvam-agent-id-public-call"),
     path("agents/<uuid:agent_id>/chat/", ChatAPIView.as_view()),
     path("demo/chat/", DemoChatAPIView.as_view()),
     path("", demo_page, name="demo-page"),

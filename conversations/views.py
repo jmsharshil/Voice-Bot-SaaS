@@ -3449,6 +3449,164 @@ def sarvam_trigger_call_api(request, agent_slug=None):
 
 
 @csrf_exempt
+@api_view(["POST", "OPTIONS"])
+@permission_classes([AllowAny])
+def public_trigger_sarvam_call_api(request, agent_slug=None):
+    """
+    Public REST API endpoint for React / Frontend Web Widget integration.
+    Allows end users to trigger an instant outbound call from a specific Sarvam Voice Agent.
+    
+    URL Patterns:
+      POST /api/public/trigger-call/
+      POST /api/sarvam/public/trigger-call/
+      POST /api/sarvam/<slug:agent_slug>/public-call/
+    """
+    import os
+    from conversations.models import SarvamCallRecord, SarvamAgent
+    from conversations.services.kylas_sarvam_bridge import SarvamAgentService
+
+    data = request.data or {}
+    phone_number = data.get("phone_number") or data.get("phone")
+    candidate_name = data.get("candidate_name") or data.get("name") or data.get("user_name") or "Customer"
+    language = data.get("language") or "hi-IN"
+
+    # Resolve agent by agent_id (preferred), slug, or agent_phone
+    agent_id = data.get("agent_id") or data.get("id")
+    slug = agent_slug or data.get("agent_slug") or data.get("agent")
+    agent_phone_param = data.get("agent_phone")
+
+    sarvam_agent = None
+    if agent_id:
+        try:
+            sarvam_agent = SarvamAgent.objects.filter(id=int(agent_id), is_active=True).first()
+        except (ValueError, TypeError):
+            pass
+    if not sarvam_agent and slug:
+        sarvam_agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
+    if not sarvam_agent and agent_phone_param:
+        clean_ap = "".join(filter(str.isdigit, str(agent_phone_param)))[-10:]
+        if clean_ap:
+            sarvam_agent = SarvamAgent.objects.filter(agent_phone__icontains=clean_ap, is_active=True).first()
+
+    if not sarvam_agent:
+        sarvam_agent = SarvamAgent.objects.filter(is_active=True).order_by("id").first()
+
+    if not sarvam_agent:
+        return Response({
+            "status": "error",
+            "message": "No active Sarvam voice agent found on the backend."
+        }, status=400)
+
+    if not phone_number:
+        return Response({
+            "status": "error",
+            "message": "phone_number parameter is required."
+        }, status=400)
+
+    if getattr(sarvam_agent, "is_minutes_exhausted", False):
+        return Response({
+            "status": "error",
+            "code": "MINUTES_EXHAUSTED",
+            "message": f"Call minutes limit is exhausted for voice agent '{sarvam_agent.name}'. Please top up minutes.",
+            "remaining_minutes": 0,
+        }, status=400)
+
+    # Collect custom agent prompt variables (e.g. car_model, city, user_name, etc.)
+    extra_vars = {}
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if k not in ["phone_number", "phone", "candidate_name", "name", "user_name", "language", "agent_slug", "agent", "agent_id", "agent_phone"]:
+                if v is not None and str(v).strip() != "":
+                    extra_vars[str(k).strip()] = str(v).strip()
+
+        if "car_model" not in extra_vars:
+            car_candidate = (
+                data.get("car_model")
+                or data.get("car_name")
+                or data.get("model")
+                or data.get("car")
+                or data.get("vehicle")
+                or data.get("product")
+                or data.get("requirement")
+            )
+            if car_candidate and str(car_candidate).strip() != "":
+                extra_vars["car_model"] = str(car_candidate).strip()
+
+    result = SarvamAgentService.trigger_outbound_call(
+        phone_number=str(phone_number),
+        lead_id=0,
+        customer_name=candidate_name,
+        language=language,
+        sarvam_agent=sarvam_agent,
+        extra_variables=extra_vars,
+    )
+
+    if isinstance(result, dict) and (result.get("code") == "MINUTES_EXHAUSTED" or result.get("status") == "error"):
+        return Response({
+            "status": "error",
+            "code": "MINUTES_EXHAUSTED",
+            "message": result.get("error") or result.get("message") or "Call minutes limit is over for this agent.",
+            "remaining_minutes": 0,
+        }, status=400)
+
+    attempt_id = result.get("attempt_id") if isinstance(result, dict) else None
+
+    rec = SarvamCallRecord.objects.create(
+        sarvam_agent=sarvam_agent,
+        attempt_id=attempt_id,
+        phone_number=str(phone_number),
+        candidate_name=candidate_name,
+        language=language,
+        status="DIALING",
+        call_type="React Outbound Call",
+    )
+
+    agent_phone = sarvam_agent.agent_phone if sarvam_agent else os.getenv("SARVAM_AGENT_PHONE_NUMBER", "+917971414121")
+
+    print(f"✅ [REACT PUBLIC CALL TRIGGERED]: Agent='{sarvam_agent.name}' ({agent_phone}) -> Customer={phone_number} ({candidate_name}) | Record #{rec.id}")
+
+    return Response({
+        "status": "success",
+        "message": f"Outbound call initiated to {phone_number} from {sarvam_agent.name} line ({agent_phone})",
+        "call_record_id": rec.id,
+        "attempt_id": attempt_id,
+        "agent": {
+            "id": sarvam_agent.id,
+            "name": sarvam_agent.name,
+            "slug": sarvam_agent.slug,
+            "agent_phone": agent_phone,
+        },
+        "customer": {
+            "phone_number": str(phone_number),
+            "name": candidate_name,
+            "language": language
+        }
+    }, status=200)
+
+
+@csrf_exempt
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_list_sarvam_agents_api(request):
+    """
+    Public REST API endpoint returning active Sarvam Voice Agents for React frontend dropdowns.
+    URL Pattern: GET /api/public/agents/
+    """
+    from conversations.models import SarvamAgent
+    agents = []
+    for a in SarvamAgent.objects.filter(is_active=True).order_by("name"):
+        agents.append({
+            "id": a.id,
+            "name": a.name,
+            "slug": a.slug,
+            "agent_phone": a.agent_phone,
+            "description": a.description or "Sarvam Voice AI Assistant",
+            "is_exhausted": a.is_minutes_exhausted,
+        })
+    return Response({"status": "success", "total": len(agents), "agents": agents}, status=200)
+
+
+@csrf_exempt
 @api_view(["POST"])
 def sarvam_sync_from_api(request, agent_slug=None):
     """
