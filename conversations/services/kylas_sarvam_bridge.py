@@ -190,12 +190,21 @@ class SarvamAgentService:
             print(f"📤 [SARVAM API PAYLOAD SENT] to {formatted_phone}: user_name='{customer_name}' | car_model='{agent_vars.get('car_model', '')}' | agent_vars={agent_vars}")
             response = requests.post(url, headers=cls.get_agent_headers(api_key), json=payload, timeout=10)
 
-            # Self-healing fallback: If Sarvam rejects undeclared variables with 422, retry with user_name only
-            if response.status_code == 422 and "not found in agent variables" in response.text:
-                logger.warning(f"⚠️ [SARVAM AGENT API 422]: Extra variables not declared in app '{app_id}'. Retrying with user_name only...")
+            # Self-healing fallback 1: If Sarvam rejects extra undeclared variables with 422, retry with user_name only
+            if response.status_code == 422:
+                logger.warning(f"⚠️ [SARVAM AGENT API 422]: App '{app_id}' rejected variables {agent_vars} (Body: {response.text}). Retrying with user_name only...")
                 fallback_payload = dict(payload)
+                fallback_payload["app_config"] = dict(payload["app_config"])
                 fallback_payload["app_config"]["agent_variables"] = {"user_name": customer_name}
                 response = requests.post(url, headers=cls.get_agent_headers(api_key), json=fallback_payload, timeout=10)
+
+                # Self-healing fallback 2: If Sarvam STILL rejects with 422, retry with empty agent_variables {}
+                if response.status_code == 422:
+                    logger.warning(f"⚠️ [SARVAM AGENT API 422]: App '{app_id}' rejected user_name. Retrying with empty agent_variables...")
+                    empty_payload = dict(payload)
+                    empty_payload["app_config"] = dict(payload["app_config"])
+                    empty_payload["app_config"]["agent_variables"] = {}
+                    response = requests.post(url, headers=cls.get_agent_headers(api_key), json=empty_payload, timeout=10)
 
             logger.info(f"✅ [SARVAM AGENT API] Call initiated for {formatted_phone} via agent '{sarvam_agent.name if sarvam_agent else 'default'}'. Status: {response.status_code}")
             print(f"📥 [SARVAM AGENT API RESPONSE]: Status {response.status_code} | Body: {response.text}")
