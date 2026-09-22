@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Voice Agent Leads &amp; Screening Dashboard</title>
+    <title>{{ agent_name|default:'Voice AI Agent' }} — Voice Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -1048,7 +1048,7 @@
         <!-- Header -->
         <div class="header">
             <div class="header-title">
-                <h1 id="pageMainHeading"><i class="fa-solid fa-robot"></i> {{ agent_name|default:'Voice AI Agent' }} — Sarvam AI Dashboard</h1>
+                <h1 id="pageMainHeading"><i class="fa-solid fa-robot"></i> {{ agent_name|default:'Voice AI Agent' }} — Voice Dashboard</h1>
                 <div id="pageSubHeading" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
                     <span class="agent-number-badge"><i class="fa-solid fa-phone"></i> Agent Line: <strong>{{ agent_phone|default:'+917971414121' }}</strong></span>
                     <span class="agent-minutes-badge" id="headerMinutesBadge" title="Call Minutes Balance" style="display:inline-flex; align-items:center; gap:5px; background:{% if is_minutes_exhausted %}#fee2e2; color:#dc2626; border:1px solid #fca5a5{% else %}#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe{% endif %}; padding:3px 10px; border-radius:20px; font-size:0.78rem; font-weight:700;">
@@ -2346,12 +2346,18 @@
                 const switcherContainer = document.getElementById('agentSwitcherContainer');
                 const selectEl = document.getElementById('sarvamAgentSelect');
 
-                if (data.status === 'success' && data.agents) {
+                if (data.status === 'success' && data.agents && data.agents.length > 0) {
+                    const agentSlugs = data.agents.map(a => a.slug);
+                    const currentSlugValid = agentSlugs.includes(SARVAM_AGENT_SLUG);
+
+                    // If user is on an agent slug they don't have access to or on generic 'default', redirect immediately
+                    if (!currentSlugValid || SARVAM_AGENT_SLUG === 'default') {
+                        window.location.replace(`/api/sarvam/${data.agents[0].slug}/leads/`);
+                        return;
+                    }
+
                     if (data.agents.length <= 1) {
                         if (switcherContainer) switcherContainer.style.display = 'none';
-                        if (data.agents.length === 1 && data.agents[0].slug && data.agents[0].slug !== SARVAM_AGENT_SLUG) {
-                            window.location.replace(`/api/sarvam/${data.agents[0].slug}/leads/`);
-                        }
                     } else {
                         if (switcherContainer) switcherContainer.style.display = 'inline-block';
                         if (selectEl) {
@@ -2912,6 +2918,7 @@
             `;
 
             if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-robot" style="color:#0284c7;"></i> ${escapeHtml(SARVAM_AGENT_NAME)} — Voice Dashboard`;
+            document.title = `${SARVAM_AGENT_NAME} — Voice Dashboard`;
             if (subEl) subEl.innerHTML = badgesHtml;
             if (tabScreeningsLabel) tabScreeningsLabel.innerText = 'All Calls & Inquiries';
             if (searchEl) searchEl.placeholder = 'Search customer name, contact, requirement...';

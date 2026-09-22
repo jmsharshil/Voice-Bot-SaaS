@@ -2631,16 +2631,28 @@ def _get_user_allowed_sarvam_agents(user):
 def sarvam_leads_page(request, agent_slug=None):
     """Renders Sarvam AI Agent Leads & Candidate Screening Dashboard."""
     from conversations.models import SarvamAgent
+    from django.shortcuts import redirect
     
     is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
     all_agent_objs = allowed_agent_objs.order_by("name")
+
+    # If user hits /sarvam-leads/ without slug, redirect to their first allowed agent slug
+    if not agent_slug and all_agent_objs.exists():
+        first_agent = all_agent_objs.first()
+        if first_agent and first_agent.slug:
+            return redirect(f"/api/sarvam/{first_agent.slug}/leads/")
 
     # Resolve sarvam_agent for this page
     sarvam_agent = None
     if agent_slug:
         sarvam_agent = all_agent_objs.filter(slug=agent_slug).first()
-    if not sarvam_agent:
-        sarvam_agent = all_agent_objs.first()
+    
+    # If the requested slug is not allowed or doesn't exist, fallback to first allowed agent
+    if not sarvam_agent and all_agent_objs.exists():
+        first_agent = all_agent_objs.first()
+        if agent_slug and first_agent.slug != agent_slug:
+            return redirect(f"/api/sarvam/{first_agent.slug}/leads/")
+        sarvam_agent = first_agent
 
     # Build list of active agents for the nav switcher with minutes details
     all_agents = []

@@ -19,7 +19,7 @@
 
 
 from django.shortcuts import render
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
 
 from rest_framework.views import APIView
@@ -103,6 +103,12 @@ def login_view(request):
             },
             status=status.HTTP_401_UNAUTHORIZED,
         )
+
+    # Establish Django session for page navigations
+    try:
+        django_login(request, user)
+    except Exception:
+        pass
 
     # Generate JWT tokens
     refresh = RefreshToken.for_user(user)

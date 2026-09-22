@@ -894,7 +894,7 @@
                              (localStorage.getItem('username') || '').toLowerCase().includes('sarvam') ||
                              (assignedSarvam.length > 0 && !isAdmin);
             if (isSarvam) {
-                if (assignedSarvam.length === 1 && assignedSarvam[0].slug) {
+                if (assignedSarvam.length > 0 && assignedSarvam[0].slug) {
                     return `/api/sarvam/${assignedSarvam[0].slug}/leads/`;
                 }
                 return '/sarvam-leads/';
