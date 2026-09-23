@@ -193,7 +193,7 @@ else:
                 'USER': conn_str_params.get('user'),
                 'PASSWORD': conn_str_params.get('password'),
                 'PORT': conn_str_params.get('port', '5432'),
-                'CONN_MAX_AGE': 60,
+                'CONN_MAX_AGE': 0,  # Do NOT pool connections — ASGI/Gunicorn + background threads exhaust Azure PostgreSQL's max_connections limit
                 'OPTIONS': {
                     'sslmode': 'require',
                 }

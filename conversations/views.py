@@ -2632,52 +2632,78 @@ def sarvam_leads_page(request, agent_slug=None):
     """Renders Sarvam AI Agent Leads & Candidate Screening Dashboard."""
     from conversations.models import SarvamAgent
     from django.shortcuts import redirect
-    
-    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
-    all_agent_objs = allowed_agent_objs.order_by("name")
+    from django.db import OperationalError, close_old_connections
 
-    # If user hits /sarvam-leads/ without slug, redirect to their first allowed agent slug
-    if not agent_slug and all_agent_objs.exists():
-        first_agent = all_agent_objs.first()
-        if first_agent and first_agent.slug:
-            return redirect(f"/api/sarvam/{first_agent.slug}/leads/")
+    # Ensure we start with a fresh connection — avoids inheriting a stale or
+    # dead connection if a prior request timed out.
+    close_old_connections()
 
-    # Resolve sarvam_agent for this page
-    sarvam_agent = None
-    if agent_slug:
-        sarvam_agent = all_agent_objs.filter(slug=agent_slug).first()
-    
-    # If the requested slug is not allowed or doesn't exist, fallback to first allowed agent
-    if not sarvam_agent and all_agent_objs.exists():
-        first_agent = all_agent_objs.first()
-        if agent_slug and first_agent.slug != agent_slug:
-            return redirect(f"/api/sarvam/{first_agent.slug}/leads/")
-        sarvam_agent = first_agent
+    try:
+        is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
+        all_agent_objs = allowed_agent_objs.order_by("name")
 
-    # Build list of active agents for the nav switcher with minutes details
-    all_agents = []
-    for ag in all_agent_objs:
-        all_agents.append({
-            "name": ag.name,
-            "slug": ag.slug,
-            "agent_phone": ag.agent_phone,
-            "allocated_minutes": ag.allocated_minutes,
-            "remaining_minutes": ag.remaining_minutes,
-            "is_exhausted": ag.is_minutes_exhausted,
-        })
+        # If user hits /sarvam-leads/ without slug, redirect to their first allowed agent slug
+        if not agent_slug and all_agent_objs.exists():
+            first_agent = all_agent_objs.first()
+            if first_agent and first_agent.slug:
+                return redirect(f"/api/sarvam/{first_agent.slug}/leads/")
 
-    context = {
-        "agent_slug": sarvam_agent.slug if sarvam_agent else (agent_slug or "default"),
-        "agent_name": sarvam_agent.name if sarvam_agent else "Voice AI Agent",
-        "agent_phone": sarvam_agent.agent_phone if sarvam_agent else "",
-        "all_agents": all_agents,
-        "allocated_minutes": sarvam_agent.allocated_minutes if sarvam_agent else 5000.0,
-        "used_minutes": sarvam_agent.total_used_minutes if sarvam_agent else 0.0,
-        "remaining_minutes": sarvam_agent.remaining_minutes if sarvam_agent else 5000.0,
-        "is_minutes_exhausted": sarvam_agent.is_minutes_exhausted if sarvam_agent else False,
-        "usage_percentage": sarvam_agent.usage_percentage if sarvam_agent else 0.0,
-    }
-    return render(request, "sarvam_leads.html", context)
+        # Resolve sarvam_agent for this page
+        sarvam_agent = None
+        if agent_slug:
+            sarvam_agent = all_agent_objs.filter(slug=agent_slug).first()
+
+        # If the requested slug is not allowed or doesn't exist, fallback to first allowed agent
+        if not sarvam_agent and all_agent_objs.exists():
+            first_agent = all_agent_objs.first()
+            if agent_slug and first_agent.slug != agent_slug:
+                return redirect(f"/api/sarvam/{first_agent.slug}/leads/")
+            sarvam_agent = first_agent
+
+        # Build list of active agents for the nav switcher with minutes details
+        all_agents = []
+        for ag in all_agent_objs:
+            all_agents.append({
+                "name": ag.name,
+                "slug": ag.slug,
+                "agent_phone": ag.agent_phone,
+                "allocated_minutes": ag.allocated_minutes,
+                "remaining_minutes": ag.remaining_minutes,
+                "is_exhausted": ag.is_minutes_exhausted,
+            })
+
+        context = {
+            "agent_slug": sarvam_agent.slug if sarvam_agent else (agent_slug or "default"),
+            "agent_name": sarvam_agent.name if sarvam_agent else "Voice AI Agent",
+            "agent_phone": sarvam_agent.agent_phone if sarvam_agent else "",
+            "all_agents": all_agents,
+            "allocated_minutes": sarvam_agent.allocated_minutes if sarvam_agent else 5000.0,
+            "used_minutes": sarvam_agent.total_used_minutes if sarvam_agent else 0.0,
+            "remaining_minutes": sarvam_agent.remaining_minutes if sarvam_agent else 5000.0,
+            "is_minutes_exhausted": sarvam_agent.is_minutes_exhausted if sarvam_agent else False,
+            "usage_percentage": sarvam_agent.usage_percentage if sarvam_agent else 0.0,
+        }
+        return render(request, "sarvam_leads.html", context)
+
+    except OperationalError as exc:
+        # Database is temporarily at max_connections (happens during heavy campaigns).
+        # Return a 503 so the load balancer can retry and the user sees a clear message.
+        import logging
+        logging.getLogger(__name__).error(
+            "sarvam_leads_page: DB connection unavailable for agent_slug=%s — %s",
+            agent_slug, exc
+        )
+        from django.http import HttpResponse
+        return HttpResponse(
+            "<html><body style='font-family:sans-serif;text-align:center;padding:60px'>"
+            "<h2>⚙️ Dashboard temporarily busy</h2>"
+            "<p>A campaign is running and the database is under heavy load.<br>"
+            "Please refresh in a few seconds.</p>"
+            "</body></html>",
+            status=503,
+        )
+
+
 
 
 def classify_sarvam_lead_status(status=None, summary=None, transcript=None, duration_seconds=0):
@@ -3864,8 +3890,14 @@ def _run_multi_stage_campaign(campaign_id):
       - Sets campaign status to COMPLETED.
     """
     import time
+    from django.db import close_old_connections
     from conversations.models import SarvamCampaign, SarvamCampaignLead, SarvamCallRecord
     from conversations.services.kylas_sarvam_bridge import SarvamAgentService
+
+    # Release any DB connection inherited from the parent thread.
+    # Background threads must not hold connections across long sleeps or they
+    # exhaust Azure PostgreSQL's max_connections limit.
+    close_old_connections()
 
     MISSED_STATUSES = {
         "NO_ANSWER", "BUSY", "FAILED", "UNREACHABLE", "CANCELLED", "MISSED",
@@ -3916,13 +3948,19 @@ def _run_multi_stage_campaign(campaign_id):
         while elapsed < wait_seconds:
             time.sleep(poll_sec)
             elapsed += poll_sec
+            # Close stale DB connections before querying — prevents holding a
+            # connection open across the full 5-minute sleep.
+            close_old_connections()
             campaign.refresh_from_db()
             if campaign.status == "CANCELLED":
                 print(f"🛑 [CAMPAIGN #{campaign.id}]: Cancelled by user during 5-minute cooldown before {next_stage_name}.")
+                close_old_connections()
                 return False
             if elapsed % 30 == 0 or elapsed == wait_seconds:
                 remaining = max(0, wait_seconds - elapsed)
                 print(f"⏳ [CAMPAIGN #{campaign.id}]: {remaining}s remaining in 5-minute cooldown before {next_stage_name} starts...")
+                close_old_connections()  # Explicitly release between log intervals
+        close_old_connections()
         return True
 
     # ==========================================
