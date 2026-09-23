@@ -1338,6 +1338,7 @@
                                 <th>#</th>
                                 <th>Customer Name</th>
                                 <th>Contact Number</th>
+                                <th>STATUS (Tags &amp; Reason)</th>
                                 <th>Stage 1 (Main)</th>
                                 <th>Stage 2 (Retry 1)</th>
                                 <th>Stage 3 (Retry 2)</th>
@@ -1348,7 +1349,7 @@
                         </thead>
                         <tbody id="campaignLeadsTableBody">
                             <tr>
-                                <td colspan="9" style="text-align:center; padding: 2rem;">Loading lead details...</td>
+                                <td colspan="10" style="text-align:center; padding: 2rem;">Loading lead details...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1752,8 +1753,11 @@
                                 <div>${contactHtml}</div>
                                 <div>${dirBadge}</div>
                             </td>
-                            <td><span style="font-weight:600; color:#0284c7;"><i class="fa-solid fa-mobile-screen-button"></i> ${escapeHtml(product)}</span></td>
-                                         <td><span style="font-weight:600; color:#10b981;"><i class="fa-solid fa-store"></i> ${escapeHtml(store)}</span></td>
+                            <td>
+                                <div><span style="font-weight:600; color:#0284c7;"><i class="fa-solid fa-mobile-screen-button"></i> ${escapeHtml(product)}</span></div>
+                                ${renderTags(s)}
+                            </td>
+                            <td><span style="font-weight:600; color:#10b981;"><i class="fa-solid fa-store"></i> ${escapeHtml(store)}</span></td>
                             <td>${statusBadge}</td>
                             <td>
                                 ${lead.audio_url
@@ -1790,7 +1794,10 @@
                             <div>${contactHtml}</div>
                             <div>${dirBadge}</div>
                         </td>
-                        <td><span style="font-weight:600; color:#0284c7;"><i class="fa-solid fa-clipboard-list"></i> ${escapeHtml(reqDetails)}</span></td>
+                        <td>
+                            <div><span style="font-weight:600; color:#0284c7;"><i class="fa-solid fa-clipboard-list"></i> ${escapeHtml(reqDetails)}</span></div>
+                            ${renderTags(s)}
+                        </td>
                         <td>${statusBadge}</td>
                         <td>
                             ${lead.audio_url
@@ -1814,16 +1821,35 @@
             }).join('');
         }
 
+        function renderTags(s) {
+            if (!s || typeof s !== 'object') return '';
+            const tags = Array.isArray(s.tags) ? s.tags : [];
+            if (!tags || tags.length === 0) return '';
+            return `<div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:4px;">` + tags.map(t => {
+                const tagStr = escapeHtml(String(t));
+                const lower = tagStr.toLowerCase();
+                let bg = '#f1f5f9', color = '#475569', border = '#e2e8f0';
+                if (lower.includes('not') || lower.includes('wrong') || lower.includes('bought') || lower.includes('decline') || lower.includes('no customer')) {
+                    bg = '#fef2f2'; color = '#b91c1c'; border = '#fecaca';
+                } else if (lower.includes('callback') || lower.includes('whatsapp') || lower.includes('driving') || lower.includes('busy')) {
+                    bg = '#fefce8'; color = '#a16207'; border = '#fef08a';
+                } else if (lower.includes('interested') || lower.includes('test drive') || lower.includes('visit') || lower.includes('booking') || lower.includes('price')) {
+                    bg = '#f0fdf4'; color = '#15803d'; border = '#bbf7d0';
+                }
+                return `<span style="font-size:0.7rem; font-weight:600; padding:1px 6px; border-radius:10px; background:${bg}; color:${color}; border:1px solid ${border}; display:inline-flex; align-items:center; gap:3px;"><i class="fa-solid fa-tag" style="font-size:0.55rem;"></i> ${tagStr}</span>`;
+            }).join('') + `</div>`;
+        }
+
         function getStatusBadge(status) {
             const s = (status || '').toUpperCase();
-            if (s.includes('INTERVIEW') || s.includes('SCHEDULED') || s.includes('PURCHASE') || s.includes('STORE_VISIT') || s.includes('HIGH_INTENT') || s.includes('INTERESTED')) {
+            if (s.includes('NOT_INTERESTED') || s.includes('NOT INTERESTED') || s.includes('REJECTED') || s.includes('DECLINED')) {
+                return `<span class="badge badge-red"><i class="fa-solid fa-ban"></i> Not Interested</span>`;
+            } else if (s.includes('INTERVIEW') || s.includes('SCHEDULED') || s.includes('PURCHASE') || s.includes('STORE_VISIT') || s.includes('HIGH_INTENT') || s.includes('INTERESTED')) {
                 return `<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> Interested / High Intent</span>`;
-            } else if (s.includes('CALLBACK') || s.includes('WHATSAPP') || s.includes('OFFER')) {
+            } else if (s.includes('CALLBACK') || s.includes('WHATSAPP') || s.includes('OFFER') || s.includes('FOLLOW_UP')) {
                 return `<span class="badge badge-yellow"><i class="fa-solid fa-phone"></i> Callback Requested</span>`;
             } else if (s.includes('MISMATCH')) {
                 return `<span class="badge badge-purple"><i class="fa-solid fa-sliders"></i> Requirements Mismatch</span>`;
-            } else if (s.includes('NOT_INTERESTED') || s.includes('NOT INTERESTED') || s.includes('REJECTED') || s.includes('DECLINED')) {
-                return `<span class="badge badge-red"><i class="fa-solid fa-ban"></i> Not Interested</span>`;
             } else if (s.includes('NO_ANSWER') || s.includes('MISSED') || s.includes('BUSY') || s.includes('FAILED')) {
                 return `<span class="badge badge-red" style="background:#fef2f2; color:#ef4444; border:1px solid #fecaca;"><i class="fa-solid fa-phone-slash"></i> Missed / No Answer</span>`;
             }
@@ -2140,12 +2166,24 @@
                 `;
             }
 
-            // Call Summary (if present)
+            // Call Summary & AI Tags (Prominent Section)
             if (s.call_summary && s.call_summary !== 'None' && s.call_summary.toString().trim()) {
                 sectionsHtml += `
+                    <div class="detail-group" style="border-color:rgba(79,70,229,0.3); background: linear-gradient(135deg, rgba(238,242,255,0.4) 0%, rgba(248,250,252,0.8) 100%);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <h4 style="color:#4338ca; margin-bottom:0;"><i class="fa-solid fa-brain"></i> AI Call Summary &amp; Tags</h4>
+                            ${renderTags(s)}
+                        </div>
+                        <p style="font-size:0.95rem;line-height:1.6;color:#1e293b;background:#ffffff;padding:0.85rem;border-radius:0.5rem;border:1px solid #e0e7ff;margin-top:0.75rem;">
+                            ${val(s.call_summary)}
+                        </p>
+                    </div>
+                `;
+            } else if (Array.isArray(s.tags) && s.tags.length > 0) {
+                sectionsHtml += `
                     <div class="detail-group" style="border-color:rgba(79,70,229,0.2);">
-                        <h4><i class="fa-solid fa-microphone"></i> Call Summary</h4>
-                        <p style="font-size:0.92rem;line-height:1.6;color:#1e293b;background:#f8fafc;padding:0.75rem;border-radius:0.5rem;border:1px solid #e2e8f0;">${val(s.call_summary)}</p>
+                        <h4 style="color:#4338ca;"><i class="fa-solid fa-tags"></i> Allocated Conversation Tags</h4>
+                        ${renderTags(s)}
                     </div>
                 `;
             }
@@ -2614,7 +2652,7 @@
                 if (res.ok && data.status === 'success') {
                     const leads = data.leads || [];
                     if (leads.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 2rem; color:var(--text-secondary);">No leads found for this campaign.</td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 2rem; color:var(--text-secondary);">No leads found for this campaign.</td></tr>`;
                         return;
                     }
 
@@ -2628,9 +2666,27 @@
                             finalBadge = `<span class="badge badge-yellow"><i class="fa-solid fa-spinner fa-spin"></i> In Progress</span>`;
                         }
 
-                        function formatStageCell(st, dur) {
+                        let statusBadge = '';
+                        const cat = (l.status_category || '').toUpperCase();
+                        const stText = escapeHtml(l.status_text || '—');
+                        const sumTip = escapeHtml(l.call_summary || '');
+                        if (cat === 'INTERESTED') {
+                            statusBadge = `<span class="badge badge-green" title="${sumTip}" style="font-size:0.75rem;"><i class="fa-solid fa-circle-check"></i> ${stText}</span>`;
+                        } else if (cat === 'NOT_INTERESTED') {
+                            statusBadge = `<span class="badge badge-red" title="${sumTip}" style="font-size:0.75rem;"><i class="fa-solid fa-ban"></i> ${stText}</span>`;
+                        } else if (cat === 'CALLBACK') {
+                            statusBadge = `<span class="badge badge-yellow" title="${sumTip}" style="font-size:0.75rem;"><i class="fa-solid fa-phone"></i> ${stText}</span>`;
+                        } else if (cat === 'MISMATCH') {
+                            statusBadge = `<span class="badge badge-purple" title="${sumTip}" style="font-size:0.75rem;"><i class="fa-solid fa-sliders"></i> ${stText}</span>`;
+                        } else if (cat === 'NO_ANSWER') {
+                            statusBadge = `<span class="badge badge-red" style="background:#fef2f2; color:#ef4444; border:1px solid #fecaca; font-size:0.75rem;"><i class="fa-solid fa-phone-slash"></i> Missed</span>`;
+                        } else {
+                            statusBadge = `<span class="badge badge-blue" title="${sumTip}" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.75rem;"><i class="fa-solid fa-circle-info"></i> ${stText}</span>`;
+                        }
+
+                        function formatStageCell(st) {
                             if (st === 'ANSWERED') {
-                                return `<span style="color:#16a34a; font-weight:700;"><i class="fa-solid fa-check-circle"></i> Answered (${dur}s)</span>`;
+                                return `<span style="color:#16a34a; font-weight:700;"><i class="fa-solid fa-check-circle"></i> Answered</span>`;
                             } else if (st === 'MISSED') {
                                 return `<span style="color:#dc2626; font-weight:600;"><i class="fa-solid fa-phone-slash"></i> Missed</span>`;
                             } else if (st === 'SKIPPED') {
@@ -2646,9 +2702,10 @@
                                 <td>${idx + 1}</td>
                                 <td><strong>${escapeHtml(l.candidate_name)}</strong></td>
                                 <td><code>${escapeHtml(l.phone_number)}</code></td>
-                                <td>${formatStageCell(l.stage_1_status, l.stage_1_duration)}</td>
-                                <td>${formatStageCell(l.stage_2_status, l.stage_2_duration)}</td>
-                                <td>${formatStageCell(l.stage_3_status, l.stage_3_duration)}</td>
+                                <td>${statusBadge}</td>
+                                <td>${formatStageCell(l.stage_1_status)}</td>
+                                <td>${formatStageCell(l.stage_2_status)}</td>
+                                <td>${formatStageCell(l.stage_3_status)}</td>
                                 <td>${finalBadge}</td>
                                 <td style="text-align:center; font-weight:700;">${l.total_attempts}</td>
                                 <td style="font-size:0.8rem; color:var(--text-secondary);">${escapeHtml(l.last_call_time || 'N/A')}</td>
@@ -2656,10 +2713,10 @@
                         `;
                     }).join('');
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 2rem; color:#dc2626;">Failed to load lead details: ${escapeHtml(data.error || 'Unknown error')}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 2rem; color:#dc2626;">Failed to load lead details: ${escapeHtml(data.error || 'Unknown error')}</td></tr>`;
                 }
             } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 2rem; color:#dc2626;">Network error loading lead details.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding: 2rem; color:#dc2626;">Network error loading lead details.</td></tr>`;
             }
         }
 
