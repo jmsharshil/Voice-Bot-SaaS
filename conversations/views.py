@@ -1775,6 +1775,14 @@ def sarvam_cdr_webhook(request):
         # [KYLAS CRM INTEGRATION - ON HOLD / COMMENTED OUT FOR NOW]
         # =========================================================
 
+        # ✅ POST-CALL AI CONVERSATION SUMMARY & ACCURATE TAG ALLOCATION
+        if rec and (rec.transcript or (isinstance(rec.summary, dict) and rec.summary.get("conversation_log")) or rec.duration_seconds > 0):
+            try:
+                from conversations.services.call_summarizer import process_and_save_call_record_summary
+                process_and_save_call_record_summary(rec.id, async_mode=True)
+            except Exception as sum_err:
+                print(f"⚠️ [SARVAM CDR SUMMARY TRIGGER ERROR]: {sum_err}")
+
         # ✅ AUTO RECORDING RETRY: If no recording yet, spawn background thread to retry
         # Sarvam takes 30-90 seconds to process audio after call ends
         if rec and not rec.audio_url and rec.interaction_id and "/" in rec.interaction_id:
@@ -1787,7 +1795,9 @@ def sarvam_cdr_webhook(request):
                 import time
                 import requests as _requests
                 import os
+                from django.db import close_old_connections
 
+                close_old_connections()
                 # ✅ Use this record's agent credentials (not hardcoded Raahi env values)
                 try:
                     from conversations.models import SarvamCallRecord as _SCR, SarvamAgent as _SA
@@ -1810,34 +1820,46 @@ def sarvam_cdr_webhook(request):
                 rec_url = f"https://apps.sarvam.ai/api/analytics/v1/{org_id}/{ws_id}/{app_id}/recordings/{interaction_id}"
                 headers = {"X-API-Key": api_key}
 
-                for attempt in range(1, max_retries + 1):
-                    time.sleep(delay_sec)
-                    try:
-                        # Import inside thread after sleep — Django is already set up by Daphne
-                        from conversations.models import SarvamCallRecord
-                        r = SarvamCallRecord.objects.filter(id=record_id).first()
-                        if not r:
-                            break
-                        if r.audio_url:
-                            print(f"✅ [RECORDING RETRY] Record #{record_id} already has audio, skipping.")
-                            break
+                try:
+                    for attempt in range(1, max_retries + 1):
+                        time.sleep(delay_sec)
+                        try:
+                            close_old_connections()
+                            # Import inside thread after sleep — Django is already set up by Daphne
+                            from conversations.models import SarvamCallRecord
+                            r = SarvamCallRecord.objects.filter(id=record_id).first()
+                            if not r:
+                                break
+                            if r.audio_url:
+                                print(f"✅ [RECORDING RETRY] Record #{record_id} already has audio, skipping.")
+                                break
 
-                        print(f"🔄 [RECORDING RETRY] Attempt {attempt}/{max_retries} for {interaction_id}...")
-                        resp = _requests.get(rec_url, headers=headers, timeout=15, allow_redirects=True)
+                            print(f"🔄 [RECORDING RETRY] Attempt {attempt}/{max_retries} for {interaction_id}...")
+                            resp = _requests.get(rec_url, headers=headers, timeout=15, allow_redirects=True)
 
-                        if resp.status_code == 200:
-                            # Got the audio — save the URL
-                            final_url = resp.url
-                            r.audio_url = final_url
-                            r.save(update_fields=["audio_url"])
-                            print(f"✅ [RECORDING RETRY] Got recording for record #{record_id} on attempt {attempt}! Saved: {final_url[:80]}")
-                            break
-                        elif resp.status_code == 404:
-                            print(f"⏳ [RECORDING RETRY] Not ready yet (attempt {attempt}/{max_retries}), retrying in {delay_sec}s...")
-                        else:
-                            print(f"⚠️ [RECORDING RETRY] Unexpected status {resp.status_code} on attempt {attempt}")
-                    except Exception as e:
-                        print(f"⚠️ [RECORDING RETRY] Attempt {attempt} error: {e}")
+                            if resp.status_code == 200:
+                                # Got the audio — save the URL
+                                final_url = resp.url
+                                r.audio_url = final_url
+                                r.save(update_fields=["audio_url"])
+                                print(f"✅ [RECORDING RETRY] Got recording for record #{record_id} on attempt {attempt}! Saved: {final_url[:80]}")
+
+                                # If transcript was missing, also trigger AI summary
+                                if not r.summary or not r.summary.get("call_summary"):
+                                    try:
+                                        from conversations.services.call_summarizer import process_and_save_call_record_summary
+                                        process_and_save_call_record_summary(r.id, async_mode=True)
+                                    except Exception:
+                                        pass
+                                break
+                            elif resp.status_code == 404:
+                                print(f"⏳ [RECORDING RETRY] Not ready yet (attempt {attempt}/{max_retries}), retrying in {delay_sec}s...")
+                            else:
+                                print(f"⚠️ [RECORDING RETRY] Unexpected status {resp.status_code} on attempt {attempt}")
+                        except Exception as e:
+                            print(f"⚠️ [RECORDING RETRY] Attempt {attempt} error: {e}")
+                finally:
+                    close_old_connections()
 
             t = threading.Thread(target=_retry_fetch_recording, args=(record_id, iid), daemon=True)
             t.start()
@@ -2713,52 +2735,76 @@ def sarvam_leads_page(request, agent_slug=None):
     """Renders Sarvam AI Agent Leads & Candidate Screening Dashboard."""
     from conversations.models import SarvamAgent
     from django.shortcuts import redirect
-    
-    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
-    all_agent_objs = allowed_agent_objs.order_by("name")
+    from django.db import OperationalError, close_old_connections
 
-    # If user hits /sarvam-leads/ without slug, redirect to their first allowed agent slug
-    if not agent_slug and all_agent_objs.exists():
-        first_agent = all_agent_objs.first()
-        if first_agent and first_agent.slug:
-            return redirect(f"/api/sarvam/{first_agent.slug}/leads/")
+    # Ensure we start with a fresh connection — avoids inheriting a stale or
+    # dead connection if a prior request timed out.
+    close_old_connections()
 
-    # Resolve sarvam_agent for this page
-    sarvam_agent = None
-    if agent_slug:
-        sarvam_agent = all_agent_objs.filter(slug=agent_slug).first()
-    
-    # If the requested slug is not allowed or doesn't exist, fallback to first allowed agent
-    if not sarvam_agent and all_agent_objs.exists():
-        first_agent = all_agent_objs.first()
-        if agent_slug and first_agent.slug != agent_slug:
-            return redirect(f"/api/sarvam/{first_agent.slug}/leads/")
-        sarvam_agent = first_agent
+    try:
+        is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
+        all_agent_objs = allowed_agent_objs.order_by("name")
 
-    # Build list of active agents for the nav switcher with minutes details
-    all_agents = []
-    for ag in all_agent_objs:
-        all_agents.append({
-            "name": ag.name,
-            "slug": ag.slug,
-            "agent_phone": ag.agent_phone,
-            "allocated_minutes": ag.allocated_minutes,
-            "remaining_minutes": ag.remaining_minutes,
-            "is_exhausted": ag.is_minutes_exhausted,
-        })
+        # If user hits /sarvam-leads/ without slug, redirect to their first allowed agent slug
+        if not agent_slug and all_agent_objs.exists():
+            first_agent = all_agent_objs.first()
+            if first_agent and first_agent.slug:
+                return redirect(f"/api/sarvam/{first_agent.slug}/leads/")
 
-    context = {
-        "agent_slug": sarvam_agent.slug if sarvam_agent else (agent_slug or "default"),
-        "agent_name": sarvam_agent.name if sarvam_agent else "Voice AI Agent",
-        "agent_phone": sarvam_agent.agent_phone if sarvam_agent else "",
-        "all_agents": all_agents,
-        "allocated_minutes": sarvam_agent.allocated_minutes if sarvam_agent else 5000.0,
-        "used_minutes": sarvam_agent.total_used_minutes if sarvam_agent else 0.0,
-        "remaining_minutes": sarvam_agent.remaining_minutes if sarvam_agent else 5000.0,
-        "is_minutes_exhausted": sarvam_agent.is_minutes_exhausted if sarvam_agent else False,
-        "usage_percentage": sarvam_agent.usage_percentage if sarvam_agent else 0.0,
-    }
-    return render(request, "sarvam_leads.html", context)
+        # Resolve sarvam_agent for this page
+        sarvam_agent = None
+        if agent_slug:
+            sarvam_agent = all_agent_objs.filter(slug=agent_slug).first()
+
+        # If the requested slug is not allowed or doesn't exist, fallback to first allowed agent
+        if not sarvam_agent and all_agent_objs.exists():
+            first_agent = all_agent_objs.first()
+            if agent_slug and first_agent.slug != agent_slug:
+                return redirect(f"/api/sarvam/{first_agent.slug}/leads/")
+            sarvam_agent = first_agent
+
+        # Build list of active agents for the nav switcher with minutes details
+        all_agents = []
+        for ag in all_agent_objs:
+            all_agents.append({
+                "name": ag.name,
+                "slug": ag.slug,
+                "agent_phone": ag.agent_phone,
+                "allocated_minutes": ag.allocated_minutes,
+                "remaining_minutes": ag.remaining_minutes,
+                "is_exhausted": ag.is_minutes_exhausted,
+            })
+
+        context = {
+            "agent_slug": sarvam_agent.slug if sarvam_agent else (agent_slug or "default"),
+            "agent_name": sarvam_agent.name if sarvam_agent else "Voice AI Agent",
+            "agent_phone": sarvam_agent.agent_phone if sarvam_agent else "",
+            "all_agents": all_agents,
+            "allocated_minutes": sarvam_agent.allocated_minutes if sarvam_agent else 5000.0,
+            "used_minutes": sarvam_agent.total_used_minutes if sarvam_agent else 0.0,
+            "remaining_minutes": sarvam_agent.remaining_minutes if sarvam_agent else 5000.0,
+            "is_minutes_exhausted": sarvam_agent.is_minutes_exhausted if sarvam_agent else False,
+            "usage_percentage": sarvam_agent.usage_percentage if sarvam_agent else 0.0,
+        }
+        return render(request, "sarvam_leads.html", context)
+
+    except OperationalError as exc:
+        # Database is temporarily at max_connections (happens during heavy campaigns).
+        # Return a 503 so the load balancer can retry and the user sees a clear message.
+        import logging
+        logging.getLogger(__name__).error(
+            "sarvam_leads_page: DB connection unavailable for agent_slug=%s — %s",
+            agent_slug, exc
+        )
+        from django.http import HttpResponse
+        return HttpResponse(
+            "<html><body style='font-family:sans-serif;text-align:center;padding:60px'>"
+            "<h2>⚙️ Dashboard temporarily busy</h2>"
+            "<p>A campaign is running and the database is under heavy load.<br>"
+            "Please refresh in a few seconds.</p>"
+            "</body></html>",
+            status=503,
+        )
 
 
 def classify_sarvam_lead_status(status=None, summary=None, transcript=None, duration_seconds=0):
@@ -2768,10 +2814,29 @@ def classify_sarvam_lead_status(status=None, summary=None, transcript=None, dura
     - 'CALLBACK': Callback Requested / WhatsApp Offers / Festive Offers Requested / Follow-up
     - 'NOT_INTERESTED': Explicitly declined, not interested, rejected, dropped without interest
     - 'NO_ANSWER': Missed, busy, no answer, dialing failure
-    - 'COMPLETED': Engaged completed call
+    - 'MISMATCH': Requirements / role mismatch
+    - 'COMPLETED': Neutral completed conversation
     """
+    # 1. Direct AI Analysis Result from summary dictionary
+    if isinstance(summary, dict):
+        ai_status = str(summary.get("final_status") or summary.get("customer_intent") or "").upper().strip()
+        if ai_status in ["INTERESTED", "HIGH_INTENT", "INTERVIEW", "POSITIVE", "CONFIRMED", "BOOKING_CONFIRMED"]:
+            return "INTERVIEW"
+        elif ai_status in ["CALLBACK", "FOLLOW_UP", "WHATSAPP"]:
+            return "CALLBACK"
+        elif ai_status in ["NOT_INTERESTED", "DECLINED", "REJECTED"]:
+            return "NOT_INTERESTED"
+        elif ai_status in ["NO_ANSWER", "MISSED", "BUSY", "FAILED", "CANCELLED", "TIMEOUT"]:
+            return "NO_ANSWER"
+        elif ai_status in ["MISMATCH", "ROLE_MISMATCH"]:
+            return "MISMATCH"
+        elif ai_status in ["GENERAL_INQUIRY", "COMPLETED", "ANSWERED"]:
+            # If explicit AI call_summary exists and wasn't classified as interested, keep it COMPLETED
+            if summary.get("call_summary"):
+                return "COMPLETED"
+
     raw_status = (str(status) if status else "").upper().strip()
-    if raw_status in ["NO_ANSWER", "MISSED", "BUSY", "FAILED", "CANCELLED", "TIMEOUT"]:
+    if raw_status in ["NO_ANSWER", "MISSED", "BUSY", "FAILED", "CANCELLED", "TIMEOUT", "UNREACHABLE"]:
         return "NO_ANSWER"
 
     try:
@@ -2779,7 +2844,7 @@ def classify_sarvam_lead_status(status=None, summary=None, transcript=None, dura
     except (ValueError, TypeError):
         dur = 0.0
 
-    if dur <= 0 and raw_status in ["NO_ANSWER", "PENDING", "DIALING"]:
+    if dur <= 0 and raw_status in ["NO_ANSWER", "PENDING", "DIALING", "QUEUED"]:
         return "NO_ANSWER"
 
     text_corpus = [raw_status]
@@ -2801,47 +2866,56 @@ def classify_sarvam_lead_status(status=None, summary=None, transcript=None, dura
 
     text = " ".join(text_corpus).lower()
 
-    # 1. NOT INTERESTED / DECLINED / DROPPED
+    # 2. NOT INTERESTED / DECLINED / DROPPED / WRONG NUMBER / ALREADY BOUGHT
     not_int_patterns = [
         "not interested", "not_interested", "declined", "rejected", "no need", "wrong number",
-        "refused", "hung up immediately", "did not want", "don't want", "not looking for",
-        "ended without a response", "stalled before", "no response from",
-        "નથી જોઈતું", "જરૂર નથી", "રસ નથી", "રોંગ નંબર", "નહિ જોઈએ", "रुचि नहीं है", "नहीं चाहिए"
+        "refused", "hung up immediately", "did not want", "don't want", "dont want", "not looking for",
+        "ended without a response", "stalled before", "no response from", "no thanks",
+        "stop calling", "do not call", "nahi chahiye", "nahi lena", "interest nahi hai", "interested nahi",
+        "phone rakho", "dusri le li", "dusra le liya", "already bought", "already purchased", "nahi karna",
+        "time nahi hai mere paas", "kyun phone kiya", "nahi chahiye bhai", "koi lena dena nahi",
+        "નથી જોઈતું", "જરૂર નથી", "રસ નથી", "રોંગ નંબર", "નહિ જોઈએ", "નથી લેવું", "નથી કરવું",
+        "લેલી છે", "ખરીદી લીધી", "ફોન મૂકો", "ફોન મુકો", "रुचि नहीं है", "नहीं चाहिए", "नहीं लेना",
+        "नको आहे", "दुसरी घेतली", "फोन ठेवा"
     ]
     if any(p in text for p in not_int_patterns):
         return "NOT_INTERESTED"
 
-    # 2. CALLBACK / OFFERS REQUESTED / WHATSAPP
+    # 3. CALLBACK / OFFERS REQUESTED / WHATSAPP / BUSY / DRIVING
     callback_patterns = [
         "callback", "call back", "call later", "call you later", "talk later", "call tomorrow",
         "busy right now", "not available to talk", "call at a later time", "contact later",
-        "whatsapp", "festive offer", "festive offers", "send details", "send info", "share details",
-        "send brochure", "send link", "send on whatsapp", "offers via whatsapp",
+        "driving", "in a meeting", "whatsapp", "festive offer", "festive offers", "send details",
+        "send info", "share details", "send brochure", "send link", "send on whatsapp", "offers via whatsapp",
+        "baad me phone", "baad me baat", "kal phone karna", "kal call karo", "sham ko phone",
         "મોકલી દો", "મોકલો", "ઓફર", "પછી ફોન", "પછી વાત", "કાલે ફોન", "કાલે કરજો",
-        "હમણાં નહિ", "હમણાં ટાઈમ નથી", "વોટ્સએપ", "भेज देना", "डिटेલ્સ भेजना", "बाद में बात", "कल करना"
+        "હમણાં નહિ", "હમણાં ટાઈમ નથી", "ડ્રાઇવિંગ", "વોટ્સએપ", "ભેજ દેના", "भेज देना", "ડિટેલ્સ મોકલો",
+        "बाद में बात", "कल करना", "कल फोन", "ड्राइविंग कर रहा हूँ", "व्हाट्सएप पर भेजें"
     ]
     if any(p in text for p in callback_patterns):
         return "CALLBACK"
 
-    # 3. INTERESTED / HIGH INTENT / STORE VISIT / UPGRADE / BUDGET / MODELS
+    # 4. INTERESTED / HIGH INTENT / STORE VISIT / TEST DRIVE / UPGRADE / BUDGET / MODELS / BOOKING
     high_intent_patterns = [
         "expressed interest", "interested in", "interest in", "interested", "high intent",
         "budget of", "budget is", "looking to buy", "looking for", "upgrade", "upgrading",
-        "purchase", "purchased", "visit the store", "store visit", "demo", "available models",
-        "models available", "confirmed", "schedule", "scheduled", "interview", "admission",
-        "positive", "product inquiry", "new phone", "wants to buy", "ready to visit",
-        "મોડેલ", "લેવું છે", "ખરીદવું", "સ્ટોર", "દુકાન", "બજેટ", "રૂપિયા", "આવીશ", "જોવું છે",
-        "કયા કયા મોડેલ", "ખરીદના", "लेना है", "रुचि", "दुकान आना", "मॉडल देखना"
+        "purchase", "purchased", "visit the store", "store visit", "test drive", "demo",
+        "available models", "models available", "confirmed", "schedule", "scheduled",
+        "interview", "admission", "positive", "product inquiry", "new phone", "wants to buy",
+        "ready to visit", "discount milega", "down payment", "loan ho jayega", "price kya hai",
+        "kitna price", "kitne ki hai", "મોડેલ", "લેવું છે", "ખરીદવું", "સ્ટોર", "દુકાન", "બજેટ",
+        "રૂપિયા", "આવીશ", "જોવું છે", "કયા કયા મોડેલ", "ટેસ્ટ ડ્રાઇવ", "ખરીદના", "लेना है", "रुचि",
+        "दुकान आना", "मॉडल देखना", "टेस्ट ड्राइव", "बुक करना है", "एडमिशन"
     ]
     if any(p in text for p in high_intent_patterns):
         return "INTERVIEW"
 
-    # 4. Short calls with no conversation
-    if dur < 10:
+    # 5. Short calls with minimal conversation
+    if dur < 8:
         return "NOT_INTERESTED"
 
-    # 5. Fallback for engaged answered calls
-    return "INTERVIEW" if dur >= 25 else "COMPLETED"
+    # 6. Engaged answered calls without explicit intent -> Neutral Completed Call
+    return "COMPLETED"
 
 
 @api_view(["GET"])
@@ -3025,6 +3099,14 @@ def sarvam_leads_data(request, agent_slug=None):
                 r.status = "NO_ANSWER"
                 r.save(update_fields=["status"])
 
+        # Auto-enrich unanalyzed record with AI call summary & tags if transcript exists
+        if r.transcript and (not isinstance(r.summary, dict) or not r.summary.get("call_summary")):
+            try:
+                from conversations.services.call_summarizer import process_and_save_call_record_summary
+                process_and_save_call_record_summary(r.id, async_mode=True)
+            except Exception:
+                pass
+
         rec_id = r.interaction_id or r.attempt_id or f"local_{r.id}"
         seen_ids.add(rec_id)
         if r.phone_number:
@@ -3204,73 +3286,84 @@ def sarvam_leads_data(request, agent_slug=None):
     # This ensures every call shown on the dashboard is also permanently stored.
     def _persist_remote_items(items_to_save, agent):
         """Background thread: upsert each remote Sarvam item into SarvamCallRecord."""
-        import django
-        for item, call_summary, candidate_name, final_status, clean_phone in items_to_save:
-            iid = item.get("interaction_id")
-            if not iid:
-                continue
-            try:
-                # Build transcript from conversation_log if present
-                conv_log = item.get("conversation_log") or []
-                transcript_text = ""
-                if conv_log and isinstance(conv_log, list):
-                    transcript_text = "\n\n".join([
-                        f"{m.get('role', 'speaker').upper()}: {m.get('en_text') or m.get('text') or ''}"
-                        for m in conv_log
-                    ])
+        from django.db import close_old_connections
+        close_old_connections()
+        try:
+            for item, call_summary, candidate_name, final_status, clean_phone in items_to_save:
+                iid = item.get("interaction_id")
+                if not iid:
+                    continue
+                try:
+                    # Build transcript from conversation_log if present
+                    conv_log = item.get("conversation_log") or []
+                    transcript_text = ""
+                    if conv_log and isinstance(conv_log, list):
+                        transcript_text = "\n\n".join([
+                            f"{m.get('role', 'speaker').upper()}: {m.get('en_text') or m.get('text') or ''}"
+                            for m in conv_log
+                        ])
 
-                # Parse start_time
-                from datetime import datetime as dt
-                start_time_raw = item.get("attempted_at") or item.get("start_datetime")
-                start_time_val = None
-                if start_time_raw:
-                    try:
-                        from django.utils.dateparse import parse_datetime
-                        start_time_val = parse_datetime(str(start_time_raw))
-                    except Exception:
-                        pass
+                    # Parse start_time
+                    from datetime import datetime as dt
+                    start_time_raw = item.get("attempted_at") or item.get("start_datetime")
+                    start_time_val = None
+                    if start_time_raw:
+                        try:
+                            from django.utils.dateparse import parse_datetime
+                            start_time_val = parse_datetime(str(start_time_raw))
+                        except Exception:
+                            pass
 
-                defaults = {
-                    "sarvam_agent": agent,
-                    "candidate_name": candidate_name or "Unknown Candidate",
-                    "applied_position": call_summary.get("applied_position", "Admission Counselor") if isinstance(call_summary, dict) else "Admission Counselor",
-                    "language": item.get("language_name", "hi-IN"),
-                    "status": final_status or "COMPLETED",
-                    "duration_seconds": round(float(item.get("duration_in_seconds", 0)), 1),
-                    "audio_url": item.get("audio_url") or "",
-                    "summary": call_summary if isinstance(call_summary, dict) else {},
-                    "call_type": "Sarvam API",
-                }
-                if start_time_val:
-                    defaults["start_time"] = start_time_val
-                if transcript_text:
-                    defaults["transcript"] = transcript_text
-                if clean_phone:
-                    defaults["phone_number"] = clean_phone
+                    defaults = {
+                        "sarvam_agent": agent,
+                        "candidate_name": candidate_name or "Unknown Candidate",
+                        "applied_position": call_summary.get("applied_position", "Admission Counselor") if isinstance(call_summary, dict) else "Admission Counselor",
+                        "language": item.get("language_name", "hi-IN"),
+                        "status": final_status or "COMPLETED",
+                        "duration_seconds": round(float(item.get("duration_in_seconds", 0)), 1),
+                        "audio_url": item.get("audio_url") or "",
+                        "summary": call_summary if isinstance(call_summary, dict) else {},
+                        "call_type": "Sarvam API",
+                    }
+                    if start_time_val:
+                        defaults["start_time"] = start_time_val
+                    if transcript_text:
+                        defaults["transcript"] = transcript_text
+                    if clean_phone:
+                        defaults["phone_number"] = clean_phone
 
-                # Upsert by interaction_id
-                obj, created = SarvamCallRecord.objects.update_or_create(
-                    interaction_id=iid,
-                    defaults=defaults
-                )
-                if created:
-                    print(f"✅ [AUTO-PERSIST] Saved new call to DB: {iid} | {candidate_name} | {clean_phone}")
-                else:
-                    # Patch any missing fields on existing record
-                    needs_save = False
-                    if not obj.audio_url and item.get("audio_url"):
-                        obj.audio_url = item.get("audio_url")
-                        needs_save = True
-                    if not obj.transcript and transcript_text:
-                        obj.transcript = transcript_text
-                        needs_save = True
-                    if not obj.sarvam_agent and agent:
-                        obj.sarvam_agent = agent
-                        needs_save = True
-                    if needs_save:
-                        obj.save()
-            except Exception as ex:
-                print(f"⚠️ [AUTO-PERSIST] Failed for {iid}: {ex}")
+                    # Upsert by interaction_id
+                    obj, created = SarvamCallRecord.objects.update_or_create(
+                        interaction_id=iid,
+                        defaults=defaults
+                    )
+                    if created:
+                        print(f"✅ [AUTO-PERSIST] Saved new call to DB: {iid} | {candidate_name} | {clean_phone}")
+                    else:
+                        # Patch any missing fields on existing record
+                        needs_save = False
+                        if not obj.audio_url and item.get("audio_url"):
+                            obj.audio_url = item.get("audio_url")
+                            needs_save = True
+                        if not obj.transcript and transcript_text:
+                            obj.transcript = transcript_text
+                            needs_save = True
+                        if not obj.sarvam_agent and agent:
+                            obj.sarvam_agent = agent
+                            needs_save = True
+                        if needs_save:
+                            obj.save()
+
+                    if obj.transcript and (not obj.summary or not isinstance(obj.summary, dict) or not obj.summary.get("call_summary")):
+                        try:
+                            from conversations.services.call_summarizer import process_and_save_call_record_summary
+                            process_and_save_call_record_summary(obj.id, async_mode=False)
+                        except Exception:
+                            pass
+                except Exception as ex:
+                    print(f"⚠️ [AUTO-PERSIST] Failed for {iid}: {ex}")
+        finally:
+            close_old_connections()
 
     if new_remote_to_persist:
         import threading
@@ -3413,6 +3506,14 @@ def sarvam_transcript_detail(request, interaction_id, agent_slug=None):
                 rec.save(update_fields=["transcript"])
 
         if rec.transcript:
+            # If AI summary is missing, trigger async enrichment
+            if not rec.summary or not isinstance(rec.summary, dict) or not rec.summary.get("call_summary"):
+                try:
+                    from conversations.services.call_summarizer import process_and_save_call_record_summary
+                    process_and_save_call_record_summary(rec.id, async_mode=True)
+                except Exception:
+                    pass
+
             raw = rec.transcript
             messages = []
             if isinstance(raw, str) and "\n\n" in raw:
@@ -3945,8 +4046,14 @@ def _run_multi_stage_campaign(campaign_id):
       - Sets campaign status to COMPLETED.
     """
     import time
+    from django.db import close_old_connections
     from conversations.models import SarvamCampaign, SarvamCampaignLead, SarvamCallRecord
     from conversations.services.kylas_sarvam_bridge import SarvamAgentService
+
+    # Release any DB connection inherited from the parent thread.
+    # Background threads must not hold connections across long sleeps or they
+    # exhaust Azure PostgreSQL's max_connections limit.
+    close_old_connections()
 
     MISSED_STATUSES = {
         "NO_ANSWER", "BUSY", "FAILED", "UNREACHABLE", "CANCELLED", "MISSED",
@@ -3997,13 +4104,19 @@ def _run_multi_stage_campaign(campaign_id):
         while elapsed < wait_seconds:
             time.sleep(poll_sec)
             elapsed += poll_sec
+            # Close stale DB connections before querying — prevents holding a
+            # connection open across the full 5-minute sleep.
+            close_old_connections()
             campaign.refresh_from_db()
             if campaign.status == "CANCELLED":
                 print(f"🛑 [CAMPAIGN #{campaign.id}]: Cancelled by user during 5-minute cooldown before {next_stage_name}.")
+                close_old_connections()
                 return False
             if elapsed % 30 == 0 or elapsed == wait_seconds:
                 remaining = max(0, wait_seconds - elapsed)
                 print(f"⏳ [CAMPAIGN #{campaign.id}]: {remaining}s remaining in 5-minute cooldown before {next_stage_name} starts...")
+                close_old_connections()  # Explicitly release between log intervals
+        close_old_connections()
         return True
 
     # ==========================================
@@ -4676,6 +4789,132 @@ def sarvam_campaigns_list_api(request, agent_slug=None):
     }, status=200)
 
 
+def _extract_lead_status_and_reasons(lead):
+    """
+    Extracts the precise STATUS (with reason tags) and AI Call Summary for a campaign lead.
+    Returns: (status_text, call_summary_text, status_category)
+    """
+    best_call = None
+    if lead.stage_3_call and (lead.stage_3_status == "ANSWERED" or lead.stage_3_call.duration_seconds > 0 or lead.stage_3_call.transcript):
+        best_call = lead.stage_3_call
+    elif lead.stage_2_call and (lead.stage_2_status == "ANSWERED" or lead.stage_2_call.duration_seconds > 0 or lead.stage_2_call.transcript):
+        best_call = lead.stage_2_call
+    elif lead.stage_1_call and (lead.stage_1_status == "ANSWERED" or lead.stage_1_call.duration_seconds > 0 or lead.stage_1_call.transcript):
+        best_call = lead.stage_1_call
+    elif lead.last_call_record:
+        best_call = lead.last_call_record
+    elif lead.stage_1_call:
+        best_call = lead.stage_1_call
+
+    if lead.final_status == "MISSED_ALL_RETRIES" or (not best_call and lead.final_status == "MISSED"):
+        return ("NO ANSWER / MISSED", "Customer did not answer across all 3 retry attempts.", "NO_ANSWER")
+
+    if not best_call and lead.final_status in ["PENDING", "IN_PROGRESS"]:
+        return ("IN PROGRESS", "Calling campaign currently in progress...", "IN_PROGRESS")
+
+    if not best_call:
+        return ("NO ANSWER / MISSED", "No call record found for this lead.", "NO_ANSWER")
+
+    summary_dict = best_call.summary if isinstance(best_call.summary, dict) else {}
+    tags = summary_dict.get("tags") or []
+    if isinstance(tags, str):
+        tags = [t.strip() for t in tags.split(",") if t.strip()]
+    elif not isinstance(tags, list):
+        tags = []
+
+    call_summary = summary_dict.get("call_summary") or ""
+    raw_status = str(summary_dict.get("final_status") or best_call.status or lead.final_status or "").upper().strip()
+
+    # If call was answered or has content, but tags or summary are missing, run quick analysis
+    if (not tags or not call_summary) and (best_call.transcript or best_call.duration_seconds > 0):
+        try:
+            from conversations.services.call_summarizer import analyze_call_transcript
+            analysis = analyze_call_transcript(
+                transcript=best_call.transcript or "",
+                candidate_name=lead.candidate_name,
+                duration_seconds=best_call.duration_seconds,
+                agent_name=best_call.sarvam_agent.name if best_call.sarvam_agent else "Agent",
+                extra_vars=summary_dict
+            )
+            tags = analysis.get("tags") or []
+            call_summary = analysis.get("call_summary") or ""
+            raw_status = analysis.get("final_status") or raw_status
+            summary_dict.update({
+                "tags": tags,
+                "call_summary": call_summary,
+                "final_status": raw_status,
+                "sentiment": analysis.get("sentiment", "NEUTRAL")
+            })
+            best_call.summary = summary_dict
+            best_call.status = raw_status
+            best_call.save(update_fields=["summary", "status", "updated_at", "billed_seconds"])
+        except Exception:
+            pass
+
+    classified = classify_sarvam_lead_status(raw_status, summary_dict, best_call.transcript, best_call.duration_seconds)
+
+    if classified == "INTERVIEW" or raw_status in ["INTERESTED", "HIGH_INTENT", "INTERVIEW", "POSITIVE", "CONFIRMED", "BOOKING_CONFIRMED"]:
+        reason_tags = [t for t in tags if t.lower() not in ["interested", "interview", "positive", "high intent", "answered"]]
+        if reason_tags:
+            status_text = f"INTERESTED - {', '.join(reason_tags)}"
+        else:
+            status_text = "INTERESTED - High Intent"
+        category = "INTERESTED"
+
+    elif classified == "NOT_INTERESTED" or raw_status in ["NOT_INTERESTED", "DECLINED", "REJECTED"]:
+        reason_tags = [t for t in tags if t.lower() not in ["not interested", "declined", "rejected", "answered"]]
+        if reason_tags:
+            status_text = f"NOT INTERESTED - {', '.join(reason_tags)}"
+        else:
+            status_text = "NOT INTERESTED - Declined Offer"
+        category = "NOT_INTERESTED"
+
+    elif classified == "CALLBACK" or raw_status in ["CALLBACK", "FOLLOW_UP", "WHATSAPP"]:
+        reason_tags = [t for t in tags if t.lower() not in ["callback", "callback requested", "follow up", "answered"]]
+        if reason_tags:
+            status_text = f"CALLBACK - {', '.join(reason_tags)}"
+        else:
+            status_text = "CALLBACK - Callback Requested"
+        category = "CALLBACK"
+
+    elif classified == "MISMATCH" or raw_status in ["MISMATCH", "ROLE_MISMATCH"]:
+        reason_tags = [t for t in tags if t.lower() not in ["mismatch", "role mismatch", "requirements mismatch", "answered"]]
+        if reason_tags:
+            status_text = f"MISMATCH - {', '.join(reason_tags)}"
+        else:
+            status_text = "MISMATCH - Requirements Mismatch"
+        category = "MISMATCH"
+
+    elif classified == "NO_ANSWER" or raw_status in ["NO_ANSWER", "MISSED", "BUSY", "FAILED", "CANCELLED", "TIMEOUT"]:
+        status_text = "NO ANSWER / MISSED"
+        category = "NO_ANSWER"
+
+    else:
+        if best_call.duration_seconds < 5 and not best_call.transcript:
+            status_text = "NO ANSWER / MISSED"
+            category = "NO_ANSWER"
+        else:
+            if tags:
+                status_text = f"COMPLETED - {', '.join(tags)}"
+            else:
+                status_text = "COMPLETED - General Inquiry"
+            category = "COMPLETED"
+
+    if not call_summary:
+        if category == "NO_ANSWER":
+            call_summary = "Call was missed or not answered."
+        elif category == "INTERESTED":
+            call_summary = "Customer expressed interest during the call."
+        elif category == "NOT_INTERESTED":
+            call_summary = "Customer declined or indicated no interest."
+        elif category == "CALLBACK":
+            call_summary = "Customer requested callback or details via WhatsApp."
+        else:
+            call_summary = "Call completed."
+
+    return (status_text, call_summary, category)
+
+
 @api_view(["GET"])
 def sarvam_campaign_detail_api(request, campaign_id):
     """
@@ -4694,6 +4933,8 @@ def sarvam_campaign_detail_api(request, campaign_id):
         s2_dur = round(lead.stage_2_call.duration_seconds, 1) if lead.stage_2_call else 0.0
         s3_dur = round(lead.stage_3_call.duration_seconds, 1) if lead.stage_3_call else 0.0
 
+        status_text, call_summary, category = _extract_lead_status_and_reasons(lead)
+
         leads_data.append({
             "id": lead.id,
             "candidate_name": lead.candidate_name,
@@ -4705,6 +4946,9 @@ def sarvam_campaign_detail_api(request, campaign_id):
             "stage_3_status": lead.stage_3_status,
             "stage_3_duration": s3_dur,
             "final_status": lead.final_status,
+            "status_text": status_text,
+            "status_category": category,
+            "call_summary": call_summary,
             "total_attempts": lead.total_attempts,
             "last_call_time": lead.last_call_record.created_at.strftime("%d %b %Y %H:%M") if (lead.last_call_record and lead.last_call_record.created_at) else "",
         })
@@ -4744,7 +4988,7 @@ def sarvam_campaign_cancel_api(request, campaign_id):
 def sarvam_campaign_export_full_api(request, campaign_id):
     """
     Generates and downloads a comprehensive Excel file of the whole campaign,
-    including every candidate lead and their status across all 3 stages.
+    including every candidate lead, their status across all 3 stages, detailed STATUS with tags & reasons, and AI call summary.
     GET /api/sarvam/campaigns/<id>/export-full/
     """
     from conversations.models import SarvamCampaign
@@ -4766,6 +5010,7 @@ def sarvam_campaign_export_full_api(request, campaign_id):
     header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
     align_center = Alignment(horizontal="center", vertical="center")
     align_left = Alignment(horizontal="left", vertical="center")
+    align_left_wrap = Alignment(horizontal="left", vertical="center", wrap_text=True)
 
     thin_border = Border(
         left=Side(style='thin', color='CBD5E1'),
@@ -4778,13 +5023,12 @@ def sarvam_campaign_export_full_api(request, campaign_id):
         "S.No",
         "Candidate Name",
         "Phone Number",
+        "STATUS",
         "Stage 1 (Main)",
-        "Stage 1 Duration (s)",
         "Stage 2 (Retry 1)",
-        "Stage 2 Duration (s)",
         "Stage 3 (Retry 2 - Final)",
-        "Stage 3 Duration (s)",
         "Final Outcome",
+        "AI Call Summary",
         "Total Attempts",
         "Last Call Time",
     ]
@@ -4801,40 +5045,63 @@ def sarvam_campaign_export_full_api(request, campaign_id):
 
     leads = campaign.leads.all().order_by("id")
     for idx, lead in enumerate(leads, start=1):
-        s1_dur = round(lead.stage_1_call.duration_seconds, 1) if lead.stage_1_call else 0.0
-        s2_dur = round(lead.stage_2_call.duration_seconds, 1) if lead.stage_2_call else 0.0
-        s3_dur = round(lead.stage_3_call.duration_seconds, 1) if lead.stage_3_call else 0.0
-
         last_time = ""
         if lead.last_call_record and lead.last_call_record.created_at:
             last_time = lead.last_call_record.created_at.strftime("%d %b %Y %H:%M")
         elif lead.created_at:
             last_time = lead.created_at.strftime("%d %b %Y %H:%M")
 
+        status_text, call_summary, category = _extract_lead_status_and_reasons(lead)
+
         row = [
             idx,
             lead.candidate_name,
             lead.phone_number,
+            status_text,
             lead.stage_1_status,
-            s1_dur,
             lead.stage_2_status,
-            s2_dur,
             lead.stage_3_status,
-            s3_dur,
             lead.final_status,
+            call_summary,
             lead.total_attempts,
             last_time,
         ]
         ws.append(row)
         curr_row = idx + 1
-        ws.row_dimensions[curr_row].height = 22
+        ws.row_dimensions[curr_row].height = 26
         for col_num in range(1, len(headers) + 1):
             cell = ws.cell(row=curr_row, column=col_num)
             cell.border = thin_border
-            cell.alignment = align_left if col_num in [2, 3] else align_center
+            if col_num in [2, 3, 4]:
+                cell.alignment = align_left
+            elif col_num == 9:
+                cell.alignment = align_left_wrap
+            else:
+                cell.alignment = align_center
 
-            # Highlight status column
-            if col_num == 10:
+            # Highlight STATUS column with tags & reason (col 4)
+            if col_num == 4:
+                if category == "INTERESTED":
+                    cell.fill = PatternFill(start_color="DCFCE7", end_color="DCFCE7", fill_type="solid")
+                    cell.font = Font(color="166534", bold=True)
+                elif category == "NOT_INTERESTED":
+                    cell.fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+                    cell.font = Font(color="991B1B", bold=True)
+                elif category == "CALLBACK":
+                    cell.fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+                    cell.font = Font(color="92400E", bold=True)
+                elif category == "MISMATCH":
+                    cell.fill = PatternFill(start_color="F3E8FF", end_color="F3E8FF", fill_type="solid")
+                    cell.font = Font(color="6B21A8", bold=True)
+                elif category == "NO_ANSWER":
+                    cell.fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
+                    cell.font = Font(color="475569", bold=True)
+                elif category == "COMPLETED":
+                    cell.fill = PatternFill(start_color="EFF6FF", end_color="EFF6FF", fill_type="solid")
+                    cell.font = Font(color="1E40AF", bold=True)
+
+            # Highlight Final Outcome column (col 8)
+            elif col_num == 8:
                 if lead.final_status == "ANSWERED":
                     cell.fill = PatternFill(start_color="DCFCE7", end_color="DCFCE7", fill_type="solid")
                     cell.font = Font(color="166534", bold=True)
@@ -4843,9 +5110,15 @@ def sarvam_campaign_export_full_api(request, campaign_id):
                     cell.font = Font(color="991B1B", bold=True)
 
     for col in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
-        col_letter = get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
+        col_idx = col[0].column
+        col_letter = get_column_letter(col_idx)
+        if col_idx == 4:
+            ws.column_dimensions[col_letter].width = 38
+        elif col_idx == 9:
+            ws.column_dimensions[col_letter].width = 50
+        else:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            ws.column_dimensions[col_letter].width = max(max_len + 4, 12)
 
     buf = io.BytesIO()
     wb.save(buf)
