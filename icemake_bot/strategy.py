@@ -1495,21 +1495,35 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
         from conversations.models import CallDetailRecord
         from datetime import timedelta
         
-        bot_numbers = [
-            "919484959435", "9484959435",
-            "8758007011", "918758007011",
-            "7971019486", "917971019486",
-            "7971017251", "917971017251",
-            "7969016753", "917969016753",
-            "100259134222", "91100259134222",
-            "unknown"
-        ]
-
         def is_bot_did(num_str):
             if not num_str:
                 return True
-            digits = "".join(filter(str.isdigit, str(num_str)))
-            return not digits or any(b in digits for b in bot_numbers)
+            num_s = str(num_str).strip()
+            if num_s.lower() in ["unknown", "none", "not provided", ""]:
+                return True
+            digits = "".join(filter(str.isdigit, num_s))
+            if not digits or len(digits) < 7:
+                return True
+            clean = digits[2:] if (len(digits) == 12 and digits.startswith("91")) else digits
+            
+            known_dids = [
+                "7971019136", "917971019136",
+                "9429390434", "919429390434",
+                "7971019486", "917971019486",
+                "7971017251", "917971017251",
+                "7969016753", "917969016753",
+                "9484959435", "919484959435",
+                "8758007011", "918758007011",
+                "100259134222", "91100259134222",
+            ]
+            if any(kd in digits for kd in known_dids):
+                return True
+            
+            did_prefixes = ("797101", "796901", "942939", "948495", "875800", "100259")
+            if clean.startswith(did_prefixes) or digits.startswith(did_prefixes):
+                return True
+                
+            return False
 
         raw_c = str(ticket.conversation.user_number or "").strip() if ticket.conversation else ""
 
@@ -1522,7 +1536,12 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
         has_real_cdr_number = cdr and cdr.phone_number and cdr.phone_number != "unknown" and not is_bot_did(cdr.phone_number)
         if not has_real_cdr_number:
             import time
-            ice_dids = ["7971019486", "917971019486", "+917971019486"]
+            ice_dids = [
+                "7971019486", "917971019486", "+917971019486",
+                "7971019136", "917971019136", "+917971019136",
+                "9429390434", "919429390434", "+919429390434",
+                "7971017251", "917971017251", "+917971017251"
+            ]
             for _ in range(4):
                 time.sleep(2)
                 if ticket.conversation:

@@ -1919,41 +1919,59 @@ def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
         else:
             direction = "outbound"
 
-        known_dids = [
-            "7971019486", "917971019486",
-            "7971017251", "917971017251",
-            "7969016753", "917969016753",
-            "100259134222", "91100259134222"
-        ]
+        def is_bot_did(num_str):
+            if not num_str:
+                return True
+            num_s = str(num_str).strip()
+            if num_s.lower() in ["unknown", "none", "not provided", ""]:
+                return True
+            digits = "".join(filter(str.isdigit, num_s))
+            if not digits or len(digits) < 7:
+                return True
+            clean = digits[2:] if (len(digits) == 12 and digits.startswith("91")) else digits
+            
+            known_did_exact = [
+                "7971019136", "917971019136",
+                "9429390434", "919429390434",
+                "7971019486", "917971019486",
+                "7971017251", "917971017251",
+                "7969016753", "917969016753",
+                "9484959435", "919484959435",
+                "8758007011", "918758007011",
+                "100259134222", "91100259134222",
+            ]
+            if any(kd in digits for kd in known_did_exact):
+                return True
+            
+            did_prefixes = ("797101", "796901", "942939", "948495", "875800", "100259")
+            if clean.startswith(did_prefixes) or digits.startswith(did_prefixes):
+                return True
+                
+            return False
 
         # First priority: Direct phone_number field if present (Insurance-Bot / IVRManager format)
         direct_phone = raw_data.get("phone_number") or raw_data.get("caller_number")
-        if direct_phone and direct_phone != "unknown":
-            clean_dp = "".join(filter(str.isdigit, str(direct_phone)))
-            if not any(b in clean_dp for b in known_dids):
-                phone_number = str(direct_phone).strip()
-                did = str(raw_data.get("did") or call_data.get("from") or call_data.get("to") or "unknown").strip()
-            else:
-                # Direct phone_number was DID -> real caller is in 'did'
-                phone_number = str(raw_data.get("did") or "").strip()
-                did = str(direct_phone).strip()
+        raw_did = raw_data.get("did") or call_data.get("from") or call_data.get("to") or ""
+
+        if direct_phone and not is_bot_did(direct_phone):
+            phone_number = str(direct_phone).strip()
+            did = str(raw_did if is_bot_did(raw_did) else "unknown").strip()
+        elif raw_did and not is_bot_did(raw_did):
+            phone_number = str(raw_did).strip()
+            did = str(direct_phone if is_bot_did(direct_phone) else "unknown").strip()
         else:
             raw_from = str(call_data.get("from") or "").strip()
             raw_to = str(call_data.get("to") or "").strip()
-            clean_from = "".join(filter(str.isdigit, raw_from))
-            clean_to = "".join(filter(str.isdigit, raw_to))
 
-            if any(b in clean_from for b in known_dids):
-                # 'from' is DID -> 'to' is REAL CALLER!
-                phone_number = raw_to
-                did = raw_from
-            elif any(b in clean_to for b in known_dids):
-                # 'to' is DID -> 'from' is REAL CALLER!
+            if not is_bot_did(raw_from):
                 phone_number = raw_from
-                did = raw_to
+                did = raw_to if is_bot_did(raw_to) else "unknown"
+            elif not is_bot_did(raw_to):
+                phone_number = raw_to
+                did = raw_from if is_bot_did(raw_from) else "unknown"
             else:
-                phone_number = raw_from if direction == "inbound" else raw_to
-                did = raw_to if direction == "inbound" else raw_from
+                phone_number = "unknown"
+                did = raw_from if is_bot_did(raw_from) else (raw_to if is_bot_did(raw_to) else "unknown")
 
         print(f"🎯 [CDR RESOLVED USER CALLER NUMBER]: {phone_number} (DID: {did})")
 
@@ -2130,7 +2148,7 @@ def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
             conversation.call_type = new_call_type
             conversation.save(update_fields=["call_type"])
 
-        if data.get("phone_number") and data.get("phone_number") != "unknown":
+        if data.get("phone_number") and data.get("phone_number") != "unknown" and not is_bot_did(data.get("phone_number")):
             conversation.user_number = data.get("phone_number", "")
             conversation.save(update_fields=["user_number"])
 
@@ -2158,9 +2176,9 @@ def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
         existing_cdr = CallDetailRecord.objects.filter(uniqueid=data["uniqueid"]).first()
 
     if existing_cdr:
-        if data.get("phone_number") and data.get("phone_number") != "unknown":
+        if data.get("phone_number") and data.get("phone_number") != "unknown" and not is_bot_did(data.get("phone_number")):
             existing_cdr.phone_number = data.get("phone_number")
-        if data.get("did") and data.get("did") != "unknown":
+        if data.get("did") and data.get("did") != "unknown" and is_bot_did(data.get("did")):
             existing_cdr.did = data.get("did")
         existing_cdr.recording_file_name = rec_file or existing_cdr.recording_file_name
         existing_cdr.duration = safe_int_val(data.get("duration"), existing_cdr.duration)
@@ -2235,9 +2253,15 @@ def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
             from icemake_bot.models import IcemakeTicket
             from icemake_bot.strategy import _append_to_google_sheet
             ticket = IcemakeTicket.objects.filter(conversation=conversation).first()
-            if ticket and not ticket.google_sheet_synced:
-                print(f"🎯 [ICEMAKE POST API CDR RECEIVED]: Syncing real SIM caller number '{data.get('phone_number')}' to Google Sheet!")
-                _append_to_google_sheet(ticket, force=False)
+            if ticket:
+                real_num = data.get("phone_number")
+                if real_num and real_num != "unknown" and not is_bot_did(real_num):
+                    force_sync = not ticket.google_sheet_synced or not ticket.calling_number or is_bot_did(ticket.calling_number)
+                    if force_sync:
+                        print(f"🎯 [ICEMAKE POST API CDR RECEIVED]: Syncing real SIM caller number '{real_num}' to Google Sheet!")
+                        _append_to_google_sheet(ticket, force=True)
+                elif not ticket.google_sheet_synced:
+                    _append_to_google_sheet(ticket, force=False)
         except Exception as e_resync:
             print(f"⚠️ Ice Make POST API Google Sheet sync error: {e_resync}")
 
