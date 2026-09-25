@@ -72,16 +72,13 @@ class VoiceAgent(models.Model):
 
     @property
     def used_minutes(self):
-        from conversations.models import Conversation
-        import math
+        from conversations.models import Conversation, calculate_billed_seconds
         completed = Conversation.objects.filter(agent=self, ended_at__isnull=False)
         total_billed = 0.0
         for c in completed:
             raw_seconds = (c.ended_at - c.started_at).total_seconds()
             if raw_seconds > 0:
-                shifted_seconds = raw_seconds + 1
-                rounded_intervals = math.ceil(shifted_seconds / 30)
-                total_billed += rounded_intervals * 30 / 60.0
+                total_billed += calculate_billed_seconds(raw_seconds) / 60.0
         return round(total_billed + (self.extra_used_minutes or 0.0), 1)
 
     # 🔥 Dynamic prompt resolution

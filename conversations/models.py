@@ -156,16 +156,30 @@ import math
 
 def calculate_billed_seconds(duration_seconds):
     """
-    Calculates billable seconds based on 30-second telecom pulse:
-      - 0 sec => 0 sec
-      - 1 to 30 sec => 30 sec
-      - 31 to 60 sec => 60 sec
-      - 61 to 90 sec => 90 sec
+    Calculates billable seconds based on stepped minute billing with +1 min bonus when >30s:
+      - 0 sec => 0 min (0s)
+      - 1 to 30 sec => 1 min (60s)
+      - 31 to 60 sec => 2 min (120s)
+      - 61 to 90 sec => 2 min (120s)
+      - 91 to 120 sec => 3 min (180s)
+      - 121 to 150 sec => 3 min (180s)
+      - 151 to 180 sec => 4 min (240s)
       etc.
     """
     if not duration_seconds or duration_seconds <= 0:
         return 0
-    return int(math.ceil(float(duration_seconds) / 30.0) * 30)
+    dur = float(duration_seconds)
+    full_mins = int(dur // 60)
+    rem_secs = dur % 60
+
+    if rem_secs == 0:
+        billed_mins = full_mins + 1 if full_mins > 0 else 0
+    elif rem_secs <= 30:
+        billed_mins = full_mins + 1
+    else:  # rem_secs > 30
+        billed_mins = full_mins + 2
+
+    return int(billed_mins * 60)
 
 
 class SarvamAgent(models.Model):
@@ -207,7 +221,7 @@ class SarvamAgent(models.Model):
 
     @property
     def total_used_seconds(self):
-        """Calculates total billed seconds from all call records using 30s pulse."""
+        """Calculates total billed seconds from all call records using 60s (1 min) pulse."""
         from django.db.models import Sum
         billed_sum = self.call_records.aggregate(total=Sum('billed_seconds'))['total'] or 0
         return float(billed_sum) + float(self.extra_used_seconds)
@@ -229,8 +243,8 @@ class SarvamAgent(models.Model):
 
     @property
     def is_minutes_exhausted(self):
-        """True if agent has no remaining balance for at least 1 pulse (30 sec)."""
-        return self.remaining_seconds < 30.0
+        """True if agent has no remaining balance for at least 1 pulse (60 sec / 1 min)."""
+        return self.remaining_seconds < 60.0
 
     @property
     def usage_percentage(self):
@@ -318,7 +332,7 @@ class SarvamCallRecord(models.Model):
     duration_seconds = models.FloatField(default=0.0)
     billed_seconds = models.IntegerField(
         default=0,
-        help_text="Billed seconds calculated with 30s pulse (e.g. 20s->30s, 40s->60s)"
+        help_text="Billed seconds calculated with 60s (1 min) pulse (e.g. 1s->60s, 61s->120s)"
     )
     start_time = models.DateTimeField(null=True, blank=True)           # Sarvam start time
     audio_url = models.TextField(blank=True, null=True)

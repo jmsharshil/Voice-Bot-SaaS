@@ -1596,35 +1596,84 @@ def sarvam_cdr_webhook(request):
             or (output_vars.get("language") if isinstance(output_vars, dict) else None)
             or "hi-IN"
         )
-        # Comprehensive duration extraction from all possible Sarvam payload locations
-        duration = (
-            float(raw_data.get("duration_in_seconds") or 0)
-            or float(raw_data.get("duration") or 0)
-            or float(raw_data.get("call_duration") or 0)
-            or float(raw_data.get("call_length") or 0)
-            or float(raw_data.get("duration_seconds") or 0)
-            or float(call_obj.get("duration_in_seconds") or 0)
-            or float(call_obj.get("duration") or 0)
-            or float(call_obj.get("call_duration") or 0)
-            or float(call_obj.get("call_length") or 0)
-            or float(metadata.get("duration_in_seconds") or 0)
-            or float(metadata.get("duration") or 0)
-            or float((raw_data.get("analytics") or {}).get("duration_in_seconds") or 0)
-            or float((raw_data.get("telemetry") or {}).get("duration_in_seconds") or 0)
-            or call_length
-            or 0.0
-        )
+        # 1. Flexible timestamp parsing helper
+        def _parse_ts_flexible(ts_str):
+            if not ts_str:
+                return None
+            from django.utils.dateparse import parse_datetime
+            from django.utils import timezone
+            from datetime import datetime as _dt
+            s = str(ts_str).strip()
+            res = parse_datetime(s.replace("Z", "+00:00"))
+            if not res and " " in s:
+                res = parse_datetime(s.replace(" ", "T"))
+            if not res:
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y/%m/%d %H:%M:%S", "%d-%m-%Y %H:%M:%S"):
+                    try:
+                        res = _dt.strptime(s.split(".")[0], fmt)
+                        break
+                    except Exception:
+                        pass
+            if res and res.tzinfo is None:
+                res = timezone.make_aware(res, timezone.utc)
+            return res
 
-        # If duration was not explicitly sent, calculate from start and end timestamps if available
-        if duration <= 0 and call_start_time and call_end_time:
-            try:
-                from django.utils.dateparse import parse_datetime
-                st_dt = parse_datetime(str(call_start_time).replace("Z", "+00:00"))
-                en_dt = parse_datetime(str(call_end_time).replace("Z", "+00:00"))
-                if st_dt and en_dt and en_dt > st_dt:
-                    duration = (en_dt - st_dt).total_seconds()
-            except Exception:
-                pass
+        st_dt = _parse_ts_flexible(call_start_time)
+        en_dt = _parse_ts_flexible(call_end_time)
+        ts_duration = 0.0
+        if st_dt and en_dt and en_dt > st_dt:
+            ts_duration = (en_dt - st_dt).total_seconds()
+
+        # 2. Comprehensive duration extraction from all possible Sarvam payload locations
+        raw_dur = 0.0
+        for dur_val in [
+            raw_data.get("duration_in_seconds"),
+            raw_data.get("duration"),
+            raw_data.get("call_duration"),
+            raw_data.get("call_length"),
+            raw_data.get("duration_seconds"),
+            call_obj.get("duration_in_seconds"),
+            call_obj.get("duration"),
+            call_obj.get("call_duration"),
+            call_obj.get("call_length"),
+            metadata.get("duration_in_seconds"),
+            metadata.get("duration"),
+            (raw_data.get("analytics") or {}).get("duration_in_seconds"),
+            (raw_data.get("telemetry") or {}).get("duration_in_seconds"),
+            call_length,
+        ]:
+            if dur_val is not None:
+                try:
+                    v = float(dur_val)
+                    if v > 0:
+                        raw_dur = v
+                        break
+                except (ValueError, TypeError):
+                    pass
+
+        # 3. Estimate duration from conversation / transcript if available
+        transcript_dur = 0.0
+        full_conversation_text = str(transcript or "")
+        if not full_conversation_text and isinstance(conversation_log, list):
+            full_conversation_text = " ".join([str(m.get("text") or m.get("en_text") or "") for m in conversation_log])
+        
+        if full_conversation_text:
+            words = len(full_conversation_text.split())
+            lines = [l for l in full_conversation_text.split("\n") if any(l.strip().upper().startswith(p) for p in ("AGENT:", "USER:", "BOT:", "CUSTOMER:", "SPEAKER:"))]
+            turns = len(lines) if len(lines) >= 2 else (len(conversation_log) if isinstance(conversation_log, list) else 0)
+            if turns >= 2 or words > 15:
+                turn_estimate = float(turns * 10.0)
+                word_estimate = float(words / 2.2)
+                transcript_dur = max(turn_estimate, word_estimate)
+
+        # 4. Reconcile final duration (highest-accuracy source wins)
+        if raw_dur > 0 and raw_dur <= 10 and (ts_duration >= 30 or transcript_dur >= 30):
+            # Payload sent duration in minutes (e.g. "3" meaning 3 minutes = 180s)
+            duration = max(raw_dur * 60.0, ts_duration, transcript_dur)
+        else:
+            duration = max(raw_dur, ts_duration)
+            if duration < 10 and transcript_dur >= 15:
+                duration = max(duration, transcript_dur)
 
         # Build summary from all rich fields in the root payload
         if not output_vars and raw_data:
@@ -1641,6 +1690,12 @@ def sarvam_cdr_webhook(request):
             rec.interaction_id = interaction_id or rec.interaction_id
             rec.status = final_status
             rec.duration_seconds = duration if duration > 0 else rec.duration_seconds
+            if st_dt:
+                rec.start_time = st_dt
+            elif call_start_time:
+                ts_val = _parse_ts_flexible(call_start_time)
+                if ts_val:
+                    rec.start_time = ts_val
             if candidate_name and candidate_name not in ["Candidate", "Customer", "Valued Customer", ""]:
                 if not rec.candidate_name or rec.candidate_name.lower() in ["candidate", "customer", "valued customer", "none", "null", ""] or rec.candidate_name.startswith("Candidate #"):
                     rec.candidate_name = candidate_name
@@ -1656,13 +1711,14 @@ def sarvam_cdr_webhook(request):
             if webhook_sarvam_agent and not rec.sarvam_agent:
                 rec.sarvam_agent = webhook_sarvam_agent
             rec.save()
-            print(f"✅ [SARVAM CDR LOGS]: Updated local SarvamCallRecord ID #{rec.id} for {rec.phone_number} ({rec.candidate_name}) -> Status: {final_status}, Recording: {'YES' if rec.audio_url else 'NO'}, Transcript: {'YES' if rec.transcript else 'NO'}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'}")
+            print(f"✅ [SARVAM CDR LOGS]: Updated local SarvamCallRecord ID #{rec.id} for {rec.phone_number} ({rec.candidate_name}) -> Status: {final_status}, Duration: {rec.duration_seconds}s (Billed: {rec.billed_seconds}s), Recording: {'YES' if rec.audio_url else 'NO'}, Transcript: {'YES' if rec.transcript else 'NO'}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'}")
         else:
             if not user_phone and not interaction_id and not (candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]):
                 print(f"⚠️ [SARVAM CDR LOGS]: Ignored dummy webhook payload (No user_phone, interaction_id, or candidate_name).")
             else:
                 is_inbound = bool(call_obj.get("direction") == "inbound" or raw_data.get("direction") == "inbound" or not attempt_id)
                 rec_call_type = "Inbound Call" if is_inbound else "Outbound Call"
+                parsed_st = st_dt or _parse_ts_flexible(call_start_time)
                 rec = SarvamCallRecord.objects.create(
                     sarvam_agent=webhook_sarvam_agent,
                     attempt_id=clean_attempt_id,
@@ -1673,11 +1729,12 @@ def sarvam_cdr_webhook(request):
                     status=final_status or "COMPLETED",
                     call_type=rec_call_type,
                     duration_seconds=duration or 0.0,
+                    start_time=parsed_st,
                     summary=output_vars if isinstance(output_vars, dict) else {},
                     transcript=transcript or "",
                     audio_url=recording_url,
                 )
-                print(f"✅ [SARVAM CDR LOGS]: Created new local SarvamCallRecord ID #{rec.id} ({rec_call_type}) for {user_phone} -> Status: {final_status}, Recording: {'YES' if rec.audio_url else 'NO'}, Agent: {webhook_sarvam_agent.name if webhook_sarvam_agent else 'N/A'}")
+                print(f"✅ [SARVAM CDR LOGS]: Created new local SarvamCallRecord ID #{rec.id} ({rec_call_type}) for {user_phone} -> Status: {final_status}, Duration: {rec.duration_seconds}s (Billed: {rec.billed_seconds}s), Recording: {'YES' if rec.audio_url else 'NO'}, Agent: {webhook_sarvam_agent.name if webhook_sarvam_agent else 'N/A'}")
 
         # ✅ REAL-TIME CAMPAIGN LEAD SYNC: If this call belongs to a multi-stage campaign, update the lead outcome instantly!
         if rec:
@@ -2340,19 +2397,28 @@ import math
 
 def _round_seconds_to_billed_minutes(total_seconds):
     """
-    Rounding logic:
-      1-29 sec  → 0.5 min (30 sec)
-      30-59 sec → 1 min
-      60-89 sec → 1.5 min
-      90-119 sec → 2 min
-      i.e. round UP to the nearest 30-second interval, then convert to minutes.
+    Stepped minute billing logic (+1 min bonus when >30s):
+      - 0 sec => 0 min
+      - 1 to 30 sec => 1 min
+      - 31 to 60 sec => 2 min
+      - 61 to 90 sec => 2 min
+      - 91 to 120 sec => 3 min
+      - 121 to 150 sec => 3 min
+      - 151 to 180 sec => 4 min
+      etc.
     """
     if total_seconds <= 0:
         return 0.0
-    # Shift by 1 to align the boundaries correctly (1-29 -> 1, 30-59 -> 2, etc.)
-    shifted_seconds = total_seconds + 1
-    rounded_intervals = math.ceil(shifted_seconds / 30)
-    return rounded_intervals * 30 / 60.0
+    dur = float(total_seconds)
+    full_mins = int(dur // 60)
+    rem_secs = dur % 60
+    if rem_secs == 0:
+        billed_mins = full_mins + 1 if full_mins > 0 else 0
+    elif rem_secs <= 30:
+        billed_mins = full_mins + 1
+    else:  # rem_secs > 30
+        billed_mins = full_mins + 2
+    return float(billed_mins)
 
 
 def _calculate_bot_usage(agent):
@@ -2968,7 +3034,7 @@ def sarvam_leads_data(request, agent_slug=None):
     import os
     import requests as http_requests
     from datetime import datetime, timedelta
-    from conversations.models import SarvamCallRecord, SarvamAgent
+    from conversations.models import SarvamCallRecord, SarvamAgent, calculate_billed_seconds
     from conversations.services.kylas_sarvam_bridge import SarvamAgentService
 
     # Resolve which sarvam agent to use
@@ -3052,18 +3118,31 @@ def sarvam_leads_data(request, agent_slug=None):
                 created_at__range=(t_min, t_max)
             ).exclude(id=r.id).exclude(phone_number__in=["unknown", "N/A", "", "none"]).first()
             if valid_sibling:
+                update_flds = []
                 if r.transcript and not valid_sibling.transcript:
                     valid_sibling.transcript = r.transcript
-                    valid_sibling.save(update_fields=["transcript"])
+                    update_flds.append("transcript")
                 if r.summary and not valid_sibling.summary:
                     valid_sibling.summary = r.summary
-                    valid_sibling.save(update_fields=["summary"])
+                    update_flds.append("summary")
                 if r.audio_url and not valid_sibling.audio_url:
                     valid_sibling.audio_url = r.audio_url
-                    valid_sibling.save(update_fields=["audio_url"])
+                    update_flds.append("audio_url")
                 if r.interaction_id and not valid_sibling.interaction_id:
                     valid_sibling.interaction_id = r.interaction_id
-                    valid_sibling.save(update_fields=["interaction_id"])
+                    update_flds.append("interaction_id")
+                if getattr(r, "start_time", None) and not getattr(valid_sibling, "start_time", None):
+                    valid_sibling.start_time = r.start_time
+                    update_flds.append("start_time")
+                if r.duration_seconds and (not valid_sibling.duration_seconds or valid_sibling.duration_seconds < r.duration_seconds):
+                    valid_sibling.duration_seconds = r.duration_seconds
+                    valid_sibling.billed_seconds = calculate_billed_seconds(r.duration_seconds)
+                    update_flds.extend(["duration_seconds", "billed_seconds"])
+                if valid_sibling.status in ["DIALING", "PENDING", "NO_ANSWER", "IN_PROGRESS", ""] and r.status:
+                    valid_sibling.status = r.status
+                    update_flds.append("status")
+                if update_flds:
+                    valid_sibling.save(update_fields=list(set(update_flds)))
                 print(f"🧹 [AUTO-CLEANUP]: Merged and deleted orphaned dummy record #{r.id} into valid call #{valid_sibling.id} ({valid_sibling.phone_number})")
                 r.delete()
                 continue
@@ -3207,7 +3286,7 @@ def sarvam_leads_data(request, agent_slug=None):
             "direction": direction,
             "call_direction_display": call_dir_display,
             "duration_seconds": round(r.duration_seconds, 1),
-            "billed_seconds": r.billed_seconds or int(math.ceil(float(r.duration_seconds or 0) / 30.0) * 30),
+            "billed_seconds": r.billed_seconds or calculate_billed_seconds(r.duration_seconds),
             "language": r.language or "Hindi",
             "attempted_at": r.start_time.strftime("%Y-%m-%dT%H:%M:%SZ") if getattr(r, "start_time", None) else r.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "audio_url": rec_audio_url,
@@ -3311,7 +3390,7 @@ def sarvam_leads_data(request, agent_slug=None):
             "direction": remote_dir,
             "call_direction_display": remote_dir_display,
             "duration_seconds": round(remote_dur, 1),
-            "billed_seconds": int(math.ceil(remote_dur / 30.0) * 30) if remote_dur > 0 else 0,
+            "billed_seconds": calculate_billed_seconds(remote_dur),
             "language": item.get("language_name", "Hindi"),
             "attempted_at": item.get("attempted_at") or item.get("start_datetime"),
             "audio_url": item.get("audio_url"),
@@ -4069,7 +4148,8 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
     if status_upper in ["DIALING", "PENDING", "IN_PROGRESS", ""]:
         call_rec.status = "NO_ANSWER"
         call_rec.duration_seconds = 0.0
-        call_rec.save(update_fields=["status", "duration_seconds"])
+        call_rec.billed_seconds = 0
+        call_rec.save(update_fields=["status", "duration_seconds", "billed_seconds"])
 
     return False
 
