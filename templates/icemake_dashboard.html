@@ -133,12 +133,20 @@
             align-items: center;
             gap: 1.25rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+            cursor: pointer;
+            user-select: none;
         }
 
         .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card.active-card {
+            border: 2px solid var(--primary-indigo);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15), 0 6px 16px rgba(79, 70, 229, 0.12);
+            background: #faf5ff;
         }
 
         .stat-icon {
@@ -543,40 +551,40 @@
 
     <!-- Stats Cards -->
     <div class="stats-grid">
-        <div class="stat-card">
+        <div class="stat-card active-card" id="cardAll" onclick="selectCardFilter('ALL')" title="Click to view all inquiries">
             <div class="stat-icon blue">
-                <i class="fa-solid fa-ticket"></i>
+                <i class="fa-solid fa-layer-group"></i>
             </div>
             <div class="stat-info">
                 <h3 id="statTotalComplaints">0</h3>
-                <p>Total Complaints Logged</p>
+                <p>Total Inquiries (All Channels)</p>
             </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" id="cardVoice" onclick="selectCardFilter('Voice Bot')" title="Click to filter Voice Bot calls">
             <div class="stat-icon cyan">
                 <i class="fa-solid fa-microphone"></i>
             </div>
             <div class="stat-info">
-                <h3 id="statRecordedCalls">0</h3>
-                <p>Call Audio Recordings</p>
+                <h3 id="statVoiceCalls">0</h3>
+                <p>Voice Agent Calls</p>
             </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" id="cardWa" onclick="selectCardFilter('WhatsApp Bot')" title="Click to filter WhatsApp Bot inquiries">
             <div class="stat-icon green">
+                <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <div class="stat-info">
+                <h3 id="statWhatsappInquiries">0</h3>
+                <p>WhatsApp Bot Inquiries</p>
+            </div>
+        </div>
+        <div class="stat-card" id="cardSynced" onclick="selectCardFilter('SYNCED')" title="Click to filter synced tickets">
+            <div class="stat-icon amber">
                 <i class="fa-solid fa-file-excel"></i>
             </div>
             <div class="stat-info">
                 <h3 id="statSyncedSheet">0</h3>
-                <p>Synced to Google Sheet</p>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon amber">
-                <i class="fa-solid fa-icicles"></i>
-            </div>
-            <div class="stat-info">
-                <h3 id="statProducts">Freezer, Chiller</h3>
-                <p>Supported Products</p>
+                <p>Synced / Tickets Created</p>
             </div>
         </div>
     </div>
@@ -585,25 +593,32 @@
     <div class="controls-card">
         <div class="search-box">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="searchInput" placeholder="Search by Ticket ID, Customer Name, Phone, City, Product...">
+            <input type="text" id="searchInput" placeholder="Search by Ticket ID, Customer Name, Mobile, City, Issue...">
         </div>
         <div class="filter-group">
+            <select id="channelFilter" class="select-input" style="border: 2px solid #4f46e5; background: #f5f3ff; font-weight: 600; color: #4338ca;">
+                <option value="ALL">🌐 All Channels (Voice & WA)</option>
+                <option value="Voice Bot">🎙️ Voice Bot Only</option>
+                <option value="WhatsApp Bot">💬 WhatsApp Bot Only</option>
+            </select>
+
             <select id="productFilter" class="select-input">
                 <option value="ALL">All Products</option>
                 <option value="Blast Freezer">Blast Freezer</option>
                 <option value="Chiller">Chiller</option>
                 <option value="Freezer">Freezer</option>
+                <option value="Cold Room">Cold Room</option>
                 <option value="Other">Other</option>
             </select>
 
             <select id="syncFilter" class="select-input">
                 <option value="ALL">All Sync Status</option>
-                <option value="SYNCED">Google Sheet Synced</option>
+                <option value="SYNCED">Ticket / Sheet Synced</option>
                 <option value="PENDING">Pending</option>
             </select>
 
-            <button class="btn-refresh" onclick="fetchTickets()">
-                <i class="fa-solid fa-rotate-right"></i> Refresh
+            <button id="refreshBtn" class="btn-refresh" onclick="fetchTickets()">
+                <i id="refreshIcon" class="fa-solid fa-rotate-right"></i> Refresh
             </button>
         </div>
     </div>
@@ -614,12 +629,13 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Channel</th>
                         <th>Ticket ID</th>
                         <th>Customer Details</th>
                         <th>Location / State</th>
                         <th>Product</th>
                         <th>Issue Summary</th>
-                        <th style="min-width: 350px;">Call Recording</th>
+                        <th style="min-width: 320px;">Media / Audio / Chat</th>
                         <th>Sheet Status</th>
                         <th>Date & Time</th>
                     </tr>
@@ -634,6 +650,47 @@
             <h3>No Customer Complaints Found</h3>
             <p>New complaints will automatically appear here live.</p>
         </div>
+        <div id="paginationControls" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: #ffffff; border-top: 1px solid var(--card-border); flex-wrap: wrap; gap: 1rem;">
+            <div id="paginationInfo" style="font-size: 0.88rem; color: var(--text-muted); font-weight: 500;">
+                Showing 1 to 20 of 0 entries
+            </div>
+            <div id="paginationButtons" style="display: flex; align-items: center; gap: 6px;">
+                <!-- Dynamic Page Buttons -->
+            </div>
+        </div>
+</div>
+
+<!-- WhatsApp Chat Drawer Modal -->
+<div id="chatModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; justify-content: center; align-items: center; padding: 1.5rem;">
+    <div style="background: #ffffff; width: 100%; max-width: 550px; max-height: 85vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+        <!-- Modal Header -->
+        <div style="background: linear-gradient(135deg, #075e54, #128c7e); padding: 1rem 1.5rem; color: #ffffff; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: #25d366; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: white;">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </div>
+                <div>
+                    <h3 id="chatModalTitle" style="font-size: 1.05rem; font-weight: 700; margin: 0;">WhatsApp Chat</h3>
+                    <p id="chatModalSub" style="font-size: 0.78rem; opacity: 0.9; margin: 0;">Customer Transcript</p>
+                </div>
+            </div>
+            <button onclick="closeChatModal()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.1rem;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Chat Container -->
+        <div id="chatMessagesContainer" style="padding: 1.25rem; overflow-y: auto; flex-grow: 1; background: #efeae2; display: flex; flex-direction: column; gap: 10px;">
+            <!-- Dynamic Messages Insertion -->
+        </div>
+
+        <!-- Modal Footer -->
+        <div style="padding: 0.8rem 1.25rem; background: #f0f2f5; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end;">
+            <button onclick="closeChatModal()" style="background: #075e54; color: white; border: none; padding: 0.5rem 1.2rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                Close Transcript
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- Sticky Audio Player Dock -->
@@ -676,24 +733,36 @@
     }
 
     async function fetchTickets() {
+        const btn = document.getElementById('refreshBtn');
+        const icon = document.getElementById('refreshIcon');
+        if (icon) icon.classList.add('fa-spin');
+        if (btn) btn.disabled = true;
+
         try {
             const res = await fetch('/api/icemake-dashboard/data/');
             const data = await res.json();
             allTickets = data.tickets || [];
-            updateStats();
+            updateStats(data);
             renderTickets();
         } catch (err) {
             console.error("Failed to load tickets:", err);
+        } finally {
+            setTimeout(() => {
+                if (icon) icon.classList.remove('fa-spin');
+                if (btn) btn.disabled = false;
+            }, 300);
         }
     }
 
-    function updateStats() {
+    function updateStats(apiData) {
         const total = allTickets.length;
-        const recCount = allTickets.filter(t => t.recording_url).length;
+        const voiceCount = apiData && apiData.voice_count !== undefined ? apiData.voice_count : allTickets.filter(t => t.source === 'Voice Bot').length;
+        const waCount = apiData && apiData.whatsapp_count !== undefined ? apiData.whatsapp_count : allTickets.filter(t => t.source === 'WhatsApp Bot').length;
         const syncedCount = allTickets.filter(t => t.google_sheet_synced).length;
 
         document.getElementById('statTotalComplaints').textContent = total;
-        document.getElementById('statRecordedCalls').textContent = recCount;
+        document.getElementById('statVoiceCalls').textContent = voiceCount;
+        document.getElementById('statWhatsappInquiries').textContent = waCount;
         document.getElementById('statSyncedSheet').textContent = syncedCount;
     }
 
@@ -770,6 +839,46 @@
         });
     }
 
+    function openChatModal(ticketId) {
+        const ticket = allTickets.find(t => t.id == ticketId);
+        if (!ticket) return;
+
+        document.getElementById("chatModalTitle").textContent = `${ticket.customer_name} (${ticket.ticket_number})`;
+        document.getElementById("chatModalSub").textContent = `WhatsApp Mobile: ${ticket.registered_mobile || ticket.caller_phone}`;
+
+        const container = document.getElementById("chatMessagesContainer");
+        const messages = ticket.messages || [];
+
+        if (messages.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #64748b;">
+                    <i class="fa-brands fa-whatsapp" style="font-size: 2.5rem; margin-bottom: 0.5rem; color: #25d366;"></i>
+                    <p style="font-weight: 600;">No chat messages recorded yet.</p>
+                </div>
+            `;
+        } else {
+            container.innerHTML = messages.map(m => {
+                const isInbound = m.direction === 'inbound';
+                const timeStr = m.timestamp ? m.timestamp.split('T')[1]?.substring(0, 5) || '' : '';
+                return `
+                    <div style="align-self: ${isInbound ? 'flex-start' : 'flex-end'}; max-width: 80%; background: ${isInbound ? '#ffffff' : '#dcf8c6'}; padding: 0.6rem 0.9rem; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); font-size: 0.88rem; color: #0f172a;">
+                        <div style="font-weight: 600; font-size: 0.75rem; color: ${isInbound ? '#075e54' : '#128c7e'}; margin-bottom: 2px;">
+                            ${isInbound ? 'Customer' : 'Ice Make Bot'}
+                        </div>
+                        <div style="line-height: 1.4; white-space: pre-wrap;">${m.content || ''}</div>
+                        <div style="font-size: 0.7rem; color: #94a3b8; text-align: right; margin-top: 4px;">${timeStr}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById("chatModal").style.display = "flex";
+    }
+
+    function closeChatModal() {
+        document.getElementById("chatModal").style.display = "none";
+    }
+
     currentAudio.ontimeupdate = () => {
         const seekSlider = document.getElementById("stickySeekSlider");
         const timeText = document.getElementById("stickyTimeText");
@@ -786,76 +895,152 @@
         updateRowButtons();
     };
 
+    let currentPage = 1;
+    const PAGE_SIZE = 20;
+
+    function selectCardFilter(filterType) {
+        const chanFilter = document.getElementById('channelFilter');
+        const syncFilter = document.getElementById('syncFilter');
+
+        if (filterType === 'ALL') {
+            chanFilter.value = 'ALL';
+            syncFilter.value = 'ALL';
+        } else if (filterType === 'Voice Bot') {
+            chanFilter.value = 'Voice Bot';
+            syncFilter.value = 'ALL';
+        } else if (filterType === 'WhatsApp Bot') {
+            chanFilter.value = 'WhatsApp Bot';
+            syncFilter.value = 'ALL';
+        } else if (filterType === 'SYNCED') {
+            syncFilter.value = 'SYNCED';
+        }
+
+        syncActiveCardWithFilters();
+        resetAndRender();
+    }
+
+    function syncActiveCardWithFilters() {
+        const chanFilter = document.getElementById('channelFilter').value;
+        const syncFilter = document.getElementById('syncFilter').value;
+
+        document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active-card'));
+
+        if (syncFilter === 'SYNCED') {
+            document.getElementById('cardSynced')?.classList.add('active-card');
+        } else if (chanFilter === 'Voice Bot') {
+            document.getElementById('cardVoice')?.classList.add('active-card');
+        } else if (chanFilter === 'WhatsApp Bot') {
+            document.getElementById('cardWa')?.classList.add('active-card');
+        } else {
+            document.getElementById('cardAll')?.classList.add('active-card');
+        }
+    }
+
+    function resetAndRender() {
+        syncActiveCardWithFilters();
+        currentPage = 1;
+        renderTickets();
+    }
+
     function renderTickets() {
         const tbody = document.getElementById('ticketsTbody');
         const emptyState = document.getElementById('emptyState');
         const search = document.getElementById('searchInput').value.toLowerCase().trim();
+        const chanFilter = document.getElementById('channelFilter').value;
         const prodFilter = document.getElementById('productFilter').value;
         const syncFilter = document.getElementById('syncFilter').value;
 
         const filtered = allTickets.filter(t => {
             const matchSearch = 
-                t.ticket_number.toLowerCase().includes(search) ||
-                t.customer_name.toLowerCase().includes(search) ||
-                t.registered_mobile.toLowerCase().includes(search) ||
-                t.caller_phone.toLowerCase().includes(search) ||
-                t.city_state.toLowerCase().includes(search) ||
-                t.machine_model_no.toLowerCase().includes(search) ||
-                t.issue_description.toLowerCase().includes(search);
+                (t.ticket_number || '').toLowerCase().includes(search) ||
+                (t.customer_name || '').toLowerCase().includes(search) ||
+                (t.registered_mobile || '').toLowerCase().includes(search) ||
+                (t.caller_phone || '').toLowerCase().includes(search) ||
+                (t.city_state || '').toLowerCase().includes(search) ||
+                (t.machine_model_no || '').toLowerCase().includes(search) ||
+                (t.issue_description || '').toLowerCase().includes(search);
 
-            const matchProd = prodFilter === 'ALL' || t.machine_model_no.toLowerCase().includes(prodFilter.toLowerCase());
+            const matchChan = chanFilter === 'ALL' || t.source === chanFilter;
+            const matchProd = prodFilter === 'ALL' || (t.machine_model_no || '').toLowerCase().includes(prodFilter.toLowerCase()) || (t.issue_type || '').toLowerCase().includes(prodFilter.toLowerCase());
             const matchSync = syncFilter === 'ALL' || 
                 (syncFilter === 'SYNCED' && t.google_sheet_synced) ||
                 (syncFilter === 'PENDING' && !t.google_sheet_synced);
 
-            return matchSearch && matchProd && matchSync;
+            return matchSearch && matchChan && matchProd && matchSync;
         });
 
-        if (filtered.length === 0) {
+        const totalFiltered = filtered.length;
+        const totalPages = Math.ceil(totalFiltered / PAGE_SIZE) || 1;
+
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = (currentPage - 1) * PAGE_SIZE;
+        const endIndex = Math.min(startIndex + PAGE_SIZE, totalFiltered);
+        const pageItems = filtered.slice(startIndex, endIndex);
+
+        if (totalFiltered === 0) {
             tbody.innerHTML = '';
             emptyState.style.display = 'block';
+            document.getElementById('paginationControls').style.display = 'none';
             return;
         }
 
         emptyState.style.display = 'none';
+        document.getElementById('paginationControls').style.display = 'flex';
         
-        tbody.innerHTML = filtered.map(t => {
-            let audioHtml = '';
+        tbody.innerHTML = pageItems.map(t => {
+            const isVoice = t.source === 'Voice Bot';
+            const channelBadge = isVoice ?
+                `<span style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-solid fa-microphone"></i> Voice Bot</span>` :
+                `<span style="background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px;"><i class="fa-brands fa-whatsapp"></i> WhatsApp Bot</span>`;
+
+            let mediaHtml = '';
             const isPlaying = activeTicketId == t.id && !currentAudio.paused;
 
-            if (t.recording_url) {
-                audioHtml = `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="play-ticket-btn ${isPlaying ? 'playing' : ''}" data-ticket-id="${t.id}" onclick="playTicketAudio('${t.id}', '${t.recording_url}', '${t.ticket_number}', '${t.customer_name.replace(/'/g, "\\'")}')">
-                            <i class="fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}"></i>
-                            <span class="btn-label">${isPlaying ? 'Playing...' : 'Play Audio'}</span>
-                            <small style="opacity: 0.85; margin-left: 2px;">(${formatDuration(t.call_duration)})</small>
-                        </button>
-                        <a href="${t.recording_url}" target="_blank" download class="download-btn" title="Download Audio" style="color: var(--primary-indigo); font-size: 1.1rem; padding: 4px;">
-                            <i class="fa-solid fa-download"></i>
-                        </a>
-                    </div>
-                `;
+            if (isVoice) {
+                if (t.recording_url) {
+                    mediaHtml = `
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button class="play-ticket-btn ${isPlaying ? 'playing' : ''}" data-ticket-id="${t.id}" onclick="playTicketAudio('${t.id}', '${t.recording_url}', '${t.ticket_number}', '${t.customer_name.replace(/'/g, "\\'")}')">
+                                <i class="fa-solid ${isPlaying ? 'fa-pause' : 'fa-play'}"></i>
+                                <span class="btn-label">${isPlaying ? 'Playing...' : 'Play Audio'}</span>
+                                <small style="opacity: 0.85; margin-left: 2px;">(${formatDuration(t.call_duration)})</small>
+                            </button>
+                            <a href="${t.recording_url}" target="_blank" download class="download-btn" title="Download Audio" style="color: var(--primary-indigo); font-size: 1.1rem; padding: 4px;">
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    mediaHtml = `<span class="no-rec"><i class="fa-solid fa-volume-xmark"></i> No Audio</span>`;
+                }
             } else {
-                audioHtml = `<span class="no-rec"><i class="fa-solid fa-volume-xmark"></i> No Audio</span>`;
+                const msgCount = (t.messages || []).length;
+                mediaHtml = `
+                    <button onclick="openChatModal('${t.id}')" style="background: #25d366; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37,211,102,0.3);">
+                        <i class="fa-brands fa-whatsapp" style="font-size: 1rem;"></i> View Chat Transcript (${msgCount})
+                    </button>
+                `;
             }
 
             const sheetStatusHtml = t.google_sheet_synced ?
-                `<span class="sheet-badge synced"><i class="fa-solid fa-check-double"></i> Synced</span>` :
-                `<span class="sheet-badge pending"><i class="fa-solid fa-clock"></i> Pending</span>`;
+                `<span class="sheet-badge synced"><i class="fa-solid fa-check-double"></i> Ticket Created</span>` :
+                `<span class="sheet-badge pending"><i class="fa-solid fa-clock"></i> In Progress</span>`;
 
             return `
                 <tr>
+                    <td>${channelBadge}</td>
                     <td><span class="ticket-badge">${t.ticket_number}</span></td>
                     <td>
                         <strong style="color: var(--text-main); font-size: 0.95rem;">${t.customer_name}</strong>
                         <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 2px;">
-                            <i class="fa-solid fa-phone"></i> ${t.registered_mobile}
+                            <i class="fa-solid fa-phone"></i> ${t.registered_mobile || t.caller_phone}
                         </div>
                     </td>
                     <td>
-                        <div style="color: var(--text-main);">${t.city_state}</div>
-                        <div style="color: var(--text-muted); font-size: 0.78rem;">${t.company_name}</div>
+                        <div style="color: var(--text-main); font-weight: 600;">${t.city_state}</div>
+                        <div style="color: var(--text-muted); font-size: 0.78rem;">Assigned: ${t.assigned_engineer || 'Mr Rutvik'}</div>
                     </td>
                     <td>
                         <span class="product-pill">
@@ -865,7 +1050,7 @@
                     <td style="max-width: 260px; line-height: 1.4; color: var(--text-main);">
                         ${t.issue_description}
                     </td>
-                    <td>${audioHtml}</td>
+                    <td>${mediaHtml}</td>
                     <td>${sheetStatusHtml}</td>
                     <td>
                         <div style="color: var(--text-muted); font-size: 0.8rem;">${t.created_at}</div>
@@ -873,12 +1058,65 @@
                 </tr>
             `;
         }).join('');
+
+        renderPaginationUI(totalFiltered, startIndex, endIndex, totalPages);
+    }
+
+    function renderPaginationUI(totalFiltered, startIndex, endIndex, totalPages) {
+        document.getElementById('paginationInfo').innerHTML = `
+            Showing <strong style="color: #4f46e5;">${totalFiltered > 0 ? startIndex + 1 : 0}</strong> to <strong style="color: #4f46e5;">${endIndex}</strong> of <strong style="color: #0f172a;">${totalFiltered}</strong> entries (20 per page)
+        `;
+
+        let btnsHtml = '';
+
+        btnsHtml += `
+            <button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--card-border); background: ${currentPage === 1 ? '#f8fafc' : '#ffffff'}; color: ${currentPage === 1 ? '#cbd5e1' : '#475569'}; font-weight: 600; cursor: ${currentPage === 1 ? 'default' : 'pointer'};">
+                <i class="fa-solid fa-chevron-left"></i> Prev
+            </button>
+        `;
+
+        let startP = Math.max(1, currentPage - 2);
+        let endP = Math.min(totalPages, currentPage + 2);
+
+        if (startP > 1) {
+            btnsHtml += `<button onclick="goToPage(1)" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--card-border); background: #ffffff; color: #475569; font-weight: 600; cursor: pointer;">1</button>`;
+            if (startP > 2) btnsHtml += `<span style="padding: 0 4px; color: #94a3b8;">...</span>`;
+        }
+
+        for (let p = startP; p <= endP; p++) {
+            const isActive = p === currentPage;
+            btnsHtml += `
+                <button onclick="goToPage(${p})" style="padding: 6px 12px; border-radius: 8px; border: ${isActive ? 'none' : '1px solid var(--card-border)'}; background: ${isActive ? '#4f46e5' : '#ffffff'}; color: ${isActive ? '#ffffff' : '#475569'}; font-weight: 700; cursor: pointer; box-shadow: ${isActive ? '0 2px 8px rgba(79,70,229,0.3)' : 'none'};">
+                    ${p}
+                </button>
+            `;
+        }
+
+        if (endP < totalPages) {
+            if (endP < totalPages - 1) btnsHtml += `<span style="padding: 0 4px; color: #94a3b8;">...</span>`;
+            btnsHtml += `<button onclick="goToPage(${totalPages})" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--card-border); background: #ffffff; color: #475569; font-weight: 600; cursor: pointer;">${totalPages}</button>`;
+        }
+
+        btnsHtml += `
+            <button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--card-border); background: ${currentPage === totalPages ? '#f8fafc' : '#ffffff'}; color: ${currentPage === totalPages ? '#cbd5e1' : '#475569'}; font-weight: 600; cursor: ${currentPage === totalPages ? 'default' : 'pointer'};">
+                Next <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        `;
+
+        document.getElementById('paginationButtons').innerHTML = btnsHtml;
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        renderTickets();
+        window.scrollTo({ top: 300, behavior: 'smooth' });
     }
 
     // Event Listeners
-    document.getElementById('searchInput').addEventListener('input', renderTickets);
-    document.getElementById('productFilter').addEventListener('change', renderTickets);
-    document.getElementById('syncFilter').addEventListener('change', renderTickets);
+    document.getElementById('searchInput').addEventListener('input', resetAndRender);
+    document.getElementById('channelFilter').addEventListener('change', resetAndRender);
+    document.getElementById('productFilter').addEventListener('change', resetAndRender);
+    document.getElementById('syncFilter').addEventListener('change', resetAndRender);
     document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.clear();
         window.location.replace('/accounts/login/');

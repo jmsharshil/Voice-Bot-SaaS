@@ -1603,13 +1603,72 @@ def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
     except Exception as e:
         logger.error("Failed to append ticket to Google Sheet: %s", e)
 
+def _send_meta_whatsapp_template(to_phone: str, template_name: str, parameters: list) -> dict:
+    """
+    Sends WhatsApp message via Meta Cloud API using approved templates.
+    """
+    import os
+    import requests
+    from django.conf import settings
+
+    meta_phone_id = getattr(settings, "ICEMAKE_PHONE_NUMBER_ID", None) or os.getenv("ICEMAKE_PHONE_NUMBER_ID") or getattr(settings, "META_PHONE_NUMBER_ID", None) or os.getenv("META_PHONE_NUMBER_ID")
+    meta_access_token = getattr(settings, "WHATSAPP_TOKEN", None) or os.getenv("WHATSAPP_TOKEN") or getattr(settings, "META_ACCESS_TOKEN", None) or os.getenv("META_ACCESS_TOKEN")
+
+    if not meta_phone_id or not meta_access_token:
+        return {"error": "Missing Meta credentials", "skipped": True}
+
+    clean_phone = "".join(filter(str.isdigit, str(to_phone)))
+    if len(clean_phone) == 10:
+        clean_phone = "91" + clean_phone
+
+    url = f"https://graph.facebook.com/v19.0/{meta_phone_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {meta_access_token}",
+        "Content-Type": "application/json"
+    }
+
+    body_params = [{"type": "text", "text": str(p) if p and str(p).strip() != "" else "N/A"} for p in parameters]
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": clean_phone,
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {
+                "code": "en"
+            },
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": body_params
+                }
+            ]
+        }
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        try:
+            res_data = response.json()
+        except Exception:
+            res_data = response.text
+        print(f"📲 [META WA SUCCESS]: Template '{template_name}' sent to {clean_phone}. Response: {res_data}")
+        return {"success": True, "response": res_data}
+    except Exception as e:
+        logger.error(f"[META WA ERROR] Failed to send Meta template '{template_name}' to {clean_phone}: {e}")
+        return {"error": str(e)}
+
+
 def _send_whatsapp_ticket_confirmation(ticket):
     """
-    Sends WhatsApp confirmation message with Ice Make ticket details.
+    Sends WhatsApp confirmation message with Ice Make ticket details via Meta Cloud API (or WASender fallback).
+    Template: icemake_customer_
+    Variables: {{1}} = Ticket Number
     """
     try:
-        from bot.services.whatsapp_service import send_whatsapp_message
-        
+        import os
+        from django.conf import settings
         target_phone = ticket.registered_mobile or (ticket.conversation.user_number if ticket.conversation else None)
         if not target_phone or str(target_phone).strip() in ["unknown", "None", ""]:
             logger.warning("[ICEMAKE WA] No valid phone number to send WhatsApp message.")
@@ -1619,8 +1678,23 @@ def _send_whatsapp_ticket_confirmation(ticket):
         if len(clean_phone) == 10:
             clean_phone = "91" + clean_phone
 
+        meta_phone_id = getattr(settings, "ICEMAKE_PHONE_NUMBER_ID", None) or os.getenv("ICEMAKE_PHONE_NUMBER_ID") or getattr(settings, "META_PHONE_NUMBER_ID", None) or os.getenv("META_PHONE_NUMBER_ID")
+        meta_access_token = getattr(settings, "WHATSAPP_TOKEN", None) or os.getenv("WHATSAPP_TOKEN") or getattr(settings, "META_ACCESS_TOKEN", None) or os.getenv("META_ACCESS_TOKEN")
+
+        if meta_phone_id and meta_access_token:
+            ticket_no = str(ticket.ticket_number or "N/A")
+            meta_res = _send_meta_whatsapp_template(
+                to_phone=clean_phone,
+                template_name="icemake_customer_",
+                parameters=[ticket_no]
+            )
+            if meta_res.get("success"):
+                print(f"📲 [ICEMAKE META WA SUCCESS]: Sent 'icemake_customer_' template to {clean_phone} for Ticket #{ticket.ticket_number}")
+                return
+
+        from bot.services.whatsapp_service import send_whatsapp_message
         wa_text = (
-            f"❄️ *Ice Make Refrigeration Ltd. - Service Ticket Confirmation*\n\n"
+            f"*Ice Make Refrigeration Ltd. - Service Ticket Confirmation*\n\n"
             f"Dear Customer,\n"
             f"Thank you for contacting Ice Make 24x7 Support. Your complaint has been registered successfully.\n\n"
             f"📋 *Complaint ID:* {ticket.ticket_number}\n"
@@ -1633,27 +1707,152 @@ def _send_whatsapp_ticket_confirmation(ticket):
             f"Have a great day!\n"
             f"*Ice Make Refrigeration Ltd.*"
         )
-
         res = send_whatsapp_message(clean_phone, wa_text)
         print(f"📲 [ICEMAKE WA SUCCESS]: WhatsApp confirmation sent to {clean_phone} for Ticket #{ticket.ticket_number}. Response: {res}")
     except Exception as e:
         logger.error("[ICEMAKE WA ERROR] Failed to send WhatsApp confirmation: %s", e)
 
+
+# Exact Zone & State Wise Engineer Mapping Table for Ice Make
+STATE_ENGINEER_MAPPING = {
+    # 1. Gujarat Zone - Mr Rutvik (9727721447)
+    "gujarat": {"phone": "919727721447", "name": "Mr Rutvik"},
+    "gujrat": {"phone": "919727721447", "name": "Mr Rutvik"},
+    "ahmedabad": {"phone": "919727721447", "name": "Mr Rutvik"},
+    "surat": {"phone": "919727721447", "name": "Mr Rutvik"},
+    "vadodara": {"phone": "919727721447", "name": "Mr Rutvik"},
+    "rajkot": {"phone": "919727721447", "name": "Mr Rutvik"},
+    "gandhinagar": {"phone": "919727721447", "name": "Mr Rutvik"},
+
+    # 2. North Zone – Delhi, Haryana, Uttar Pradesh, Uttarakhand, HP, Punjab, J & K -> Mr Manjit (9998857391)
+    "delhi": {"phone": "919998857391", "name": "Mr Manjit"},
+    "haryana": {"phone": "919998857391", "name": "Mr Manjit"},
+    "uttar pradesh": {"phone": "919998857391", "name": "Mr Manjit"},
+    "up": {"phone": "919998857391", "name": "Mr Manjit"},
+    "uttarakhand": {"phone": "919998857391", "name": "Mr Manjit"},
+    "himachal pradesh": {"phone": "919998857391", "name": "Mr Manjit"},
+    "hp": {"phone": "919998857391", "name": "Mr Manjit"},
+    "punjab": {"phone": "919998857391", "name": "Mr Manjit"},
+    "jammu": {"phone": "919998857391", "name": "Mr Manjit"},
+    "kashmir": {"phone": "919998857391", "name": "Mr Manjit"},
+    "j&k": {"phone": "919998857391", "name": "Mr Manjit"},
+    "j & k": {"phone": "919998857391", "name": "Mr Manjit"},
+
+    # 3. East Zone – Kolkata, West Bengal, Assam, Bihar, Chhattisgarh, Orissa/Odisha, Jharkhand -> Mr Mahesh (9512037115)
+    "kolkata": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "kolkatta": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "west bengal": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "bengal": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "assam": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "bihar": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "chhattisgarh": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "chattisgarh": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "odisha": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "orissa": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "jharkhand": {"phone": "919512037115", "name": "Mr Mahesh"},
+
+    # 4. West Zone – Maharashtra, Rajasthan, Madhya Pradesh, Goa -> Mr Ashok (9998701129)
+    "maharashtra": {"phone": "919998701129", "name": "Mr Ashok"},
+    "maharastra": {"phone": "919998701129", "name": "Mr Ashok"},
+    "mumbai": {"phone": "919998701129", "name": "Mr Ashok"},
+    "pune": {"phone": "919998701129", "name": "Mr Ashok"},
+    "rajasthan": {"phone": "919998701129", "name": "Mr Ashok"},
+    "jaipur": {"phone": "919998701129", "name": "Mr Ashok"},
+    "madhya pradesh": {"phone": "919998701129", "name": "Mr Ashok"},
+    "madyapradesh": {"phone": "919998701129", "name": "Mr Ashok"},
+    "mp": {"phone": "919998701129", "name": "Mr Ashok"},
+    "indore": {"phone": "919998701129", "name": "Mr Ashok"},
+    "bhopal": {"phone": "919998701129", "name": "Mr Ashok"},
+    "goa": {"phone": "919998701129", "name": "Mr Ashok"},
+
+    # 5. South Zone – Kerala, Tamil Nadu, Telangana, Karnataka, Andhra Pradesh -> Ms Vaidehi (9512015593)
+    "kerala": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "tamil nadu": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "tamilnadu": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "chennai": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "telangana": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "telungana": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "hyderabad": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "karnataka": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "bangalore": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "bengaluru": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "andhra pradesh": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "andhra": {"phone": "919512015593", "name": "Ms Vaidehi"},
+}
+
+DEFAULT_ENGINEER_PHONE = "919157885377"
+DEFAULT_ENGINEER_NAME = "Mr Uchit"
+
+def get_engineer_for_state(location_str: str) -> tuple:
+    """
+    Returns (engineer_phone, engineer_name) based on the state/city in location_str.
+    Uses code-level mapping directly.
+    """
+    if not location_str:
+        location_str = ""
+    loc_lower = str(location_str).lower()
+
+    for state_key, eng_data in STATE_ENGINEER_MAPPING.items():
+        if state_key in loc_lower:
+            return eng_data["phone"], eng_data["name"]
+
+    return DEFAULT_ENGINEER_PHONE, DEFAULT_ENGINEER_NAME
+
+
 def _send_whatsapp_engineer_notification(ticket):
     """
-    Sends WhatsApp alert to the Service Engineer using ENGINEER_WHATSAPP_NUMBER from .env.
+    Sends WhatsApp alert to the Service Engineer using Meta Cloud API (or WASender fallback).
+    Routes to specific state engineer based on user's city/state.
+    Template: icemake_serviceengineer
+    Variables:
+      {{1}} = Ticket Number
+      {{2}} = Customer Name
+      {{3}} = Customer Mobile
+      {{4}} = City / State
+      {{5}} = Product Issue / Machine Model
+      {{6}} = Description
+      {{7}} = Assigned Engineer Name
     """
     try:
         import os
-        from bot.services.whatsapp_service import send_whatsapp_message
+        from django.conf import settings
         
-        engineer_number = os.getenv("ENGINEER_WHATSAPP_NUMBER") or "919913381306"
+        cust_phone = ticket.registered_mobile or (ticket.conversation.user_number if ticket.conversation else "N/A")
+        ticket_no = str(ticket.ticket_number or "N/A")
+        cust_name = str(ticket.customer_name or "N/A")
+        city_state = str(ticket.city_state or ticket.company_name or "N/A")
+        product_issue = str(ticket.machine_model_no or ticket.issue_type or "N/A")
+        description = str(ticket.issue_description or "N/A")
+
+        # Resolve engineer phone number and name based on customer's state
+        engineer_number, assigned_eng = get_engineer_for_state(city_state)
+        
         clean_eng = "".join(filter(str.isdigit, str(engineer_number)))
         if len(clean_eng) == 10:
             clean_eng = "91" + clean_eng
 
-        cust_phone = ticket.registered_mobile or (ticket.conversation.user_number if ticket.conversation else "N/A")
+        meta_phone_id = getattr(settings, "ICEMAKE_PHONE_NUMBER_ID", None) or os.getenv("ICEMAKE_PHONE_NUMBER_ID") or getattr(settings, "META_PHONE_NUMBER_ID", None) or os.getenv("META_PHONE_NUMBER_ID")
+        meta_access_token = getattr(settings, "META_ACCESS_TOKEN", None) or os.getenv("META_ACCESS_TOKEN") or getattr(settings, "WHATSAPP_TOKEN", None) or os.getenv("WHATSAPP_TOKEN")
 
+        if meta_phone_id and meta_access_token:
+            meta_res = _send_meta_whatsapp_template(
+                to_phone=clean_eng,
+                template_name="icemake_serviceengineer",
+                parameters=[
+                    ticket_no,
+                    cust_name,
+                    cust_phone,
+                    city_state,
+                    product_issue,
+                    description,
+                    assigned_eng
+                ]
+            )
+            if meta_res.get("success"):
+                print(f"🚨 [ENGINEER META WA ALERT SUCCESS]: Sent 'icemake_serviceengineer' template to Engineer '{assigned_eng}' ({clean_eng}) for State '{city_state}' (Ticket #{ticket.ticket_number})")
+                return
+
+        from bot.services.whatsapp_service import send_whatsapp_message
         wa_text = (
             f"🚨 *NEW ICEMAKE SERVICE TICKET ALERT*\n\n"
             f"A new complaint ticket has been logged by customer:\n\n"
@@ -1664,13 +1863,12 @@ def _send_whatsapp_engineer_notification(ticket):
             f"🏠 *Address:* {ticket.company_name or 'N/A'}\n"
             f"⚙️ *Product Name:* {ticket.machine_model_no or 'N/A'}\n"
             f"🛠️ *Issue Type:* {ticket.issue_type or 'Other'}\n"
-            f"📝 *Description:* {ticket.issue_description or 'N/A'}\n\n"
+            f"📝 *Description:* {ticket.issue_description or 'N/A'}\n"
+            f"👤 *Assigned Engineer:* {assigned_eng}\n\n"
             f"Please attend to this issue immediately.\n"
             f"*Ice Make Refrigeration Ltd.*"
         )
-
         res = send_whatsapp_message(clean_eng, wa_text)
-        # Check if rate-limited by WASender Account Protection (429)
         if isinstance(res, dict) and (res.get("retry_after") or "Account Protection enabled" in str(res)):
             retry_sec = int(res.get("retry_after", 5)) + 1
             print(f"⏳ [ENGINEER WA RATE LIMIT]: WASender 429 rate limit hit. Pausing {retry_sec}s before retry...")
@@ -1678,7 +1876,7 @@ def _send_whatsapp_engineer_notification(ticket):
             time.sleep(retry_sec)
             res = send_whatsapp_message(clean_eng, wa_text)
 
-        print(f"🚨 [ENGINEER WA ALERT SUCCESS]: Alert sent to Engineer {clean_eng} for Ticket #{ticket.ticket_number}. Response: {res}")
+        print(f"🚨 [ENGINEER WA ALERT SUCCESS]: Alert sent to Engineer '{assigned_eng}' ({clean_eng}) for State '{city_state}' (Ticket #{ticket.ticket_number}). Response: {res}")
     except Exception as e:
         logger.error("[ENGINEER WA ERROR] Failed to send WhatsApp alert to engineer: %s", e)
 

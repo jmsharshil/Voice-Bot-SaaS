@@ -2405,11 +2405,13 @@ def icemake_dashboard_page(request):
 @api_view(["GET"])
 def icemake_dashboard_data(request):
     """
-    Returns JSON array of all IcemakeTicket records joined with CallDetailRecord.
+    Returns JSON array of all IcemakeTicket records joined with CallDetailRecord,
+    AND integrates live WhatsApp CRM inquiries from external API.
     """
     from datetime import timedelta
     from icemake_bot.models import IcemakeTicket
     from conversations.models import CallDetailRecord
+    import requests as _requests
 
     tickets = IcemakeTicket.objects.select_related("conversation").order_by("-created_at")
     
@@ -2454,13 +2456,14 @@ def icemake_dashboard_data(request):
         caller_phone = getattr(cdr, "phone_number", "") or (t.conversation.user_number if t.conversation else t.registered_mobile)
 
         data.append({
-            "id": t.id,
+            "id": f"voice_{t.id}",
+            "source": "Voice Bot",
             "ticket_number": t.ticket_number,
             "customer_name": t.customer_name or "Not Provided",
             "registered_mobile": t.registered_mobile or "Not Provided",
             "caller_phone": caller_phone or t.registered_mobile or "Not Provided",
             "city_state": t.city_state or "Not Provided",
-            "company_name": t.company_name or "Not Provided",
+            "company_name": t.company_name or "Voice Channel",
             "machine_model_no": t.machine_model_no or "Not Provided",
             "issue_type": t.issue_type or "Other",
             "issue_description": t.issue_description or "Not Provided",
@@ -2470,9 +2473,87 @@ def icemake_dashboard_data(request):
             "recording_url": rec_url,
             "call_duration": duration,
             "call_status": disposition,
+            "messages": [],
+            "assigned_engineer": "Mr Rutvik",
         })
 
-    return Response({"tickets": data})
+    # 📥 FETCH LIVE WHATSAPP BOT INQUIRIES FROM EXTERNAL API (ALL PAGES)
+    whatsapp_tickets = []
+    try:
+        token = "1272077585997381"
+        base_wa_url = f"https://whatsappcrmsaas-emdke9dnb4f8bne6.centralindia-01.azurewebsites.net/api/icemake/data/?token={token}"
+        wa_resp = _requests.get(base_wa_url, timeout=10)
+        if wa_resp.status_code == 200:
+            wa_json = wa_resp.json()
+            total_pages = min(wa_json.get("total_pages", 1), 10)
+            all_convs = wa_json.get("conversations", [])
+
+            for p in range(2, total_pages + 1):
+                try:
+                    p_resp = _requests.get(f"{base_wa_url}&page={p}", timeout=8)
+                    if p_resp.status_code == 200:
+                        all_convs.extend(p_resp.json().get("conversations", []))
+                except Exception:
+                    pass
+
+            for conv in all_convs:
+                t_data = conv.get("ticket_data") or {}
+                cust = conv.get("customer") or {}
+
+                ticket_no = t_data.get("ticket_no") or f"WA-{conv.get('id')}"
+                cust_name = t_data.get("name") or cust.get("name") or "WhatsApp Customer"
+                registered_mobile = t_data.get("registered_mobile") or cust.get("whatsapp_number") or ""
+                city = t_data.get("city") or ""
+                state = t_data.get("state") or ""
+                city_state = f"{city}, {state}".strip(", ") if (city or state) else "Not Provided"
+                issue_type = t_data.get("complaint_type") or "WhatsApp Inquiry"
+                issue_desc = t_data.get("issue_desc") or ""
+
+                messages = conv.get("messages", [])
+                if not issue_desc and messages:
+                    for m in reversed(messages):
+                        if m.get("direction") == "inbound" and m.get("content"):
+                            issue_desc = m.get("content")
+                            break
+
+                created_at_str = conv.get("created_at") or ""
+                if "T" in created_at_str:
+                    created_at_str = created_at_str.replace("T", " ").split(".")[0]
+
+                whatsapp_tickets.append({
+                    "id": f"wa_{conv.get('id')}",
+                    "source": "WhatsApp Bot",
+                    "ticket_number": ticket_no if ticket_no else f"WA-{conv.get('id')}",
+                    "customer_name": cust_name,
+                    "registered_mobile": registered_mobile,
+                    "caller_phone": cust.get("whatsapp_number") or registered_mobile,
+                    "city_state": city_state,
+                    "company_name": t_data.get("pincode") or "WhatsApp Channel",
+                    "machine_model_no": t_data.get("complaint_type") or "WhatsApp Bot",
+                    "issue_type": issue_type if issue_type else "WhatsApp Inquiry",
+                    "issue_description": issue_desc if issue_desc else "WhatsApp Conversation",
+                    "language": "en",
+                    "created_at": created_at_str,
+                    "google_sheet_synced": True if conv.get("bot_state") == "TICKET_GENERATED" else False,
+                    "recording_url": "",
+                    "call_duration": 0,
+                    "call_status": "TICKET_GENERATED" if conv.get("bot_state") == "TICKET_GENERATED" else conv.get("status", "IN_PROGRESS"),
+                    "messages": messages,
+                    "assigned_engineer": t_data.get("assigned_engineer") or "Not Assigned",
+                    "engineer_phone": t_data.get("engineer_phone") or "",
+                })
+    except Exception as e_wa:
+        print(f"⚠️ Error fetching WhatsApp CRM API data: {e_wa}")
+
+    all_tickets = data + whatsapp_tickets
+    all_tickets.sort(key=lambda x: str(x.get("created_at", "")), reverse=True)
+
+    return Response({
+        "tickets": all_tickets,
+        "total_count": len(all_tickets),
+        "voice_count": len(data),
+        "whatsapp_count": len(whatsapp_tickets)
+    })
 
 
 @api_view(["GET"])
