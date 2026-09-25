@@ -2488,11 +2488,27 @@ def proxy_audio(request):
     from urllib.parse import urlparse, parse_qs
     from django.http import StreamingHttpResponse, HttpResponse
 
-    audio_url = request.GET.get("url")
+    audio_url = request.GET.get("url", "")
     if not audio_url:
         return HttpResponse("Missing url parameter", status=400)
 
     try:
+        from urllib.parse import unquote, urlparse, parse_qs
+        # ✅ Recursively unwrap any nested proxy-audio URLs (e.g. /conversations/proxy-audio/?url=... or /api/proxy-audio/?url=...)
+        while ("proxy-audio" in audio_url and "url=" in audio_url) or audio_url.startswith("%2F") or audio_url.startswith("/"):
+            if "url=" in audio_url:
+                idx = audio_url.find("url=")
+                audio_url = unquote(audio_url[idx + 4:])
+            else:
+                audio_url = unquote(audio_url)
+            audio_url = audio_url.strip()
+            if audio_url.startswith("http://") or audio_url.startswith("https://"):
+                break
+
+        audio_url = audio_url.strip()
+        if not audio_url.startswith("http://") and not audio_url.startswith("https://"):
+            return HttpResponse(f"Invalid audio URL format: {audio_url}", status=400)
+
         headers = {}
 
         # ✅ Convert *.sarvam.ai/media URLs (e.g. indus.sarvam.ai or agents.sarvam.ai) → apps.sarvam.ai analytics recording URLs
@@ -2888,7 +2904,7 @@ def sarvam_leads_data(request, agent_slug=None):
 
     remote_items = []
     try:
-        res = http_requests.get(sarvam_url, headers=headers, params=params, timeout=10)
+        res = http_requests.get(sarvam_url, headers=headers, params=params, timeout=15)
         if res.status_code == 200 and res.content:
             remote_items = res.json().get("items", [])
     except Exception as e:
@@ -3075,7 +3091,7 @@ def sarvam_leads_data(request, agent_slug=None):
             app_id = (ag_obj.app_id if ag_obj else "") or os.getenv("SARVAM_AGENT_APP_ID", "")
             if org_id and ws_id and app_id:
                 analytics_rec_url = f"https://apps.sarvam.ai/api/analytics/v1/{org_id}/{ws_id}/{app_id}/recordings/{r.interaction_id}"
-                rec_audio_url = f"/conversations/proxy-audio/?url={quote(analytics_rec_url)}"
+                rec_audio_url = analytics_rec_url
 
         processed_leads.append({
             "interaction_id": rec_id,
