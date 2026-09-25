@@ -2190,12 +2190,15 @@
 
             // Audio Recording (if present)
             if (lead.audio_url) {
+                const cleanAudioSrc = (lead.audio_url.startsWith('http') || !lead.audio_url.includes('/proxy-audio/'))
+                    ? `/api/proxy-audio/?url=${encodeURIComponent(lead.audio_url)}`
+                    : lead.audio_url;
                 sectionsHtml += `
                     <div class="detail-group">
                         <h4><i class="fa-solid fa-headphones"></i> Audio Recording</h4>
-                        <audio class="audio-player" controls src="/api/proxy-audio/?url=${encodeURIComponent(lead.audio_url)}"></audio>
+                        <audio class="audio-player" controls src="${cleanAudioSrc}"></audio>
                         <p style="font-size:0.75rem;color:#64748b;margin-top:0.4rem;">
-                            <a href="/api/proxy-audio/?url=${encodeURIComponent(lead.audio_url)}" target="_blank" style="color:#4f46e5;font-weight:600;text-decoration:none;">
+                            <a href="${cleanAudioSrc}" target="_blank" style="color:#4f46e5;font-weight:600;text-decoration:none;">
                                 <i class="fa-solid fa-download"></i> Download Recording
                             </a>
                         </p>
