@@ -799,7 +799,7 @@
             "Registered Mobile": t.registered_mobile || '',
             "Real SIM Caller Number": t.caller_phone || '',
             "Location / State": t.city_state || 'Not Provided',
-            "Assigned Engineer": t.assigned_engineer || 'Mr Rutvik',
+            "Assigned Engineer": t.assigned_engineer || 'Not Assigned',
             "Machine Model": t.machine_model_no || 'Not Provided',
             "Issue Category": t.issue_type || 'Other',
             "Issue Description": t.issue_description || '',
@@ -1166,7 +1166,7 @@
                     </td>
                     <td>
                         <div style="color: var(--text-main); font-weight: 600;">${t.city_state}</div>
-                        <div style="color: var(--text-muted); font-size: 0.78rem;">Assigned: ${t.assigned_engineer || 'Mr Rutvik'}</div>
+                        <div style="color: var(--text-muted); font-size: 0.78rem;">Assigned: ${t.assigned_engineer || 'Not Assigned'}</div>
                     </td>
                     <td>
                         <span class="product-pill">

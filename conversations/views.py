@@ -2492,6 +2492,22 @@ def icemake_dashboard_page(request):
     return render(request, "icemake_dashboard.html")
 
 
+def resolve_engineer_for_state(location_str):
+    if not location_str:
+        return "Mr Rutvik", "919727721447"
+    loc_lower = str(location_str).lower().strip()
+    
+    try:
+        from icemake_bot.strategy import STATE_ENGINEER_MAPPING
+        for key, info in STATE_ENGINEER_MAPPING.items():
+            if key in loc_lower:
+                return info.get("name", "Mr Rutvik"), info.get("phone", "919727721447")
+    except Exception:
+        pass
+        
+    return "Mr Rutvik", "919727721447"
+
+
 @api_view(["GET"])
 def icemake_dashboard_data(request):
     """
@@ -2545,6 +2561,8 @@ def icemake_dashboard_data(request):
         disposition = getattr(cdr, "disposition", "ANSWERED") or "ANSWERED"
         caller_phone = getattr(cdr, "phone_number", "") or (t.conversation.user_number if t.conversation else t.registered_mobile)
 
+        assigned_eng_name, assigned_eng_phone = resolve_engineer_for_state(t.city_state)
+
         data.append({
             "id": f"voice_{t.id}",
             "source": "Voice Bot",
@@ -2564,7 +2582,8 @@ def icemake_dashboard_data(request):
             "call_duration": duration,
             "call_status": disposition,
             "messages": [],
-            "assigned_engineer": "Mr Rutvik",
+            "assigned_engineer": assigned_eng_name,
+            "engineer_phone": assigned_eng_phone,
         })
 
     # 📥 FETCH LIVE WHATSAPP BOT INQUIRIES FROM EXTERNAL API (ALL PAGES)
@@ -2610,6 +2629,11 @@ def icemake_dashboard_data(request):
                 if "T" in created_at_str:
                     created_at_str = created_at_str.replace("T", " ").split(".")[0]
 
+                wa_assigned_name = t_data.get("assigned_engineer")
+                wa_assigned_phone = t_data.get("engineer_phone")
+                if not wa_assigned_name or wa_assigned_name == "Not Assigned":
+                    wa_assigned_name, wa_assigned_phone = resolve_engineer_for_state(city_state)
+
                 whatsapp_tickets.append({
                     "id": f"wa_{conv.get('id')}",
                     "source": "WhatsApp Bot",
@@ -2629,8 +2653,8 @@ def icemake_dashboard_data(request):
                     "call_duration": 0,
                     "call_status": "TICKET_GENERATED" if conv.get("bot_state") == "TICKET_GENERATED" else conv.get("status", "IN_PROGRESS"),
                     "messages": messages,
-                    "assigned_engineer": t_data.get("assigned_engineer") or "Not Assigned",
-                    "engineer_phone": t_data.get("engineer_phone") or "",
+                    "assigned_engineer": wa_assigned_name,
+                    "engineer_phone": wa_assigned_phone or "",
                 })
     except Exception as e_wa:
         print(f"⚠️ Error fetching WhatsApp CRM API data: {e_wa}")
