@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <style>
         :root {
@@ -267,6 +269,28 @@
 
         .btn-refresh:hover {
             background: #4338ca;
+            transform: translateY(-1px);
+        }
+
+        .btn-excel {
+            background: #16a34a;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0.65rem 1.2rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
+        }
+
+        .btn-excel:hover {
+            background: #15803d;
             transform: translateY(-1px);
         }
 
@@ -620,6 +644,10 @@
             <button id="refreshBtn" class="btn-refresh" onclick="fetchTickets()">
                 <i id="refreshIcon" class="fa-solid fa-rotate-right"></i> Refresh
             </button>
+
+            <button id="exportExcelBtn" class="btn-excel" onclick="exportToExcel()" title="Export all Voice & WhatsApp complaints to multi-sheet Excel file">
+                <i class="fa-solid fa-file-excel"></i> Export Excel
+            </button>
         </div>
     </div>
 
@@ -752,6 +780,104 @@
                 if (btn) btn.disabled = false;
             }, 300);
         }
+    }
+
+    function exportToExcel() {
+        if (!allTickets || allTickets.length === 0) {
+            alert("No complaint data available to export.");
+            return;
+        }
+
+        const voiceTickets = allTickets.filter(t => t.source === 'Voice Bot');
+        const whatsappTickets = allTickets.filter(t => t.source === 'WhatsApp Bot');
+
+        const voiceRows = voiceTickets.map((t, idx) => ({
+            "S.No": idx + 1,
+            "Channel": "Voice Bot",
+            "Ticket Number": t.ticket_number || '',
+            "Customer Name": t.customer_name || 'Not Provided',
+            "Registered Mobile": t.registered_mobile || '',
+            "Real SIM Caller Number": t.caller_phone || '',
+            "Location / State": t.city_state || 'Not Provided',
+            "Assigned Engineer": t.assigned_engineer || 'Mr Rutvik',
+            "Machine Model": t.machine_model_no || 'Not Provided',
+            "Issue Category": t.issue_type || 'Other',
+            "Issue Description": t.issue_description || '',
+            "Call Duration (sec)": t.call_duration || 0,
+            "Call Status": t.call_status || 'ANSWERED',
+            "Call Recording URL": t.recording_url || 'No Audio Recording',
+            "Google Sheet Synced": t.google_sheet_synced ? 'Yes (Synced)' : 'No (Pending)',
+            "Date & Time": t.created_at || ''
+        }));
+
+        const whatsappRows = whatsappTickets.map((t, idx) => ({
+            "S.No": idx + 1,
+            "Channel": "WhatsApp Bot",
+            "Ticket Number": t.ticket_number || '',
+            "Customer Name": t.customer_name || 'WhatsApp Customer',
+            "WhatsApp Mobile": t.registered_mobile || t.caller_phone || '',
+            "City / State": t.city_state || 'Not Provided',
+            "Assigned Engineer": t.assigned_engineer || 'Not Assigned',
+            "Machine Model / Category": t.machine_model_no || 'WhatsApp Bot',
+            "Issue Category": t.issue_type || 'WhatsApp Inquiry',
+            "Issue Description": t.issue_description || '',
+            "Total Chat Messages": (t.messages || []).length,
+            "Bot Status": t.call_status || 'TICKET_GENERATED',
+            "Google Sheet Synced": t.google_sheet_synced ? 'Yes (Synced)' : 'No (Pending)',
+            "Date & Time": t.created_at || ''
+        }));
+
+        const wb = XLSX.utils.book_new();
+
+        // Sheet 1: Voice Agent Data
+        const wsVoice = XLSX.utils.json_to_sheet(
+            voiceRows.length > 0 ? voiceRows : [{ "Status": "No Voice Bot Records Found" }]
+        );
+        wsVoice['!cols'] = [
+            { wch: 6 },  // S.No
+            { wch: 12 }, // Channel
+            { wch: 18 }, // Ticket Number
+            { wch: 22 }, // Customer Name
+            { wch: 18 }, // Registered Mobile
+            { wch: 22 }, // Real SIM Caller Number
+            { wch: 20 }, // Location / State
+            { wch: 20 }, // Assigned Engineer
+            { wch: 20 }, // Machine Model
+            { wch: 25 }, // Issue Category
+            { wch: 45 }, // Issue Description
+            { wch: 18 }, // Duration
+            { wch: 15 }, // Status
+            { wch: 50 }, // Recording URL
+            { wch: 20 }, // Sheet Synced
+            { wch: 22 }  // Date & Time
+        ];
+        XLSX.utils.book_append_sheet(wb, wsVoice, "Voice Agent Data");
+
+        // Sheet 2: WhatsApp Bot Data
+        const wsWhatsapp = XLSX.utils.json_to_sheet(
+            whatsappRows.length > 0 ? whatsappRows : [{ "Status": "No WhatsApp Bot Records Found" }]
+        );
+        wsWhatsapp['!cols'] = [
+            { wch: 6 },  // S.No
+            { wch: 14 }, // Channel
+            { wch: 18 }, // Ticket Number
+            { wch: 22 }, // Customer Name
+            { wch: 20 }, // WhatsApp Mobile
+            { wch: 20 }, // City / State
+            { wch: 20 }, // Assigned Engineer
+            { wch: 25 }, // Machine Model
+            { wch: 25 }, // Issue Category
+            { wch: 45 }, // Issue Description
+            { wch: 20 }, // Chat Messages
+            { wch: 20 }, // Bot Status
+            { wch: 20 }, // Sheet Synced
+            { wch: 22 }  // Date & Time
+        ];
+        XLSX.utils.book_append_sheet(wb, wsWhatsapp, "WhatsApp Bot Data");
+
+        const todayStr = new Date().toISOString().split('T')[0];
+        const fileName = `ICEMAKE_Complaints_Report_${todayStr}.xlsx`;
+        XLSX.writeFile(wb, fileName);
     }
 
     function updateStats(apiData) {
