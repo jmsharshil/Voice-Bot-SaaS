@@ -2563,6 +2563,8 @@ def icemake_dashboard_data(request):
 
         assigned_eng_name, assigned_eng_phone = resolve_engineer_for_state(t.city_state)
 
+        from django.utils.timezone import localtime
+
         data.append({
             "id": f"voice_{t.id}",
             "source": "Voice Bot",
@@ -2576,7 +2578,7 @@ def icemake_dashboard_data(request):
             "issue_type": t.issue_type or "Other",
             "issue_description": t.issue_description or "Not Provided",
             "language": t.language,
-            "created_at": t.created_at.strftime("%Y-%m-%d %H:%M:%S") if t.created_at else "",
+            "created_at": localtime(t.created_at).strftime("%Y-%m-%d %H:%M:%S") if t.created_at else "",
             "google_sheet_synced": t.google_sheet_synced,
             "recording_url": rec_url,
             "call_duration": duration,
@@ -2626,8 +2628,19 @@ def icemake_dashboard_data(request):
                             break
 
                 created_at_str = conv.get("created_at") or ""
-                if "T" in created_at_str:
-                    created_at_str = created_at_str.replace("T", " ").split(".")[0]
+                if created_at_str:
+                    try:
+                        import datetime as _dt
+                        from django.utils import timezone as _tz
+                        if "T" in created_at_str:
+                            clean_ts = created_at_str.rstrip("Z")
+                            parsed_dt = _dt.datetime.fromisoformat(clean_ts)
+                            if parsed_dt.tzinfo is None:
+                                parsed_dt = _tz.make_aware(parsed_dt, _tz.utc)
+                            created_at_str = _tz.localtime(parsed_dt).strftime("%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        if "T" in created_at_str:
+                            created_at_str = created_at_str.replace("T", " ").split(".")[0]
 
                 wa_assigned_name = t_data.get("assigned_engineer")
                 wa_assigned_phone = t_data.get("engineer_phone")
