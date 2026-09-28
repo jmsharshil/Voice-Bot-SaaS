@@ -24,33 +24,42 @@ class MinutesTrackingTestCase(TestCase):
         self.assertEqual(_round_seconds_to_billed_minutes(0), 0.0)
         self.assertEqual(_round_seconds_to_billed_minutes(-5), 0.0)
         
-        # 1-29 seconds -> 0.5
-        self.assertEqual(_round_seconds_to_billed_minutes(1), 0.5)
-        self.assertEqual(_round_seconds_to_billed_minutes(15), 0.5)
-        self.assertEqual(_round_seconds_to_billed_minutes(29), 0.5)
-        
-        # 30-59 seconds -> 1.0
+        # 1-30 seconds -> 1.0 min
+        self.assertEqual(_round_seconds_to_billed_minutes(1), 1.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(15), 1.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(29), 1.0)
         self.assertEqual(_round_seconds_to_billed_minutes(30), 1.0)
-        self.assertEqual(_round_seconds_to_billed_minutes(45), 1.0)
-        self.assertEqual(_round_seconds_to_billed_minutes(59), 1.0)
-        
-        # 60-89 seconds -> 1.5
-        self.assertEqual(_round_seconds_to_billed_minutes(60), 1.5)
-        self.assertEqual(_round_seconds_to_billed_minutes(75), 1.5)
-        self.assertEqual(_round_seconds_to_billed_minutes(89), 1.5)
-        
-        # 90-119 seconds -> 2.0
-        self.assertEqual(_round_seconds_to_billed_minutes(90), 2.0)
-        self.assertEqual(_round_seconds_to_billed_minutes(119), 2.0)
 
-        # 122 seconds (2m 2s) -> 122 -> 150 seconds -> 2.5 minutes
-        self.assertEqual(_round_seconds_to_billed_minutes(122), 2.5)
+        # 31-60 seconds -> 2.0 min
+        self.assertEqual(_round_seconds_to_billed_minutes(31), 2.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(45), 2.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(60), 2.0)
+        
+        # 61-90 seconds -> 2.0 min
+        self.assertEqual(_round_seconds_to_billed_minutes(61), 2.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(75), 2.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(90), 2.0)
+
+        # 91-120 seconds -> 3.0 min
+        self.assertEqual(_round_seconds_to_billed_minutes(91), 3.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(105), 3.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(120), 3.0)
+
+        # 121-150 seconds -> 3.0 min
+        self.assertEqual(_round_seconds_to_billed_minutes(121), 3.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(135), 3.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(150), 3.0)
+
+        # 151-180 seconds -> 4.0 min
+        self.assertEqual(_round_seconds_to_billed_minutes(151), 4.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(165), 4.0)
+        self.assertEqual(_round_seconds_to_billed_minutes(180), 4.0)
 
     def test_bot_usage_aggregation(self):
         # Create some conversation records
         now = timezone.now()
         
-        # Conv 1: 15 seconds (billed 0.5m)
+        # Conv 1: 15 seconds (billed 1.0m)
         Conversation.objects.create(
             agent=self.agent,
             session_id="session_1",
@@ -58,7 +67,7 @@ class MinutesTrackingTestCase(TestCase):
             ended_at=now + timedelta(seconds=15)
         )
         
-        # Conv 2: 45 seconds (billed 1.0m)
+        # Conv 2: 45 seconds (billed 2.0m)
         Conversation.objects.create(
             agent=self.agent,
             session_id="session_2",
@@ -66,7 +75,7 @@ class MinutesTrackingTestCase(TestCase):
             ended_at=now + timedelta(seconds=45)
         )
         
-        # Conv 3: 122 seconds (billed 2.5m)
+        # Conv 3: 122 seconds (billed 3.0m)
         Conversation.objects.create(
             agent=self.agent,
             session_id="session_3",
@@ -82,9 +91,9 @@ class MinutesTrackingTestCase(TestCase):
             ended_at=None
         )
 
-        # Total expected: 0.5 + 1.0 + 2.5 = 4.0 minutes
+        # Total expected: 1.0 (15s) + 2.0 (45s) + 3.0 (122s) = 6.0 minutes
         total_usage = _calculate_bot_usage(self.agent)
-        self.assertEqual(total_usage, 4.0)
+        self.assertEqual(total_usage, 6.0)
 
 
 from conversations.views import get_campaign_lead_conversation
