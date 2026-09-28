@@ -2564,6 +2564,15 @@ def icemake_dashboard_data(request):
         assigned_eng_name, assigned_eng_phone = resolve_engineer_for_state(t.city_state)
 
         from django.utils.timezone import localtime
+        import zoneinfo as _zi
+        ist_tz = _zi.ZoneInfo("Asia/Kolkata")
+
+        created_at_formatted = ""
+        if t.created_at:
+            try:
+                created_at_formatted = localtime(t.created_at, ist_tz).strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                created_at_formatted = t.created_at.strftime("%Y-%m-%d %H:%M:%S")
 
         data.append({
             "id": f"voice_{t.id}",
@@ -2578,7 +2587,7 @@ def icemake_dashboard_data(request):
             "issue_type": t.issue_type or "Other",
             "issue_description": t.issue_description or "Not Provided",
             "language": t.language,
-            "created_at": localtime(t.created_at).strftime("%Y-%m-%d %H:%M:%S") if t.created_at else "",
+            "created_at": created_at_formatted,
             "google_sheet_synced": t.google_sheet_synced,
             "recording_url": rec_url,
             "call_duration": duration,
@@ -2637,7 +2646,7 @@ def icemake_dashboard_data(request):
                             parsed_dt = _dt.datetime.fromisoformat(clean_ts)
                             if parsed_dt.tzinfo is None:
                                 parsed_dt = _tz.make_aware(parsed_dt, _tz.utc)
-                            created_at_str = _tz.localtime(parsed_dt).strftime("%Y-%m-%d %H:%M:%S")
+                            created_at_str = _tz.localtime(parsed_dt, _zi.ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S")
                     except Exception:
                         if "T" in created_at_str:
                             created_at_str = created_at_str.replace("T", " ").split(".")[0]
