@@ -127,52 +127,27 @@ def _format_spoken_number(phone_num: str, lang: str) -> str:
 
 def _format_spoken_ticket(ticket_number: str, lang: str) -> str:
     """
-    Formats ticket number digit-by-digit with comma pauses for slow, clear, distinct TTS speech pronunciation.
-    E.g. C270826418 -> "C, 2, 7, 0, 8, 2, 6, 4, 1, 8"
+    Formats ticket number character-by-character with comma pauses for slow, clear, distinct TTS speech pronunciation.
+    E.g. VC270826418 -> "V, C, 2, 7, 0, 8, 2, 6, 4, 1, 8"
     """
     if not ticket_number:
         return ""
     
-    if lang == "gu":
-        gu_digit_words = {'0': 'ઝીરો', '1': 'એક', '2': 'બે', '3': 'ત્રણ', '4': 'ચાર', '5': 'પાંચ', '6': 'છ', '7': 'સાત', '8': 'આઠ', '9': 'નવ'}
-        parts = [gu_digit_words.get(ch, ch) if ch.isdigit() else ('સી' if ch == 'C' else ch) for ch in ticket_number]
-        return ", ".join(parts)
-    elif lang == "hi":
-        hi_digit_words = {'0': 'शून्य', '1': 'एक', '2': 'दो', '3': 'तीन', '4': 'चार', '5': 'पांच', '6': 'छह', '7': 'सात', '8': 'आठ', '9': 'नौ'}
-        parts = [hi_digit_words.get(ch, ch) if ch.isdigit() else ('सी' if ch == 'C' else ch) for ch in ticket_number]
-        return ", ".join(parts)
-    elif lang == "te":
-        te_digit_words = {'0': 'సున్నా', '1': 'ఒకటి', '2': 'రెండు', '3': 'మూడు', '4': 'నాలుగు', '5': 'ఐదు', '6': 'ఆరు', '7': 'ఏడు', '8': 'ఎనిమిది', '9': 'తొమ్మిది'}
-        parts = [te_digit_words.get(ch, ch) if ch.isdigit() else ('సి' if ch == 'C' else ch) for ch in ticket_number]
-        return ", ".join(parts)
-    elif lang == "pa":
-        pa_digit_words = {'0': 'ਜ਼ੀਰੋ', '1': 'ਇੱਕ', '2': 'ਦੋ', '3': 'ਤਿੰਨ', '4': 'ਚਾਰ', '5': 'ਪੰਜ', '6': 'ਛੇ', '7': 'ਸੱਤ', '8': 'ਅੱਠ', '9': 'ਨੌਂ'}
-        parts = [pa_digit_words.get(ch, ch) if ch.isdigit() else ('ਸੀ' if ch == 'C' else ch) for ch in ticket_number]
-        return ", ".join(parts)
-    elif lang == "bn":
-        bn_digit_words = {'0': 'শূন্য', '1': 'এক', '2': 'দুই', '3': 'তিন', '4': 'চার', '5': 'পাঁচ', '6': 'ছয়', '7': 'সাত', '8': 'আট', '9': 'নয়'}
-        parts = [bn_digit_words.get(ch, ch) if ch.isdigit() else ('সি' if ch == 'C' else ch) for ch in ticket_number]
-        return ", ".join(parts)
-    elif lang == "mr":
-        mr_digit_words = {'0': 'शून्य', '1': 'एक', '2': 'दोन', '3': 'तीन', '4': 'चार', '5': 'पाच', '6': 'सहा', '7': 'सात', '8': 'आठ', '9': 'नऊ'}
-        parts = [mr_digit_words.get(ch, ch) if ch.isdigit() else ('सी' if ch == 'C' else ch) for ch in ticket_number]
-        return ", ".join(parts)
-    elif lang == "ta":
-        ta_digit_words = {'0': 'சுழியம்', '1': 'ஒன்று', '2': 'இரண்டு', '3': 'மூன்று', '4': 'நான்கு', '5': 'ஐந்து', '6': 'ஆறு', '7': 'ஏழு', '8': 'எட்டு', '9': 'ஒன்பது'}
-        parts = [ta_digit_words.get(ch, ch) if ch.isdigit() else ('சி' if ch == 'C' else ch) for ch in ticket_number]
-        return ", ".join(parts)
-    elif lang == "kn":
-        kn_digit_words = {'0': 'ಶೂನ್ಯ', '1': 'ಒಂದು', '2': 'ಎರಡು', '3': 'ಮೂರು', '4': 'ನಾಲ್ಕು', '5': 'ಐದು', '6': 'ಆರು', '7': 'ಏಳು', '8': 'ಎಂಟು', '9': 'ಒಂಬತ್ತು'}
-        parts = [kn_digit_words.get(ch, ch) if ch.isdigit() else ('ಸಿ' if ch == 'C' else ch) for ch in ticket_number]
-        return ", ".join(parts)
-    elif lang == "ml":
-        ml_digit_words = {'0': 'പൂജ്യം', '1': 'ഒന്ന്', '2': 'രണ്ട്', '3': 'മൂന്ന്', '4': 'നാല്', '5': 'അഞ്ച്', '6': 'ആറ്', '7': 'ഏഴ്', '8': 'എട്ട്', '9': 'ഒൻപത്'}
-        parts = [ml_digit_words.get(ch, ch) if ch.isdigit() else ('സി' if ch == 'C' else ch) for ch in ticket_number]
-        return ", ".join(parts)
-    else:
-        en_digit_words = {'0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine'}
-        parts = [en_digit_words.get(ch, ch) if ch.isdigit() else ('C' if ch == 'C' else ch) for ch in ticket_number]
-        return ", ".join(parts)
+    char_map = {
+        "gu": ({'0': 'ઝીરો', '1': 'એક', '2': 'બે', '3': 'ત્રણ', '4': 'ચાર', '5': 'પાંચ', '6': 'છ', '7': 'સાત', '8': 'આઠ', '9': 'નવ'}, {'V': 'વી', 'C': 'સી'}),
+        "hi": ({'0': 'शून्य', '1': 'एक', '2': 'दो', '3': 'तीन', '4': 'चार', '5': 'पांच', '6': 'छह', '7': 'सात', '8': 'आठ', '9': 'नौ'}, {'V': 'वी', 'C': 'सी'}),
+        "te": ({'0': 'సున్నా', '1': 'ఒకటి', '2': 'రెండు', '3': 'మూడు', '4': 'నాలుగు', '5': 'ఐదు', '6': 'ఆరు', '7': 'ఏడు', '8': 'ఎనిమిది', '9': 'తొమ్మిది'}, {'V': 'వి', 'C': 'సి'}),
+        "pa": ({'0': 'ਜ਼ੀਰੋ', '1': 'ਇੱਕ', '2': 'ਦੋ', '3': 'ਤਿੰਨ', '4': 'ਚਾਰ', '5': 'ਪੰਜ', '6': 'ਛੇ', '7': 'ਸੱਤ', '8': 'ਅੱਠ', '9': 'ਨੌਂ'}, {'V': 'ਵੀ', 'C': 'ਸੀ'}),
+        "bn": ({'0': 'শূন্য', '1': 'এক', '2': 'দুই', '3': 'তিন', '4': 'চার', '5': 'পাঁচ', '6': 'ছয়', '7': 'সাত', '8': 'আট', '9': 'নয়'}, {'V': 'ভি', 'C': 'সি'}),
+        "mr": ({'0': 'शून्य', '1': 'एक', '2': 'दोन', '3': 'तीन', '4': 'चार', '5': 'पाच', '6': 'सहा', '7': 'सात', '8': 'आठ', '9': 'नऊ'}, {'V': 'वी', 'C': 'सी'}),
+        "ta": ({'0': 'சுழியம்', '1': 'ஒன்று', '2': 'இரண்டு', '3': 'மூன்று', '4': 'நான்கு', '5': 'ஐந்து', '6': 'ஆறு', '7': 'ஏழு', '8': 'எட்டு', '9': 'ஒன்பது'}, {'V': 'வி', 'C': 'சி'}),
+        "kn": ({'0': 'ಶೂನ್ಯ', '1': 'ಒಂದು', '2': 'ಎರಡು', '3': 'ಮೂರು', '4': 'ನಾಲ್ಕು', '5': 'ಐದು', '6': 'ಆರು', '7': 'ಏಳು', '8': 'ಎಂಟು', '9': 'ಒಂಬತ್ತು'}, {'V': 'ವಿ', 'C': 'ಸಿ'}),
+        "ml": ({'0': 'പൂജ്യം', '1': 'ഒന്ന്', '2': 'രണ്ട്', '3': 'മൂന്ന്', '4': 'നാല്', '5': 'അഞ്ച്', '6': 'ആറ്', '7': 'ഏഴ്', '8': 'എട്ട്', '9': 'ഒൻപത്'}, {'V': 'വി', 'C': 'സി'}),
+    }
+    
+    digits, letters = char_map.get(lang, ({'0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine'}, {'V': 'V', 'C': 'C'}))
+    parts = [digits.get(ch, letters.get(ch, ch)) for ch in ticket_number]
+    return ", ".join(parts)
 
 def _log_translator(user_msg, agent_reply, lang):
     """Helper to log terminal translation asynchronously in a background thread."""
@@ -880,13 +855,13 @@ def icemake_finalize(response, prep_result):
 
 def _generate_ticket_number() -> str:
     """
-    Generates ticket format: C + MMDDYY + 3 digit random code.
-    E.g. C030726001
+    Generates ticket format: VC + DDMMYY + 3 digit random code.
+    E.g. VC280926101
     """
     now = datetime.now()
     date_str = now.strftime("%d%m%y")
     seq = random.randint(100, 999)
-    return f"C{date_str}{seq}"
+    return f"VC{date_str}{seq}"
 
 def _extract_clean_ticket_entities(state: dict) -> dict:
     """

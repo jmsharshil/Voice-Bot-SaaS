@@ -5088,6 +5088,7 @@ def sarvam_campaign_export_full_api(request, campaign_id):
         "Candidate Name",
         "Phone Number",
         "STATUS",
+        "Interest Status",
         "Stage 1 (Main)",
         "Stage 2 (Retry 1)",
         "Stage 3 (Retry 2 - Final)",
@@ -5117,11 +5118,20 @@ def sarvam_campaign_export_full_api(request, campaign_id):
 
         status_text, call_summary, category = _extract_lead_status_and_reasons(lead)
 
+        # 3-way status mapping
+        if category in ["INTERESTED", "CALLBACK", "COMPLETED"]:
+            interest_mapped = "Interested"
+        elif category in ["NOT_INTERESTED", "MISMATCH"]:
+            interest_mapped = "Not Interested"
+        else:
+            interest_mapped = "No Answer / Missed"
+
         row = [
             idx,
             lead.candidate_name,
             lead.phone_number,
             status_text,
+            interest_mapped,
             lead.stage_1_status,
             lead.stage_2_status,
             lead.stage_3_status,
@@ -5138,7 +5148,7 @@ def sarvam_campaign_export_full_api(request, campaign_id):
             cell.border = thin_border
             if col_num in [2, 3, 4]:
                 cell.alignment = align_left
-            elif col_num == 9:
+            elif col_num == 10:
                 cell.alignment = align_left_wrap
             else:
                 cell.alignment = align_center
@@ -5164,8 +5174,20 @@ def sarvam_campaign_export_full_api(request, campaign_id):
                     cell.fill = PatternFill(start_color="EFF6FF", end_color="EFF6FF", fill_type="solid")
                     cell.font = Font(color="1E40AF", bold=True)
 
-            # Highlight Final Outcome column (col 8)
-            elif col_num == 8:
+            # Highlight Interest Status column (col 5)
+            elif col_num == 5:
+                if interest_mapped == "Interested":
+                    cell.fill = PatternFill(start_color="DCFCE7", end_color="DCFCE7", fill_type="solid")
+                    cell.font = Font(color="166534", bold=True)
+                elif interest_mapped == "Not Interested":
+                    cell.fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+                    cell.font = Font(color="991B1B", bold=True)
+                else:
+                    cell.fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
+                    cell.font = Font(color="475569", bold=True)
+
+            # Highlight Final Outcome column (col 9)
+            elif col_num == 9:
                 if lead.final_status == "ANSWERED":
                     cell.fill = PatternFill(start_color="DCFCE7", end_color="DCFCE7", fill_type="solid")
                     cell.font = Font(color="166534", bold=True)
@@ -5178,7 +5200,9 @@ def sarvam_campaign_export_full_api(request, campaign_id):
         col_letter = get_column_letter(col_idx)
         if col_idx == 4:
             ws.column_dimensions[col_letter].width = 38
-        elif col_idx == 9:
+        elif col_idx == 5:
+            ws.column_dimensions[col_letter].width = 20
+        elif col_idx == 10:
             ws.column_dimensions[col_letter].width = 50
         else:
             max_len = max(len(str(cell.value or '')) for cell in col)
