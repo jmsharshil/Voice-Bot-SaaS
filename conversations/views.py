@@ -1499,24 +1499,30 @@ def sarvam_cdr_webhook(request):
 
         # ✅ Try fetching recording using this agent's credentials
         if interaction_id:
-            print(f"🎙️ [SARVAM RECORDINGS API] Fetching call recording for interaction_id: {interaction_id}")
-            rec_result = SarvamAgentService.fetch_interaction_recording(
-                interaction_id=interaction_id, sarvam_agent=webhook_sarvam_agent
-            )
-            if rec_result:
-                if isinstance(rec_result, str) and rec_result.startswith("http"):
-                    recording_url = rec_result
-                elif isinstance(rec_result, dict):
-                    recording_url = rec_result.get("recording_url") or rec_result.get("audio_url") or rec_result.get("url") or recording_url
+            try:
+                print(f"🎙️ [SARVAM RECORDINGS API] Fetching call recording for interaction_id: {interaction_id}")
+                rec_result = SarvamAgentService.fetch_interaction_recording(
+                    interaction_id=interaction_id, sarvam_agent=webhook_sarvam_agent
+                )
+                if rec_result:
+                    if isinstance(rec_result, str) and rec_result.startswith("http"):
+                        recording_url = rec_result
+                    elif isinstance(rec_result, dict):
+                        recording_url = rec_result.get("recording_url") or rec_result.get("audio_url") or rec_result.get("url") or recording_url
+            except Exception as rec_err:
+                print(f"⚠️ [SARVAM RECORDING FETCH NOTICE]: {rec_err}")
 
             # ✅ Fetch transcript from API only if conversation_log/call_transcript didn't give us one
             if not transcript:
-                print(f"🔍 [SARVAM ANALYTICS API] Fetching transcript for interaction_id: {interaction_id}")
-                analytics_res = SarvamAgentService.fetch_interaction_transcript(interaction_id=interaction_id)
-                if isinstance(analytics_res, dict) and "transcript" in analytics_res:
-                    transcript = analytics_res.get("transcript")
-                elif isinstance(analytics_res, list):
-                    transcript = "\n\n".join([f"{item.get('role', 'Speaker').upper()}: {item.get('text', '')}" for item in analytics_res])
+                try:
+                    print(f"🔍 [SARVAM ANALYTICS API] Fetching transcript for interaction_id: {interaction_id}")
+                    analytics_res = SarvamAgentService.fetch_interaction_transcript(interaction_id=interaction_id)
+                    if isinstance(analytics_res, dict) and "transcript" in analytics_res:
+                        transcript = analytics_res.get("transcript")
+                    elif isinstance(analytics_res, list):
+                        transcript = "\n\n".join([f"{item.get('role', 'Speaker').upper()}: {item.get('text', '')}" for item in analytics_res])
+                except Exception as tr_err:
+                    print(f"⚠️ [SARVAM TRANSCRIPT FETCH NOTICE]: {tr_err}")
 
         # ✅ Build final_status — prefer final_status / completion_status / call_disposition / status
         final_status = (
@@ -2605,7 +2611,7 @@ def icemake_dashboard_data(request):
         wa_resp = _requests.get(base_wa_url, timeout=10)
         if wa_resp.status_code == 200:
             wa_json = wa_resp.json()
-            total_pages = min(wa_json.get("total_pages", 1), 10)
+            total_pages = wa_json.get("total_pages", 1)
             all_convs = wa_json.get("conversations", [])
 
             for p in range(2, total_pages + 1):
