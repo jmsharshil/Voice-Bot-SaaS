@@ -1841,17 +1841,17 @@
         }
 
         function getStatusBadge(status) {
-            const s = (status || '').toUpperCase();
+            const s = (status || '').toUpperCase().trim();
             if (s.includes('NOT_INTERESTED') || s.includes('NOT INTERESTED') || s.includes('REJECTED') || s.includes('DECLINED')) {
                 return `<span class="badge badge-red"><i class="fa-solid fa-ban"></i> Not Interested</span>`;
-            } else if (s.includes('INTERVIEW') || s.includes('SCHEDULED') || s.includes('PURCHASE') || s.includes('STORE_VISIT') || s.includes('HIGH_INTENT') || s.includes('INTERESTED')) {
-                return `<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> Interested / High Intent</span>`;
             } else if (s.includes('CALLBACK') || s.includes('WHATSAPP') || s.includes('OFFER') || s.includes('FOLLOW_UP')) {
                 return `<span class="badge badge-yellow"><i class="fa-solid fa-phone"></i> Callback Requested</span>`;
             } else if (s.includes('MISMATCH')) {
                 return `<span class="badge badge-purple"><i class="fa-solid fa-sliders"></i> Requirements Mismatch</span>`;
             } else if (s.includes('NO_ANSWER') || s.includes('MISSED') || s.includes('BUSY') || s.includes('FAILED')) {
                 return `<span class="badge badge-red" style="background:#fef2f2; color:#ef4444; border:1px solid #fecaca;"><i class="fa-solid fa-phone-slash"></i> Missed / No Answer</span>`;
+            } else if (s.includes('INTERVIEW') || s.includes('SCHEDULED') || s.includes('PURCHASE') || s.includes('STORE_VISIT') || s.includes('HIGH_INTENT') || s === 'INTERESTED' || s.includes('CONFIRMED')) {
+                return `<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> Interested / High Intent</span>`;
             }
             return `<span class="badge badge-blue" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;"><i class="fa-solid fa-circle-check"></i> Completed</span>`;
         }
@@ -1913,22 +1913,40 @@
                                        (s.customer_area || '').toLowerCase().includes(search) ||
                                        (s.recommended_store || '').toLowerCase().includes(search);
 
-                let leadStatus = (lead.final_status || '').toUpperCase();
-                if (typeof s === 'object' && s !== null) {
-                    const extraS = (s.final_status || s.status || s.intent || '').toUpperCase();
-                    if (extraS) leadStatus = `${leadStatus} ${extraS}`;
-                }
+                const mainStatus = (lead.final_status || '').toUpperCase().trim();
+                const extraS = (typeof s === 'object' && s !== null) ? (s.final_status || s.status || s.intent || '').toUpperCase().trim() : '';
+
+                // Explicitly check for negative/uninterested markers
+                const isNotInterested = mainStatus.includes('NOT_INTERESTED') || mainStatus.includes('NOT INTERESTED') || 
+                                         mainStatus.includes('REJECTED') || mainStatus.includes('DECLINED') ||
+                                         extraS.includes('NOT_INTERESTED') || extraS.includes('NOT INTERESTED') || 
+                                         extraS.includes('REJECTED') || extraS.includes('DECLINED');
+
+                const isNoAnswer = mainStatus.includes('NO_ANSWER') || mainStatus.includes('MISSED') || 
+                                   mainStatus.includes('BUSY') || mainStatus.includes('FAILED') ||
+                                   extraS.includes('NO_ANSWER') || extraS.includes('MISSED');
+
+                const isMismatch = mainStatus.includes('MISMATCH') || extraS.includes('MISMATCH');
+
+                const isCallback = (mainStatus.includes('CALLBACK') || mainStatus.includes('WHATSAPP') || 
+                                    mainStatus.includes('FOLLOW_UP') || extraS.includes('CALLBACK') || 
+                                    extraS.includes('WHATSAPP')) && !isNotInterested;
+
+                const isInterested = (mainStatus === 'INTERVIEW' || mainStatus === 'INTERESTED' || mainStatus === 'HIGH_INTENT' ||
+                                     extraS === 'INTERVIEW' || extraS === 'INTERESTED' || extraS === 'HIGH_INTENT' ||
+                                     ['SCHEDULED', 'PURCHASE', 'STORE_VISIT', 'HIGH_INTENT', 'CONFIRMED', 'POSITIVE'].some(k => mainStatus.includes(k) || extraS.includes(k))) &&
+                                     !isNotInterested && !isNoAnswer && !isMismatch && !isCallback;
 
                 let matchesStatus = true;
 
                 if (status === 'INTERVIEW') {
-                    matchesStatus = ['INTERVIEW', 'SCHEDULED', 'PURCHASE', 'STORE_VISIT', 'VISIT', 'HIGH_INTENT', 'CONFIRMED', 'INTERESTED', 'POSITIVE'].some(k => leadStatus.includes(k));
+                    matchesStatus = isInterested;
                 } else if (status === 'CALLBACK') {
-                    matchesStatus = ['CALLBACK', 'WHATSAPP', 'FOLLOW_UP', 'FOLLOWUP', 'OFFER', 'REQUEST'].some(k => leadStatus.includes(k));
+                    matchesStatus = isCallback;
                 } else if (status === 'NOT_INTERESTED') {
-                    matchesStatus = ['NOT_INTERESTED', 'NOT INTERESTED', 'REJECTED', 'DECLINED', 'NO_ANSWER', 'BUSY', 'MISMATCH'].some(k => leadStatus.includes(k));
+                    matchesStatus = isNotInterested || isNoAnswer || isMismatch;
                 } else if (status === 'MISMATCH') {
-                    matchesStatus = leadStatus.includes('MISMATCH');
+                    matchesStatus = isMismatch;
                 }
 
                 return matchesSearch && matchesStatus;

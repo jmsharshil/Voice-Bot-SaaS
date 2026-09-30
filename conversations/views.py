@@ -5150,11 +5150,31 @@ def sarvam_campaign_cancel_api(request, campaign_id):
     return Response({"status": "success", "message": f"Campaign #{campaign_id} cancelled."}, status=200)
 
 
+def _extract_preferred_store(lead):
+    """Extracts preferred store or location from call summary and dynamic variables."""
+    best_call = lead.stage_3_call or lead.stage_2_call or lead.stage_1_call or lead.last_call_record
+    if best_call and isinstance(best_call.summary, dict):
+        s = best_call.summary
+        for k in ["preferred_store", "recommended_store", "store_name", "store_location", "store", "customer_area", "area", "location", "city"]:
+            val = s.get(k)
+            if val and str(val).strip() and str(val).strip().lower() not in ["none", "null", "unknown", "n/a", ""]:
+                return str(val).strip()
+
+    for data_dict in [getattr(lead, "extra_variables", {}), getattr(lead, "extra_data", {})]:
+        if isinstance(data_dict, dict):
+            for k in ["preferred_store", "recommended_store", "store_name", "store_location", "store", "area", "city", "location"]:
+                val = data_dict.get(k)
+                if val and str(val).strip() and str(val).strip().lower() not in ["none", "null", "unknown", "n/a", ""]:
+                    return str(val).strip()
+
+    return "N/A"
+
+
 @api_view(["GET"])
 def sarvam_campaign_export_full_api(request, campaign_id):
     """
     Generates and downloads a comprehensive Excel file of the whole campaign,
-    including every candidate lead, their status across all 3 stages, detailed STATUS with tags & reasons, and AI call summary.
+    including candidate lead details, preferred store/location, 3-stage status, STATUS tags, and AI call summary.
     GET /api/sarvam/campaigns/<id>/export-full/
     """
     from conversations.models import SarvamCampaign
@@ -5191,6 +5211,7 @@ def sarvam_campaign_export_full_api(request, campaign_id):
         "Phone Number",
         "STATUS",
         "Interest Status",
+        "Preferred Store",
         "Stage 1 (Main)",
         "Stage 2 (Retry 1)",
         "Stage 3 (Retry 2 - Final)",
@@ -5219,6 +5240,7 @@ def sarvam_campaign_export_full_api(request, campaign_id):
             last_time = lead.created_at.strftime("%d %b %Y %H:%M")
 
         status_text, call_summary, category = _extract_lead_status_and_reasons(lead)
+        pref_store = _extract_preferred_store(lead)
 
         # 3-way status mapping
         if category in ["INTERESTED", "CALLBACK", "COMPLETED"]:
@@ -5234,6 +5256,7 @@ def sarvam_campaign_export_full_api(request, campaign_id):
             lead.phone_number,
             status_text,
             interest_mapped,
+            pref_store,
             lead.stage_1_status,
             lead.stage_2_status,
             lead.stage_3_status,
@@ -5248,9 +5271,9 @@ def sarvam_campaign_export_full_api(request, campaign_id):
         for col_num in range(1, len(headers) + 1):
             cell = ws.cell(row=curr_row, column=col_num)
             cell.border = thin_border
-            if col_num in [2, 3, 4]:
+            if col_num in [2, 3, 4, 6]:
                 cell.alignment = align_left
-            elif col_num == 10:
+            elif col_num == 11:
                 cell.alignment = align_left_wrap
             else:
                 cell.alignment = align_center
@@ -5288,8 +5311,8 @@ def sarvam_campaign_export_full_api(request, campaign_id):
                     cell.fill = PatternFill(start_color="F1F5F9", end_color="F1F5F9", fill_type="solid")
                     cell.font = Font(color="475569", bold=True)
 
-            # Highlight Final Outcome column (col 9)
-            elif col_num == 9:
+            # Highlight Final Outcome column (col 10)
+            elif col_num == 10:
                 if lead.final_status == "ANSWERED":
                     cell.fill = PatternFill(start_color="DCFCE7", end_color="DCFCE7", fill_type="solid")
                     cell.font = Font(color="166534", bold=True)
@@ -5304,7 +5327,9 @@ def sarvam_campaign_export_full_api(request, campaign_id):
             ws.column_dimensions[col_letter].width = 38
         elif col_idx == 5:
             ws.column_dimensions[col_letter].width = 20
-        elif col_idx == 10:
+        elif col_idx == 6:
+            ws.column_dimensions[col_letter].width = 25
+        elif col_idx == 11:
             ws.column_dimensions[col_letter].width = 50
         else:
             max_len = max(len(str(cell.value or '')) for cell in col)
@@ -5439,15 +5464,18 @@ def sarvam_sample_template_api(request):
     sample_data = [
         {
             "Candidate Name": "Rajesh Sharma",
-            "Phone Number": "91525XXXXX"
+            "Phone Number": "91525XXXXX",
+            "Recommended Store": "Bodakdev Store"
         },
         {
             "Candidate Name": "Priya Patel",
-            "Phone Number": "98765XXXXX"
+            "Phone Number": "98765XXXXX",
+            "Recommended Store": "Palladium Mall Store"
         },
         {
             "Candidate Name": "Amit Kumar",
-            "Phone Number": "91234XXXXX"
+            "Phone Number": "91234XXXXX",
+            "Recommended Store": "Vijay Cross Road Store"
         }
     ]
 
