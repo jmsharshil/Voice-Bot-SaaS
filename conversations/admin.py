@@ -178,6 +178,45 @@ class SarvamAgentAdmin(admin.ModelAdmin):
     reset_5000_minutes.short_description = "🔄 Reset Quota to 5,000 Minutes"
 
 
+@admin.register(SarvamCampaign)
+class SarvamCampaignAdmin(admin.ModelAdmin):
+    list_display = (
+        "id", "name", "sarvam_agent", "current_stage_badge", "status_badge",
+        "total_leads", "answered_count", "missed_count", "created_by", "created_at"
+    )
+    list_filter = ("status", "current_stage", "sarvam_agent", "created_at")
+    search_fields = ("name", "excel_file_name", "sarvam_agent__name")
+    readonly_fields = ("created_at", "updated_at")
+    ordering = ("-created_at",)
+
+    def current_stage_badge(self, obj):
+        stages = {
+            1: "Stage 1: Main",
+            2: "Stage 2: Retry #1",
+            3: "Stage 3: Final Retry #2",
+            4: "Completed"
+        }
+        return stages.get(obj.current_stage, f"Stage {obj.current_stage}")
+    current_stage_badge.short_description = "Current Stage"
+
+    def status_badge(self, obj):
+        color = "#16a34a" if obj.status == "COMPLETED" else ("#dc2626" if obj.status == "CANCELLED" else "#0284c7")
+        return format_html('<span style="color:{}; font-weight:700;">{}</span>', color, obj.status)
+    status_badge.short_description = "Status"
+
+
+@admin.register(SarvamCampaignLead)
+class SarvamCampaignLeadAdmin(admin.ModelAdmin):
+    list_display = (
+        "id", "candidate_name", "phone_number", "campaign", "applied_position",
+        "stage_1_status", "stage_2_status", "stage_3_status", "final_status", "created_at"
+    )
+    list_filter = ("final_status", "stage_1_status", "stage_2_status", "stage_3_status", "campaign")
+    search_fields = ("candidate_name", "phone_number", "applied_position")
+    readonly_fields = ("created_at", "updated_at")
+    ordering = ("id",)
+
+
 @admin.register(SarvamCallRecord)
 class SarvamCallRecordAdmin(admin.ModelAdmin):
     list_display = (
