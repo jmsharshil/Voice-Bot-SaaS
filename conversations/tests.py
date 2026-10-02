@@ -323,3 +323,50 @@ class SamsungStoreStrategyTestCase(TestCase):
 
         session.refresh_from_db()
         self.assertEqual(session.state["call_phase"], "LLM_CONVERSATION")
+
+
+from unittest.mock import patch, MagicMock
+from conversations.views import proxy_audio
+
+class ProxyAudioTestCase(TestCase):
+    def setUp(self):
+        self.factory = APIRequestFactory()
+
+    def test_proxy_audio_missing_url(self):
+        request = self.factory.get("/api/proxy-audio/")
+        response = proxy_audio(request)
+        self.assertEqual(response.status_code, 400)
+
+    def test_proxy_audio_options_cors(self):
+        request = self.factory.options("/api/proxy-audio/?url=https://example.com/audio.mp3")
+        response = proxy_audio(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Access-Control-Allow-Origin"], "*")
+
+    @patch("requests.get")
+    def test_proxy_audio_inline(self, mock_get):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.headers = {"Content-Type": "audio/mpeg", "Content-Length": "100"}
+        mock_resp.iter_content.return_value = [b"chunk1", b"chunk2"]
+        mock_get.return_value = mock_resp
+
+        request = self.factory.get("/api/proxy-audio/?url=https://example.com/audio.mp3")
+        response = proxy_audio(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Disposition"], "inline")
+        self.assertEqual(response["Content-Type"], "audio/mpeg")
+
+    @patch("requests.get")
+    def test_proxy_audio_download_attachment(self, mock_get):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.headers = {"Content-Type": "audio/mpeg", "Content-Length": "100"}
+        mock_resp.iter_content.return_value = [b"chunk1", b"chunk2"]
+        mock_get.return_value = mock_resp
+
+        request = self.factory.get("/api/proxy-audio/?url=https://example.com/audio.mp3&download=1&filename=call_recording_9104142402.mp3")
+        response = proxy_audio(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Disposition"], 'attachment; filename="call_recording_9104142402.mp3"')
+

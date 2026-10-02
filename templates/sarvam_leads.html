@@ -1676,6 +1676,78 @@
             setTimeout(() => { if (toast.parentNode) toast.remove(); }, 5000);
         }
 
+        async function downloadAudioFile(url, filename, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            if (!url) {
+                showToast('⚠️ No audio recording available for this call.', 'warning');
+                return;
+            }
+
+            const targetBtn = event ? (event.currentTarget || event.target) : null;
+            let originalHtml = '';
+            if (targetBtn && targetBtn.innerHTML) {
+                originalHtml = targetBtn.innerHTML;
+                targetBtn.disabled = true;
+                targetBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Downloading...';
+            }
+
+            showToast('⏳ Downloading recording...', 'info');
+
+            const cleanFilename = filename || 'call_recording.mp3';
+
+            // Ensure proxy URL contains download=1 and filename parameters
+            let downloadUrl = url;
+            if (!downloadUrl.includes('/api/proxy-audio/') && downloadUrl.startsWith('http')) {
+                downloadUrl = `/api/proxy-audio/?url=${encodeURIComponent(downloadUrl)}`;
+            }
+            const sep = downloadUrl.includes('?') ? '&' : '?';
+            if (!downloadUrl.includes('download=')) {
+                downloadUrl = `${downloadUrl}${sep}download=1&filename=${encodeURIComponent(cleanFilename)}`;
+            }
+
+            try {
+                const res = await fetch(downloadUrl);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const blob = await res.blob();
+
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = blobUrl;
+                a.download = cleanFilename;
+                document.body.appendChild(a);
+                a.click();
+
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(blobUrl);
+                }, 2000);
+
+                showToast('✅ Audio recording downloaded successfully!', 'success');
+            } catch (err) {
+                console.warn('Direct blob fetch failed, falling back to iframe/link trigger:', err);
+                // Fallback: programmatic trigger on hidden <a> tag with attachment header
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = downloadUrl;
+                a.setAttribute('download', cleanFilename);
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                }, 2000);
+                showToast('🎧 Audio download started!', 'success');
+            } finally {
+                if (targetBtn && originalHtml) {
+                    targetBtn.disabled = false;
+                    targetBtn.innerHTML = originalHtml;
+                }
+            }
+        }
+
 
         function getAvatarStyle(name) {
             const gradients = [
@@ -1733,6 +1805,14 @@
                     ? `<strong style="color: var(--text-primary); font-size: 0.92rem;">${escapeHtml(lead.contact)}</strong>`
                     : `<span style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic;">Private Contact</span>`;
 
+                const cleanAudioSrc = lead.audio_url
+                    ? ((lead.audio_url.startsWith('http') || !lead.audio_url.includes('/proxy-audio/'))
+                        ? `/api/proxy-audio/?url=${encodeURIComponent(lead.audio_url)}`
+                        : lead.audio_url)
+                    : '';
+                const recPhone = (lead.contact ? String(lead.contact).replace(/\D/g, '') : '') || (lead.interaction_id ? String(lead.interaction_id).split('/').pop() : '') || 'call';
+                const recFilename = `recording_${recPhone}.mp3`;
+
                 if (isSamsungAgent) {
                     const product = s.product_interest || s.car_model || s.model || s.product_name || s.interest || (lead.applied_position && !lead.applied_position.includes('Counselor') ? lead.applied_position : 'Samsung phone');
                     const area = s.customer_area || s.current_location || s.area || s.city || 'N/A';
@@ -1761,7 +1841,12 @@
                             <td>${statusBadge}</td>
                             <td>
                                 ${lead.audio_url
-                                    ? `<span style="color:#10b981;font-size:0.8rem;font-weight:600;"><i class="fa-solid fa-headphones"></i> Ready</span>`
+                                    ? `<div style="display:inline-flex; align-items:center; gap:6px;">
+                                        <span style="color:#10b981;font-size:0.8rem;font-weight:600;"><i class="fa-solid fa-headphones"></i> Ready</span>
+                                        <button type="button" class="btn-action" title="Download Audio Recording" onclick="downloadAudioFile('${cleanAudioSrc}', '${recFilename}', event)" style="padding:2px 6px; font-size:0.75rem; background:#eef2ff; color:#4f46e5; border:1px solid #c7d2fe; border-radius:4px; cursor:pointer;" onmouseover="this.style.background='#e0e7ff'" onmouseout="this.style.background='#eef2ff'">
+                                            <i class="fa-solid fa-download"></i>
+                                        </button>
+                                       </div>`
                                     : `<span style="color:#475569;font-size:0.8rem;"><i class="fa-regular fa-clock"></i> Processing</span>`
                                 }
                             </td>
@@ -1801,7 +1886,12 @@
                         <td>${statusBadge}</td>
                         <td>
                             ${lead.audio_url
-                                ? `<span style="color:#10b981;font-size:0.8rem;font-weight:600;"><i class="fa-solid fa-headphones"></i> Ready</span>`
+                                ? `<div style="display:inline-flex; align-items:center; gap:6px;">
+                                    <span style="color:#10b981;font-size:0.8rem;font-weight:600;"><i class="fa-solid fa-headphones"></i> Ready</span>
+                                    <button type="button" class="btn-action" title="Download Audio Recording" onclick="downloadAudioFile('${cleanAudioSrc}', '${recFilename}', event)" style="padding:2px 6px; font-size:0.75rem; background:#eef2ff; color:#4f46e5; border:1px solid #c7d2fe; border-radius:4px; cursor:pointer;" onmouseover="this.style.background='#e0e7ff'" onmouseout="this.style.background='#eef2ff'">
+                                        <i class="fa-solid fa-download"></i>
+                                    </button>
+                                   </div>`
                                 : `<span style="color:#475569;font-size:0.8rem;"><i class="fa-regular fa-clock"></i> Processing</span>`
                             }
                         </td>
@@ -2211,15 +2301,17 @@
                 const cleanAudioSrc = (lead.audio_url.startsWith('http') || !lead.audio_url.includes('/proxy-audio/'))
                     ? `/api/proxy-audio/?url=${encodeURIComponent(lead.audio_url)}`
                     : lead.audio_url;
+                const recPhone = (lead.contact ? String(lead.contact).replace(/\D/g, '') : '') || (lead.interaction_id ? String(lead.interaction_id).split('/').pop() : '') || 'call';
+                const recFilename = `recording_${recPhone}.mp3`;
                 sectionsHtml += `
                     <div class="detail-group">
                         <h4><i class="fa-solid fa-headphones"></i> Audio Recording</h4>
                         <audio class="audio-player" controls src="${cleanAudioSrc}"></audio>
-                        <p style="font-size:0.75rem;color:#64748b;margin-top:0.4rem;">
-                            <a href="${cleanAudioSrc}" target="_blank" style="color:#4f46e5;font-weight:600;text-decoration:none;">
-                                <i class="fa-solid fa-download"></i> Download Recording
-                            </a>
-                        </p>
+                        <div style="margin-top:0.6rem;">
+                            <button type="button" onclick="downloadAudioFile('${cleanAudioSrc}', '${recFilename}', event)" style="background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;padding:6px 14px;border-radius:6px;font-weight:600;font-size:0.82rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;box-shadow:0 1px 2px rgba(0,0,0,0.04);" onmouseover="this.style.background='#e0e7ff'" onmouseout="this.style.background='#eef2ff'">
+                                <i class="fa-solid fa-download"></i> Download Recording (.mp3)
+                            </button>
+                        </div>
                     </div>
                 `;
             }

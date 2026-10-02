@@ -2698,25 +2698,30 @@ def icemake_dashboard_data(request):
     })
 
 
-@api_view(["GET"])
+@api_view(["GET", "OPTIONS"])
 def proxy_audio(request):
     """
     Proxies external audio recording URLs so HTML5 audio element can stream them
-    inline without CORS restrictions or missing auth headers.
-    Automatically adds the Sarvam X-API-Key for Sarvam Analytics URLs.
-    Converts agents.sarvam.ai/media (session-only) to apps.sarvam.ai analytics API URLs.
+    inline without CORS restrictions or missing auth headers, and enables direct
+    file attachment downloading when requested with download=1.
     """
     import os
     import requests as _requests
-    from urllib.parse import urlparse, parse_qs
+    from urllib.parse import urlparse, parse_qs, unquote
     from django.http import StreamingHttpResponse, HttpResponse
+
+    if request.method == "OPTIONS":
+        res = HttpResponse(status=200)
+        res["Access-Control-Allow-Origin"] = "*"
+        res["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        res["Access-Control-Allow-Headers"] = "*"
+        return res
 
     audio_url = request.GET.get("url", "")
     if not audio_url:
         return HttpResponse("Missing url parameter", status=400)
 
     try:
-        from urllib.parse import unquote, urlparse, parse_qs
         # ✅ Recursively unwrap any nested proxy-audio URLs (e.g. /conversations/proxy-audio/?url=... or /api/proxy-audio/?url=...)
         while ("proxy-audio" in audio_url and "url=" in audio_url) or audio_url.startswith("%2F") or audio_url.startswith("/"):
             if "url=" in audio_url:
@@ -2810,8 +2815,31 @@ def proxy_audio(request):
             status=req.status_code,
             content_type=content_type
         )
-        response["Content-Disposition"] = "inline"
+
+        is_download = request.GET.get("download", "").lower() in ("1", "true", "yes")
+        raw_filename = request.GET.get("filename", "").strip()
+        if not raw_filename:
+            ext = ".mp3"
+            if "wav" in content_type.lower() or audio_url.lower().endswith(".wav"):
+                ext = ".wav"
+            elif "ogg" in content_type.lower() or audio_url.lower().endswith(".ogg"):
+                ext = ".ogg"
+            filename = f"recording{ext}"
+        else:
+            import re
+            filename = re.sub(r'[^a-zA-Z0-9_.-]', '_', raw_filename)
+            if not any(filename.lower().endswith(e) for e in [".mp3", ".wav", ".ogg", ".m4a", ".aac"]):
+                filename += ".mp3"
+
+        if is_download:
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            response["Access-Control-Expose-Headers"] = "Content-Disposition"
+        else:
+            response["Content-Disposition"] = "inline"
+
         response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "*"
         response["Accept-Ranges"] = "bytes"
         if "Content-Length" in req.headers:
             response["Content-Length"] = req.headers["Content-Length"]
