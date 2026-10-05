@@ -1083,9 +1083,6 @@
                         <a href="#" id="manageTeamMenuItem" onclick="openTeamManagementModal(event)" class="pd-item" style="display:flex; align-items:center; gap:8px; padding:10px 14px; color:#1e293b; text-decoration:none; font-size:0.88rem; font-weight:600; border-top:1px solid #f1f5f9; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                             <i class="fa-solid fa-users-gear" style="color:#6366f1;"></i> Manage Team
                         </a>
-                        <a href="/admin-management/" class="pd-item" id="adminConsoleMenuItem" style="display:none; align-items:center; gap:8px; padding:10px 14px; color:#1e293b; text-decoration:none; font-size:0.88rem; font-weight:600; border-top:1px solid #f1f5f9; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-                            <i class="fa-solid fa-shield-halved" style="color:#0284c7;"></i> Admin Console
-                        </a>
                         <button class="pd-logout" onclick="logout()">
                             <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
                         </button>
@@ -3448,12 +3445,10 @@
             const avatar = document.getElementById('profileAvatar');
             const pdName = document.getElementById('pdName');
             const pdRole = document.getElementById('pdRole');
-            const adminMenu = document.getElementById('adminConsoleMenuItem');
             const manageTeamMenu = document.getElementById('manageTeamMenuItem');
 
             if (pdName) pdName.textContent = username;
             if (pdRole) pdRole.textContent = role && role !== 'No Role' ? role : (isAdmin ? 'System Admin' : 'Logged in');
-            if (adminMenu && isAdmin) adminMenu.style.display = 'flex';
 
             if (avatar) {
                 if (profilePic && profilePic !== 'null' && profilePic !== '') {
