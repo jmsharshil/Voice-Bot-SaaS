@@ -15,6 +15,7 @@ from .views import (
     sarvam_campaign_export_full_api, sarvam_campaign_export_missed_api, sarvam_campaign_cancel_api,
     sarvam_agent_minutes_status_api, sarvam_adjust_agent_minutes_api, sarvam_toggle_agent_active_api,
     sarvam_admin_all_campaigns_api, sarvam_admin_campaign_action_api,
+    system_maintenance_enable_api, system_maintenance_disable_api, system_maintenance_status_api,
 )
 from django.urls import path, re_path
 
@@ -103,4 +104,12 @@ urlpatterns = [
     # Sarvam Agent Toggle Active Status
     path("sarvam/agents/<int:agent_id>/toggle/", sarvam_toggle_agent_active_api, name="sarvam-agent-toggle-id"),
     path("sarvam/<slug:agent_slug>/toggle/", sarvam_toggle_agent_active_api, name="sarvam-agent-toggle-slug"),
-]
+
+    # Production Maintenance System Control APIs (Postman Controlled)
+    path("system/maintenance/enable/", system_maintenance_enable_api, name="system-maintenance-enable"),
+    path("system/maintenance/disable/", system_maintenance_disable_api, name="system-maintenance-disable"),
+    path("system/maintenance/status/", system_maintenance_status_api, name="system-maintenance-status"),
+    path("api/system/maintenance/enable/", system_maintenance_enable_api),
+    path("api/system/maintenance/disable/", system_maintenance_disable_api),
+    path("api/system/maintenance/status/", system_maintenance_status_api),
+]

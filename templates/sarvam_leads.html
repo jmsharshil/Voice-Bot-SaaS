@@ -1091,6 +1091,20 @@
             </div>
         </div>
 
+        <!-- System Maintenance Live Alert Banner -->
+        <div id="maintenanceBanner" style="display:none; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1.5px solid #f59e0b; border-radius: 12px; padding: 14px 20px; margin: 16px clamp(14px, 2vw, 32px) 0 clamp(14px, 2vw, 32px); color: #92400e; font-weight: 600; font-size: 0.92rem; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15); animation: fadeIn 0.3s ease;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.4rem; color: #d97706;"></i>
+                <div>
+                    <strong style="display: block; font-size: 0.98rem; color: #78350f;">⚠️ System Under Maintenance</strong>
+                    <span id="maintenanceBannerText">System is under maintenance for 10 minutes. Call triggering and campaign launch features are temporarily paused. Please try again after 10 minutes.</span>
+                </div>
+            </div>
+            <span style="background: #ffffff; color: #b45309; border: 1px solid #fcd34d; padding: 5px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; white-space: nowrap;">
+                <i class="fa-solid fa-eye"></i> Exploration Mode Active
+            </span>
+        </div>
+
         <!-- Dashboard Section Navigation Tabs -->
         <div class="dashboard-tabs">
             <button class="dash-tab-btn active" id="tabScreeningsBtn" onclick="switchDashboardTab('screenings')">
@@ -1999,16 +2013,21 @@
         }
 
         async function fetchLeadsData(silent = false) {
-            const days = document.getElementById('daysFilter').value;
+            const days = document.getElementById('daysFilter')?.value || 30;
+            const search = (document.getElementById('searchInput')?.value || '').trim();
+            const statusSelect = document.getElementById('statusFilter');
+            const status = statusSelect ? statusSelect.value : currentCardFilter;
             const tbody = document.getElementById('leadsTableBody');
 
-            if (!silent) {
+            if (!silent && tbody) {
+                const isSamsung = isSamsungAgentMode();
+                const colSpan = isSamsung ? 8 : 7;
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7">
+                        <td colspan="${colSpan}">
                             <div class="loading-container">
                                 <div class="spinner"></div>
-                                <p>Fetching Candidate Screening Data...</p>
+                                <p>Fetching user Data...</p>
                             </div>
                         </td>
                     </tr>
@@ -2016,11 +2035,22 @@
             }
 
             try {
-                const response = await fetch(`${SARVAM_API_PREFIX}/data/?days=${days}`);
+                const reqPageSize = pageSize === 'ALL' ? 1000 : (parseInt(pageSize, 10) || 10);
+                const queryParams = new URLSearchParams({
+                    days: days,
+                    page: currentPage,
+                    page_size: reqPageSize,
+                    search: search,
+                    status: status
+                });
+
+                const response = await fetch(`${SARVAM_API_PREFIX}/data/?${queryParams.toString()}`);
                 const data = await response.json();
 
                 if (data.error) {
-                    if (!silent) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--accent-red); padding: 2rem;">Error: ${data.error}</td></tr>`;
+                    const isSamsung = isSamsungAgentMode();
+                    const colSpan = isSamsung ? 8 : 7;
+                    if (!silent && tbody) tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; color: var(--accent-red); padding: 2rem;">Error: ${data.error}</td></tr>`;
                     return;
                 }
 
@@ -2030,15 +2060,8 @@
                 }
 
                 const newLeads = data.leads || [];
-
-                // Smart diff: detect new records or newly added recordings
-                const newSig = newLeads.map(l => `${l.id}:${l.audio_url ? '1' : '0'}:${l.final_status}`).join('|');
-                const oldSig = allLeadsData.map(l => `${l.id}:${l.audio_url ? '1' : '0'}:${l.final_status}`).join('|');
-                const hasChanges = newSig !== oldSig;
-                const hadMoreRecords = newLeads.length > allLeadsData.length;
-                const newRecordings = newLeads.filter(nl => nl.audio_url && !allLeadsData.find(ol => ol.id === nl.id && ol.audio_url)).length;
-
                 allLeadsData = newLeads;
+                filteredLeadsCache = newLeads;
 
                 // Update Stats - Common for all Sarvam agents
                 const totalEl = document.getElementById('stat-total');
@@ -2046,7 +2069,7 @@
                 const callbackEl = document.getElementById('stat-callback');
                 const notIntEl = document.getElementById('stat-not-interested');
 
-                const totalVal = data.stats ? (data.stats.total_calls ?? (data.leads ? data.leads.length : 0)) : (data.leads ? data.leads.length : 0);
+                const totalVal = data.total ?? (data.stats ? (data.stats.total_calls ?? newLeads.length) : newLeads.length);
                 const highIntentVal = data.stats ? ((data.stats.high_intent || data.stats.interview_scheduled || 0)) : 0;
                 const callbackVal = data.stats ? (data.stats.callback_required || 0) : 0;
                 const notIntVal = data.stats ? ((data.stats.not_interested || 0) + (data.stats.role_mismatch || 0)) : 0;
@@ -2056,24 +2079,24 @@
                 if (callbackEl) callbackEl.innerText = callbackVal;
                 if (notIntEl) notIntEl.innerText = notIntVal;
 
-                if (!silent || hasChanges) {
-                    filterLeads();
-                }
+                // Server-side pagination parameters
+                const serverTotal = data.total ?? newLeads.length;
+                const totalPages = data.total_pages ?? (pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(serverTotal / reqPageSize)));
+                const startIdx = pageSize === 'ALL' ? 0 : (currentPage - 1) * reqPageSize;
+                const endIdx = pageSize === 'ALL' ? serverTotal : Math.min(startIdx + newLeads.length, serverTotal);
+
+                renderLeads(newLeads);
+                renderPaginationControls(serverTotal, startIdx, endIdx, totalPages);
 
                 // Update last-updated time
                 const lastUpdEl = document.getElementById('last-updated-time');
                 if (lastUpdEl) lastUpdEl.innerText = new Date().toLocaleTimeString();
 
-                // Show toast if data changed during silent poll
-                if (silent && hadMoreRecords) {
-                    showToast('📋 New call data received — dashboard updated!', 'info');
-                } else if (silent && newRecordings > 0) {
-                    showToast(`🎧 Recording ready for ${newRecordings} call(s)!`, 'success');
-                }
-
             } catch (err) {
                 console.error(err);
-                if (!silent) tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--accent-red); padding: 2rem;">Failed to fetch leads data.</td></tr>`;
+                const isSamsung = isSamsungAgentMode();
+                const colSpan = isSamsung ? 8 : 7;
+                if (!silent && tbody) tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; color: var(--accent-red); padding: 2rem;">Failed to fetch leads data.</td></tr>`;
             }
         }
 
@@ -2436,90 +2459,16 @@
         }
 
         function filterLeads(resetPage = false) {
-            const search = (document.getElementById('searchInput')?.value || '').toLowerCase();
             const statusSelect = document.getElementById('statusFilter');
             const status = statusSelect ? statusSelect.value : currentCardFilter;
 
             currentCardFilter = status;
             updateStatCardHighlight(status);
 
-            const filtered = allLeadsData.filter(lead => {
-                const s = lead.summary || {};
-                const matchesSearch = (lead.candidate_name || '').toLowerCase().includes(search) ||
-                                       (lead.contact || '').toLowerCase().includes(search) ||
-                                       (lead.applied_position || '').toLowerCase().includes(search) ||
-                                       (s.product_interest || '').toLowerCase().includes(search) ||
-                                       (s.customer_area || '').toLowerCase().includes(search) ||
-                                       (s.recommended_store || '').toLowerCase().includes(search);
-
-                const mainStatus = (lead.final_status || '').toUpperCase().trim();
-                const extraS = (typeof s === 'object' && s !== null) ? (s.final_status || s.status || s.intent || '').toUpperCase().trim() : '';
-
-                // Explicitly check for negative/uninterested markers
-                const isNotInterested = mainStatus.includes('NOT_INTERESTED') || mainStatus.includes('NOT INTERESTED') || 
-                                         mainStatus.includes('REJECTED') || mainStatus.includes('DECLINED') ||
-                                         extraS.includes('NOT_INTERESTED') || extraS.includes('NOT INTERESTED') || 
-                                         extraS.includes('REJECTED') || extraS.includes('DECLINED');
-
-                const isNoAnswer = mainStatus.includes('NO_ANSWER') || mainStatus.includes('MISSED') || 
-                                   mainStatus.includes('BUSY') || mainStatus.includes('FAILED') ||
-                                   extraS.includes('NO_ANSWER') || extraS.includes('MISSED');
-
-                const isMismatch = mainStatus.includes('MISMATCH') || extraS.includes('MISMATCH');
-
-                const isCallback = (mainStatus.includes('CALLBACK') || mainStatus.includes('WHATSAPP') || 
-                                    mainStatus.includes('FOLLOW_UP') || extraS.includes('CALLBACK') || 
-                                    extraS.includes('WHATSAPP')) && !isNotInterested;
-
-                const isInterested = (mainStatus === 'INTERVIEW' || mainStatus === 'INTERESTED' || mainStatus === 'HIGH_INTENT' ||
-                                     extraS === 'INTERVIEW' || extraS === 'INTERESTED' || extraS === 'HIGH_INTENT' ||
-                                     ['SCHEDULED', 'PURCHASE', 'STORE_VISIT', 'HIGH_INTENT', 'CONFIRMED', 'POSITIVE'].some(k => mainStatus.includes(k) || extraS.includes(k))) &&
-                                     !isNotInterested && !isNoAnswer && !isMismatch && !isCallback;
-
-                let matchesStatus = true;
-
-                if (status === 'INTERVIEW') {
-                    matchesStatus = isInterested;
-                } else if (status === 'CALLBACK') {
-                    matchesStatus = isCallback;
-                } else if (status === 'NOT_INTERESTED') {
-                    matchesStatus = isNotInterested || isNoAnswer || isMismatch;
-                } else if (status === 'MISMATCH') {
-                    matchesStatus = isMismatch;
-                }
-
-                return matchesSearch && matchesStatus;
-            });
-
-            filteredLeadsCache = filtered;
-
             if (resetPage) {
                 currentPage = 1;
             }
-
-            applyPaginationAndRender();
-        }
-
-        function applyPaginationAndRender() {
-            const total = filteredLeadsCache.length;
-            let effectivePageSize = pageSize === 'ALL' ? total : (parseInt(pageSize, 10) || 10);
-            if (effectivePageSize <= 0) effectivePageSize = 10;
-
-            const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(total / effectivePageSize));
-
-            if (currentPage > totalPages) {
-                currentPage = totalPages;
-            }
-            if (currentPage < 1) {
-                currentPage = 1;
-            }
-
-            const startIdx = pageSize === 'ALL' ? 0 : (currentPage - 1) * effectivePageSize;
-            const endIdx = pageSize === 'ALL' ? total : Math.min(startIdx + effectivePageSize, total);
-            const pagedLeads = (pageSize === 'ALL') ? filteredLeadsCache : filteredLeadsCache.slice(startIdx, endIdx);
-
-            renderLeads(pagedLeads);
-            renderPaginationControls(total, startIdx, endIdx, totalPages);
+            fetchLeadsData(false);
         }
 
         function onPageSizeChange(newSize) {
@@ -2529,12 +2478,12 @@
                 sel.value = String(newSize);
             }
             currentPage = 1;
-            applyPaginationAndRender();
+            fetchLeadsData(false);
         }
 
         function goToPage(pageNum) {
             currentPage = pageNum;
-            applyPaginationAndRender();
+            fetchLeadsData(false);
         }
 
         function renderPaginationControls(total, startIdx, endIdx, totalPages) {
@@ -2820,7 +2769,84 @@
             document.getElementById('detailModal').style.display = 'none';
         }
 
+        // ── Maintenance Mode Management ──
+        let isSystemUnderMaintenance = false;
+        let systemMaintenanceMessage = "System is under maintenance for 10 minutes. Please try again after 10 minutes.";
+
+        async function checkSystemMaintenanceStatus() {
+            try {
+                const response = await fetch('/api/system/maintenance/status/');
+                if (response.ok) {
+                    const data = await response.json();
+                    isSystemUnderMaintenance = !!(data.is_active || data.maintenance_active);
+                    if (data.message) {
+                        systemMaintenanceMessage = data.message;
+                    }
+                    applyMaintenanceUIState(isSystemUnderMaintenance, systemMaintenanceMessage);
+                }
+            } catch (err) {
+                console.warn('Maintenance status check error:', err);
+            }
+        }
+
+        function applyMaintenanceUIState(active, message) {
+            const banner = document.getElementById('maintenanceBanner');
+            const bannerText = document.getElementById('maintenanceBannerText');
+            
+            if (banner) {
+                banner.style.display = active ? 'flex' : 'none';
+                if (bannerText && message) bannerText.textContent = message;
+            }
+
+            // Find all call & campaign trigger buttons
+            const callButtons = document.querySelectorAll('.trigger-call-btn, .btn-call-quick, #submitCallBtn, #submitCampaignBtn');
+            callButtons.forEach(btn => {
+                if (active) {
+                    btn.setAttribute('data-maintenance-disabled', 'true');
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                    btn.style.pointerEvents = 'auto';
+                    btn.setAttribute('title', message);
+                    // Store original onclick if not already stored
+                    if (!btn.getAttribute('data-orig-onclick')) {
+                        btn.setAttribute('data-orig-onclick', btn.getAttribute('onclick') || '');
+                    }
+                    btn.onclick = function(e) {
+                        if (e) { e.preventDefault(); e.stopPropagation(); }
+                        openMaintenanceModal(message);
+                        return false;
+                    };
+                } else {
+                    btn.removeAttribute('data-maintenance-disabled');
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                    btn.removeAttribute('title');
+                    const origClick = btn.getAttribute('data-orig-onclick');
+                    if (origClick) {
+                        btn.setAttribute('onclick', origClick);
+                        btn.removeAttribute('data-orig-onclick');
+                    }
+                }
+            });
+        }
+
+        function openMaintenanceModal(msg) {
+            const modal = document.getElementById('maintenanceModal');
+            const msgEl = document.getElementById('maintenanceModalMsg');
+            if (msgEl) msgEl.textContent = msg || systemMaintenanceMessage;
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeMaintenanceModal() {
+            const modal = document.getElementById('maintenanceModal');
+            if (modal) modal.style.display = 'none';
+        }
+
         function openTriggerCallModal(phone = '', name = '') {
+            if (isSystemUnderMaintenance) {
+                openMaintenanceModal(systemMaintenanceMessage);
+                return;
+            }
             if (currentAgentMinutes && currentAgentMinutes.is_exhausted) {
                 openMinutesExhaustedModal();
                 return;
@@ -2837,6 +2863,11 @@
 
         async function handleTriggerCall(event) {
             event.preventDefault();
+            if (isSystemUnderMaintenance) {
+                closeTriggerCallModal();
+                openMaintenanceModal(systemMaintenanceMessage);
+                return;
+            }
             if (currentAgentMinutes && currentAgentMinutes.is_exhausted) {
                 closeTriggerCallModal();
                 openMinutesExhaustedModal();
@@ -3305,6 +3336,10 @@
         }
 
         function openCampaignModal() {
+            if (isSystemUnderMaintenance) {
+                openMaintenanceModal(systemMaintenanceMessage);
+                return;
+            }
             if (currentAgentMinutes && currentAgentMinutes.is_exhausted) {
                 openMinutesExhaustedModal();
                 return;
@@ -3349,6 +3384,11 @@
 
         async function handleCampaignUpload(event) {
             event.preventDefault();
+            if (isSystemUnderMaintenance) {
+                closeCampaignModal();
+                openMaintenanceModal(systemMaintenanceMessage);
+                return;
+            }
             if (currentAgentMinutes && currentAgentMinutes.is_exhausted) {
                 closeCampaignModal();
                 openMinutesExhaustedModal();
@@ -3606,11 +3646,13 @@
             applyAgentTheme();
             loadUserAssignedAgents();
             fetchLeadsData();
+            checkSystemMaintenanceStatus();
         });
 
         let isCampaignActive = false;
 
         function runDynamicPoll() {
+            checkSystemMaintenanceStatus();
             if (currentDashboardTab === 'campaigns') {
                 fetchCampaignsData(true);
             } else {

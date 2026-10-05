@@ -508,4 +508,24 @@ class SarvamCampaignLead(models.Model):
         verbose_name = "Sarvam Campaign Lead"
         verbose_name_plural = "Sarvam Campaign Leads"
         ordering = ["id"]
+
+
+class SystemMaintenanceConfig(models.Model):
+    """Simple System Maintenance Toggle for Production Deployments."""
+    is_active = models.BooleanField(default=False)
+    message = models.CharField(
+        max_length=255,
+        default="System is under maintenance for 10 minutes. Please try again after 10 minutes."
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Maintenance: {'ON' if self.is_active else 'OFF'}"
+
+    @classmethod
+    def get_config(cls):
+        config, _ = cls.objects.get_or_create(id=1)
+        return config
+
+
 

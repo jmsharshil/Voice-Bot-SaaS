@@ -3646,12 +3646,91 @@ def sarvam_leads_data(request, agent_slug=None):
         "usage_percentage": sarvam_agent.usage_percentage if sarvam_agent else 0.0,
     }
 
+    # Filter by search & status query params if provided
+    search_q = (request.GET.get("search") or "").strip().lower()
+    status_q = (request.GET.get("status") or "").strip().upper()
+
+    if search_q or (status_q and status_q != "ALL"):
+        filtered_leads = []
+        for lead in processed_leads:
+            s_dict = lead.get("summary") or {}
+            cand_name = str(lead.get("candidate_name") or "").lower()
+            contact_str = str(lead.get("contact") or "").lower()
+            pos_str = str(lead.get("applied_position") or "").lower()
+            prod_str = str(s_dict.get("product_interest") or "").lower()
+            store_str = str(s_dict.get("recommended_store") or s_dict.get("store") or "").lower()
+
+            matches_search = not search_q or (
+                search_q in cand_name or search_q in contact_str or
+                search_q in pos_str or search_q in prod_str or search_q in store_str
+            )
+
+            st_val = str(lead.get("final_status") or "").upper()
+            if status_q == "INTERVIEW":
+                matches_status = (st_val == "INTERVIEW")
+            elif status_q == "CALLBACK":
+                matches_status = (st_val == "CALLBACK")
+            elif status_q == "NOT_INTERESTED":
+                matches_status = (st_val in ["NOT_INTERESTED", "NO_ANSWER", "MISMATCH"])
+            elif status_q == "MISMATCH":
+                matches_status = (st_val == "MISMATCH")
+            else:
+                matches_status = True
+
+            if matches_search and matches_status:
+                filtered_leads.append(lead)
+    else:
+        filtered_leads = processed_leads
+
+    import math
+    total_count = len(filtered_leads)
+    
+    raw_page = request.GET.get("page")
+    raw_page_size = request.GET.get("page_size") or request.GET.get("limit")
+
+    if raw_page or raw_page_size:
+        try:
+            page = max(int(raw_page or 1), 1)
+        except (ValueError, TypeError):
+            page = 1
+        
+        try:
+            page_size = int(raw_page_size or 10)
+        except (ValueError, TypeError):
+            page_size = 10
+
+        if page_size > 0:
+            total_pages = math.ceil(total_count / page_size) if total_count > 0 else 1
+            if page > total_pages:
+                page = total_pages
+            start_idx = (page - 1) * page_size
+            end_idx = start_idx + page_size
+            paged_leads = filtered_leads[start_idx:end_idx]
+        else:
+            paged_leads = filtered_leads
+            total_pages = 1
+            page = 1
+            page_size = total_count
+    else:
+        paged_leads = filtered_leads
+        total_pages = 1
+        page = 1
+        page_size = total_count
+
     return Response({
-        "total": len(processed_leads),
+        "total": total_count,
+        "total_unfiltered": len(processed_leads),
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
         "stats": stats,
         "agent_minutes": agent_minutes_info,
-        "leads": processed_leads
+        "leads": paged_leads,
+        "agent_name": sarvam_agent.name if sarvam_agent else "Sarvam AI Agent",
+        "agent_slug": sarvam_agent.slug if sarvam_agent else "default",
+        "agent_phone": sarvam_agent.agent_phone if sarvam_agent else ""
     }, status=200)
+
 
 
 @api_view(["GET"])
@@ -3795,7 +3874,15 @@ def sarvam_transcript_detail(request, interaction_id, agent_slug=None):
 def sarvam_trigger_call_api(request, agent_slug=None):
     """Triggers an outbound call directly from the Sarvam AI Agent dashboard."""
     import os
-    from conversations.models import SarvamCallRecord, SarvamAgent
+    from conversations.models import SarvamCallRecord, SarvamAgent, SystemMaintenanceConfig
+
+    # Maintenance Check: Block single call triggering during maintenance
+    m_config = SystemMaintenanceConfig.get_config()
+    if m_config.is_active:
+        return Response({
+            "error": m_config.message,
+            "maintenance_active": True
+        }, status=503)
 
     data = request.data or {}
     phone_number = data.get("phone_number") or data.get("phone")
@@ -4711,7 +4798,15 @@ def sarvam_upload_campaign_api(request, agent_slug=None):
     import threading
     import pandas as pd
     from datetime import datetime
-    from conversations.models import SarvamAgent, SarvamCampaign, SarvamCampaignLead
+    from conversations.models import SarvamAgent, SarvamCampaign, SarvamCampaignLead, SystemMaintenanceConfig
+
+    # Maintenance Check: Block Excel campaign upload & launching during maintenance
+    m_config = SystemMaintenanceConfig.get_config()
+    if m_config.is_active:
+        return Response({
+            "error": m_config.message,
+            "maintenance_active": True
+        }, status=503)
 
     # Resolve agent
     slug = agent_slug or request.data.get("agent_slug")
@@ -5312,6 +5407,87 @@ def sarvam_admin_campaign_action_api(request, campaign_id):
     return Response({"status": "success", "message": f"Campaign #{campaign_id} status updated to {campaign.status}."}, status=200)
 
 
+# ======================================================
+# POSTMAN SYSTEM MAINTENANCE & ZERO-DOWNTIME DEPLOYMENT APIs
+# ======================================================
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def system_maintenance_enable_api(request):
+    """
+    POSTMAN MAINTENANCE API: Enables Maintenance Mode for production code deployments.
+    Headers or Body: secret_key or X-Admin-Secret-Key
+    Disables trigger call & campaign upload buttons for all clients, while leaving platform exploration active.
+    POST /api/system/maintenance/enable/
+    """
+    sec = request.headers.get("X-Admin-Secret-Key") or request.data.get("secret_key")
+    from conversations.models import SystemMaintenanceConfig, SarvamCampaign
+    config = SystemMaintenanceConfig.get_config()
+
+    if not sec or sec.strip() != config.secret_key.strip():
+        return Response({"error": "Invalid or missing admin secret key."}, status=403)
+
+    msg = request.data.get("message") or "System is under maintenance for 10 minutes. Please try again after 10 minutes."
+    config.is_active = True
+    config.message = msg
+    config.save()
+
+    # Safely pause running campaigns to avoid dropped calls during deployment
+    running_campaigns = SarvamCampaign.objects.filter(status__icontains="RUNNING")
+    paused_count = running_campaigns.count()
+    running_campaigns.update(status="PAUSED")
+
+    return Response({
+        "status": "success",
+        "maintenance_active": True,
+        "message": f"Maintenance Mode ENABLED. Call trigger & campaign buttons are now disabled for all clients. {paused_count} running campaign(s) safely paused.",
+        "maintenance_notice": config.message,
+        "active_campaigns_paused": paused_count
+    }, status=200)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def system_maintenance_disable_api(request):
+    """
+    POSTMAN MAINTENANCE API: Disables Maintenance Mode after code deployment finishes.
+    Headers or Body: secret_key or X-Admin-Secret-Key
+    Re-enables call triggering & campaign uploading for all clients.
+    POST /api/system/maintenance/disable/
+    """
+    sec = request.headers.get("X-Admin-Secret-Key") or request.data.get("secret_key")
+    from conversations.models import SystemMaintenanceConfig
+    config = SystemMaintenanceConfig.get_config()
+
+    if not sec or sec.strip() != config.secret_key.strip():
+        return Response({"error": "Invalid or missing admin secret key."}, status=403)
+
+    config.is_active = False
+    config.save()
+
+    return Response({
+        "status": "success",
+        "maintenance_active": False,
+        "message": "Maintenance Mode DISABLED. All client buttons & call features are now fully enabled and operational!"
+    }, status=200)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def system_maintenance_status_api(request):
+    """
+    Public Status API: Used by Postman and dashboard polling.
+    Returns whether maintenance mode is active and the maintenance notice message.
+    GET /api/system/maintenance/status/
+    """
+    from conversations.models import SystemMaintenanceConfig
+    config = SystemMaintenanceConfig.get_config()
+    return Response({
+        "maintenance_active": config.is_active,
+        "message": config.message if config.is_active else ""
+    }, status=200)
+
+
 
 def _extract_preferred_store(lead):
     """Extracts preferred store or location from call summary and dynamic variables."""
@@ -5838,4 +6014,64 @@ def sarvam_toggle_agent_active_api(request, agent_id=None, agent_slug=None):
         "is_active": agent.is_active,
         "message": f"Agent '{agent.name}' is now {'Active' if agent.is_active else 'Inactive'}."
     }, status=200)
+
+
+# ── SIMPLE PRODUCTION MAINTENANCE MODE SYSTEM APIs ──
+
+@api_view(["POST", "GET"])
+@permission_classes([AllowAny])
+def system_maintenance_enable_api(request):
+    """
+    Simple API to ENABLE system maintenance mode.
+    Disables call triggering and campaign buttons for all client dashboards.
+    """
+    from conversations.models import SystemMaintenanceConfig, SarvamCampaign
+    config = SystemMaintenanceConfig.get_config()
+    config.is_active = True
+    config.save(update_fields=["is_active", "updated_at"])
+
+    # Safely pause running dialer campaigns
+    SarvamCampaign.objects.filter(status__in=["dialing", "running"]).update(status="paused")
+
+    return Response({
+        "status": "success",
+        "maintenance_active": True,
+        "message": "System Maintenance ENABLED. Call trigger & campaign buttons are now disabled for users."
+    }, status=200)
+
+
+@api_view(["POST", "GET"])
+@permission_classes([AllowAny])
+def system_maintenance_disable_api(request):
+    """
+    Simple API to DISABLE system maintenance mode.
+    Re-enables call triggering and campaign buttons for all client dashboards.
+    """
+    from conversations.models import SystemMaintenanceConfig
+    config = SystemMaintenanceConfig.get_config()
+    config.is_active = False
+    config.save(update_fields=["is_active", "updated_at"])
+
+    return Response({
+        "status": "success",
+        "maintenance_active": False,
+        "message": "System Maintenance DISABLED. All dashboard call features are now fully enabled!"
+    }, status=200)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def system_maintenance_status_api(request):
+    """
+    Simple API to return current maintenance status for dashboard polling.
+    """
+    from conversations.models import SystemMaintenanceConfig
+    config = SystemMaintenanceConfig.get_config()
+    return Response({
+        "is_active": config.is_active,
+        "maintenance_active": config.is_active,
+        "message": config.message if config.is_active else ""
+    }, status=200)
+
+
 
