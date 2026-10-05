@@ -86,6 +86,26 @@
         return accessToken;
     }
 
+    // Extract cookie value by name (e.g., csrftoken) or fallback to DOM input
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        if (!cookieValue) {
+            const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (csrfInput) cookieValue = csrfInput.value;
+        }
+        return cookieValue;
+    }
+
     // Intercept global fetch
     const originalFetch = window.fetch;
     window.fetch = async function(resource, options) {
@@ -96,20 +116,39 @@
             return originalFetch(resource, options);
         }
 
-        const hasAccessToken = localStorage.getItem('access_token');
+        options = options || {};
+        options.headers = options.headers || {};
 
-        if (hasAccessToken && isInternalUrl(urlStr)) {
-            const token = await refreshTokenIfNeeded();
-            if (token) {
-                options = options || {};
-                options.headers = options.headers || {};
+        if (isInternalUrl(urlStr)) {
+            const hasAccessToken = localStorage.getItem('access_token');
+            if (hasAccessToken) {
+                const token = await refreshTokenIfNeeded();
+                if (token) {
+                    // Automatically inject/update the Authorization header for all internal calls
+                    if (options.headers instanceof Headers) {
+                        options.headers.set('Authorization', 'Bearer ' + token);
+                    } else if (typeof options.headers === 'object') {
+                        const authKey = Object.keys(options.headers).find(k => k.toLowerCase() === 'authorization') || 'Authorization';
+                        options.headers[authKey] = 'Bearer ' + token;
+                    }
+                }
+            }
 
-                // Automatically inject/update the Authorization header for all internal calls
-                if (options.headers instanceof Headers) {
-                    options.headers.set('Authorization', 'Bearer ' + token);
-                } else if (typeof options.headers === 'object') {
-                    const authKey = Object.keys(options.headers).find(k => k.toLowerCase() === 'authorization') || 'Authorization';
-                    options.headers[authKey] = 'Bearer ' + token;
+            // Automatically inject X-CSRFToken header for state-changing HTTP methods (POST, PUT, PATCH, DELETE)
+            const method = (options.method || 'GET').toUpperCase();
+            if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+                const csrfToken = getCookie('csrftoken');
+                if (csrfToken) {
+                    if (options.headers instanceof Headers) {
+                        if (!options.headers.has('X-CSRFToken')) {
+                            options.headers.set('X-CSRFToken', csrfToken);
+                        }
+                    } else if (typeof options.headers === 'object') {
+                        const csrfKey = Object.keys(options.headers).find(k => k.toLowerCase() === 'x-csrftoken') || 'X-CSRFToken';
+                        if (!options.headers[csrfKey]) {
+                            options.headers[csrfKey] = csrfToken;
+                        }
+                    }
                 }
             }
         }
@@ -117,6 +156,7 @@
         const response = await originalFetch(resource, options);
 
         // Fallback: If any internal API request returns 401 Unauthorized, force token refresh and retry once
+        const hasAccessToken = localStorage.getItem('access_token');
         if (response.status === 401 && !urlStr.includes('/api/accounts/token/refresh/') && hasAccessToken && isInternalUrl(urlStr)) {
             const token = await refreshTokenIfNeeded(true); // Force refresh on 401
             if (token) {

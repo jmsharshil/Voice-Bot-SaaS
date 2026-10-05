@@ -46,7 +46,7 @@ from django.urls import path, include
 from django.views.generic import RedirectView
 from conversations.views import demo_page, icemake_dashboard_page, sarvam_leads_page
 from conversations.views import call_analytics_page, lead_analysis_page, lead_analysis_data, lead_analysis_detail
-# from chat_channels.whatsapp.webhook import whatsapp_webhook
+from accounts.views import team_management_page, admin_management_page
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -56,6 +56,8 @@ urlpatterns = [
     path("dashboard/", lead_analysis_page, name="lead-analysis"),
     path("sarvam-leads/", sarvam_leads_page, name="sarvam-leads-root"),
     path("icemake-dashboard/", icemake_dashboard_page, name="icemake-dashboard"),
+    path("team-management/", team_management_page, name="team-management-direct"),
+    path("admin-management/", admin_management_page, name="admin-management-direct"),
     path("navya-analytics/lead-analysis/data/", lead_analysis_data, name="lead-analysis-data"),
     path("navya-analytics/lead-analysis/detail/<str:session_id>/", lead_analysis_detail, name="lead-analysis-detail"),
     path("accounts/", include("accounts.urls")),

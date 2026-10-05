@@ -1080,6 +1080,12 @@
                             <div class="pd-name" id="pdName">User</div>
                             <div class="pd-label" id="pdRole">Logged in</div>
                         </div>
+                        <a href="#" id="manageTeamMenuItem" onclick="openTeamManagementModal(event)" class="pd-item" style="display:flex; align-items:center; gap:8px; padding:10px 14px; color:#1e293b; text-decoration:none; font-size:0.88rem; font-weight:600; border-top:1px solid #f1f5f9; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                            <i class="fa-solid fa-users-gear" style="color:#6366f1;"></i> Manage Team
+                        </a>
+                        <a href="/admin-management/" class="pd-item" id="adminConsoleMenuItem" style="display:none; align-items:center; gap:8px; padding:10px 14px; color:#1e293b; text-decoration:none; font-size:0.88rem; font-weight:600; border-top:1px solid #f1f5f9; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                            <i class="fa-solid fa-shield-halved" style="color:#0284c7;"></i> Admin Console
+                        </a>
                         <button class="pd-logout" onclick="logout()">
                             <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
                         </button>
@@ -1104,13 +1110,47 @@
             const SARVAM_AGENT_SLUG = "{{ agent_slug|default:'default' }}";
             const SARVAM_AGENT_NAME = "{{ agent_name|default:'Voice AI Agent' }}";
             const SARVAM_AGENT_PHONE = "{{ agent_phone|default:'' }}";
-            const isSamsungAgent = SARVAM_AGENT_SLUG.includes('samsung') || SARVAM_AGENT_NAME.toLowerCase().includes('samsung') || SARVAM_AGENT_SLUG === 'vtech';
+            
+            function isSamsungAgentMode() {
+                const slug = (typeof SARVAM_AGENT_SLUG !== 'undefined' ? SARVAM_AGENT_SLUG : '').toLowerCase();
+                const name = (typeof SARVAM_AGENT_NAME !== 'undefined' ? SARVAM_AGENT_NAME : '').toLowerCase();
+                const path = window.location.pathname.toLowerCase();
+                const headingEl = document.getElementById('pageMainHeading');
+                const heading = headingEl ? headingEl.innerText.toLowerCase() : '';
+
+                return (
+                    slug.includes('samsung') || slug.includes('vtech') || slug.includes('cafe') ||
+                    name.includes('samsung') || name.includes('vtech') || name.includes('cafe') ||
+                    path.includes('samsung') || path.includes('vtech') || path.includes('cafe') ||
+                    heading.includes('samsung') || heading.includes('vtech') || heading.includes('cafe')
+                );
+            }
+
+            const isSamsungAgent = isSamsungAgentMode();
             const SARVAM_API_PREFIX = SARVAM_AGENT_SLUG && SARVAM_AGENT_SLUG !== 'default'
                 ? `/api/sarvam/${SARVAM_AGENT_SLUG}/leads`
                 : '/api/sarvam/leads';
             const SARVAM_CAMPAIGN_API_PREFIX = SARVAM_AGENT_SLUG && SARVAM_AGENT_SLUG !== 'default'
                 ? `/api/sarvam/${SARVAM_AGENT_SLUG}/campaigns`
                 : '/api/sarvam/campaigns';
+
+            document.addEventListener('DOMContentLoaded', () => {
+                if (isSamsungAgentMode()) {
+                    const headerRow = document.getElementById('tableHeaderRow');
+                    if (headerRow) {
+                        headerRow.innerHTML = `
+                            <th>Customer Details</th>
+                            <th>Contact Number</th>
+                            <th>Product Interest</th>
+                            <th>Recommended Store</th>
+                            <th>Call Outcome</th>
+                            <th>Recording</th>
+                            <th>Date &amp; Time</th>
+                            <th>Actions</th>
+                        `;
+                    }
+                }
+            });
         </script>
 
         <!-- SECTION 1: CANDIDATE / CUSTOMER LEADS -->
@@ -1490,6 +1530,114 @@
         </div>
     </div>
 
+    <!-- Team Management Modal Card -->
+    <div class="modal-overlay" id="teamManagementModal" style="display:none; z-index:9999;">
+        <div class="modal-card" style="max-width: 780px; width: 95%; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-bottom: 1px solid #e2e8f0; padding: 1.25rem 1.5rem; border-radius: 20px 20px 0 0;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(99, 102, 241, 0.12); color: #6366f1; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                        <i class="fa-solid fa-users-gear"></i>
+                    </div>
+                    <div>
+                        <h2 style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0;">Team &amp; Sub-User Management</h2>
+                        <p style="font-size: 0.8rem; color: #64748b; margin: 2px 0 0 0;">Allocate voice agent access &amp; manage sub-user permissions</p>
+                    </div>
+                </div>
+                <button class="close-btn" onclick="closeTeamManagementModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body" style="padding: 1.5rem; max-height: 75vh; overflow-y: auto;">
+                <!-- Sub-User Header Bar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap;">
+                    <h3 style="font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0; display:flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-user-group" style="color:#0284c7;"></i> Active Team Members (<span id="teamMemberCount">0</span>)
+                    </h3>
+                    <button type="button" onclick="toggleAddMemberForm()" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.25);">
+                        <i class="fa-solid fa-user-plus"></i> <span id="addMemberBtnText">Add Team Member</span>
+                    </button>
+                </div>
+
+                <!-- Alert Message -->
+                <div id="teamModalAlert" style="display: none; padding: 0.8rem 1rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; margin-bottom: 1rem;"></div>
+
+                <!-- Add Team Member Collapsible Form -->
+                <div id="addTeamMemberCard" style="display: none; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+                    <h4 style="font-size: 0.9rem; font-weight: 700; color: #0f172a; margin: 0 0 1rem 0; display:flex; align-items:center; gap:6px;">
+                        <i class="fa-solid fa-user-plus" style="color: #6366f1;"></i> Create New Sub-User
+                    </h4>
+                    <form id="addTeamMemberForm" onsubmit="submitAddTeamMember(event)">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.3rem;">Username *</label>
+                                <input type="text" id="newTeamUsername" required placeholder="e.g. john_agent" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.88rem; outline: none; background: white;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.3rem;">Email Address *</label>
+                                <input type="email" id="newTeamEmail" required placeholder="john@example.com" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.88rem; outline: none; background: white;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.3rem;">Password *</label>
+                                <input type="password" id="newTeamPassword" required placeholder="••••••••" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.88rem; outline: none; background: white;">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 1rem; background: #ffffff; padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.5rem;">Access Permissions</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.82rem; color: #475569;">
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="permViewLeads" checked style="accent-color: #0284c7;"> View Calls &amp; Inquiries
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="permViewCampaigns" checked style="accent-color: #0284c7;"> View &amp; Launch Campaigns
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                    <input type="checkbox" id="permManageTeam" style="accent-color: #0284c7;"> Manage Sub-Users
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom: 1rem; background: #ffffff; padding: 0.85rem 1rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                            <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.3rem;">
+                                <i class="fa-solid fa-store" style="color:#0284c7;"></i> Assigned Recommended Store(s)
+                            </label>
+                            <input type="text" id="newTeamStores" placeholder="e.g. CG Road Store, Satellite Store (comma-separated)" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.85rem; outline: none; background: white;">
+                            <small style="color: #64748b; font-size: 0.75rem; margin-top: 4px; display: block;">Sub-users will strictly only see calls matching these assigned store names. Leave blank for full access.</small>
+                        </div>
+
+                        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                            <button type="button" onclick="toggleAddMemberForm(false)" style="padding: 7px 14px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: 600; font-size: 0.82rem; cursor: pointer; color: #475569;">Cancel</button>
+                            <button type="submit" id="btnSubmitTeamUser" style="padding: 7px 18px; border-radius: 8px; border: none; background: #16a34a; color: white; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-check"></i> Create Sub-User
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Sub-Users List Table -->
+                <div class="table-responsive" style="max-height: 380px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+                        <thead>
+                            <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 700;">
+                                <th style="padding: 10px 14px;">User</th>
+                                <th style="padding: 10px 14px;">Email</th>
+                                <th style="padding: 10px 14px;">Permissions</th>
+                                <th style="padding: 10px 14px; text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teamMembersTableBody">
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                                    <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #0284c7;"></i>
+                                    <p style="margin-top: 6px; font-weight: 500;">Loading team members...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         let allLeadsData = [];
@@ -1497,6 +1645,282 @@
         let currentPage = 1;
         let pageSize = 10;
         let filteredLeadsCache = [];
+
+        function getCsrfToken() {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 10) === ('csrftoken=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(10));
+                        break;
+                    }
+                }
+            }
+            return cookieValue || '';
+        }
+
+        function getAuthHeaders(extraHeaders = {}) {
+            const headers = { ...extraHeaders };
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            const csrfToken = getCsrfToken();
+            if (csrfToken) {
+                headers['X-CSRFToken'] = csrfToken;
+            }
+            return headers;
+        }
+
+        function openTeamManagementModal(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown) dropdown.classList.remove('open');
+
+            let permissions = {};
+            try { permissions = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch(e){}
+            const isAdmin = localStorage.getItem('is_admin') === 'true' || '{{ request.user.is_superuser|yesno:"true,false" }}' === 'true';
+            const isSubUser = '{{ request.user.profile.created_by|default:"" }}' !== '';
+            let canManageTeam = false;
+            if (isAdmin) {
+                canManageTeam = true;
+            } else if (permissions.can_manage_team !== undefined) {
+                canManageTeam = permissions.can_manage_team === true;
+            } else {
+                canManageTeam = !isSubUser;
+            }
+
+            if (!canManageTeam) {
+                alert('You do not have permission to manage team sub-users.');
+                return;
+            }
+
+            const modal = document.getElementById('teamManagementModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                loadTeamMemberList();
+            }
+        }
+
+        function closeTeamManagementModal() {
+            const modal = document.getElementById('teamManagementModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        window.openTeamManagementModal = openTeamManagementModal;
+        window.closeTeamManagementModal = closeTeamManagementModal;
+
+        function toggleAddMemberForm(show) {
+            const card = document.getElementById('addTeamMemberCard');
+            const btnText = document.getElementById('addMemberBtnText');
+            if (!card) return;
+            if (show === undefined) {
+                show = card.style.display === 'none';
+            }
+            card.style.display = show ? 'block' : 'none';
+            if (btnText) {
+                btnText.textContent = show ? 'Close Form' : 'Add Team Member';
+            }
+        }
+
+        async function loadTeamMemberList() {
+            const tbody = document.getElementById('teamMembersTableBody');
+            const countSpan = document.getElementById('teamMemberCount');
+            if (!tbody) return;
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: #94a3b8;">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem; color: #0284c7;"></i>
+                        <p style="margin-top: 6px; font-weight: 500;">Loading team members...</p>
+                    </td>
+                </tr>
+            `;
+
+            try {
+                const response = await fetch('/api/accounts/team/', {
+                    headers: getAuthHeaders({ 'Accept': 'application/json' })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 1.5rem; color: #dc2626;">
+                                <i class="fa-solid fa-triangle-exclamation" style="font-size: 1.2rem;"></i>
+                                <p style="margin-top: 4px; font-weight: 600;">${errData.error || errData.detail || 'Failed to load team members'}</p>
+                            </td>
+                        </tr>
+                    `;
+                    if (countSpan) countSpan.textContent = '0';
+                    return;
+                }
+
+                const members = await response.json();
+                if (countSpan) countSpan.textContent = members.length;
+
+                if (!members || members.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 2rem; color: #64748b;">
+                                <i class="fa-solid fa-users" style="font-size: 1.8rem; color: #cbd5e1; margin-bottom: 6px; display: block;"></i>
+                                No sub-users added yet. Click <strong>Add Team Member</strong> to create one.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = members.map(m => {
+                    const perms = m.custom_permissions || {};
+                    const permBadges = [];
+                    if (perms.can_view_leads !== false) permBadges.push('<span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;">Calls</span>');
+                    if (perms.can_view_campaigns !== false) permBadges.push('<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;">Campaigns</span>');
+                    if (perms.can_manage_team) permBadges.push('<span style="background:#fef3c7; color:#b45309; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;">Team Admin</span>');
+
+                    const assignedStores = perms.assigned_stores || [];
+                    let storeText = '';
+                    if (Array.isArray(assignedStores) && assignedStores.length > 0) {
+                        storeText = assignedStores.join(', ');
+                    } else if (typeof assignedStores === 'string' && assignedStores.trim()) {
+                        storeText = assignedStores.trim();
+                    }
+                    if (storeText) {
+                        permBadges.push(`<span style="background:#fae8ff; color:#86198f; padding:2px 6px; border-radius:4px; font-size:0.75rem; font-weight:600;" title="Assigned Recommended Stores"><i class="fa-solid fa-store"></i> ${escapeHtml(storeText)}</span>`);
+                    }
+
+                    return `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 10px 14px; font-weight: 700; color: #0f172a;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <div style="width:30px; height:30px; border-radius:50%; background:#e2e8f0; color:#475569; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.8rem;">
+                                        ${m.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span>${m.username}</span>
+                                </div>
+                            </td>
+                            <td style="padding: 10px 14px; color: #475569;">${m.email || '—'}</td>
+                            <td style="padding: 10px 14px;">
+                                <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                    ${permBadges.length > 0 ? permBadges.join(' ') : '<span style="color:#94a3b8; font-size:0.75rem;">Standard</span>'}
+                                </div>
+                            </td>
+                            <td style="padding: 10px 14px; text-align: center;">
+                                <button type="button" onclick="deleteTeamMember(${m.id}, '${m.username}')" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Delete Sub-User">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Error loading team:', err);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 1.5rem; color: #dc2626;">
+                            Failed to connect to server.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        async function submitAddTeamMember(e) {
+            e.preventDefault();
+            const alertBox = document.getElementById('teamModalAlert');
+            const submitBtn = document.getElementById('btnSubmitTeamUser');
+            
+            const username = document.getElementById('newTeamUsername').value.trim();
+            const email = document.getElementById('newTeamEmail').value.trim();
+            const password = document.getElementById('newTeamPassword').value.trim();
+            const canViewLeads = document.getElementById('permViewLeads').checked;
+            const canViewCampaigns = document.getElementById('permViewCampaigns').checked;
+            const canManageTeam = document.getElementById('permManageTeam').checked;
+            const storesInput = document.getElementById('newTeamStores') ? document.getElementById('newTeamStores').value.trim() : '';
+            const assignedStoresList = storesInput ? storesInput.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+            if (!username || !email || !password) return;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating...';
+
+            try {
+                const response = await fetch('/api/accounts/team/', {
+                    method: 'POST',
+                    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({
+                        username,
+                        email,
+                        password,
+                        permissions: {
+                            can_view_leads: canViewLeads,
+                            can_view_calls: canViewLeads,
+                            can_view_campaigns: canViewCampaigns,
+                            can_manage_team: canManageTeam,
+                            assigned_stores: assignedStoresList
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    if (alertBox) {
+                        alertBox.style.display = 'block';
+                        alertBox.style.background = '#fee2e2';
+                        alertBox.style.color = '#dc2626';
+                        alertBox.style.border = '1px solid #fca5a5';
+                        alertBox.textContent = data.error || data.detail || 'Failed to create sub-user.';
+                    }
+                } else {
+                    if (alertBox) {
+                        alertBox.style.display = 'block';
+                        alertBox.style.background = '#dcfce7';
+                        alertBox.style.color = '#15803d';
+                        alertBox.style.border = '1px solid #86efac';
+                        alertBox.textContent = `Sub-user "${username}" created successfully!`;
+                        setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
+                    }
+                    document.getElementById('addTeamMemberForm').reset();
+                    toggleAddMemberForm(false);
+                    loadTeamMemberList();
+                }
+            } catch (err) {
+                console.error('Error adding team member:', err);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Create Sub-User';
+            }
+        }
+
+        async function deleteTeamMember(userId, username) {
+            if (!confirm(`Are you sure you want to delete sub-user "${username}"? They will lose access to the voice agent dashboard.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/accounts/team/${userId}/`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok || response.status === 204) {
+                    loadTeamMemberList();
+                } else {
+                    const data = await response.json().catch(() => ({}));
+                    alert(data.error || data.detail || 'Failed to delete team member.');
+                }
+            } catch (err) {
+                console.error('Error deleting team member:', err);
+            }
+        }
 
         function updateMinutesUI(minutesData) {
             if (!minutesData) return;
@@ -1708,9 +2132,37 @@
 
         function renderLeads(leads) {
             const tbody = document.getElementById('leadsTableBody');
+            const headerRow = document.getElementById('tableHeaderRow');
+            const isSamsung = isSamsungAgentMode();
+
+            if (headerRow) {
+                if (isSamsung) {
+                    headerRow.innerHTML = `
+                        <th>Customer Details</th>
+                        <th>Contact Number</th>
+                        <th>Product Interest</th>
+                        <th>Recommended Store</th>
+                        <th>Call Outcome</th>
+                        <th>Recording</th>
+                        <th>Date &amp; Time</th>
+                        <th>Actions</th>
+                    `;
+                } else {
+                    headerRow.innerHTML = `
+                        <th>Customer Details</th>
+                        <th>Contact Number</th>
+                        <th>Requirement / Key Details</th>
+                        <th>Call Outcome</th>
+                        <th>Recording</th>
+                        <th>Date &amp; Time</th>
+                        <th>Actions</th>
+                    `;
+                }
+            }
 
             if (!leads || leads.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color: var(--text-secondary); padding: 3rem;">No voice call interactions found for this period.</td></tr>`;
+                const colSpan = isSamsung ? 8 : 7;
+                tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; color: var(--text-secondary); padding: 3rem;">No voice call interactions found for this period.</td></tr>`;
                 return;
             }
 
@@ -1733,7 +2185,7 @@
                     ? `<strong style="color: var(--text-primary); font-size: 0.92rem;">${escapeHtml(lead.contact)}</strong>`
                     : `<span style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic;">Private Contact</span>`;
 
-                if (isSamsungAgent) {
+                if (isSamsungAgentMode()) {
                     const product = s.product_interest || s.car_model || s.model || s.product_name || s.interest || (lead.applied_position && !lead.applied_position.includes('Counselor') ? lead.applied_position : 'Samsung phone');
                     const area = s.customer_area || s.current_location || s.area || s.city || 'N/A';
                     const store = s.recommended_store || s.store || s.preferred_store || 'N/A';
@@ -2315,7 +2767,7 @@
             try {
                 const response = await fetch(`${SARVAM_API_PREFIX}/call/`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ phone_number: phone, candidate_name: name })
                 });
                 
@@ -2443,7 +2895,7 @@
             const container = document.getElementById('campaignsContainer');
             try {
                 const url = `${SARVAM_CAMPAIGN_API_PREFIX}/list/`;
-                const res = await fetch(url);
+                const res = await fetch(url, { headers: getAuthHeaders() });
                 const data = await res.json();
 
                 if (res.ok && data.status === 'success') {
@@ -2750,7 +3202,7 @@
             try {
                 const res = await fetch(`/api/sarvam/campaigns/${campaignId}/cancel/`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
+                    headers: getAuthHeaders({'Content-Type': 'application/json'})
                 });
                 const data = await res.json();
                 if (data.status === 'success') {
@@ -2839,6 +3291,7 @@
             try {
                 const response = await fetch(`${SARVAM_API_PREFIX}/upload-campaign/`, {
                     method: 'POST',
+                    headers: getAuthHeaders(),
                     body: formData
                 });
 
@@ -2898,13 +3351,17 @@
         function initUserProfile() {
             const username = localStorage.getItem('username') || '{{ request.user.username|default:"User" }}';
             const role = localStorage.getItem('role') || 'User';
+            const isAdmin = localStorage.getItem('is_admin') === 'true' || '{{ request.user.is_superuser|yesno:"true,false" }}' === 'true';
             const profilePic = localStorage.getItem('profile_picture');
             const avatar = document.getElementById('profileAvatar');
             const pdName = document.getElementById('pdName');
             const pdRole = document.getElementById('pdRole');
+            const adminMenu = document.getElementById('adminConsoleMenuItem');
+            const manageTeamMenu = document.getElementById('manageTeamMenuItem');
 
             if (pdName) pdName.textContent = username;
-            if (pdRole) pdRole.textContent = role && role !== 'No Role' ? role : 'Logged in';
+            if (pdRole) pdRole.textContent = role && role !== 'No Role' ? role : (isAdmin ? 'System Admin' : 'Logged in');
+            if (adminMenu && isAdmin) adminMenu.style.display = 'flex';
 
             if (avatar) {
                 if (profilePic && profilePic !== 'null' && profilePic !== '') {
@@ -2914,6 +3371,38 @@
                     avatar.style.backgroundImage = 'linear-gradient(135deg, #0284c7, #0369a1)';
                     avatar.textContent = (username.charAt(0) || 'U').toUpperCase();
                 }
+            }
+
+            // Parse sub-user access permissions
+            let permissions = {};
+            try { permissions = JSON.parse(localStorage.getItem('permissions') || '{}'); } catch(e){}
+            const isSubUser = '{{ request.user.profile.created_by|default:"" }}' !== '';
+            
+            let canManageTeam = false;
+            if (isAdmin) {
+                canManageTeam = true;
+            } else if (permissions.can_manage_team !== undefined) {
+                canManageTeam = permissions.can_manage_team === true;
+            } else {
+                canManageTeam = !isSubUser;
+            }
+
+            if (manageTeamMenu) {
+                manageTeamMenu.style.display = canManageTeam ? 'flex' : 'none';
+            }
+
+            // Check campaign permission
+            const canViewCampaigns = permissions.can_view_campaigns !== false;
+            const campaignTabBtn = document.getElementById('tabCampaignsBtn');
+            if (campaignTabBtn && !canViewCampaigns) {
+                campaignTabBtn.style.display = 'none';
+            }
+
+            // Check calls/leads permission
+            const canViewLeads = permissions.can_view_leads !== false;
+            const screeningsTabBtn = document.getElementById('tabScreeningsBtn');
+            if (screeningsTabBtn && !canViewLeads) {
+                screeningsTabBtn.style.display = 'none';
             }
         }
 

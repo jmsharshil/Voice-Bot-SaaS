@@ -2875,6 +2875,7 @@ def _get_user_allowed_sarvam_agents(user):
     Helper for multi-tenant Sarvam agent access control.
     - Superusers (is_superuser=True) get access to all active Sarvam agents.
     - Regular users with assigned_sarvam_agents get access ONLY to those assigned agents.
+    - Sub-users created by an owner inherit the creator's assigned_sarvam_agents if not explicitly assigned.
     - Regular users with no assigned_sarvam_agents get no access (empty QuerySet).
     """
     from conversations.models import SarvamAgent
@@ -2886,6 +2887,13 @@ def _get_user_allowed_sarvam_agents(user):
         assigned = user.profile.assigned_sarvam_agents.filter(is_active=True)
         if assigned.exists():
             return False, assigned
+        # Fallback for sub-users: check assigned_sarvam_agents of creator
+        if user.profile.created_by:
+            creator_profile = getattr(user.profile.created_by, 'profile', None)
+            if creator_profile:
+                creator_assigned = creator_profile.assigned_sarvam_agents.filter(is_active=True)
+                if creator_assigned.exists():
+                    return False, creator_assigned
     return False, SarvamAgent.objects.none()
 
 
@@ -3544,6 +3552,29 @@ def sarvam_leads_data(request, agent_slug=None):
             daemon=True
         )
         t.start()
+
+    # Sub-user Recommended Store Isolation:
+    # If the user is a sub-user (created by an owner) and has specific assigned_stores configured,
+    # strictly limit processed_leads to only those leads matching their assigned store(s).
+    user_prof = getattr(request.user, 'profile', None)
+    user_p = getattr(user_prof, 'custom_permissions', {}) if user_prof else {}
+
+    raw_st = user_p.get("assigned_stores", [])
+    if isinstance(raw_st, str):
+        assigned_st_list = [s.strip().lower() for s in raw_st.split(",") if s.strip()]
+    elif isinstance(raw_st, list):
+        assigned_st_list = [str(s).strip().lower() for s in raw_st if str(s).strip()]
+    else:
+        assigned_st_list = []
+
+    if user_prof and user_prof.created_by and not user_p.get("can_manage_team") and assigned_st_list:
+        scoped_leads = []
+        for l in processed_leads:
+            s_dict = l.get("summary") or {}
+            rec_s = str(s_dict.get("recommended_store") or s_dict.get("store") or s_dict.get("preferred_store") or "").strip().lower()
+            if rec_s and any(st in rec_s or rec_s in st for st in assigned_st_list):
+                scoped_leads.append(l)
+        processed_leads = scoped_leads
 
     stats = {
         "total_calls": len(processed_leads),
@@ -5154,6 +5185,104 @@ def sarvam_campaign_cancel_api(request, campaign_id):
     campaign.status = "CANCELLED"
     campaign.save(update_fields=["status"])
     return Response({"status": "success", "message": f"Campaign #{campaign_id} cancelled."}, status=200)
+
+
+@api_view(["GET"])
+def sarvam_admin_all_campaigns_api(request):
+    """
+    Superadmin API: Returns all live & past campaigns across all clients, sub-users, and voice agents.
+    GET /api/sarvam/admin/campaigns/
+    """
+    if not request.user or not request.user.is_authenticated:
+        return Response({"error": "Authentication required"}, status=401)
+    
+    if not request.user.is_superuser:
+        return Response({"error": "Access denied. Superadmin access required."}, status=403)
+
+    from conversations.models import SarvamCampaign
+    campaigns = SarvamCampaign.objects.filter(created_by__isnull=False).select_related(
+        "sarvam_agent", "created_by", "created_by__profile", "created_by__profile__created_by"
+    ).order_by("-created_at")
+
+    result = []
+    for c in campaigns:
+        creator = c.created_by
+        creator_name = creator.username if creator else "System / Unspecified"
+        
+        creator_prof = getattr(creator, "profile", None) if creator else None
+        owner_name = None
+        if creator_prof and creator_prof.created_by:
+            owner_name = creator_prof.created_by.username
+            is_subuser = True
+        else:
+            is_subuser = False
+
+        agent = c.sarvam_agent
+        agent_name = agent.name if agent else "Default Agent"
+        agent_slug = agent.slug if agent else ""
+
+        result.append({
+            "id": c.id,
+            "name": c.name,
+            "excel_file_name": c.excel_file_name or "N/A",
+            "creator_username": creator_name,
+            "is_subuser": is_subuser,
+            "owner_username": owner_name,
+            "agent_name": agent_name,
+            "agent_slug": agent_slug,
+            "status": c.status,
+            "current_stage": c.current_stage,
+            "total_leads": c.total_leads,
+            "stage_1_answered": c.stage_1_answered,
+            "stage_1_missed": c.stage_1_missed,
+            "stage_2_answered": c.stage_2_answered,
+            "stage_2_missed": c.stage_2_missed,
+            "stage_3_answered": c.stage_3_answered,
+            "stage_3_missed": c.stage_3_missed,
+            "answered_count": c.answered_count,
+            "missed_count": c.missed_count,
+            "created_at": c.created_at.strftime("%Y-%m-%dT%H:%M:%SZ") if c.created_at else "",
+            "created_at_display": c.created_at.strftime("%d %b %Y %H:%M") if c.created_at else "",
+        })
+
+    return Response({
+        "status": "success",
+        "total_campaigns": len(result),
+        "active_running": sum(1 for x in result if x["status"] in ["RUNNING", "QUEUED", "IN_PROGRESS"]),
+        "campaigns": result
+    }, status=200)
+
+
+@api_view(["POST"])
+def sarvam_admin_campaign_action_api(request, campaign_id):
+    """
+    Superadmin API: Controls status (PAUSE, RESUME, CANCEL) of any campaign across any voice agent.
+    POST /api/sarvam/admin/campaigns/<id>/action/
+    body: {"action": "PAUSE" | "RESUME" | "CANCEL"}
+    """
+    if not request.user or not request.user.is_authenticated:
+        return Response({"error": "Authentication required"}, status=401)
+    if not request.user.is_superuser:
+        return Response({"error": "Access denied. Superadmin access required."}, status=403)
+
+    action = str(request.data.get("action", "")).upper().strip()
+    from conversations.models import SarvamCampaign
+    campaign = SarvamCampaign.objects.filter(id=campaign_id).first()
+    if not campaign:
+        return Response({"error": "Campaign not found"}, status=404)
+
+    if action == "PAUSE":
+        campaign.status = "PAUSED"
+    elif action == "RESUME":
+        campaign.status = "RUNNING"
+    elif action == "CANCEL":
+        campaign.status = "CANCELLED"
+    else:
+        return Response({"error": "Invalid action. Use PAUSE, RESUME, or CANCEL."}, status=400)
+
+    campaign.save(update_fields=["status"])
+    return Response({"status": "success", "message": f"Campaign #{campaign_id} status updated to {campaign.status}."}, status=200)
+
 
 
 def _extract_preferred_store(lead):

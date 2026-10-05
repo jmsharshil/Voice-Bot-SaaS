@@ -18,6 +18,7 @@
 
 
 
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login as django_login
 from django.contrib.auth.models import User
@@ -25,11 +26,11 @@ from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .models import Role, UserProfile
 from .serializers import RegisterSerializer, RoleSerializer, UserSerializer
@@ -66,6 +67,7 @@ class RegisterView(APIView):
 
 
 @api_view(["POST"])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def login_view(request):
     """
@@ -83,8 +85,9 @@ def login_view(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # Check if the user exists at all
-    if not User.objects.filter(username=username).exists():
+    # Check if the user exists at all (case-insensitive lookup)
+    user_obj = User.objects.filter(username__iexact=username).first()
+    if not user_obj:
         return Response(
             {
                 "error": f"No account found for '{username}'.",
@@ -93,8 +96,8 @@ def login_view(request):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    # User exists — check credentials
-    user = authenticate(username=username, password=password)
+    # User exists — check credentials using exact DB username
+    user = authenticate(username=user_obj.username, password=password)
     if user is None:
         return Response(
             {
@@ -162,17 +165,28 @@ def login_view(request):
     assigned_sarvam_agents = []
     if hasattr(user, 'profile') and user.profile:
         assigned_agents_qs = user.profile.assigned_sarvam_agents.filter(is_active=True)
+        # Inherit from creator if not set on sub-user directly
+        if not assigned_agents_qs.exists() and user.profile.created_by and hasattr(user.profile.created_by, 'profile'):
+            creator_profile = user.profile.created_by.profile
+            creator_agents = creator_profile.assigned_sarvam_agents.filter(is_active=True)
+            if creator_agents.exists():
+                user.profile.assigned_sarvam_agents.set(creator_agents.all())
+                assigned_agents_qs = user.profile.assigned_sarvam_agents.filter(is_active=True)
+
         if assigned_agents_qs.exists():
             is_sarvam_user = True
             assigned_sarvam_agents = [
                 {"id": a.id, "name": a.name, "slug": a.slug, "phone": a.agent_phone}
                 for a in assigned_agents_qs
             ]
+
     if role_name and "sarvam" in role_name.lower():
         is_sarvam_user = True
     elif user.username.lower().startswith("sarvam") or "sarvam" in user.username.lower():
         is_sarvam_user = True
     elif permissions.get("is_sarvam_user") or permissions.get("can_view_sarvam"):
+        is_sarvam_user = True
+    elif hasattr(user, 'profile') and user.profile and user.profile.created_by:
         is_sarvam_user = True
 
     # If user is superuser and no specific Sarvam agents are assigned, provide all active Sarvam agents
@@ -233,37 +247,55 @@ class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
 
+def check_can_manage_team(user):
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    profile = getattr(user, 'profile', None)
+    if not profile:
+        return False
+    if isinstance(profile.custom_permissions, dict) and "can_manage_team" in profile.custom_permissions:
+        return bool(profile.custom_permissions.get("can_manage_team"))
+    if profile.role and isinstance(profile.role.permissions, dict) and profile.role.permissions.get("can_manage_team"):
+        return True
+    if profile.created_by is None:
+        return True
+    return False
+
+
 # --- Client Team Management (For client admins managing their sub-users) ---
 
 class TeamListView(APIView):
+    authentication_classes = [SessionAuthentication, JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if not hasattr(request.user, 'profile') or not request.user.profile.assigned_agent:
-            return Response({"error": "No voice bot assigned to your account."}, status=status.HTTP_400_BAD_REQUEST)
-        
-        profile = request.user.profile
-        can_manage = profile.custom_permissions.get('can_manage_team', False) or (profile.role and profile.role.permissions.get('can_manage_team', False))
-        if not can_manage:
+        if not check_can_manage_team(request.user):
             return Response({"error": "You do not have permission to manage team members."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Fetch other users with the same assigned agent (excluding current user and superusers)
-        team_users = User.objects.filter(
-            profile__assigned_agent=profile.assigned_agent
-        ).exclude(id=request.user.id).exclude(is_superuser=True)
+        profile = getattr(request.user, 'profile', None)
+        # Fetch users created by request.user or sharing assigned_agent / assigned_sarvam_agents
+        from django.db.models import Q
+        q_filter = Q(profile__created_by=request.user)
+        if profile and profile.assigned_agent:
+            q_filter |= Q(profile__assigned_agent=profile.assigned_agent)
+        if profile and profile.assigned_sarvam_agents.exists():
+            q_filter |= Q(profile__assigned_sarvam_agents__in=profile.assigned_sarvam_agents.all())
+
+        if request.user.is_superuser:
+            team_users = User.objects.exclude(id=request.user.id).order_by('-date_joined')
+        else:
+            team_users = User.objects.filter(q_filter).exclude(id=request.user.id).exclude(is_superuser=True).distinct().order_by('-date_joined')
 
         serializer = UserSerializer(team_users, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        if not hasattr(request.user, 'profile') or not request.user.profile.assigned_agent:
-            return Response({"error": "No voice bot assigned to your account."}, status=status.HTTP_400_BAD_REQUEST)
-
-        profile = request.user.profile
-        can_manage = profile.custom_permissions.get('can_manage_team', False) or (profile.role and profile.role.permissions.get('can_manage_team', False))
-        if not can_manage:
+        if not check_can_manage_team(request.user):
             return Response({"error": "You do not have permission to manage team members."}, status=status.HTTP_403_FORBIDDEN)
 
+        profile = getattr(request.user, 'profile', None)
         username = request.data.get("username")
         email = request.data.get("email")
         password = request.data.get("password")
@@ -279,15 +311,26 @@ class TeamListView(APIView):
         user = User.objects.create_user(username=username, email=email, password=password)
         
         # Configure sub-user profile
-        user.profile.assigned_agent = profile.assigned_agent
+        if profile:
+            user.profile.assigned_agent = profile.assigned_agent
+            if profile.assigned_sarvam_agents.exists():
+                user.profile.assigned_sarvam_agents.set(profile.assigned_sarvam_agents.all())
+            elif profile.created_by and profile.created_by.profile.assigned_sarvam_agents.exists():
+                user.profile.assigned_sarvam_agents.set(profile.created_by.profile.assigned_sarvam_agents.all())
+            user.profile.role = profile.role
+
+        p_manage = permissions.get("can_manage_team", False)
+        p_campaigns = permissions.get("can_view_campaigns", False) or p_manage
+        p_leads = permissions.get("can_view_leads", True) or p_campaigns or p_manage
+        assigned_stores = permissions.get("assigned_stores", [])
+
         user.profile.custom_permissions = {
-            "can_view_leads": permissions.get("can_view_leads", False),
-            "can_view_calls": permissions.get("can_view_calls", False),
-            "can_view_campaigns": permissions.get("can_view_campaigns", False),
-            "can_manage_team": permissions.get("can_manage_team", False)
+            "can_view_leads": p_leads,
+            "can_view_calls": p_leads,
+            "can_view_campaigns": p_campaigns,
+            "can_manage_team": p_manage,
+            "assigned_stores": assigned_stores
         }
-        # Inherit role (e.g. Kia Client/Hospital Client) but ensure they can't manage team
-        user.profile.role = profile.role
         user.profile.created_by = request.user
         user.profile.save()
 
@@ -295,22 +338,24 @@ class TeamListView(APIView):
 
 
 class TeamDetailView(APIView):
+    authentication_classes = [SessionAuthentication, JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def put(self, request, pk):
-        if not hasattr(request.user, 'profile') or not request.user.profile.assigned_agent:
-            return Response({"error": "No voice bot assigned to your account."}, status=status.HTTP_400_BAD_REQUEST)
-
-        profile = request.user.profile
-        can_manage = profile.custom_permissions.get('can_manage_team', False) or (profile.role and profile.role.permissions.get('can_manage_team', False))
-        if not can_manage:
+        if not check_can_manage_team(request.user):
             return Response({"error": "You do not have permission to manage team members."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Only allow modifying users assigned to the same agent
-        user_to_edit = User.objects.filter(
-            id=pk,
-            profile__assigned_agent=profile.assigned_agent
-        ).first()
+        profile = getattr(request.user, 'profile', None)
+        if request.user.is_superuser:
+            user_to_edit = User.objects.filter(id=pk).first()
+        else:
+            from django.db.models import Q
+            q_filter = Q(profile__created_by=request.user)
+            if profile and profile.assigned_agent:
+                q_filter |= Q(profile__assigned_agent=profile.assigned_agent)
+            if profile and profile.assigned_sarvam_agents.exists():
+                q_filter |= Q(profile__assigned_sarvam_agents__in=profile.assigned_sarvam_agents.all())
+            user_to_edit = User.objects.filter(Q(id=pk) & q_filter).first()
 
         if not user_to_edit:
             return Response({"error": "Team member not found or does not belong to your bot's scope."}, status=status.HTTP_404_NOT_FOUND)
@@ -337,39 +382,42 @@ class TeamDetailView(APIView):
         user_to_edit.save()
 
         # Update permissions
-        if "can_view_leads" in permissions or "can_view_calls" in permissions or "can_view_campaigns" in permissions or "can_manage_team" in permissions:
-            if not user_to_edit.profile.custom_permissions:
-                user_to_edit.profile.custom_permissions = {}
-            if "can_view_leads" in permissions:
-                user_to_edit.profile.custom_permissions["can_view_leads"] = permissions.get("can_view_leads", False)
-            if "can_view_calls" in permissions:
-                user_to_edit.profile.custom_permissions["can_view_calls"] = permissions.get("can_view_calls", False)
-            if "can_view_campaigns" in permissions:
-                user_to_edit.profile.custom_permissions["can_view_campaigns"] = permissions.get("can_view_campaigns", False)
-            if "can_manage_team" in permissions:
-                user_to_edit.profile.custom_permissions["can_manage_team"] = permissions.get("can_manage_team", False)
+        if any(k in permissions for k in ["can_view_leads", "can_view_calls", "can_view_campaigns", "can_manage_team", "assigned_stores"]):
+            p_manage = permissions.get("can_manage_team", False)
+            p_campaigns = permissions.get("can_view_campaigns", False) or p_manage
+            p_leads = permissions.get("can_view_leads", True) or p_campaigns or p_manage
+            assigned_stores = permissions.get("assigned_stores", user_to_edit.profile.custom_permissions.get("assigned_stores", []))
+
+            user_to_edit.profile.custom_permissions = {
+                "can_view_leads": p_leads,
+                "can_view_calls": p_leads,
+                "can_view_campaigns": p_campaigns,
+                "can_manage_team": p_manage,
+                "assigned_stores": assigned_stores
+            }
             user_to_edit.profile.save()
 
         serializer = UserSerializer(user_to_edit)
         return Response(serializer.data)
 
     def delete(self, request, pk):
-        if not hasattr(request.user, 'profile') or not request.user.profile.assigned_agent:
-            return Response({"error": "No voice bot assigned to your account."}, status=status.HTTP_400_BAD_REQUEST)
-
-        profile = request.user.profile
-        can_manage = profile.custom_permissions.get('can_manage_team', False) or (profile.role and profile.role.permissions.get('can_manage_team', False))
-        if not can_manage:
+        if not check_can_manage_team(request.user):
             return Response({"error": "You do not have permission to delete team members."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Only allow deleting users assigned to the same agent
-        user_to_delete = User.objects.filter(
-            id=pk,
-            profile__assigned_agent=profile.assigned_agent
-        ).first()
+        profile = getattr(request.user, 'profile', None)
+        if request.user.is_superuser:
+            user_to_delete = User.objects.filter(id=pk).first()
+        else:
+            from django.db.models import Q
+            q_filter = Q(profile__created_by=request.user)
+            if profile and profile.assigned_agent:
+                q_filter |= Q(profile__assigned_agent=profile.assigned_agent)
+            if profile and profile.assigned_sarvam_agents.exists():
+                q_filter |= Q(profile__assigned_sarvam_agents__in=profile.assigned_sarvam_agents.all())
+            user_to_delete = User.objects.filter(Q(id=pk) & q_filter).first()
 
         if not user_to_delete:
-            return Response({"error": "Team member not found or does not belong to your bot's scope."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Team member not found or does not belong to your scope."}, status=status.HTTP_404_NOT_FOUND)
 
         if user_to_delete.id == request.user.id:
             return Response({"error": "You cannot delete yourself."}, status=status.HTTP_400_BAD_REQUEST)

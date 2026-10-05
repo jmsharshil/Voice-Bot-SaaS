@@ -14,6 +14,7 @@ from .views import (
     sarvam_user_agents_api, sarvam_campaigns_list_api, sarvam_campaign_detail_api,
     sarvam_campaign_export_full_api, sarvam_campaign_export_missed_api, sarvam_campaign_cancel_api,
     sarvam_agent_minutes_status_api, sarvam_adjust_agent_minutes_api, sarvam_toggle_agent_active_api,
+    sarvam_admin_all_campaigns_api, sarvam_admin_campaign_action_api,
 )
 from django.urls import path, re_path
 
@@ -65,6 +66,10 @@ urlpatterns = [
     path("sarvam/campaigns/<int:campaign_id>/export-full/", sarvam_campaign_export_full_api, name="sarvam-campaign-export-full"),
     path("sarvam/campaigns/<int:campaign_id>/export-missed/", sarvam_campaign_export_missed_api, name="sarvam-campaign-export-missed"),
     path("sarvam/campaigns/<int:campaign_id>/cancel/", sarvam_campaign_cancel_api, name="sarvam-campaign-cancel"),
+
+    # Superadmin System-Wide Global Campaigns Monitoring & Controls
+    path("sarvam/admin/campaigns/", sarvam_admin_all_campaigns_api, name="sarvam-admin-all-campaigns"),
+    path("sarvam/admin/campaigns/<int:campaign_id>/action/", sarvam_admin_campaign_action_api, name="sarvam-admin-campaign-action"),
 
     # Sarvam AI Agent Leads Dashboard — Per-Agent (each slug gets its own dashboard)
     path("sarvam/<slug:agent_slug>/leads/", sarvam_leads_page, name="sarvam-agent-leads"),

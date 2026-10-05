@@ -963,6 +963,21 @@
 
         restoreSessionIfPresent();
 
+        function getCsrfToken() {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 10) === ('csrftoken=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(10));
+                        break;
+                    }
+                }
+            }
+            return cookieValue || '';
+        }
+
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const submitBtn = document.getElementById('submitBtn');
@@ -984,7 +999,10 @@
             try {
                 const response = await fetch('/api/accounts/login-api/', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
                     body: JSON.stringify({ username, password }),
                 });
                 const data = await response.json();
@@ -1010,11 +1028,8 @@
 
                     const redirectUrl = getRedirectUrl(data.permissions || {}, data.permissions?.is_admin || false);
                     window.location.replace(redirectUrl);
-                } else if (data.code === 'user_not_found') {
-                    signupAlertMsg.innerText = data.error;
-                    signupAlert.classList.add('show');
-                } else if (data.code === 'wrong_password') {
-                    errorText.innerText = data.error;
+                } else if (data.code === 'user_not_found' || data.code === 'wrong_password') {
+                    errorText.innerText = data.error || 'Login failed. Please try again.';
                     errorBox.classList.add('show');
                 } else {
                     errorText.innerText = data.error || 'Login failed. Please try again.';
