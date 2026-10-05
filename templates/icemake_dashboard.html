@@ -739,9 +739,9 @@
     </div>
 
     <div class="sticky-actions">
-        <a id="stickyDownloadBtn" href="#" target="_blank" download class="sticky-btn" title="Download Audio">
+        <button id="stickyDownloadBtn" type="button" class="sticky-btn" title="Download Audio">
             <i class="fa-solid fa-download"></i>
-        </a>
+        </button>
         <button class="sticky-btn" onclick="closeAudioBar()" title="Close Player">
             <i class="fa-solid fa-xmark"></i>
         </button>
@@ -752,6 +752,44 @@
     let allTickets = [];
     let currentAudio = new Audio();
     let activeTicketId = null;
+
+    async function downloadAudioFile(url, filename, event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        if (!url) return;
+        const cleanFilename = filename || 'recording.mp3';
+        let downloadUrl = (url && url.startsWith('http')) ? `/api/proxy-audio/?url=${encodeURIComponent(url)}` : url;
+        const sep = downloadUrl.includes('?') ? '&' : '?';
+        if (!downloadUrl.includes('download=')) {
+            downloadUrl = `${downloadUrl}${sep}download=1&filename=${encodeURIComponent(cleanFilename)}`;
+        }
+        try {
+            const res = await fetch(downloadUrl);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const blob = await res.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            a.download = cleanFilename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(blobUrl);
+            }, 2000);
+        } catch (err) {
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = downloadUrl;
+            a.setAttribute('download', cleanFilename);
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); }, 2000);
+        }
+    }
 
     function formatDuration(seconds) {
         if (!seconds || isNaN(seconds)) return "0:00";
@@ -912,7 +950,7 @@
             currentAudio.src = proxyUrl;
             activeTicketId = ticketId;
             trackInfo.innerHTML = `<strong>${ticketNum}</strong> • ${custName}`;
-            downloadBtn.href = proxyUrl;
+            downloadBtn.onclick = (e) => downloadAudioFile(url, `recording_${ticketNum}.mp3`, e);
         }
 
         currentAudio.play().catch(e => console.error("Audio play error:", e));
@@ -1133,9 +1171,9 @@
                                 <span class="btn-label">${isPlaying ? 'Playing...' : 'Play Audio'}</span>
                                 <small style="opacity: 0.85; margin-left: 2px;">(${formatDuration(t.call_duration)})</small>
                             </button>
-                            <a href="${t.recording_url}" target="_blank" download class="download-btn" title="Download Audio" style="color: var(--primary-indigo); font-size: 1.1rem; padding: 4px;">
+                            <button type="button" onclick="downloadAudioFile('${t.recording_url}', 'recording_${t.ticket_number}.mp3', event)" class="download-btn" title="Download Audio" style="background:none; border:none; color: var(--primary-indigo); font-size: 1.1rem; padding: 4px; cursor: pointer;">
                                 <i class="fa-solid fa-download"></i>
-                            </a>
+                            </button>
                         </div>
                     `;
                 } else {
