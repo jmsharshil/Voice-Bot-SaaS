@@ -168,6 +168,12 @@ class SarvamAgentService:
         if "car" in agent_vars and "car_model" not in agent_vars:
             agent_vars["car_model"] = agent_vars["car"]
 
+        # Car Number alias helpers: map car_num, registration_number, vehicle_number, etc. to car_number
+        for num_alias in ["car_num", "registration_number", "reg_number", "vehicle_number", "car_no", "car_no.", "plate_number"]:
+            if num_alias in agent_vars and "car_number" not in agent_vars:
+                agent_vars["car_number"] = agent_vars[num_alias]
+
+
         payload = {
             "app_config": {
                 "app_id": app_id,

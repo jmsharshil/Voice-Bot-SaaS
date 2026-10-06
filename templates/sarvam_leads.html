@@ -1457,7 +1457,7 @@
                 <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.75rem; padding: 0.85rem; font-size: 0.85rem; color: #0369a1; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;">
                     <div>
                         <strong style="display:block; margin-bottom: 2px;"><i class="fa-solid fa-circle-info"></i> 3-Stage Automated Campaign</strong>
-                        <span>Upload <code>.xlsx</code> or <code>.csv</code> with <strong>Phone Number</strong> &amp; <strong>Name</strong>. Calls not picked up will automatically be retried 2 times (Total 3 Stages).</span>
+                        <span>Upload <code>.xlsx</code> or <code>.csv</code> with <strong>user_name</strong> &amp; <strong>phone_number</strong>. <em>(Note: <code>car_model</code> &amp; <code>car_number</code> columns are optional — delete them if not needed.)</em></span>
                     </div>
                     <a href="/api/sarvam/leads/sample-template/" target="_blank" style="background: #ffffff; color: #0284c7; border: 1px solid #7dd3fc; padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 0.78rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;">
                         <i class="fa-solid fa-download"></i> Sample Template
@@ -3444,10 +3444,11 @@
                         switchDashboardTab('campaigns');
                     }, 1800);
                 } else {
+                    const sampleBtnHtml = `<div style="margin-top: 10px;"><a href="/api/sarvam/leads/sample-template/" target="_blank" style="background: #ffffff; color: #dc2626; border: 1.5px solid #fca5a5; padding: 6px 14px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.1);"><i class="fa-solid fa-download"></i> Download Sample Excel Template</a></div>`;
                     alertBox.style.background = '#fef2f2';
                     alertBox.style.color = '#dc2626';
                     alertBox.style.border = '1px solid #fecaca';
-                    alertBox.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${data.error || 'Failed to launch campaign.'}`;
+                    alertBox.innerHTML = `<div><i class="fa-solid fa-circle-exclamation"></i> <strong>Excel Format Error:</strong> ${escapeHtml(data.error || 'Failed to parse Excel file.')}</div>${sampleBtnHtml}`;
                     alertBox.style.display = 'block';
                 }
             } catch (err) {

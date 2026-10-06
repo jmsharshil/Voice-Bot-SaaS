@@ -4868,7 +4868,12 @@ def sarvam_upload_campaign_api(request, agent_slug=None):
             break
 
     if not phone_col:
-        return Response({"error": "Could not find a valid Phone Number column. Headers found: " + ", ".join(list(df.columns))}, status=400)
+        return Response({
+            "status": "error",
+            "code": "INVALID_EXCEL_FORMAT",
+            "error": f"Invalid Excel format! Could not find a valid 'phone_number' or 'user_name' column. Headers found: {', '.join(list(df.columns))}. Please download our sample template for the correct format.",
+            "sample_template_url": "/api/sarvam/leads/sample-template/"
+        }, status=400)
 
     name_col = None
     for n_key in [
@@ -5802,27 +5807,49 @@ def sarvam_sample_template_api(request):
 
     sample_data = [
         {
-            "Candidate Name": "Rajesh Sharma",
-            "Phone Number": "91525XXXXX",
-            "Recommended Store": "Bodakdev Store"
+            "user_name": "Rajesh Sharma",
+            "phone_number": "91525XXXXX",
+            "car_model": "Creta SX",
+            "car_number": "GJ01AB1234"
         },
         {
-            "Candidate Name": "Priya Patel",
-            "Phone Number": "98765XXXXX",
-            "Recommended Store": "Palladium Mall Store"
+            "user_name": "Priya Patel",
+            "phone_number": "99525XXXXX",
+            "car_model": "Scorpio-N",
+            "car_number": "GJ18CD5678"
         },
         {
-            "Candidate Name": "Amit Kumar",
-            "Phone Number": "91234XXXXX",
-            "Recommended Store": "Vijay Cross Road Store"
+            "user_name": "Amit Kumar",
+            "phone_number": "91525XXXXX",
+            "car_model": "Thar 4x4",
+            "car_number": "MH02EF9012"
+        },
+        {
+            "user_name": "NOTE: car_model and car_number columns are optional — delete them if not needed.",
+            "phone_number": "",
+            "car_model": "",
+            "car_number": ""
         }
     ]
 
-    df = pd.DataFrame(sample_data)
+
+
+    df_data = pd.DataFrame(sample_data)
+
+    notes_data = [
+        {"Column Name": "user_name", "Status": "Required", "Note / Instruction": "Customer's full name"},
+        {"Column Name": "phone_number", "Status": "Required", "Note / Instruction": "10-digit mobile number"},
+        {"Column Name": "car_model", "Status": "Optional", "Note / Instruction": "Automobile vehicle model — Delete this column if not needed for your business"},
+        {"Column Name": "car_number", "Status": "Optional", "Note / Instruction": "Vehicle registration number — Delete this column if not needed for your business"}
+    ]
+    df_notes = pd.DataFrame(notes_data)
+
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name="Candidates")
+        df_data.to_excel(writer, index=False, sheet_name="Campaign_Data")
+        df_notes.to_excel(writer, index=False, sheet_name="Instructions_&_Notes")
     output.seek(0)
+
 
     response = HttpResponse(
         output.getvalue(),
