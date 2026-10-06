@@ -46,14 +46,24 @@ SECRET_KEY = 'django-insecure-*7s*aaz)wrq!lexszd)#u*k!f^uv^imr70+j)7rk-xhq8*l(5k
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
-ALLOWED_HOSTS = ["*","multivoicebot-d3eyanb4h2g4crhh.centralindia-01.azurewebsites.net", "insurancebot-b3aha4cmfnbghza7.centralindia-01.azurewebsites.net"]
+ALLOWED_HOSTS = [
+    "*",
+    "multivoicebot-d3eyanb4h2g4crhh.centralindia-01.azurewebsites.net",
+    "insurancebot-b3aha4cmfnbghza7.centralindia-01.azurewebsites.net",
+    "jolly-flower-0c1382600.2.azurestaticapps.net",
+    "jmstechnova.com",
+    "www.jmstechnova.com",
+]
 
 
 CSRF_TRUSTED_ORIGINS = [
     "https://multivoicebot-d3eyanb4h2g4crhh.centralindia-01.azurewebsites.net",
     "https://renav-ch.on-forge.com",
     "https://insurancebot-b3aha4cmfnbghza7.centralindia-01.azurewebsites.net",
-    "https://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net"
+    "https://voicebotsaas-dterfndqfbfqfkhd.centralindia-01.azurewebsites.net",
+    "https://jolly-flower-0c1382600.2.azurestaticapps.net",
+    "https://jmstechnova.com",
+    "https://www.jmstechnova.com",
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -72,6 +82,9 @@ CORS_ALLOWED_ORIGINS = [
     "https://renav-ch.on-forge.com",
     "https://naavya.ai",
     "https://www.naavya.ai",
+    "https://jolly-flower-0c1382600.2.azurestaticapps.net",
+    "https://jmstechnova.com",
+    "https://www.jmstechnova.com",
 ]
 # Application definition
 
