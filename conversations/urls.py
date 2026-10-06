@@ -17,9 +17,18 @@ from .views import (
     sarvam_admin_all_campaigns_api, sarvam_admin_campaign_action_api,
     system_maintenance_enable_api, system_maintenance_disable_api, system_maintenance_status_api,
 )
+from .incoming_webhooks import incoming_trigger_webhook
 from django.urls import path, re_path
 
 urlpatterns = [
+    # ── INBOUND EXTERNAL WEBHOOK TRIGGER ENDPOINTS ────────────────────
+    path("webhook/trigger-call/", incoming_trigger_webhook, name="incoming-trigger-webhook-default"),
+    path("webhook/trigger-call/<slug:agent_slug>/", incoming_trigger_webhook, name="incoming-trigger-webhook-slug"),
+    path("webhook/trigger-call/agent/<int:agent_id>/", incoming_trigger_webhook, name="incoming-trigger-webhook-id"),
+    path("api/webhook/trigger-call/", incoming_trigger_webhook),
+    path("api/webhook/trigger-call/<slug:agent_slug>/", incoming_trigger_webhook),
+    path("api/webhook/trigger-call/agent/<int:agent_id>/", incoming_trigger_webhook),
+
     # ── PUBLIC REST API FOR REACT FRONTEND INTEGRATION ────────────────
     path("v1/trigger-call/", public_trigger_sarvam_call_api, name="api-v1-trigger-call"),
     path("v1/agents/", public_list_sarvam_agents_api, name="api-v1-list-agents"),

@@ -1412,6 +1412,9 @@ def sarvam_cdr_webhook(request):
             raw_data.get("user_phone_number")
             or raw_data.get("phone_number")
             or raw_data.get("user_identifier")
+            or raw_data.get("caller_phone")
+            or raw_data.get("caller_number")
+            or raw_data.get("phone")
             or call_obj.get("from")
             or call_obj.get("caller_number")
             or call_obj.get("to")
@@ -1472,21 +1475,37 @@ def sarvam_cdr_webhook(request):
         from conversations.services.kylas_sarvam_bridge import SarvamAgentService
         from conversations.models import SarvamCallRecord, SarvamAgent
 
-        # ✅ Detect which SarvamAgent this CDR belongs to using app_id or agent_phone from payload
-        cdr_app_id = raw_data.get("app_id") or raw_data.get("agent_id") or ""
-        cdr_agent_phone = raw_data.get("agent_phone_number") or raw_data.get("agent_phone") or ""
+        # ✅ Detect which SarvamAgent this CDR belongs to using app_id, agent_phone, deployment_id, or keyword matching
+        cdr_app_id = str(raw_data.get("app_id") or raw_data.get("agent_id") or "").strip()
+        cdr_agent_phone = str(raw_data.get("agent_phone_number") or raw_data.get("agent_phone") or "").strip()
+        deployment_id = str(raw_data.get("deployment_id") or "").strip()
         webhook_sarvam_agent = None
+
         if cdr_app_id:
             webhook_sarvam_agent = SarvamAgent.objects.filter(app_id=cdr_app_id, is_active=True).first()
         if not webhook_sarvam_agent and cdr_agent_phone:
             clean_agent_phone = "".join(filter(str.isdigit, str(cdr_agent_phone)))
-            webhook_sarvam_agent = SarvamAgent.objects.filter(
-                agent_phone__icontains=clean_agent_phone[-10:]
-            ).first() if len(clean_agent_phone) >= 10 else None
+            if len(clean_agent_phone) >= 10:
+                webhook_sarvam_agent = SarvamAgent.objects.filter(
+                    agent_phone__icontains=clean_agent_phone[-10:]
+                ).first()
+        if not webhook_sarvam_agent:
+            # Match by keyword in app_id / deployment_id against SarvamAgent slug or name (e.g. 'Kia', 'Samsung')
+            search_haystack = f"{cdr_app_id} {deployment_id}".lower()
+            for ag in SarvamAgent.objects.filter(is_active=True):
+                ag_slug = (ag.slug or "").lower()
+                ag_name = (ag.name or "").lower()
+                first_name_word = ag_name.split()[0] if ag_name else ""
+                if ag_slug and ag_slug in search_haystack:
+                    webhook_sarvam_agent = ag
+                    break
+                if first_name_word and len(first_name_word) >= 3 and first_name_word in search_haystack:
+                    webhook_sarvam_agent = ag
+                    break
         if not webhook_sarvam_agent:
             webhook_sarvam_agent = SarvamAgent.objects.filter(is_active=True).first()
 
-        print(f"🔍 [SARVAM CDR] Resolved agent: {webhook_sarvam_agent.name if webhook_sarvam_agent else 'DEFAULT (env)'} | app_id={cdr_app_id}")
+        print(f"🔍 [SARVAM CDR] Resolved agent: {webhook_sarvam_agent.name if webhook_sarvam_agent else 'DEFAULT (env)'} | app_id={cdr_app_id} | deployment_id={deployment_id}")
 
         recording_url = (
             raw_data.get("recording_url")
@@ -1542,11 +1561,15 @@ def sarvam_cdr_webhook(request):
             raw_data.get("candidate_name")
             or raw_data.get("user_name")
             or raw_data.get("customer_name")
+            or raw_data.get("caller_name")
+            or raw_data.get("caller")
             or metadata.get("customer_name")
             or metadata.get("user_name")
+            or metadata.get("caller_name")
             or (output_vars.get("candidate_name") if isinstance(output_vars, dict) else None)
             or (output_vars.get("user_name") if isinstance(output_vars, dict) else None)
             or (output_vars.get("customer_name") if isinstance(output_vars, dict) else None)
+            or (output_vars.get("caller_name") if isinstance(output_vars, dict) else None)
             or "Customer"
         )
 
@@ -5036,6 +5059,22 @@ def sarvam_upload_campaign_api(request, agent_slug=None):
     }, status=200)
 
 
+def _is_subuser_restricted(user):
+    """
+    Returns True if user is a sub-user (created by an owner account)
+    and does NOT have team management permission.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if getattr(user, 'is_superuser', False):
+        return False
+    user_prof = getattr(user, 'profile', None)
+    if not user_prof:
+        return False
+    user_p = getattr(user_prof, 'custom_permissions', {}) or {}
+    return bool(user_prof.created_by and not user_p.get("can_manage_team"))
+
+
 @api_view(["GET"])
 def sarvam_campaigns_list_api(request, agent_slug=None):
     """
@@ -5059,6 +5098,9 @@ def sarvam_campaigns_list_api(request, agent_slug=None):
         qs = SarvamCampaign.objects.all().order_by("-created_at")
     else:
         qs = SarvamCampaign.objects.filter(sarvam_agent__in=allowed_agent_objs).order_by("-created_at")
+
+    if _is_subuser_restricted(request.user):
+        qs = qs.filter(created_by=request.user)
 
     campaigns_data = []
     for c in qs:
@@ -5111,6 +5153,10 @@ def sarvam_campaigns_list_api(request, agent_slug=None):
                 "missed": c.stage_3_missed,
             },
             "created_at": c.created_at.strftime("%d %b %Y %H:%M"),
+            "created_by_user": (
+                f"{c.created_by.username} (Sub-user)" if (c.created_by and hasattr(c.created_by, 'profile') and c.created_by.profile.created_by)
+                else (c.created_by.username if c.created_by else "Main Admin")
+            ),
         })
 
     return Response({
@@ -5258,6 +5304,9 @@ def sarvam_campaign_detail_api(request, campaign_id):
     if not campaign:
         return Response({"error": "Campaign not found"}, status=404)
 
+    if _is_subuser_restricted(request.user) and campaign.created_by != request.user:
+        return Response({"error": "Access denied. You can only view details of campaigns created by your account."}, status=403)
+
     leads_data = []
     for lead in campaign.leads.all().order_by("id"):
         s1_dur = round(lead.stage_1_call.duration_seconds, 1) if lead.stage_1_call else 0.0
@@ -5309,6 +5358,9 @@ def sarvam_campaign_cancel_api(request, campaign_id):
     campaign = SarvamCampaign.objects.filter(id=campaign_id).first()
     if not campaign:
         return Response({"error": "Campaign not found"}, status=404)
+
+    if _is_subuser_restricted(request.user) and campaign.created_by != request.user:
+        return Response({"error": "Access denied. You can only cancel campaigns created by your account."}, status=403)
 
     campaign.status = "CANCELLED"
     campaign.save(update_fields=["status"])
@@ -5532,6 +5584,9 @@ def sarvam_campaign_export_full_api(request, campaign_id):
     if not campaign:
         return Response({"error": "Campaign not found"}, status=404)
 
+    if _is_subuser_restricted(request.user) and campaign.created_by != request.user:
+        return Response({"error": "Access denied. You can only export campaigns created by your account."}, status=403)
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Full Campaign Report"
@@ -5712,6 +5767,9 @@ def sarvam_campaign_export_missed_api(request, campaign_id):
     if not campaign:
         return Response({"error": "Campaign not found"}, status=404)
 
+    if _is_subuser_restricted(request.user) and campaign.created_by != request.user:
+        return Response({"error": "Access denied. You can only export campaigns created by your account."}, status=403)
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Missed Numbers (3 Retries)"
@@ -5855,7 +5913,7 @@ def sarvam_sample_template_api(request):
         output.getvalue(),
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response["Content-Disposition"] = 'attachment; filename="Sarvam_AI_Campaign_Sample_Template.xlsx"'
+    response["Content-Disposition"] = 'attachment; filename="Naavya_AI_campaign_Sarvam_Template.xlsx"'
     return response
 
 

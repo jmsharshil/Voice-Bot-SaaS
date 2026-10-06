@@ -1130,10 +1130,10 @@
                 const heading = headingEl ? headingEl.innerText.toLowerCase() : '';
 
                 return (
-                    slug.includes('samsung') || slug.includes('vtech') || slug.includes('cafe') ||
-                    name.includes('samsung') || name.includes('vtech') || name.includes('cafe') ||
-                    path.includes('samsung') || path.includes('vtech') || path.includes('cafe') ||
-                    heading.includes('samsung') || heading.includes('vtech') || heading.includes('cafe')
+                    slug.includes('samsung') || slug.includes('vtech') || slug.includes('cafe') || slug.includes('store') || slug.includes('retail') || slug.includes('enfield') ||
+                    name.includes('samsung') || name.includes('vtech') || name.includes('cafe') || name.includes('store') || name.includes('retail') || name.includes('enfield') ||
+                    path.includes('samsung') || path.includes('vtech') || path.includes('cafe') || path.includes('store') || path.includes('retail') || path.includes('enfield') ||
+                    heading.includes('samsung') || heading.includes('vtech') || heading.includes('cafe') || heading.includes('store') || heading.includes('retail') || heading.includes('enfield')
                 );
             }
 
@@ -3098,6 +3098,7 @@
                                     <span><i class="fa-solid fa-file-lines"></i> ${escapeHtml(c.excel_file_name || 'Uploaded Sheet')}</span>
                                     <span><i class="fa-solid fa-calendar"></i> ${escapeHtml(c.created_at)}</span>
                                     <span><i class="fa-solid fa-users"></i> <strong>${c.total_leads}</strong> Leads</span>
+                                    <span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:12px; font-weight:600;"><i class="fa-solid fa-user-circle"></i> Launched by: <strong>${escapeHtml(c.created_by_user || 'Main Admin')}</strong></span>
                                 </div>
                             </div>
                             <div>
