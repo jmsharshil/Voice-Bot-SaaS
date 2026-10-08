@@ -3404,6 +3404,7 @@ def sarvam_leads_data(request, agent_slug=None):
             "final_status": r.status,
             "summary": r.summary or {},
             "transcript": r.transcript or "",
+            "campaign_created_by_id": getattr(getattr(r, "campaign", None), "created_by_id", None),
         })
 
     # Determine retail agent (agent-level flag, used in both local and remote loops)
@@ -3621,6 +3622,10 @@ def sarvam_leads_data(request, agent_slug=None):
     if user_prof and user_prof.created_by and not user_p.get("can_manage_team") and assigned_st_list:
         scoped_leads = []
         for l in processed_leads:
+            if l.get("campaign_created_by_id") == request.user.id:
+                scoped_leads.append(l)
+                continue
+
             s_dict = l.get("summary") or {}
             rec_s = str(s_dict.get("recommended_store") or s_dict.get("store") or s_dict.get("preferred_store") or "").strip().lower()
             if rec_s and any(st in rec_s or rec_s in st for st in assigned_st_list):
