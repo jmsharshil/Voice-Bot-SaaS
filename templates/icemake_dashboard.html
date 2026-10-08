@@ -641,7 +641,7 @@
                 <option value="PENDING">Pending</option>
             </select>
 
-            <button id="refreshBtn" class="btn-refresh" onclick="fetchTickets()">
+            <button id="refreshBtn" class="btn-refresh" onclick="fetchTickets(false)">
                 <i id="refreshIcon" class="fa-solid fa-rotate-right"></i> Refresh
             </button>
 
@@ -798,14 +798,19 @@
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     }
 
-    async function fetchTickets() {
+    async function fetchTickets(isAutoRefresh = false) {
         const btn = document.getElementById('refreshBtn');
         const icon = document.getElementById('refreshIcon');
-        if (icon) icon.classList.add('fa-spin');
-        if (btn) btn.disabled = true;
+        if (!isAutoRefresh) {
+            if (icon) icon.classList.add('fa-spin');
+            if (btn) btn.disabled = true;
+        }
 
         try {
-            const res = await fetch('/api/icemake-dashboard/data/');
+            const url = isAutoRefresh 
+                ? '/api/icemake-dashboard/data/?auto=1'
+                : '/api/icemake-dashboard/data/?fetch_whatsapp=1';
+            const res = await fetch(url);
             const data = await res.json();
             allTickets = data.tickets || [];
             updateStats(data);
@@ -813,10 +818,12 @@
         } catch (err) {
             console.error("Failed to load tickets:", err);
         } finally {
-            setTimeout(() => {
-                if (icon) icon.classList.remove('fa-spin');
-                if (btn) btn.disabled = false;
-            }, 300);
+            if (!isAutoRefresh) {
+                setTimeout(() => {
+                    if (icon) icon.classList.remove('fa-spin');
+                    if (btn) btn.disabled = false;
+                }, 300);
+            }
         }
     }
 
@@ -1286,14 +1293,14 @@
         window.location.replace('/accounts/login/');
     });
 
-    // Initial Load
-    fetchTickets();
+    // Initial Load (Manual load fetches both Voice & live WhatsApp API)
+    fetchTickets(false);
 
-    // Safe Auto-Refresh: Skip DOM re-render while user is actively playing audio!
+    // Safe Auto-Refresh: Automatically updates Voice Agent leads every 30s while skipping external WhatsApp API calls
     setInterval(() => {
         if (currentAudio && !currentAudio.paused) return;
-        fetchTickets();
-    }, 60000);
+        fetchTickets(true);
+    }, 30000);
 </script>
 
 </body>

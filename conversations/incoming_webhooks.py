@@ -73,7 +73,17 @@ def _extract_lead_fields(raw_data):
     candidate_name = str(candidate_name).strip()
 
     # 3. Language & Position
-    language = entity.get("language") or raw_data.get("language") or "hi-IN"
+    language = (
+        entity.get("language")
+        or entity.get("langauge")
+        or entity.get("lang")
+        or entity.get("locale")
+        or raw_data.get("language")
+        or raw_data.get("langauge")
+        or raw_data.get("lang")
+        or raw_data.get("locale")
+        or None
+    )
     applied_position = entity.get("applied_position") or entity.get("position") or "Admission Counselor"
 
     # 4. Extract Dynamic Extra Prompt Variables for Sarvam Agent (city, campaign, company, etc.)

@@ -98,7 +98,7 @@ class SarvamAgentService:
         }
 
     @classmethod
-    def trigger_outbound_call(cls, phone_number: str, lead_id: int = 0, customer_name: str = "", language: str = "hi-IN", context: dict = None, sarvam_agent=None, extra_variables: dict = None):
+    def trigger_outbound_call(cls, phone_number: str, lead_id: int = 0, customer_name: str = "", language: str = None, context: dict = None, sarvam_agent=None, extra_variables: dict = None):
         """
         Triggers an outbound voice call from Sarvam AI Agent to the target phone number.
         If `sarvam_agent` (SarvamAgent instance) is provided, its credentials are used;
@@ -151,6 +151,8 @@ class SarvamAgentService:
         agent_vars = {
             "user_name": customer_name,
         }
+        if language and str(language).strip():
+            agent_vars["language"] = str(language).strip()
 
         # Inject all dynamic columns from the uploaded spreadsheet
         if extra_variables and isinstance(extra_variables, dict):

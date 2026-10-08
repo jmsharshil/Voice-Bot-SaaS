@@ -1392,7 +1392,8 @@ def sarvam_cdr_webhook(request):
         print("="*60 + "\n")
 
         call_obj = raw_data.get("call") if isinstance(raw_data.get("call"), dict) else {}
-        metadata = raw_data.get("metadata", {})
+        metadata = raw_data.get("metadata") if isinstance(raw_data.get("metadata"), dict) else {}
+        analysis_obj = raw_data.get("analysis") if isinstance(raw_data.get("analysis"), dict) else {}
 
         # ✅ Extract interaction_id (supports interaction_id, interactionId, call_id, callId, sid)
         interaction_id = (
@@ -1429,7 +1430,7 @@ def sarvam_cdr_webhook(request):
         # ✅ Extract call timing fields
         call_start_time = raw_data.get("call_start_time") or raw_data.get("started_at") or raw_data.get("timestamp")
         call_end_time = raw_data.get("call_end_time") or raw_data.get("ended_at")
-        call_length = float(raw_data.get("call_length") or raw_data.get("duration_in_seconds") or raw_data.get("duration") or 0)
+        call_length = float(raw_data.get("call_length") or raw_data.get("duration_in_seconds") or raw_data.get("duration") or raw_data.get("call_duration") or 0)
 
         # ✅ Parse conversation_log into a readable transcript string
         conversation_log = raw_data.get("conversation_log") or []
@@ -1446,7 +1447,7 @@ def sarvam_cdr_webhook(request):
             or raw_data.get("call_transcript")
             or raw_data.get("transcript")
             or raw_data.get("interaction_transcript")
-            or raw_data.get("analysis", {}).get("transcript")
+            or analysis_obj.get("transcript")
         )
 
         if isinstance(interaction_id, str) and ("{" in interaction_id or "[" in interaction_id or "test" in interaction_id):
@@ -1476,9 +1477,19 @@ def sarvam_cdr_webhook(request):
         from conversations.models import SarvamCallRecord, SarvamAgent
 
         # ✅ Detect which SarvamAgent this CDR belongs to using app_id, agent_phone, deployment_id, or keyword matching
-        cdr_app_id = str(raw_data.get("app_id") or raw_data.get("agent_id") or "").strip()
-        cdr_agent_phone = str(raw_data.get("agent_phone_number") or raw_data.get("agent_phone") or "").strip()
-        deployment_id = str(raw_data.get("deployment_id") or "").strip()
+        cdr_app_id = str(raw_data.get("app_id") or raw_data.get("agent_id") or raw_data.get("appId") or metadata.get("app_id") or "").strip()
+        cdr_agent_phone = str(
+            raw_data.get("agent_phone_number")
+            or raw_data.get("agent_phone")
+            or raw_data.get("called_number")
+            or raw_data.get("did")
+            or raw_data.get("to")
+            or call_obj.get("to")
+            or call_obj.get("agent_phone")
+            or metadata.get("agent_phone")
+            or ""
+        ).strip()
+        deployment_id = str(raw_data.get("deployment_id") or metadata.get("deployment_id") or "").strip()
         webhook_sarvam_agent = None
 
         if cdr_app_id:
@@ -1502,6 +1513,56 @@ def sarvam_cdr_webhook(request):
                 if first_name_word and len(first_name_word) >= 3 and first_name_word in search_haystack:
                     webhook_sarvam_agent = ag
                     break
+
+        if not webhook_sarvam_agent:
+            # ✅ Try resolving agent from recent call record in DIALING / PENDING status
+            from datetime import timedelta
+            from django.utils import timezone
+            recent_threshold = timezone.now() - timedelta(minutes=45)
+            match_rec = None
+            if attempt_id:
+                match_rec = SarvamCallRecord.objects.filter(attempt_id=attempt_id).first()
+            if not match_rec and interaction_id:
+                match_rec = SarvamCallRecord.objects.filter(interaction_id=interaction_id).first()
+            if not match_rec and candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]:
+                match_rec = SarvamCallRecord.objects.filter(
+                    created_at__gte=recent_threshold,
+                    status__in=["DIALING", "PENDING", "IN_PROGRESS", "QUEUED"]
+                ).filter(
+                    candidate_name__icontains=candidate_name.strip()
+                ).order_by("-created_at").first()
+
+            if match_rec and match_rec.sarvam_agent:
+                webhook_sarvam_agent = match_rec.sarvam_agent
+                print(f"🎯 [CDR RESOLUTION]: Resolved agent '{webhook_sarvam_agent.name}' from matched call record #{match_rec.id}")
+
+        if not webhook_sarvam_agent:
+            # Smart Transcript Fallback: If Sarvam omitted app_id/phone, search transcript & summary text for agent name/slug
+            full_tr_text = str(raw_data.get("call_summary") or "")
+            tr_list = raw_data.get("call_transcript") or raw_data.get("transcript") or []
+            if isinstance(tr_list, list):
+                for item in tr_list:
+                    if isinstance(item, dict):
+                        full_tr_text += " " + str(item.get("en_text") or item.get("text") or "")
+            elif isinstance(tr_list, str):
+                full_tr_text += " " + tr_list
+
+            full_text_lower = full_tr_text.lower()
+            if full_text_lower.strip():
+                for ag in SarvamAgent.objects.filter(is_active=True):
+                    ag_slug = (ag.slug or "").lower()
+                    ag_name = (ag.name or "").lower()
+                    if ag_slug and len(ag_slug) >= 3 and ag_slug in full_text_lower:
+                        webhook_sarvam_agent = ag
+                        print(f"🎯 [CDR RESOLUTION]: Resolved agent '{ag.name}' from transcript keyword match (slug '{ag_slug}')")
+                        break
+                    if ag_name and len(ag_name) >= 3:
+                        name_words = [w.strip() for w in ag_name.split() if len(w.strip()) >= 3 and w.strip() not in ["agent", "voice", "bot", "auto", "call"]]
+                        if name_words and any(w in full_text_lower for w in name_words):
+                            webhook_sarvam_agent = ag
+                            print(f"🎯 [CDR RESOLUTION]: Resolved agent '{ag.name}' from transcript keyword match (name '{ag_name}')")
+                            break
+
         if not webhook_sarvam_agent:
             webhook_sarvam_agent = SarvamAgent.objects.filter(is_active=True).first()
 
@@ -2537,12 +2598,21 @@ def resolve_engineer_for_state(location_str):
     return "Mr Rutvik", "919727721447"
 
 
+_ICEMAKE_WHATSAPP_CACHE = {
+    "tickets": [],
+    "updated_at": None
+}
+
+
 @api_view(["GET"])
 def icemake_dashboard_data(request):
     """
     Returns JSON array of all IcemakeTicket records joined with CallDetailRecord,
     AND integrates live WhatsApp CRM inquiries from external API.
+    Voice agent leads update automatically on auto-refresh, while WhatsApp leads
+    only hit the external API on manual refresh or initial load.
     """
+    global _ICEMAKE_WHATSAPP_CACHE
     from datetime import timedelta
     from icemake_bot.models import IcemakeTicket
     from conversations.models import CallDetailRecord
@@ -2626,89 +2696,103 @@ def icemake_dashboard_data(request):
             "engineer_phone": assigned_eng_phone,
         })
 
-    # 📥 FETCH LIVE WHATSAPP BOT INQUIRIES FROM EXTERNAL API (ALL PAGES)
+    # 📥 FETCH LIVE WHATSAPP BOT INQUIRIES FROM EXTERNAL API
+    # Only hit external WhatsApp API on manual refresh / initial load, or if cache empty.
+    should_fetch_wa = (
+        request.GET.get("fetch_whatsapp") == "1" or
+        request.GET.get("auto") != "1" or
+        _ICEMAKE_WHATSAPP_CACHE.get("updated_at") is None
+    )
+
     whatsapp_tickets = []
-    try:
-        token = "1272077585997381"
-        base_wa_url = f"https://whatsappcrmsaas-emdke9dnb4f8bne6.centralindia-01.azurewebsites.net/api/icemake/data/?token={token}"
-        wa_resp = _requests.get(base_wa_url, timeout=10)
-        if wa_resp.status_code == 200:
-            wa_json = wa_resp.json()
-            total_pages = wa_json.get("total_pages", 1)
-            all_convs = wa_json.get("conversations", [])
+    if should_fetch_wa:
+        try:
+            token = "1272077585997381"
+            base_wa_url = f"https://whatsappcrmsaas-emdke9dnb4f8bne6.centralindia-01.azurewebsites.net/api/icemake/data/?token={token}"
+            wa_resp = _requests.get(base_wa_url, timeout=10)
+            if wa_resp.status_code == 200:
+                wa_json = wa_resp.json()
+                total_pages = wa_json.get("total_pages", 1)
+                all_convs = wa_json.get("conversations", [])
 
-            for p in range(2, total_pages + 1):
-                try:
-                    p_resp = _requests.get(f"{base_wa_url}&page={p}", timeout=8)
-                    if p_resp.status_code == 200:
-                        all_convs.extend(p_resp.json().get("conversations", []))
-                except Exception:
-                    pass
-
-            for conv in all_convs:
-                t_data = conv.get("ticket_data") or {}
-                cust = conv.get("customer") or {}
-
-                ticket_no = t_data.get("ticket_no") or f"WA-{conv.get('id')}"
-                cust_name = t_data.get("name") or cust.get("name") or "WhatsApp Customer"
-                registered_mobile = t_data.get("registered_mobile") or cust.get("whatsapp_number") or ""
-                city = t_data.get("city") or ""
-                state = t_data.get("state") or ""
-                city_state = f"{city}, {state}".strip(", ") if (city or state) else "Not Provided"
-                issue_type = t_data.get("complaint_type") or "WhatsApp Inquiry"
-                issue_desc = t_data.get("issue_desc") or ""
-
-                messages = conv.get("messages", [])
-                if not issue_desc and messages:
-                    for m in reversed(messages):
-                        if m.get("direction") == "inbound" and m.get("content"):
-                            issue_desc = m.get("content")
-                            break
-
-                created_at_str = conv.get("created_at") or ""
-                if created_at_str:
+                for p in range(2, total_pages + 1):
                     try:
-                        import datetime as _dt
-                        from django.utils import timezone as _tz
-                        if "T" in created_at_str:
-                            clean_ts = created_at_str.rstrip("Z")
-                            parsed_dt = _dt.datetime.fromisoformat(clean_ts)
-                            if parsed_dt.tzinfo is None:
-                                parsed_dt = _tz.make_aware(parsed_dt, _tz.utc)
-                            created_at_str = _tz.localtime(parsed_dt, _zi.ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S")
+                        p_resp = _requests.get(f"{base_wa_url}&page={p}", timeout=8)
+                        if p_resp.status_code == 200:
+                            all_convs.extend(p_resp.json().get("conversations", []))
                     except Exception:
-                        if "T" in created_at_str:
-                            created_at_str = created_at_str.replace("T", " ").split(".")[0]
+                        pass
 
-                wa_assigned_name = t_data.get("assigned_engineer")
-                wa_assigned_phone = t_data.get("engineer_phone")
-                if not wa_assigned_name or wa_assigned_name == "Not Assigned":
-                    wa_assigned_name, wa_assigned_phone = resolve_engineer_for_state(city_state)
+                for conv in all_convs:
+                    t_data = conv.get("ticket_data") or {}
+                    cust = conv.get("customer") or {}
 
-                whatsapp_tickets.append({
-                    "id": f"wa_{conv.get('id')}",
-                    "source": "WhatsApp Bot",
-                    "ticket_number": ticket_no if ticket_no else f"WA-{conv.get('id')}",
-                    "customer_name": cust_name,
-                    "registered_mobile": registered_mobile,
-                    "caller_phone": cust.get("whatsapp_number") or registered_mobile,
-                    "city_state": city_state,
-                    "company_name": t_data.get("pincode") or "WhatsApp Channel",
-                    "machine_model_no": t_data.get("complaint_type") or "WhatsApp Bot",
-                    "issue_type": issue_type if issue_type else "WhatsApp Inquiry",
-                    "issue_description": issue_desc if issue_desc else "WhatsApp Conversation",
-                    "language": "en",
-                    "created_at": created_at_str,
-                    "google_sheet_synced": True if conv.get("bot_state") == "TICKET_GENERATED" else False,
-                    "recording_url": "",
-                    "call_duration": 0,
-                    "call_status": "TICKET_GENERATED" if conv.get("bot_state") == "TICKET_GENERATED" else conv.get("status", "IN_PROGRESS"),
-                    "messages": messages,
-                    "assigned_engineer": wa_assigned_name,
-                    "engineer_phone": wa_assigned_phone or "",
-                })
-    except Exception as e_wa:
-        print(f"⚠️ Error fetching WhatsApp CRM API data: {e_wa}")
+                    ticket_no = t_data.get("ticket_no") or f"WA-{conv.get('id')}"
+                    cust_name = t_data.get("name") or cust.get("name") or "WhatsApp Customer"
+                    registered_mobile = t_data.get("registered_mobile") or cust.get("whatsapp_number") or ""
+                    city = t_data.get("city") or ""
+                    state = t_data.get("state") or ""
+                    city_state = f"{city}, {state}".strip(", ") if (city or state) else "Not Provided"
+                    issue_type = t_data.get("complaint_type") or "WhatsApp Inquiry"
+                    issue_desc = t_data.get("issue_desc") or ""
+
+                    messages = conv.get("messages", [])
+                    if not issue_desc and messages:
+                        for m in reversed(messages):
+                            if m.get("direction") == "inbound" and m.get("content"):
+                                issue_desc = m.get("content")
+                                break
+
+                    created_at_str = conv.get("created_at") or ""
+                    if created_at_str:
+                        try:
+                            import datetime as _dt
+                            from django.utils import timezone as _tz
+                            if "T" in created_at_str:
+                                clean_ts = created_at_str.rstrip("Z")
+                                parsed_dt = _dt.datetime.fromisoformat(clean_ts)
+                                if parsed_dt.tzinfo is None:
+                                    parsed_dt = _tz.make_aware(parsed_dt, _tz.utc)
+                                created_at_str = _tz.localtime(parsed_dt, _zi.ZoneInfo("Asia/Kolkata")).strftime("%Y-%m-%d %H:%M:%S")
+                        except Exception:
+                            if "T" in created_at_str:
+                                created_at_str = created_at_str.replace("T", " ").split(".")[0]
+
+                    wa_assigned_name = t_data.get("assigned_engineer")
+                    wa_assigned_phone = t_data.get("engineer_phone")
+                    if not wa_assigned_name or wa_assigned_name == "Not Assigned":
+                        wa_assigned_name, wa_assigned_phone = resolve_engineer_for_state(city_state)
+
+                    whatsapp_tickets.append({
+                        "id": f"wa_{conv.get('id')}",
+                        "source": "WhatsApp Bot",
+                        "ticket_number": ticket_no if ticket_no else f"WA-{conv.get('id')}",
+                        "customer_name": cust_name,
+                        "registered_mobile": registered_mobile,
+                        "caller_phone": cust.get("whatsapp_number") or registered_mobile,
+                        "city_state": city_state,
+                        "company_name": t_data.get("pincode") or "WhatsApp Channel",
+                        "machine_model_no": t_data.get("complaint_type") or "WhatsApp Bot",
+                        "issue_type": issue_type if issue_type else "WhatsApp Inquiry",
+                        "issue_description": issue_desc if issue_desc else "WhatsApp Conversation",
+                        "language": "en",
+                        "created_at": created_at_str,
+                        "google_sheet_synced": True if conv.get("bot_state") == "TICKET_GENERATED" else False,
+                        "recording_url": "",
+                        "call_duration": 0,
+                        "call_status": "TICKET_GENERATED" if conv.get("bot_state") == "TICKET_GENERATED" else conv.get("status", "IN_PROGRESS"),
+                        "messages": messages,
+                        "assigned_engineer": wa_assigned_name,
+                        "engineer_phone": wa_assigned_phone or "",
+                    })
+            from django.utils import timezone as _tz
+            _ICEMAKE_WHATSAPP_CACHE["tickets"] = whatsapp_tickets
+            _ICEMAKE_WHATSAPP_CACHE["updated_at"] = _tz.now()
+        except Exception as e_wa:
+            print(f"⚠️ Error fetching WhatsApp CRM API data: {e_wa}")
+            whatsapp_tickets = _ICEMAKE_WHATSAPP_CACHE.get("tickets", [])
+    else:
+        whatsapp_tickets = _ICEMAKE_WHATSAPP_CACHE.get("tickets", [])
 
     all_tickets = data + whatsapp_tickets
     all_tickets.sort(key=lambda x: str(x.get("created_at", "")), reverse=True)
@@ -3910,7 +3994,7 @@ def sarvam_trigger_call_api(request, agent_slug=None):
     data = request.data or {}
     phone_number = data.get("phone_number") or data.get("phone")
     candidate_name = data.get("candidate_name") or data.get("name") or "Candidate"
-    language = data.get("language") or "hi-IN"
+    language = data.get("language") or data.get("langauge") or data.get("lang") or data.get("locale") or None
 
     # Resolve which sarvam agent to use
     slug = agent_slug or data.get("agent_slug")
@@ -3941,8 +4025,12 @@ def sarvam_trigger_call_api(request, agent_slug=None):
 
     extra_vars = {}
     if isinstance(data, dict):
+        reserved_keys = [
+            "phone_number", "phone", "candidate_name", "name", "user_name", "full_name",
+            "language", "langauge", "lang", "locale", "agent_slug", "agent", "agent_id", "agent_phone", "id"
+        ]
         for k, v in data.items():
-            if k not in ["phone_number", "phone", "candidate_name", "name", "language", "agent_slug", "agent"]:
+            if str(k).strip() not in reserved_keys:
                 if v is not None and str(v).strip() != "":
                     extra_vars[str(k).strip()] = str(v).strip()
 
@@ -3985,7 +4073,7 @@ def sarvam_trigger_call_api(request, agent_slug=None):
         attempt_id=attempt_id,
         phone_number=str(phone_number),
         candidate_name=candidate_name,
-        language=language,
+        language=language or "hi-IN",
         status="DIALING",
         applied_position="Admission Counselor",
     )
@@ -4023,7 +4111,7 @@ def public_trigger_sarvam_call_api(request, agent_slug=None):
     data = request.data or {}
     phone_number = data.get("phone_number") or data.get("phone")
     candidate_name = data.get("candidate_name") or data.get("name") or data.get("user_name") or "Customer"
-    language = data.get("language") or "hi-IN"
+    language = data.get("language") or data.get("langauge") or data.get("lang") or data.get("locale") or None
 
     # Resolve agent by agent_id (preferred), slug, or agent_phone
     agent_id = data.get("agent_id") or data.get("id")
@@ -4069,8 +4157,12 @@ def public_trigger_sarvam_call_api(request, agent_slug=None):
     # Collect custom agent prompt variables (e.g. car_model, city, user_name, etc.)
     extra_vars = {}
     if isinstance(data, dict):
+        reserved_keys = [
+            "phone_number", "phone", "candidate_name", "name", "user_name", "full_name",
+            "language", "langauge", "lang", "locale", "agent_slug", "agent", "agent_id", "agent_phone", "id"
+        ]
         for k, v in data.items():
-            if k not in ["phone_number", "phone", "candidate_name", "name", "user_name", "language", "agent_slug", "agent", "agent_id", "agent_phone"]:
+            if str(k).strip() not in reserved_keys:
                 if v is not None and str(v).strip() != "":
                     extra_vars[str(k).strip()] = str(v).strip()
 
@@ -4111,7 +4203,7 @@ def public_trigger_sarvam_call_api(request, agent_slug=None):
         attempt_id=attempt_id,
         phone_number=str(phone_number),
         candidate_name=candidate_name,
-        language=language,
+        language=language or "hi-IN",
         status="DIALING",
         call_type="React Outbound Call",
     )
@@ -4510,7 +4602,7 @@ def _run_multi_stage_campaign(campaign_id):
                 phone_number=lead.phone_number,
                 lead_id=0,
                 customer_name=lead.candidate_name,
-                language=getattr(lead, "language", "hi-IN"),
+                language=getattr(lead, "language", None),
                 extra_variables=extra_vars_combined,
                 sarvam_agent=agent,
             )
@@ -4640,7 +4732,7 @@ def _run_multi_stage_campaign(campaign_id):
                 phone_number=lead.phone_number,
                 lead_id=0,
                 customer_name=lead.candidate_name,
-                language=getattr(lead, "language", "hi-IN"),
+                language=getattr(lead, "language", None),
                 extra_variables=extra_vars_combined,
                 sarvam_agent=agent,
             )
@@ -4765,7 +4857,7 @@ def _run_multi_stage_campaign(campaign_id):
                 phone_number=lead.phone_number,
                 lead_id=0,
                 customer_name=lead.candidate_name,
-                language=getattr(lead, "language", "hi-IN"),
+                language=getattr(lead, "language", None),
                 extra_variables=extra_vars_combined,
                 sarvam_agent=agent,
             )
