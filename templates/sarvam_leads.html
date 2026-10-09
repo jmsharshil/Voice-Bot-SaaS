@@ -2028,7 +2028,7 @@
             const callbackEl = document.getElementById('stat-callback');
             const notIntEl = document.getElementById('stat-not-interested');
 
-            const totalVal = data.total ?? (data.stats ? (data.stats.total_calls ?? newLeads.length) : newLeads.length);
+            const totalVal = (data.stats && data.stats.total_calls !== undefined) ? data.stats.total_calls : (data.total ?? newLeads.length);
             const highIntentVal = data.stats ? ((data.stats.high_intent || data.stats.interview_scheduled || 0)) : 0;
             const callbackVal = data.stats ? (data.stats.callback_required || 0) : 0;
             const notIntVal = data.stats ? ((data.stats.not_interested || 0) + (data.stats.role_mismatch || 0)) : 0;

@@ -3302,24 +3302,29 @@ def sarvam_leads_data(request, agent_slug=None):
 
     # Filter local records scoped strictly to this agent (or user's allowed agents)
     if sarvam_agent:
-        base_qs = SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent)
+        agent_qs = SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent)
     elif is_superuser:
-        base_qs = SarvamCallRecord.objects.all()
+        agent_qs = SarvamCallRecord.objects.all()
     else:
-        base_qs = SarvamCallRecord.objects.filter(sarvam_agent__in=allowed_agent_objs)
+        agent_qs = SarvamCallRecord.objects.filter(sarvam_agent__in=allowed_agent_objs)
 
     search_q = (request.GET.get("search") or "").strip()
     status_q = (request.GET.get("status") or "").strip().upper()
 
     if search_q:
         from django.db.models import Q
-        base_qs = base_qs.filter(
+        agent_qs = agent_qs.filter(
             Q(candidate_name__icontains=search_q) |
             Q(phone_number__icontains=search_q) |
             Q(applied_position__icontains=search_q) |
             Q(call_type__icontains=search_q)
         )
 
+    # stats_qs is the base queryset used for summary card metrics (keeps stat cards fixed on tab click)
+    stats_qs = agent_qs
+
+    # base_qs is filtered by status_q for table rows and table pagination
+    base_qs = agent_qs
     if status_q and status_q != "ALL":
         if status_q == "INTERVIEW":
             base_qs = base_qs.filter(status__in=["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED"])
@@ -3756,9 +3761,9 @@ def sarvam_leads_data(request, agent_slug=None):
         processed_leads = scoped_leads
 
     from django.db.models import Count
-    status_counts = base_qs.values("status").annotate(cnt=Count("id"))
+    status_counts = stats_qs.values("status").annotate(cnt=Count("id"))
     stats = {
-        "total_calls": total_count,
+        "total_calls": stats_qs.count(),
         "interview_scheduled": 0,
         "high_intent": 0,
         "callback_required": 0,
