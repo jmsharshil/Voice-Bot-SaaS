@@ -3633,23 +3633,6 @@ def sarvam_leads_data(request, agent_slug=None):
         remote_dir_display = "Inbound Call" if remote_dir == "inbound" else "Outbound Call"
 
         remote_dur = float(item.get("duration_in_seconds", 0))
-        processed_leads.append({
-            "interaction_id": iid,
-            "contact": contact or "N/A",
-            "candidate_name": candidate_name,
-            "applied_position": _get_requirement_str(call_summary, call_summary.get("applied_position") if isinstance(call_summary, dict) else None),
-            "call_type": "Inbound Call" if (remote_dir == "inbound") else "Outbound Call",
-            "direction": remote_dir,
-            "call_direction_display": remote_dir_display,
-            "duration_seconds": round(remote_dur, 1),
-            "billed_seconds": calculate_billed_seconds(remote_dur),
-            "language": item.get("language_name", "Hindi"),
-            "attempted_at": item.get("attempted_at") or item.get("start_datetime"),
-            "audio_url": item.get("audio_url"),
-            "final_status": final_status or "COMPLETED",
-            "summary": call_summary,
-            "transcript": "",
-        })
         # Queue for DB persistence
         new_remote_to_persist.append((item, call_summary, candidate_name, final_status, clean_item_p))
 
@@ -3687,8 +3670,8 @@ def sarvam_leads_data(request, agent_slug=None):
 
                     defaults = {
                         "sarvam_agent": agent,
-                        "candidate_name": candidate_name or "Unknown Candidate",
-                        "applied_position": call_summary.get("applied_position", "Admission Counselor") if isinstance(call_summary, dict) else "Admission Counselor",
+                        "candidate_name": candidate_name or "Customer",
+                        "applied_position": _get_requirement_str(call_summary if isinstance(call_summary, dict) else {}, item.get("applied_position")),
                         "language": item.get("language_name", "hi-IN"),
                         "status": final_status or "COMPLETED",
                         "duration_seconds": round(float(item.get("duration_in_seconds", 0)), 1),
