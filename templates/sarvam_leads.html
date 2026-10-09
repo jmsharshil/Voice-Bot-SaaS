@@ -2278,8 +2278,12 @@
                 const formattedDate = lead.attempted_at ? new Date(lead.attempted_at).toLocaleString() : 'N/A';
                 const avatarStyle = getAvatarStyle(custName);
                 const dirBadge = getDirectionBadge(lead);
+                const isOutboundCall = (lead.direction === 'outbound') || (lead.call_type && !lead.call_type.toLowerCase().includes('inbound'));
+                const isHashContact = lead.contact && (lead.contact.length > 20 || /^[a-f0-9]{32,64}$/i.test(lead.contact));
                 const contactHtml = (lead.contact && lead.contact !== 'N/A' && lead.contact !== 'unknown')
-                    ? `<strong style="color: var(--text-primary); font-size: 0.92rem;">${escapeHtml(lead.contact)}</strong>`
+                    ? (isHashContact
+                        ? `<span style="color: #6366f1; font-size: 0.85rem; font-weight: 600;" title="Session ID: ${escapeHtml(lead.contact)}"><i class="fa-solid fa-globe"></i> ${isOutboundCall ? 'Web Call (Outbound)' : 'Web Call (Inbound)'}</span>`
+                        : `<strong style="color: var(--text-primary); font-size: 0.92rem;">${escapeHtml(lead.contact)}</strong>`)
                     : `<span style="color: var(--text-secondary); font-size: 0.85rem; font-style: italic;">Private Contact</span>`;
 
                 const cleanAudioSrc = lead.audio_url
