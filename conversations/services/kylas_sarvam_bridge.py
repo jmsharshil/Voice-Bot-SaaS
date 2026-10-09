@@ -151,8 +151,6 @@ class SarvamAgentService:
         agent_vars = {
             "user_name": customer_name,
         }
-        if language and str(language).strip():
-            agent_vars["language"] = str(language).strip()
 
         # Inject all dynamic columns from the uploaded spreadsheet
         if extra_variables and isinstance(extra_variables, dict):

@@ -3268,13 +3268,19 @@ def sarvam_leads_data(request, agent_slug=None):
     headers = {"X-API-Key": api_key}
     params = {"start_datetime": start_dt, "end_datetime": end_dt, "limit": 100}
 
-    remote_items = []
-    try:
-        res = http_requests.get(sarvam_url, headers=headers, params=params, timeout=15)
-        if res.status_code == 200 and res.content:
-            remote_items = res.json().get("items", [])
-    except Exception as e:
-        print(f"⚠️ [SARVAM ANALYTICS API FETCH WARNING]: {e}")
+    from django.core.cache import cache
+    cache_key = f"sarvam_analytics_{app_id}_{days_back}"
+    remote_items = cache.get(cache_key)
+
+    if remote_items is None:
+        remote_items = []
+        try:
+            res = http_requests.get(sarvam_url, headers=headers, params=params, timeout=10)
+            if res.status_code == 200 and res.content:
+                remote_items = res.json().get("items", [])
+                cache.set(cache_key, remote_items, timeout=5)
+        except Exception as e:
+            print(f"⚠️ [SARVAM ANALYTICS API FETCH WARNING]: {e}")
 
     processed_leads = []
     seen_ids = set()

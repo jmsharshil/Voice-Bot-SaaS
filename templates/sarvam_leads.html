@@ -2012,12 +2012,53 @@
             }
         }
 
+        let leadsPageCache = {};
+
+        function applyLeadsDataResponse(data) {
+            if (data.agent_minutes) {
+                updateMinutesUI(data.agent_minutes);
+            }
+
+            const newLeads = data.leads || [];
+            allLeadsData = newLeads;
+            filteredLeadsCache = newLeads;
+
+            const totalEl = document.getElementById('stat-total');
+            const interviewEl = document.getElementById('stat-interviews');
+            const callbackEl = document.getElementById('stat-callback');
+            const notIntEl = document.getElementById('stat-not-interested');
+
+            const totalVal = data.total ?? (data.stats ? (data.stats.total_calls ?? newLeads.length) : newLeads.length);
+            const highIntentVal = data.stats ? ((data.stats.high_intent || data.stats.interview_scheduled || 0)) : 0;
+            const callbackVal = data.stats ? (data.stats.callback_required || 0) : 0;
+            const notIntVal = data.stats ? ((data.stats.not_interested || 0) + (data.stats.role_mismatch || 0)) : 0;
+
+            if (totalEl) totalEl.innerText = totalVal;
+            if (interviewEl) interviewEl.innerText = highIntentVal;
+            if (callbackEl) callbackEl.innerText = callbackVal;
+            if (notIntEl) notIntEl.innerText = notIntVal;
+
+            const reqPageSize = pageSize === 'ALL' ? 1000 : (parseInt(pageSize, 10) || 10);
+            const serverTotal = data.total ?? newLeads.length;
+            const totalPages = data.total_pages ?? (pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(serverTotal / reqPageSize)));
+            const startIdx = pageSize === 'ALL' ? 0 : (currentPage - 1) * reqPageSize;
+            const endIdx = pageSize === 'ALL' ? serverTotal : Math.min(startIdx + newLeads.length, serverTotal);
+
+            renderLeads(newLeads);
+            renderPaginationControls(serverTotal, startIdx, endIdx, totalPages);
+
+            const lastUpdEl = document.getElementById('last-updated-time');
+            if (lastUpdEl) lastUpdEl.innerText = new Date().toLocaleTimeString();
+        }
+
         async function fetchLeadsData(silent = false) {
             const days = document.getElementById('daysFilter')?.value || 30;
             const search = (document.getElementById('searchInput')?.value || '').trim();
             const statusSelect = document.getElementById('statusFilter');
             const status = statusSelect ? statusSelect.value : currentCardFilter;
             const tbody = document.getElementById('leadsTableBody');
+            const reqPageSize = pageSize === 'ALL' ? 1000 : (parseInt(pageSize, 10) || 10);
+            const cacheKey = `${days}_${search}_${status}_${currentPage}_${reqPageSize}`;
 
             if (!silent && tbody) {
                 const isSamsung = isSamsungAgentMode();
@@ -2035,7 +2076,6 @@
             }
 
             try {
-                const reqPageSize = pageSize === 'ALL' ? 1000 : (parseInt(pageSize, 10) || 10);
                 const queryParams = new URLSearchParams({
                     days: days,
                     page: currentPage,
@@ -2054,43 +2094,8 @@
                     return;
                 }
 
-                // Update Agent Minute Balance Widget & Badge
-                if (data.agent_minutes) {
-                    updateMinutesUI(data.agent_minutes);
-                }
-
-                const newLeads = data.leads || [];
-                allLeadsData = newLeads;
-                filteredLeadsCache = newLeads;
-
-                // Update Stats - Common for all Sarvam agents
-                const totalEl = document.getElementById('stat-total');
-                const interviewEl = document.getElementById('stat-interviews');
-                const callbackEl = document.getElementById('stat-callback');
-                const notIntEl = document.getElementById('stat-not-interested');
-
-                const totalVal = data.total ?? (data.stats ? (data.stats.total_calls ?? newLeads.length) : newLeads.length);
-                const highIntentVal = data.stats ? ((data.stats.high_intent || data.stats.interview_scheduled || 0)) : 0;
-                const callbackVal = data.stats ? (data.stats.callback_required || 0) : 0;
-                const notIntVal = data.stats ? ((data.stats.not_interested || 0) + (data.stats.role_mismatch || 0)) : 0;
-
-                if (totalEl) totalEl.innerText = totalVal;
-                if (interviewEl) interviewEl.innerText = highIntentVal;
-                if (callbackEl) callbackEl.innerText = callbackVal;
-                if (notIntEl) notIntEl.innerText = notIntVal;
-
-                // Server-side pagination parameters
-                const serverTotal = data.total ?? newLeads.length;
-                const totalPages = data.total_pages ?? (pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(serverTotal / reqPageSize)));
-                const startIdx = pageSize === 'ALL' ? 0 : (currentPage - 1) * reqPageSize;
-                const endIdx = pageSize === 'ALL' ? serverTotal : Math.min(startIdx + newLeads.length, serverTotal);
-
-                renderLeads(newLeads);
-                renderPaginationControls(serverTotal, startIdx, endIdx, totalPages);
-
-                // Update last-updated time
-                const lastUpdEl = document.getElementById('last-updated-time');
-                if (lastUpdEl) lastUpdEl.innerText = new Date().toLocaleTimeString();
+                leadsPageCache[cacheKey] = { data: data, timestamp: Date.now() };
+                applyLeadsDataResponse(data);
 
             } catch (err) {
                 console.error(err);
@@ -2459,6 +2464,7 @@
         }
 
         function filterLeads(resetPage = false) {
+            leadsPageCache = {}; // Reset cache on new search/filter
             const statusSelect = document.getElementById('statusFilter');
             const status = statusSelect ? statusSelect.value : currentCardFilter;
 
@@ -2472,6 +2478,7 @@
         }
 
         function onPageSizeChange(newSize) {
+            leadsPageCache = {}; // Reset cache on size change
             pageSize = newSize === 'ALL' ? 'ALL' : parseInt(newSize, 10);
             const sel = document.getElementById('pageSizeSelect');
             if (sel && sel.value !== String(newSize)) {
@@ -2483,7 +2490,21 @@
 
         function goToPage(pageNum) {
             currentPage = pageNum;
-            fetchLeadsData(false);
+            const days = document.getElementById('daysFilter')?.value || 30;
+            const search = (document.getElementById('searchInput')?.value || '').trim();
+            const statusSelect = document.getElementById('statusFilter');
+            const status = statusSelect ? statusSelect.value : currentCardFilter;
+            const reqPageSize = pageSize === 'ALL' ? 1000 : (parseInt(pageSize, 10) || 10);
+            const cacheKey = `${days}_${search}_${status}_${currentPage}_${reqPageSize}`;
+
+            if (leadsPageCache[cacheKey] && (Date.now() - leadsPageCache[cacheKey].timestamp < 60000)) {
+                // INSTANT 0ms PAGE SWITCHING (No loading spinner!)
+                applyLeadsDataResponse(leadsPageCache[cacheKey].data);
+                // Background silent refresh
+                fetchLeadsData(true);
+            } else {
+                fetchLeadsData(false);
+            }
         }
 
         function renderPaginationControls(total, startIdx, endIdx, totalPages) {
@@ -3660,8 +3681,8 @@
             } else {
                 fetchLeadsData(true);
             }
-            // Ultra-fast 3s live polling when campaign is active/dialing, else 10s
-            const nextPollMs = isCampaignActive ? 3000 : 10000;
+            // Production-optimized polling: 5s during active campaign, 15s when idle
+            const nextPollMs = isCampaignActive ? 5000 : 15000;
             setTimeout(runDynamicPoll, nextPollMs);
         }
 
