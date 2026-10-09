@@ -3302,11 +3302,61 @@ def sarvam_leads_data(request, agent_slug=None):
 
     # Filter local records scoped strictly to this agent (or user's allowed agents)
     if sarvam_agent:
-        local_records = SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent).order_by("-created_at")
+        base_qs = SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent)
     elif is_superuser:
-        local_records = SarvamCallRecord.objects.all().order_by("-created_at")
+        base_qs = SarvamCallRecord.objects.all()
     else:
-        local_records = SarvamCallRecord.objects.filter(sarvam_agent__in=allowed_agent_objs).order_by("-created_at")
+        base_qs = SarvamCallRecord.objects.filter(sarvam_agent__in=allowed_agent_objs)
+
+    search_q = (request.GET.get("search") or "").strip()
+    status_q = (request.GET.get("status") or "").strip().upper()
+
+    if search_q:
+        from django.db.models import Q
+        base_qs = base_qs.filter(
+            Q(candidate_name__icontains=search_q) |
+            Q(phone_number__icontains=search_q) |
+            Q(applied_position__icontains=search_q) |
+            Q(call_type__icontains=search_q)
+        )
+
+    if status_q and status_q != "ALL":
+        if status_q == "INTERVIEW":
+            base_qs = base_qs.filter(status__in=["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED"])
+        elif status_q == "CALLBACK":
+            base_qs = base_qs.filter(status__in=["CALLBACK", "FOLLOW_UP", "WHATSAPP"])
+        elif status_q == "NOT_INTERESTED":
+            base_qs = base_qs.filter(status__in=["NOT_INTERESTED", "NO_ANSWER", "MISSED", "MISMATCH", "BUSY", "FAILED", "CANCELLED", "TIMEOUT"])
+        elif status_q == "MISMATCH":
+            base_qs = base_qs.filter(status__in=["MISMATCH"])
+
+    total_count = base_qs.count()
+
+    raw_page = request.GET.get("page")
+    raw_page_size = request.GET.get("page_size") or request.GET.get("limit")
+    try:
+        page = max(int(raw_page or 1), 1)
+    except (ValueError, TypeError):
+        page = 1
+
+    try:
+        page_size = int(raw_page_size or 10)
+    except (ValueError, TypeError):
+        page_size = 10
+
+    import math
+    if page_size > 0 and page_size != 1000:
+        total_pages = math.ceil(total_count / page_size) if total_count > 0 else 1
+        if page > total_pages:
+            page = total_pages
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        local_records = base_qs.order_by("-created_at")[start_idx:end_idx]
+    else:
+        local_records = base_qs.order_by("-created_at")[:100]
+        total_pages = 1
+        page = 1
+        page_size = total_count
 
     for r in local_records:
         # 🟥 FIX: Skip and merge orphaned dummy webhook records with unknown phone number into valid sibling records
@@ -3722,8 +3772,10 @@ def sarvam_leads_data(request, agent_slug=None):
                 scoped_leads.append(l)
         processed_leads = scoped_leads
 
+    from django.db.models import Count
+    status_counts = base_qs.values("status").annotate(cnt=Count("id"))
     stats = {
-        "total_calls": len(processed_leads),
+        "total_calls": total_count,
         "interview_scheduled": 0,
         "high_intent": 0,
         "callback_required": 0,
@@ -3732,6 +3784,22 @@ def sarvam_leads_data(request, agent_slug=None):
         "completed": 0,
         "incomplete": 0
     }
+    for sc in status_counts:
+        st_val = (sc["status"] or "").upper().strip()
+        cnt = sc["cnt"]
+        if st_val in ["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED", "BOOKING_CONFIRMED"]:
+            stats["interview_scheduled"] += cnt
+            stats["high_intent"] += cnt
+        elif st_val in ["CALLBACK", "FOLLOW_UP", "WHATSAPP"]:
+            stats["callback_required"] += cnt
+        elif st_val in ["NOT_INTERESTED", "DECLINED", "REJECTED", "NO_ANSWER", "MISSED", "BUSY", "FAILED", "CANCELLED", "TIMEOUT", "UNREACHABLE"]:
+            stats["not_interested"] += cnt
+        elif st_val in ["MISMATCH", "ROLE_MISMATCH"]:
+            stats["role_mismatch"] += cnt
+            stats["not_interested"] += cnt
+        else:
+            stats["completed"] += cnt
+
     for lead in processed_leads:
         final_st = classify_sarvam_lead_status(
             lead.get("final_status"),
@@ -3741,21 +3809,6 @@ def sarvam_leads_data(request, agent_slug=None):
         )
         lead["final_status"] = final_st
 
-        if final_st == "INTERVIEW":
-            stats["interview_scheduled"] += 1
-            stats["high_intent"] += 1
-        elif final_st == "CALLBACK":
-            stats["callback_required"] += 1
-        elif final_st == "NOT_INTERESTED":
-            stats["not_interested"] += 1
-        elif final_st == "NO_ANSWER":
-            stats["not_interested"] += 1
-        elif final_st == "MISMATCH":
-            stats["role_mismatch"] += 1
-            stats["not_interested"] += 1
-        else:
-            stats["completed"] += 1
-
     agent_minutes_info = {
         "allocated_minutes": sarvam_agent.allocated_minutes if sarvam_agent else 5000.0,
         "used_minutes": sarvam_agent.total_used_minutes if sarvam_agent else 0.0,
@@ -3764,86 +3817,15 @@ def sarvam_leads_data(request, agent_slug=None):
         "usage_percentage": sarvam_agent.usage_percentage if sarvam_agent else 0.0,
     }
 
-    # Filter by search & status query params if provided
-    search_q = (request.GET.get("search") or "").strip().lower()
-    status_q = (request.GET.get("status") or "").strip().upper()
-
-    if search_q or (status_q and status_q != "ALL"):
-        filtered_leads = []
-        for lead in processed_leads:
-            s_dict = lead.get("summary") or {}
-            cand_name = str(lead.get("candidate_name") or "").lower()
-            contact_str = str(lead.get("contact") or "").lower()
-            pos_str = str(lead.get("applied_position") or "").lower()
-            prod_str = str(s_dict.get("product_interest") or "").lower()
-            store_str = str(s_dict.get("recommended_store") or s_dict.get("store") or "").lower()
-
-            matches_search = not search_q or (
-                search_q in cand_name or search_q in contact_str or
-                search_q in pos_str or search_q in prod_str or search_q in store_str
-            )
-
-            st_val = str(lead.get("final_status") or "").upper()
-            if status_q == "INTERVIEW":
-                matches_status = (st_val == "INTERVIEW")
-            elif status_q == "CALLBACK":
-                matches_status = (st_val == "CALLBACK")
-            elif status_q == "NOT_INTERESTED":
-                matches_status = (st_val in ["NOT_INTERESTED", "NO_ANSWER", "MISMATCH"])
-            elif status_q == "MISMATCH":
-                matches_status = (st_val == "MISMATCH")
-            else:
-                matches_status = True
-
-            if matches_search and matches_status:
-                filtered_leads.append(lead)
-    else:
-        filtered_leads = processed_leads
-
-    import math
-    total_count = len(filtered_leads)
-    
-    raw_page = request.GET.get("page")
-    raw_page_size = request.GET.get("page_size") or request.GET.get("limit")
-
-    if raw_page or raw_page_size:
-        try:
-            page = max(int(raw_page or 1), 1)
-        except (ValueError, TypeError):
-            page = 1
-        
-        try:
-            page_size = int(raw_page_size or 10)
-        except (ValueError, TypeError):
-            page_size = 10
-
-        if page_size > 0:
-            total_pages = math.ceil(total_count / page_size) if total_count > 0 else 1
-            if page > total_pages:
-                page = total_pages
-            start_idx = (page - 1) * page_size
-            end_idx = start_idx + page_size
-            paged_leads = filtered_leads[start_idx:end_idx]
-        else:
-            paged_leads = filtered_leads
-            total_pages = 1
-            page = 1
-            page_size = total_count
-    else:
-        paged_leads = filtered_leads
-        total_pages = 1
-        page = 1
-        page_size = total_count
-
     return Response({
         "total": total_count,
-        "total_unfiltered": len(processed_leads),
+        "total_unfiltered": total_count,
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,
         "stats": stats,
         "agent_minutes": agent_minutes_info,
-        "leads": paged_leads,
+        "leads": processed_leads,
         "agent_name": sarvam_agent.name if sarvam_agent else "Sarvam AI Agent",
         "agent_slug": sarvam_agent.slug if sarvam_agent else "default",
         "agent_phone": sarvam_agent.agent_phone if sarvam_agent else ""
