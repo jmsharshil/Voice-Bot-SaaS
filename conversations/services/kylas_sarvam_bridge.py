@@ -98,13 +98,14 @@ class SarvamAgentService:
         }
 
     @classmethod
-    def trigger_outbound_call(cls, phone_number: str, lead_id: int = 0, customer_name: str = "", language: str = None, context: dict = None, sarvam_agent=None, extra_variables: dict = None):
+    def trigger_outbound_call(cls, phone_number: str, lead_id: int = 0, customer_name: str = "", language: str = None, context: dict = None, sarvam_agent=None, extra_variables: dict = None, campaign_id: int = None):
         """
         Triggers an outbound voice call from Sarvam AI Agent to the target phone number.
         If `sarvam_agent` (SarvamAgent instance) is provided, its credentials are used;
         otherwise falls back to global .env configuration.
         Accepts optional `extra_variables` (e.g. {"car_model": "Scorpio-N", "city": "Ahmedabad"})
         which are dynamically passed to Sarvam agent prompt variables.
+        If `campaign_id` is passed, it is embedded into the CDR webhook URL for 100% campaign traceability.
         """
         if sarvam_agent and getattr(sarvam_agent, "is_minutes_exhausted", False):
             logger.warning(f"🛑 [MINUTES EXHAUSTED]: Agent '{sarvam_agent.name}' has 0 remaining call minutes ({sarvam_agent.remaining_minutes}m left). Call blocked.")
@@ -134,6 +135,8 @@ class SarvamAgentService:
         if clean_domain and not clean_domain.startswith("http://") and not clean_domain.startswith("https://"):
             clean_domain = f"https://{clean_domain}"
         callback_url = f"{clean_domain}/api/webhook/sarvam/cdr/" if clean_domain else ""
+        if callback_url and campaign_id:
+            callback_url = f"{callback_url}?campaign_id={campaign_id}"
 
         # Ensure phone number is E.164 formatted (with +91)
         formatted_phone = str(phone_number).strip()
@@ -173,6 +176,9 @@ class SarvamAgentService:
             if num_alias in agent_vars and "car_number" not in agent_vars:
                 agent_vars["car_number"] = agent_vars[num_alias]
 
+        # Inject campaign_id into agent_variables so Sarvam agent receives and can return it in CDR
+        if campaign_id:
+            agent_vars["campaign_id"] = str(campaign_id)
 
         payload = {
             "app_config": {
