@@ -2797,11 +2797,28 @@ def icemake_dashboard_data(request):
     all_tickets = data + whatsapp_tickets
     all_tickets.sort(key=lambda x: str(x.get("created_at", "")), reverse=True)
 
+    # ── CALCULATE VOICE AGENT ALLOCATED & REMAINING MINUTES ──
+    from agents.models import VoiceAgent
+    ice_agent = None
+    if hasattr(request.user, "profile") and request.user.profile and request.user.profile.assigned_agent and "ice" in request.user.profile.assigned_agent.name.lower():
+        ice_agent = request.user.profile.assigned_agent
+    if not ice_agent:
+        ice_agent = VoiceAgent.objects.filter(role_template__role_name__icontains="Ice Make").first()
+    if not ice_agent:
+        ice_agent = VoiceAgent.objects.filter(name__icontains="Ice Make").first()
+
+    allocated_minutes = ice_agent.minutes_quota if ice_agent else 5000
+    used_minutes = ice_agent.used_minutes if ice_agent else 0.0
+    remaining_minutes = round(max(allocated_minutes - used_minutes, 0), 1) if ice_agent else 5000.0
+
     return Response({
         "tickets": all_tickets,
         "total_count": len(all_tickets),
         "voice_count": len(data),
-        "whatsapp_count": len(whatsapp_tickets)
+        "whatsapp_count": len(whatsapp_tickets),
+        "allocated_minutes": allocated_minutes,
+        "used_minutes": used_minutes,
+        "remaining_minutes": remaining_minutes,
     })
 
 
