@@ -135,8 +135,11 @@ class SarvamAgentService:
         if clean_domain and not clean_domain.startswith("http://") and not clean_domain.startswith("https://"):
             clean_domain = f"https://{clean_domain}"
         callback_url = f"{clean_domain}/api/webhook/sarvam/cdr/" if clean_domain else ""
-        if callback_url and campaign_id:
-            callback_url = f"{callback_url}?campaign_id={campaign_id}"
+        if callback_url:
+            if campaign_id:
+                callback_url = f"{callback_url}?campaign_id={campaign_id}&call_type=outbound"
+            else:
+                callback_url = f"{callback_url}?call_type=outbound"
 
         # Ensure phone number is E.164 formatted (with +91)
         formatted_phone = str(phone_number).strip()

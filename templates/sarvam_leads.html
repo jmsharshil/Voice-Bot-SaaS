@@ -2227,6 +2227,28 @@
             }
         }
 
+        function formatCallDateTime(lead) {
+            if (!lead) return 'N/A';
+            if (lead.attempted_at_display && lead.attempted_at_display !== 'N/A' && String(lead.attempted_at_display).trim() !== '') {
+                return lead.attempted_at_display;
+            }
+            if (!lead.attempted_at) return 'N/A';
+            try {
+                const d = new Date(lead.attempted_at);
+                if (isNaN(d.getTime())) return 'N/A';
+                return d.toLocaleString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            } catch (e) {
+                return 'N/A';
+            }
+        }
+
         function renderLeads(leads) {
             const tbody = document.getElementById('leadsTableBody');
             const headerRow = document.getElementById('tableHeaderRow');
@@ -2275,7 +2297,7 @@
                 const reqDetails = s.car_model || s.product_interest || s.product_name || s.flat_type || s.loan_type || s.course_name || s.requirement || lead.applied_position || 'General Inquiry';
                 const initials = (custName || 'C').split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2) || 'C';
                 const statusBadge = getStatusBadge(lead.final_status);
-                const formattedDate = lead.attempted_at ? new Date(lead.attempted_at).toLocaleString() : 'N/A';
+                const formattedDate = formatCallDateTime(lead);
                 const avatarStyle = getAvatarStyle(custName);
                 const dirBadge = getDirectionBadge(lead);
                 const isOutboundCall = (lead.direction === 'outbound') || (lead.call_type && !lead.call_type.toLowerCase().includes('inbound'));
@@ -2620,7 +2642,7 @@
                 custName = isSamsungAgent ? 'Valued Customer' : (lead.candidate_name || 'Customer');
             }
 
-            const formattedDate = lead.attempted_at ? new Date(lead.attempted_at).toLocaleString() : 'N/A';
+            const formattedDate = formatCallDateTime(lead);
             const callDir = lead.call_direction_display || lead.call_type || (lead.direction === 'inbound' ? 'Inbound Call' : 'Outbound Call');
             const statusBadge = getStatusBadge(lead.final_status);
 

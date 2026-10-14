@@ -685,6 +685,7 @@ from rest_framework.decorators import api_view, permission_classes
 
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 from agents.models import VoiceAgent
 from assistant.management.commands.stt import speech_to_text
@@ -1453,25 +1454,30 @@ def sarvam_cdr_webhook(request):
         if isinstance(interaction_id, str) and ("{" in interaction_id or "[" in interaction_id or "test" in interaction_id):
             interaction_id = None
 
-        # ✅ Fix bare UUID: prepend date in YYYYMMDD format
+        # ✅ Fix bare UUID: prepend date in YYYYMMDD format (using Indian local date IST)
         if interaction_id and isinstance(interaction_id, str) and "/" not in interaction_id:
             from datetime import datetime
+            from django.utils import timezone
             raw_ts = call_start_time or raw_data.get("timestamp") or call_obj.get("timestamp")
             if raw_ts:
                 try:
-                    ts_str = str(raw_ts).replace("Z", "+00:00").split(".")[0]
-                    call_date = datetime.fromisoformat(ts_str).strftime("%Y%m%d")
+                    ts_str = str(raw_ts).replace("Z", "").split(".")[0].strip()
+                    if "T" in ts_str:
+                        call_date = datetime.fromisoformat(ts_str).strftime("%Y%m%d")
+                    elif " " in ts_str:
+                        call_date = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S").strftime("%Y%m%d")
+                    else:
+                        call_date = datetime.fromisoformat(ts_str).strftime("%Y%m%d")
                     interaction_id = f"{call_date}/{interaction_id}"
                     print(f"✅ [CDR FIX] Formatted bare interaction_id with date: {interaction_id}")
                 except Exception as ts_err:
-                    call_date = datetime.utcnow().strftime("%Y%m%d")
+                    call_date = timezone.localtime(timezone.now()).strftime("%Y%m%d")
                     interaction_id = f"{call_date}/{interaction_id}"
-                    print(f"⚠️ [CDR FIX] Timestamp parse failed: {ts_err} — using today: {interaction_id}")
+                    print(f"⚠️ [CDR FIX] Timestamp parse failed: {ts_err} — using today (IST): {interaction_id}")
             else:
-                from datetime import datetime
-                call_date = datetime.utcnow().strftime("%Y%m%d")
+                call_date = timezone.localtime(timezone.now()).strftime("%Y%m%d")
                 interaction_id = f"{call_date}/{interaction_id}"
-                print(f"⚠️ [CDR FIX] No timestamp in payload — using today's date: {interaction_id}")
+                print(f"⚠️ [CDR FIX] No timestamp in payload — using today's date (IST): {interaction_id}")
 
         from conversations.services.kylas_sarvam_bridge import SarvamAgentService
         from conversations.models import SarvamCallRecord, SarvamAgent
@@ -1639,9 +1645,12 @@ def sarvam_cdr_webhook(request):
             rec = SarvamCallRecord.objects.filter(attempt_id=attempt_id).first()
         if not rec and interaction_id:
             rec = SarvamCallRecord.objects.filter(interaction_id=interaction_id).first()
-            if not rec and "/" in str(interaction_id):
-                raw_iid = str(interaction_id).split("/")[-1]
-                rec = SarvamCallRecord.objects.filter(interaction_id__endswith=raw_iid).first()
+            raw_iid = str(interaction_id).split("/")[-1].strip()
+            if not rec and raw_iid:
+                rec = (
+                    SarvamCallRecord.objects.filter(interaction_id__endswith=raw_iid).first()
+                    or SarvamCallRecord.objects.filter(interaction_id__icontains=raw_iid).first()
+                )
         if not rec and user_phone:
             clean_p = "".join(filter(str.isdigit, str(user_phone)))[-10:]
             if clean_p:
@@ -1686,15 +1695,17 @@ def sarvam_cdr_webhook(request):
             or (output_vars.get("language") if isinstance(output_vars, dict) else None)
             or "hi-IN"
         )
-        # 1. Flexible timestamp parsing helper
+        # 1. Flexible timestamp parsing helper (Sarvam operates in Indian Standard Time IST / Asia/Kolkata)
         def _parse_ts_flexible(ts_str):
             if not ts_str:
                 return None
             from django.utils.dateparse import parse_datetime
             from django.utils import timezone
-            from datetime import datetime as _dt
+            from datetime import datetime as _dt, timedelta
+            from zoneinfo import ZoneInfo
+            ist_tz = ZoneInfo("Asia/Kolkata")
             s = str(ts_str).strip()
-            res = parse_datetime(s.replace("Z", "+00:00"))
+            res = parse_datetime(s.replace("Z", "+00:00") if "Z" in s else s)
             if not res and " " in s:
                 res = parse_datetime(s.replace(" ", "T"))
             if not res:
@@ -1704,8 +1715,15 @@ def sarvam_cdr_webhook(request):
                         break
                     except Exception:
                         pass
-            if res and res.tzinfo is None:
-                res = timezone.make_aware(res, timezone.utc)
+            if res:
+                if res.tzinfo is None:
+                    # Naive datetime from Sarvam is in Indian Standard Time (IST)
+                    res = timezone.make_aware(res, ist_tz)
+                else:
+                    # If string had a bogus 'Z' or '+00:00' appended by third-party telephony, but time is ~5.5 hours in the future
+                    now_utc = timezone.now()
+                    if (res - now_utc).total_seconds() > 3600 * 3:
+                        res = res - timedelta(hours=5, minutes=30)
             return res
 
         st_dt = _parse_ts_flexible(call_start_time)
@@ -1778,6 +1796,14 @@ def sarvam_cdr_webhook(request):
 
         if rec:
             rec.interaction_id = interaction_id or rec.interaction_id
+
+            # ✅ INBOUND PHONE NUMBER MERGE (from Deployment CDR):
+            # Backfill phone only if existing record has missing/unknown phone and incoming payload has valid phone:
+            if user_phone and user_phone not in ["unknown", "None", "null", "Valued Customer", ""]:
+                if not rec.phone_number or rec.phone_number in ["unknown", "None", "null", "Valued Customer", ""]:
+                    rec.phone_number = str(user_phone)
+                    print(f"📞 [INBOUND CDR MERGE]: Backfilled phone number '{rec.phone_number}' on CallRecord #{rec.id} (interaction_id: {interaction_id})")
+
             rec.status = final_status
             rec.duration_seconds = duration if duration > 0 else rec.duration_seconds
             if st_dt:
@@ -1786,17 +1812,31 @@ def sarvam_cdr_webhook(request):
                 ts_val = _parse_ts_flexible(call_start_time)
                 if ts_val:
                     rec.start_time = ts_val
-            if candidate_name and candidate_name not in ["Candidate", "Customer", "Valued Customer", ""]:
+            if candidate_name and candidate_name.strip().lower() not in ["candidate", "customer", "valued customer", "none", "null", ""]:
                 if not rec.candidate_name or rec.candidate_name.lower() in ["candidate", "customer", "valued customer", "none", "null", ""] or rec.candidate_name.startswith("Candidate #"):
                     rec.candidate_name = candidate_name
             if language_val:
                 rec.language = language_val
+            # ✅ PROTECT CUSTOM CDR SUMMARY: Never overwrite rich summary with empty deployment summary
             if isinstance(output_vars, dict) and output_vars:
-                rec.summary = output_vars
-            if transcript:
-                rec.transcript = transcript
+                if isinstance(rec.summary, dict) and rec.summary:
+                    merged_sum = dict(rec.summary)
+                    merged_sum.update(output_vars)
+                    rec.summary = merged_sum
+                else:
+                    rec.summary = output_vars
+            # ✅ PROTECT CUSTOM CDR TRANSCRIPT: Never overwrite rich transcript with empty/short deployment transcript
+            if transcript and len(str(transcript).strip()) > 5:
+                if not rec.transcript or len(str(transcript).strip()) >= len(str(rec.transcript).strip()):
+                    rec.transcript = transcript
             if recording_url:
                 rec.audio_url = recording_url
+
+            # Ensure call_type consistency for outbound calls
+            url_call_type = request.GET.get("call_type")
+            if (url_call_type == "outbound" or attempt_id or raw_data.get("direction") == "outbound" or call_obj.get("direction") == "outbound") and rec.call_type != "Outbound Call":
+                rec.call_type = "Outbound Call"
+
             # Backfill sarvam_agent if missing
             if webhook_sarvam_agent and not rec.sarvam_agent:
                 rec.sarvam_agent = webhook_sarvam_agent
@@ -1806,8 +1846,21 @@ def sarvam_cdr_webhook(request):
             if not user_phone and not interaction_id and not (candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]):
                 print(f"⚠️ [SARVAM CDR LOGS]: Ignored dummy webhook payload (No user_phone, interaction_id, or candidate_name).")
             else:
-                is_inbound = bool(call_obj.get("direction") == "inbound" or raw_data.get("direction") == "inbound" or not attempt_id)
-                rec_call_type = "Inbound Call" if is_inbound else "Outbound Call"
+                # ✅ ACCURATE CALL TYPE DETECTION:
+                # 1. If campaign_id is present -> Outbound Call
+                # 2. If call_type=outbound in callback URL -> Outbound Call
+                # 3. If attempt_id is present -> Outbound Call
+                # 4. If payload direction == 'outbound' -> Outbound Call
+                # Otherwise -> Inbound Call
+                url_call_type = request.GET.get("call_type")
+                is_outbound = (
+                    bool(request.GET.get("campaign_id") or raw_data.get("campaign_id"))
+                    or url_call_type == "outbound"
+                    or raw_data.get("direction") == "outbound"
+                    or call_obj.get("direction") == "outbound"
+                    or bool(attempt_id)
+                )
+                rec_call_type = "Outbound Call" if is_outbound else "Inbound Call"
                 parsed_st = st_dt or _parse_ts_flexible(call_start_time)
                 rec = SarvamCallRecord.objects.create(
                     sarvam_agent=webhook_sarvam_agent,
@@ -3588,6 +3641,16 @@ def sarvam_leads_data(request, agent_slug=None):
                 analytics_rec_url = f"https://apps.sarvam.ai/api/analytics/v1/{org_id}/{ws_id}/{app_id}/recordings/{r.interaction_id}"
                 rec_audio_url = analytics_rec_url
 
+        dt_obj = getattr(r, "start_time", None) or r.created_at
+        if dt_obj:
+            from django.utils import timezone
+            local_dt = timezone.localtime(dt_obj)
+            attempted_at_iso = local_dt.isoformat()
+            attempted_at_display = local_dt.strftime("%d %b %Y, %I:%M %p")
+        else:
+            attempted_at_iso = ""
+            attempted_at_display = "N/A"
+
         processed_leads.append({
             "interaction_id": rec_id,
             "contact": r.phone_number,
@@ -3599,7 +3662,8 @@ def sarvam_leads_data(request, agent_slug=None):
             "duration_seconds": round(r.duration_seconds, 1),
             "billed_seconds": r.billed_seconds or calculate_billed_seconds(r.duration_seconds),
             "language": r.language or "Hindi",
-            "attempted_at": r.start_time.strftime("%Y-%m-%dT%H:%M:%SZ") if getattr(r, "start_time", None) else r.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "attempted_at": attempted_at_iso,
+            "attempted_at_display": attempted_at_display,
             "audio_url": rec_audio_url,
             "final_status": r.status,
             "summary": r.summary or {},
@@ -4101,6 +4165,7 @@ def sarvam_trigger_call_api(request, agent_slug=None):
         candidate_name=candidate_name,
         language=language or "hi-IN",
         status="DIALING",
+        call_type="Outbound Call",
         applied_position=product_val,
         summary=initial_summary,
         created_by=request.user if (request.user and request.user.is_authenticated) else None,
@@ -5278,7 +5343,8 @@ def sarvam_campaigns_list_api(request, agent_slug=None):
                 "answered": c.stage_3_answered,
                 "missed": c.stage_3_missed,
             },
-            "created_at": c.created_at.strftime("%d %b %Y %H:%M"),
+            "created_at": timezone.localtime(c.created_at).strftime("%d %b %Y, %I:%M %p") if c.created_at else "N/A",
+            "created_at_display": timezone.localtime(c.created_at).strftime("%d %b %Y, %I:%M %p") if c.created_at else "N/A",
             "created_by_user": (
                 f"{c.created_by.username} (Sub-user)" if (c.created_by and hasattr(c.created_by, 'profile') and c.created_by.profile.created_by)
                 else (c.created_by.username if c.created_by else "Main Admin")
@@ -5456,9 +5522,10 @@ def sarvam_campaign_detail_api(request, campaign_id):
             "status_category": category,
             "call_summary": call_summary,
             "total_attempts": lead.total_attempts,
-            "last_call_time": lead.last_call_record.created_at.strftime("%d %b %Y %H:%M") if (lead.last_call_record and lead.last_call_record.created_at) else "",
+            "last_call_time": timezone.localtime(lead.last_call_record.created_at).strftime("%d %b %Y, %I:%M %p") if (lead.last_call_record and lead.last_call_record.created_at) else "N/A",
         })
 
+    camp_dt = timezone.localtime(campaign.created_at) if campaign.created_at else None
     return Response({
         "status": "success",
         "campaign": {
@@ -5470,7 +5537,8 @@ def sarvam_campaign_detail_api(request, campaign_id):
             "status": campaign.status,
             "answered_count": campaign.answered_count,
             "missed_count": campaign.missed_count,
-            "created_at": campaign.created_at.strftime("%d %b %Y %H:%M"),
+            "created_at": camp_dt.strftime("%d %b %Y, %I:%M %p") if camp_dt else "N/A",
+            "created_at_display": camp_dt.strftime("%d %b %Y, %I:%M %p") if camp_dt else "N/A",
         },
         "total_leads": len(leads_data),
         "leads": leads_data
@@ -5546,9 +5614,8 @@ def sarvam_admin_all_campaigns_api(request):
             "stage_3_answered": c.stage_3_answered,
             "stage_3_missed": c.stage_3_missed,
             "answered_count": c.answered_count,
-            "missed_count": c.missed_count,
-            "created_at": c.created_at.strftime("%Y-%m-%dT%H:%M:%SZ") if c.created_at else "",
-            "created_at_display": c.created_at.strftime("%d %b %Y %H:%M") if c.created_at else "",
+            "created_at": timezone.localtime(c.created_at).isoformat() if c.created_at else "",
+            "created_at_display": timezone.localtime(c.created_at).strftime("%d %b %Y, %I:%M %p") if c.created_at else "N/A",
         })
 
     return Response({
@@ -5760,9 +5827,9 @@ def sarvam_campaign_export_full_api(request, campaign_id):
     for idx, lead in enumerate(leads, start=1):
         last_time = ""
         if lead.last_call_record and lead.last_call_record.created_at:
-            last_time = lead.last_call_record.created_at.strftime("%d %b %Y %H:%M")
+            last_time = timezone.localtime(lead.last_call_record.created_at).strftime("%d %b %Y, %I:%M %p")
         elif lead.created_at:
-            last_time = lead.created_at.strftime("%d %b %Y %H:%M")
+            last_time = timezone.localtime(lead.created_at).strftime("%d %b %Y, %I:%M %p")
 
         status_text, call_summary, category = _extract_lead_status_and_reasons(lead)
         pref_store = _extract_preferred_store(lead)
@@ -5936,9 +6003,9 @@ def sarvam_campaign_export_missed_api(request, campaign_id):
 
     missed_leads = campaign.leads.filter(final_status="MISSED_ALL_RETRIES").order_by("id")
     for idx, lead in enumerate(missed_leads, start=1):
-        t1 = lead.stage_1_call.created_at.strftime("%d %b %Y %H:%M") if (lead.stage_1_call and lead.stage_1_call.created_at) else "N/A"
-        t2 = lead.stage_2_call.created_at.strftime("%d %b %Y %H:%M") if (lead.stage_2_call and lead.stage_2_call.created_at) else "N/A"
-        t3 = lead.stage_3_call.created_at.strftime("%d %b %Y %H:%M") if (lead.stage_3_call and lead.stage_3_call.created_at) else "N/A"
+        t1 = timezone.localtime(lead.stage_1_call.created_at).strftime("%d %b %Y, %I:%M %p") if (lead.stage_1_call and lead.stage_1_call.created_at) else "N/A"
+        t2 = timezone.localtime(lead.stage_2_call.created_at).strftime("%d %b %Y, %I:%M %p") if (lead.stage_2_call and lead.stage_2_call.created_at) else "N/A"
+        t3 = timezone.localtime(lead.stage_3_call.created_at).strftime("%d %b %Y, %I:%M %p") if (lead.stage_3_call and lead.stage_3_call.created_at) else "N/A"
 
         row = [
             idx,
