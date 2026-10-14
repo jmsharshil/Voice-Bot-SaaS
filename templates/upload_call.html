@@ -1247,7 +1247,7 @@
                         <input type="file" id="profilePicInput" accept="image/*" style="display: none;" onchange="uploadProfilePicture(event)">
                     </div>
                     <a href="/accounts/team-management/" id="teamBtn" style="display:none; text-decoration:none; padding:11px 16px; font-size:13px; font-weight:600; color:#4f46e5; border-bottom:1px solid #f1f5f9; align-items:center; gap:8px;" class="pd-item">👥 Manage Team</a>
-                    <a href="/accounts/support/" style="text-decoration:none; padding:11px 16px; font-size:13px; font-weight:600; color:#4f46e5; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:8px;" class="pd-item">🛠️ Support</a>
+                    <button type="button" onclick="openSupportChatbox(event)" style="width: 100%; border: none; background: transparent; text-align: left; padding: 11px 16px; font-size: 13px; font-weight: 600; color: #4f46e5; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; cursor: pointer; font-family: inherit;" class="pd-item">🛠️ Support</button>
                     <button class="pd-logout" onclick="logoutUser()">🚪 Logout</button>
                 </div>
             </div>
@@ -1943,7 +1943,7 @@
                     <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
                         <div class="drop-zone-icon">☁️</div>
                         <div class="drop-zone-text">Drag & drop your file here or <span>browse</span></div>
-                        <div class="drop-zone-hint">Supports .xlsx, .xls files</div>
+                        <div class="drop-zone-hint">Supports .xlsx, .xls files (Maximum 600 leads per campaign)</div>
                     </div>
 
                     <input type="file" name="file" id="fileInput" class="file-input-hidden" accept=".xlsx,.xls"
@@ -2034,7 +2034,7 @@
 
                 <div class="format-note">
                     <span class="note-icon">💡</span>
-                    <span>The <strong>name</strong> and <strong>phone</strong> columns are required to initiate AI voice call campaigns. Download the reference file above for the correct structure.</span>
+                    <span>The <strong>name</strong> and <strong>phone</strong> columns are required. Each campaign is limited to a maximum of <strong>600 leads</strong> per upload. Download the reference file above for the correct structure.</span>
                 </div>
             </div>
 
@@ -2210,6 +2210,8 @@
         });
 
     </script>
+
+    {% include "support_chatbox_modal.html" %}
 
 </body>
 

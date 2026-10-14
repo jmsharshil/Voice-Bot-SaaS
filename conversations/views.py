@@ -1824,7 +1824,27 @@ def sarvam_cdr_webhook(request):
                     transcript=transcript or "",
                     audio_url=recording_url,
                 )
-                print(f"✅ [SARVAM CDR LOGS]: Created new local SarvamCallRecord ID #{rec.id} ({rec_call_type}) for {user_phone} -> Status: {final_status}, Duration: {rec.duration_seconds}s (Billed: {rec.billed_seconds}s), Recording: {'YES' if rec.audio_url else 'NO'}, Agent: {webhook_sarvam_agent.name if webhook_sarvam_agent else 'N/A'}")
+        # Link campaign_id from query params or payload if not attached yet
+        url_campaign_id = (
+            request.GET.get("campaign_id")
+            or raw_data.get("campaign_id")
+            or (raw_data.get("agent_variables") or {}).get("campaign_id")
+            or (raw_data.get("user_config") or {}).get("campaign_id")
+            or (output_vars.get("campaign_id") if isinstance(output_vars, dict) else None)
+            or (metadata.get("campaign_id") if isinstance(metadata, dict) else None)
+        )
+        if url_campaign_id and rec and not rec.campaign_id:
+            try:
+                from conversations.models import SarvamCampaign
+                c_obj = SarvamCampaign.objects.filter(id=int(url_campaign_id)).first()
+                if c_obj:
+                    rec.campaign = c_obj
+                    if not rec.created_by and c_obj.created_by:
+                        rec.created_by = c_obj.created_by
+                    rec.save(update_fields=["campaign", "created_by"])
+                    print(f"🔗 [CAMPAIGN WEBHOOK MATCH]: Linked call #{rec.id} to Campaign #{c_obj.id}")
+            except Exception as e:
+                print(f"⚠️ [CAMPAIGN WEBHOOK MATCH ERROR]: {e}")
 
         # ✅ REAL-TIME CAMPAIGN LEAD SYNC: If this call belongs to a multi-stage campaign, update the lead outcome instantly!
         if rec:
@@ -3325,6 +3345,41 @@ def sarvam_leads_data(request, agent_slug=None):
     else:
         agent_qs = SarvamCallRecord.objects.filter(sarvam_agent__in=allowed_agent_objs)
 
+    # Sub-User Scoping:
+    # A sub-user (created by an owner account without admin/manage_team permission)
+    # can strictly see ONLY their own activity (calls they triggered, their campaigns, or matching their assigned store(s)).
+    # Main users (account owners, superusers, team admins) can see all activity across all sub-users.
+    user_prof = getattr(request.user, 'profile', None)
+    user_p = getattr(user_prof, 'custom_permissions', {}) if user_prof else {}
+    is_subuser = bool(
+        request.user.is_authenticated and
+        not getattr(request.user, 'is_superuser', False) and
+        user_prof and user_prof.created_by and
+        not user_p.get("is_admin") and
+        not user_p.get("can_manage_team")
+    )
+
+    if is_subuser:
+        from django.db.models import Q
+        raw_st = user_p.get("assigned_stores", [])
+        if isinstance(raw_st, str) and raw_st.strip():
+            assigned_st_list = [s.strip().lower() for s in raw_st.split(",") if s.strip()]
+        elif isinstance(raw_st, list) and raw_st:
+            assigned_st_list = [str(s).strip().lower() for s in raw_st if str(s).strip()]
+        else:
+            assigned_st_list = []
+
+        subuser_q = Q(created_by=request.user) | Q(campaign__created_by=request.user)
+        if assigned_st_list:
+            store_q = Q()
+            for st in assigned_st_list:
+                store_q |= Q(summary__icontains=st)
+                store_q |= Q(applied_position__icontains=st)
+                store_q |= Q(call_type__icontains=st)
+            subuser_q |= store_q
+
+        agent_qs = agent_qs.filter(subuser_q)
+
     search_q = (request.GET.get("search") or "").strip()
     status_q = (request.GET.get("status") or "").strip().upper()
 
@@ -3566,7 +3621,8 @@ def sarvam_leads_data(request, agent_slug=None):
             "final_status": r.status,
             "summary": r.summary or {},
             "transcript": r.transcript or "",
-            "campaign_created_by_id": getattr(getattr(r, "campaign", None), "created_by_id", None),
+            "campaign_created_by_id": getattr(getattr(r, "campaign", None), "created_by_id", None) or getattr(r, "created_by_id", None),
+            "created_by_id": getattr(r, "created_by_id", None),
         })
 
     # Determine retail agent (agent-level flag, used in both local and remote loops)
@@ -3749,33 +3805,6 @@ def sarvam_leads_data(request, agent_slug=None):
             daemon=True
         )
         t.start()
-
-    # Sub-user Recommended Store Isolation:
-    # If the user is a sub-user (created by an owner) and has specific assigned_stores configured,
-    # strictly limit processed_leads to only those leads matching their assigned store(s).
-    user_prof = getattr(request.user, 'profile', None)
-    user_p = getattr(user_prof, 'custom_permissions', {}) if user_prof else {}
-
-    raw_st = user_p.get("assigned_stores", [])
-    if isinstance(raw_st, str):
-        assigned_st_list = [s.strip().lower() for s in raw_st.split(",") if s.strip()]
-    elif isinstance(raw_st, list):
-        assigned_st_list = [str(s).strip().lower() for s in raw_st if str(s).strip()]
-    else:
-        assigned_st_list = []
-
-    if user_prof and user_prof.created_by and not user_p.get("can_manage_team") and assigned_st_list:
-        scoped_leads = []
-        for l in processed_leads:
-            if l.get("campaign_created_by_id") == request.user.id:
-                scoped_leads.append(l)
-                continue
-
-            s_dict = l.get("summary") or {}
-            rec_s = str(s_dict.get("recommended_store") or s_dict.get("store") or s_dict.get("preferred_store") or "").strip().lower()
-            if rec_s and any(st in rec_s or rec_s in st for st in assigned_st_list):
-                scoped_leads.append(l)
-        processed_leads = scoped_leads
 
     from django.db.models import Count
     status_counts = stats_qs.values("status").annotate(cnt=Count("id"))
@@ -4066,6 +4095,22 @@ def sarvam_trigger_call_api(request, agent_slug=None):
 
     attempt_id = result.get("attempt_id") if isinstance(result, dict) else None
 
+    initial_summary = {}
+    user_prof = getattr(request.user, 'profile', None)
+    user_p = getattr(user_prof, 'custom_permissions', {}) if user_prof else {}
+    raw_st = user_p.get("assigned_stores", [])
+    if isinstance(raw_st, str) and raw_st.strip():
+        assigned_st_list = [s.strip() for s in raw_st.split(",") if s.strip()]
+    elif isinstance(raw_st, list) and raw_st:
+        assigned_st_list = [str(s).strip() for s in raw_st if str(s).strip()]
+    else:
+        assigned_st_list = []
+    if assigned_st_list:
+        initial_summary["recommended_store"] = assigned_st_list[0]
+        initial_summary["store"] = assigned_st_list[0]
+
+    product_val = extra_vars.get("car_model") or extra_vars.get("product") or extra_vars.get("requirement") or "General Inquiry"
+
     rec = SarvamCallRecord.objects.create(
         sarvam_agent=sarvam_agent,
         attempt_id=attempt_id,
@@ -4073,7 +4118,9 @@ def sarvam_trigger_call_api(request, agent_slug=None):
         candidate_name=candidate_name,
         language=language or "hi-IN",
         status="DIALING",
-        applied_position="Admission Counselor",
+        applied_position=product_val,
+        summary=initial_summary,
+        created_by=request.user if (request.user and request.user.is_authenticated) else None,
     )
     agent_label = sarvam_agent.name if sarvam_agent else "default"
     print(f"✅ [SARVAM OUTBOUND TRIGGERED]: Agent='{agent_label}' | Record #{rec.id} for {phone_number} (Attempt: {attempt_id})")
@@ -4577,6 +4624,7 @@ def _run_multi_stage_campaign(campaign_id):
                 sarvam_agent=agent,
                 campaign=campaign,
                 campaign_stage=1,
+                created_by=campaign.created_by,
                 phone_number=lead.phone_number,
                 candidate_name=lead.candidate_name,
                 applied_position=lead.applied_position,
@@ -4603,6 +4651,7 @@ def _run_multi_stage_campaign(campaign_id):
                 language=getattr(lead, "language", None),
                 extra_variables=extra_vars_combined,
                 sarvam_agent=agent,
+                campaign_id=campaign.id,
             )
             attempt_id = res.get("attempt_id") if isinstance(res, dict) else None
             if attempt_id:
@@ -4707,6 +4756,7 @@ def _run_multi_stage_campaign(campaign_id):
                 sarvam_agent=agent,
                 campaign=campaign,
                 campaign_stage=2,
+                created_by=campaign.created_by,
                 phone_number=lead.phone_number,
                 candidate_name=lead.candidate_name,
                 applied_position=lead.applied_position,
@@ -4733,6 +4783,7 @@ def _run_multi_stage_campaign(campaign_id):
                 language=getattr(lead, "language", None),
                 extra_variables=extra_vars_combined,
                 sarvam_agent=agent,
+                campaign_id=campaign.id,
             )
             attempt_id = res.get("attempt_id") if isinstance(res, dict) else None
             if attempt_id:
@@ -4832,6 +4883,7 @@ def _run_multi_stage_campaign(campaign_id):
                 sarvam_agent=agent,
                 campaign=campaign,
                 campaign_stage=3,
+                created_by=campaign.created_by,
                 phone_number=lead.phone_number,
                 candidate_name=lead.candidate_name,
                 applied_position=lead.applied_position,
@@ -4858,6 +4910,7 @@ def _run_multi_stage_campaign(campaign_id):
                 language=getattr(lead, "language", None),
                 extra_variables=extra_vars_combined,
                 sarvam_agent=agent,
+                campaign_id=campaign.id,
             )
             attempt_id = res.get("attempt_id") if isinstance(res, dict) else None
             if attempt_id:
@@ -4970,6 +5023,14 @@ def sarvam_upload_campaign_api(request, agent_slug=None):
 
     if df.empty:
         return Response({"error": "Uploaded file contains no rows."}, status=400)
+
+    # Validate maximum 600 leads per campaign limit
+    if len(df) > 600:
+        return Response({
+            "status": "error",
+            "code": "LEAD_LIMIT_EXCEEDED",
+            "error": f"Upload limit exceeded! Maximum allowed limit is 600 leads per campaign. Your file contains {len(df)} rows. Please reduce your list to 600 or fewer rows and try again."
+        }, status=400)
 
     # Flexible column header mapping (matches only Phone and Name)
     cols = {str(c).strip().lower(): c for c in df.columns}

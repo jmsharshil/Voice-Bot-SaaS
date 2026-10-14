@@ -320,6 +320,13 @@ class SarvamCallRecord(models.Model):
         help_text="Campaign this call belongs to"
     )
     campaign_stage = models.IntegerField(default=1, help_text="1=Main, 2=Retry 1, 3=Retry 2")
+    created_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="sarvam_call_records",
+        help_text="User/subuser who initiated this call"
+    )
 
     attempt_id = models.CharField(max_length=100, unique=True, null=True, blank=True)
     interaction_id = models.CharField(max_length=200, blank=True, null=True, db_index=True)
