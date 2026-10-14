@@ -809,6 +809,17 @@ def upload_file(request):
     if ext in (".xlsx", ".xls"):
         df = pd.read_excel(file_path)
         print("[upload] Columns:", df.columns.tolist())
+
+        if len(df) > 600:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception:
+                    pass
+            obj.delete()
+            return Response({
+                "error": f"Upload limit exceeded! Maximum allowed limit is 600 records per upload. Your file contains {len(df)} rows. Please reduce your list to 600 or fewer rows and try again."
+            }, status=400)
  
         for _, row in df.iterrows():
             phone = str(row.get("phone") or "").strip()
@@ -1466,6 +1477,12 @@ def upload_call_file(request):
     except Exception as e:
         return Response({"error": f"Failed to read Excel file: {e}"}, status=400)
 
+    # Validate maximum 600 leads per campaign limit
+    if len(df) > 600:
+        return Response({
+            "error": f"Upload limit exceeded! Maximum allowed limit is 600 leads per campaign. Your file contains {len(df)} rows. Please reduce your list to 600 or fewer rows and try again."
+        }, status=400)
+
     # Find the phone column case-insensitively
     phone_col = None
     for col in df.columns:
@@ -1507,6 +1524,11 @@ def upload_call_file(request):
 
     if not phones:
         return Response({"error": "No valid phone numbers found in file"}, status=400)
+
+    if len(phones) > 600:
+        return Response({
+            "error": f"Upload limit exceeded! Found {len(phones)} valid phone numbers. Maximum allowed limit is 600 leads per campaign. Please remove extra leads and re-upload."
+        }, status=400)
 
     # Load queue and start auto-dialer
     with _call_queue_lock:
@@ -2271,6 +2293,10 @@ def start_auto_campaign(request):
     # Option 1: JSON list of phones
     if request.data.get("phones"):
         phones = request.data["phones"]
+        if len(phones) > 600:
+            return Response({
+                "error": f"Upload limit exceeded! Maximum allowed limit is 600 leads per campaign. Provided {len(phones)} numbers."
+            }, status=400)
 
     # Option 2: Excel file upload
     elif request.FILES.get("file"):
@@ -2278,6 +2304,11 @@ def start_auto_campaign(request):
         campaign_name = campaign_name or file.name
         try:
             df = pd.read_excel(file)
+            if len(df) > 600:
+                return Response({
+                    "error": f"Upload limit exceeded! Maximum allowed limit is 600 leads per campaign. Your file contains {len(df)} rows. Please reduce your list to 600 or fewer rows and try again."
+                }, status=400)
+
             phone_col = None
             for col in df.columns:
                 c_clean = str(col).strip().lower()
@@ -2325,6 +2356,11 @@ def start_auto_campaign(request):
     # Normalize all numbers
     phones = [_normalize_phone(p) for p in phones if p]
     phones = [p for p in phones if p]
+
+    if len(phones) > 600:
+        return Response({
+            "error": f"Upload limit exceeded! Found {len(phones)} valid phone numbers. Maximum allowed limit is 600 leads per campaign. Please remove extra leads and re-upload."
+        }, status=400)
 
     # Load the queue
     with _call_queue_lock:

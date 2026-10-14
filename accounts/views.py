@@ -742,53 +742,205 @@ def reset_password_page(request):
 def support_page(request):
     return render(request, "support.html")
 
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
+from django.utils import timezone
+from django.db.models import Q
+from .models import SupportQuery
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        return  # CSRF check bypassed for support API requests
 
 class SupportSubmitView(APIView):
-    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication, CsrfExemptSessionAuthentication]
+    permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
+    def get(self, request):
+        """
+        Returns all previous support queries submitted by the user,
+        ordered chronologically with formatted local date and time.
+        """
+        user = request.user if (request.user and request.user.is_authenticated) else None
+        email = (request.GET.get("email") or (user.email if user else "") or "").strip()
+        username = (request.GET.get("username") or (user.username if user else "") or "").strip()
+
+        filters = Q()
+        if user:
+            filters |= Q(user=user)
+        if email:
+            filters |= Q(email__iexact=email)
+        if username and username != "Anonymous User":
+            filters |= Q(username__iexact=username)
+
+        if not filters:
+            return Response({"queries": []}, status=status.HTTP_200_OK)
+
+        records = SupportQuery.objects.filter(filters).distinct().order_by("created_at")
+        queries_data = []
+        for r in records:
+            loc = timezone.localtime(r.created_at)
+            queries_data.append({
+                "id": r.id,
+                "query": r.query,
+                "date": loc.strftime("%d %b %Y"),
+                "time": loc.strftime("%I:%M %p"),
+                "datetime": loc.strftime("%d %b %Y, %I:%M %p"),
+                "status": r.status,
+                "email": r.email,
+                "username": r.username,
+            })
+        return Response({"queries": queries_data}, status=status.HTTP_200_OK)
+
     def post(self, request):
-        description = request.data.get("description", "").strip()
-        if not description:
-            return Response({"error": "Issue description is required."}, status=status.HTTP_400_BAD_REQUEST)
+        """
+        Stores user query in SupportQuery with date & time,
+        dispatches email notification to support team,
+        and returns the created query record with date & time.
+        """
+        query = (request.data.get("query") or request.data.get("description") or request.data.get("message") or "").strip()
+        if not query:
+            return Response({"error": "Please enter your query or issue description."}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = request.user
-        username = user.username
-        email = user.email or "No Email Provided"
+        user = request.user if (request.user and request.user.is_authenticated) else None
+        username = (user.username if user else None) or request.data.get("username") or "Anonymous User"
+        user_email = (request.data.get("email") or (user.email if user else "") or "").strip()
+        user_phone = (request.data.get("phone") or (getattr(user, "phone_number", "") or getattr(user, "phone", "") if user else "") or "").strip()
+        
+        # Determine user role
+        role_name = "User"
+        if user:
+            if getattr(user, "is_superuser", False):
+                role_name = "Super Admin"
+            elif hasattr(user, "profile") and user.profile.role:
+                role_name = user.profile.role.name
+            elif getattr(user, "is_staff", False):
+                role_name = "Staff / Admin"
+        else:
+            role_name = request.data.get("role") or "User"
 
-        subject = f"[SUPPORT ISSUE] raised by {username}"
-        body = (
-            f"Dear Team,\n\n"
-            f"A new support issue has been submitted by user '{username}' ({email}).\n\n"
-            f"--- Issue Description ---\n"
-            f"{description}\n\n"
-            f"Best regards,\n"
-            f"AI SalesBot Support Notification"
+        # Persist to database with date and time
+        support_record = SupportQuery.objects.create(
+            user=user,
+            username=username,
+            email=user_email,
+            phone=user_phone,
+            role=role_name,
+            query=query,
+            status="received"
         )
 
-        recipient_list = ["testing251299@gmail.com"]
+        local_dt = timezone.localtime(support_record.created_at)
+        submitted_at = local_dt.strftime("%d %b %Y, %I:%M %p IST")
+        formatted_date = local_dt.strftime("%d %b %Y")
+        formatted_time = local_dt.strftime("%I:%M %p")
+        formatted_datetime = local_dt.strftime("%d %b %Y, %I:%M %p")
+
+        recipient = getattr(settings, "SUPPORT_RECIPIENT_EMAIL", "testing251299@gmail.com")
+        subject = f"[SUPPORT QUERY] from {username} ({role_name})"
+
+        # Plain text fallback body
+        body_text = (
+            f"Hello Support Team,\n\n"
+            f"A user has submitted a support query through their profile chatbox.\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"USER DETAILS:\n"
+            f"• Username: {username}\n"
+            f"• Email: {user_email or 'Not Provided'}\n"
+            f"• Phone: {user_phone or 'Not Provided'}\n"
+            f"• Role: {role_name}\n"
+            f"• Submitted At: {submitted_at}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"QUERY / MESSAGE:\n"
+            f"{query}\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"You can reply directly to this email to reach the user ({user_email}).\n"
+        )
+
+        # Rich HTML email body
+        body_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }}
+                .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.06); overflow: hidden; }}
+                .header {{ background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #ffffff; padding: 24px 30px; }}
+                .header h2 {{ margin: 0; font-size: 20px; font-weight: 700; }}
+                .header p {{ margin: 4px 0 0; opacity: 0.85; font-size: 13px; }}
+                .content {{ padding: 28px 30px; }}
+                .user-table {{ width: 100%; border-collapse: collapse; margin-bottom: 24px; background: #f8fafc; border-radius: 10px; overflow: hidden; }}
+                .user-table td {{ padding: 10px 16px; font-size: 13.5px; border-bottom: 1px solid #edf2f7; }}
+                .user-table td:first-child {{ font-weight: 600; color: #64748b; width: 35%; }}
+                .user-table td:last-child {{ font-weight: 600; color: #0f172a; }}
+                .query-box {{ background: #f1f5f9; border-left: 4px solid #4f46e5; border-radius: 8px; padding: 18px 20px; font-size: 14.5px; line-height: 1.6; color: #1e293b; white-space: pre-wrap; }}
+                .footer {{ background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 30px; text-align: center; font-size: 12px; color: #94a3b8; }}
+                .reply-banner {{ margin-top: 20px; padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #065f46; font-size: 13px; text-align: center; font-weight: 500; }}
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="header">
+                    <h2>💬 New User Support Query</h2>
+                    <p>Submitted via Profile Support Chatbox</p>
+                </div>
+                <div class="content">
+                    <table class="user-table">
+                        <tr><td>Username</td><td>{username}</td></tr>
+                        <tr><td>Email Address</td><td><a href="mailto:{user_email}" style="color: #4f46e5; text-decoration: none;">{user_email or 'Not Provided'}</a></td></tr>
+                        <tr><td>Phone Number</td><td>{user_phone or 'Not Provided'}</td></tr>
+                        <tr><td>User Role</td><td>{role_name}</td></tr>
+                        <tr><td>Submission Time</td><td>{submitted_at}</td></tr>
+                    </table>
+
+                    <h4 style="margin: 0 0 10px; color: #334155; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">User Query Details:</h4>
+                    <div class="query-box">{query}</div>
+
+                    {f'<div class="reply-banner">💡 Tip: You can reply directly to this email to contact <strong>{user_email}</strong>.</div>' if user_email and '@' in user_email else ''}
+                </div>
+                <div class="footer">
+                    AI VoiceBot SaaS Platform • Automated Notification
+                </div>
+            </div>
+        </body>
+        </html>
+        """
 
         try:
-            email_msg = EmailMessage(
+            reply_to_list = [user_email] if (user_email and "@" in user_email) else []
+            email_msg = EmailMultiAlternatives(
                 subject=subject,
-                body=body,
+                body=body_text,
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                to=recipient_list,
+                to=[recipient],
+                reply_to=reply_to_list if reply_to_list else None
             )
+            email_msg.attach_alternative(body_html, "text/html")
 
-            # Check if an optional image file is uploaded
-            image_file = request.FILES.get("image")
+            # Check optional attachment
+            image_file = request.FILES.get("image") or request.FILES.get("file")
             if image_file:
-                # Attach the image
                 email_msg.attach(image_file.name, image_file.read(), image_file.content_type)
 
             email_msg.send(fail_silently=False)
-            return Response({"message": "Your support request has been submitted successfully."}, status=status.HTTP_200_OK)
-
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Failed to send support email: {e}")
-            return Response({"error": f"Failed to submit support request: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            "status": "success",
+            "message": "Your query has been sent to our support team. We will review it and reach out to you shortly.",
+            "query": {
+                "id": support_record.id,
+                "query": support_record.query,
+                "date": formatted_date,
+                "time": formatted_time,
+                "datetime": formatted_datetime,
+                "email": support_record.email,
+                "username": support_record.username,
+                "status": support_record.status,
+            }
+        }, status=status.HTTP_200_OK)

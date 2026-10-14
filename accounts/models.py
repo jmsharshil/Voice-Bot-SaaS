@@ -137,3 +137,21 @@ def save_user_profile(sender, instance, **kwargs):
         instance.profile.save()
     else:
         UserProfile.objects.get_or_create(user=instance)
+
+class SupportQuery(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="support_queries")
+    username = models.CharField(max_length=150, blank=True, null=True)
+    email = models.CharField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    role = models.CharField(max_length=100, blank=True, null=True)
+    query = models.TextField()
+    status = models.CharField(max_length=50, default="received")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "Support Query"
+        verbose_name_plural = "Support Queries"
+
+    def __str__(self):
+        return f"SupportQuery from {self.username or self.email} at {self.created_at}"

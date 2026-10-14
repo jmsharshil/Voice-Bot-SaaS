@@ -1,0 +1,752 @@
+<!-- ============================================================ -->
+<!-- SUPPORT CHATBOX POPUP MODAL                                  -->
+<!-- ============================================================ -->
+
+<div id="supportChatBackdrop" class="support-chat-backdrop" onclick="closeSupportChatbox()"></div>
+
+<div id="supportChatWindow" class="support-chat-window" role="dialog" aria-modal="true" aria-labelledby="supportChatTitle">
+    <!-- Header -->
+    <div class="support-chat-header">
+        <div class="sc-header-left">
+            <div class="sc-avatar-wrap">
+                <span class="sc-avatar-icon">🎧</span>
+                <span class="sc-status-dot" title="Online"></span>
+            </div>
+            <div>
+                <div class="sc-header-title" id="supportChatTitle">Support Assistant</div>
+                <div class="sc-header-subtitle">We reply to your queries via email</div>
+            </div>
+        </div>
+        <button type="button" class="sc-close-btn" onclick="closeSupportChatbox()" title="Close Support Chat">✕</button>
+    </div>
+
+    <!-- Chat Messages Body -->
+    <div class="support-chat-body" id="supportChatBody">
+        <!-- Initial Bot Greeting Bubble -->
+        <div class="sc-msg-row sc-msg-bot">
+            <div class="sc-msg-avatar">🤖</div>
+            <div class="sc-msg-bubble sc-bot-bubble">
+                <p style="margin: 0;">👋 Hi <strong id="scUserName">there</strong>! Have a question, query, or facing an issue?</p>
+                <p style="margin: 6px 0 0; color: #475569; font-size: 12.5px;">Write down your query below. All your previous queries and updates are saved in this chat.</p>
+            </div>
+        </div>
+
+        <!-- History Loading Indicator -->
+        <div id="scLoadingHistory" class="sc-loading-history" style="display: none;">
+            <span class="sc-spinner-sm"></span> Loading previous messages...
+        </div>
+
+        <!-- Dynamic Messages Stream (Previous queries and new responses) -->
+        <div id="scMessagesStream" class="sc-messages-stream"></div>
+    </div>
+
+    <!-- Chat Footer Composer Area -->
+    <div class="support-chat-footer" id="supportChatFooter">
+        <!-- Email Confirmation Row -->
+        <div class="sc-email-bar">
+            <span class="sc-email-label">Reply To:</span>
+            <input type="email" id="scUserEmail" class="sc-email-input" placeholder="e.g. yourname@company.com" required>
+        </div>
+
+        <!-- Error Banner -->
+        <div id="scErrorMessage" class="sc-error-banner" style="display: none;"></div>
+
+        <!-- Input Box and Send Button -->
+        <div class="sc-composer-box">
+            <textarea 
+                id="scQueryText" 
+                class="sc-textarea" 
+                rows="1" 
+                placeholder="Write your query or message..." 
+                onkeydown="handleSupportKey(event)" 
+                oninput="autoResizeSupportInput(this)"
+                required
+            ></textarea>
+            <button type="button" id="scSubmitBtn" class="sc-send-btn" onclick="submitSupportChatbox()" title="Send Query">
+                <span id="scBtnSpinner" class="sc-spinner" style="display: none;"></span>
+                <svg id="scSendIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+        <div class="sc-composer-hint">Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for new line</div>
+    </div>
+</div>
+
+<style>
+/* ===== SUPPORT CHATBOX STYLING ===== */
+.support-chat-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.38);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    z-index: 99998;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+.support-chat-backdrop.active {
+    display: block;
+    opacity: 1;
+}
+
+.support-chat-window {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 410px;
+    max-width: calc(100vw - 32px);
+    height: 580px;
+    max-height: calc(100vh - 48px);
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06);
+    flex-direction: column;
+    z-index: 99999;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transform: translateY(24px) scale(0.96);
+    opacity: 0;
+    transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.support-chat-window.active {
+    display: flex;
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.support-chat-header {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    padding: 15px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+    flex-shrink: 0;
+}
+
+.sc-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sc-avatar-wrap {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    position: relative;
+    border: 1.5px solid rgba(255, 255, 255, 0.35);
+}
+
+.sc-status-dot {
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    width: 10px;
+    height: 10px;
+    background: #22c55e;
+    border-radius: 50%;
+    border: 2px solid #4f46e5;
+    box-shadow: 0 0 6px #22c55e;
+}
+
+.sc-header-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    line-height: 1.2;
+}
+
+.sc-header-subtitle {
+    font-size: 11.5px;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+.sc-close-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: #ffffff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.15s;
+}
+.sc-close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.08);
+}
+
+.support-chat-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 20px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+}
+
+.sc-messages-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.sc-msg-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+}
+.sc-msg-row.sc-msg-user {
+    justify-content: flex-end;
+}
+
+.sc-msg-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ede9fe, #e0e7ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.sc-msg-bubble {
+    border-radius: 14px;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 82%;
+    word-break: break-word;
+}
+
+.sc-bot-bubble {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-top-left-radius: 4px;
+    color: #1e293b;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.sc-user-bubble {
+    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+    color: #ffffff;
+    border-top-right-radius: 4px;
+    white-space: pre-wrap;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+}
+
+.sc-bubble-text {
+    line-height: 1.5;
+}
+
+.sc-bubble-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+    font-size: 10.5px;
+}
+.sc-msg-user .sc-bubble-meta {
+    justify-content: flex-end;
+    opacity: 0.9;
+    color: #e0e7ff;
+}
+.sc-msg-bot .sc-bubble-meta {
+    justify-content: flex-start;
+    color: #64748b;
+}
+
+.sc-bubble-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.sc-bubble-check {
+    font-weight: 700;
+    letter-spacing: -1px;
+    color: #c7d2fe;
+}
+
+.sc-loading-history {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #64748b;
+    padding: 8px;
+}
+
+/* Chat Footer Composer */
+.support-chat-footer {
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 14px 12px;
+    flex-shrink: 0;
+}
+
+.sc-email-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 4px 10px;
+    margin-bottom: 8px;
+    transition: border-color 0.2s;
+}
+.sc-email-bar:focus-within {
+    border-color: #a5b4fc;
+    background: #ffffff;
+}
+
+.sc-email-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.sc-email-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 12px;
+    font-family: inherit;
+    color: #0f172a;
+}
+
+.sc-composer-box {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 6px 8px 6px 12px;
+    transition: all 0.2s ease;
+}
+.sc-composer-box:focus-within {
+    border-color: #4f46e5;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.sc-textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #0f172a;
+    max-height: 84px;
+    min-height: 22px;
+    padding: 4px 0;
+    box-sizing: border-box;
+}
+
+.sc-send-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+}
+.sc-send-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+}
+.sc-send-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.sc-composer-hint {
+    font-size: 10.5px;
+    color: #94a3b8;
+    margin-top: 5px;
+    text-align: right;
+}
+
+.sc-error-banner {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 11.5px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.sc-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: scSpin 0.7s linear infinite;
+    display: inline-block;
+}
+
+.sc-spinner-sm {
+    width: 12px;
+    height: 12px;
+    border: 2px solid #cbd5e1;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: scSpin 0.7s linear infinite;
+    display: inline-block;
+}
+
+@keyframes scSpin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+    .support-chat-window {
+        bottom: 0;
+        right: 0;
+        width: 100vw;
+        max-width: 100vw;
+        height: 90vh;
+        max-height: 90vh;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+}
+</style>
+
+<script>
+/* ============================================================ */
+/* SUPPORT CHATBOX LOGIC WITH PERSISTENT QUERY HISTORY          */
+/* ============================================================ */
+
+// Set to keep track of rendered query IDs to avoid duplicate bubbles
+const scRenderedQueryIds = new Set();
+let scHistoryLoaded = false;
+
+function escapeHtmlSupport(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function autoResizeSupportInput(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 84) + 'px';
+}
+
+function handleSupportKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitSupportChatbox();
+    }
+}
+
+function scrollToBottomSupport() {
+    const body = document.getElementById('supportChatBody');
+    if (body) {
+        setTimeout(() => {
+            body.scrollTop = body.scrollHeight;
+        }, 80);
+    }
+}
+
+function renderUserQueryMessage(q) {
+    if (q.id && scRenderedQueryIds.has(q.id)) {
+        return;
+    }
+    if (q.id) {
+        scRenderedQueryIds.add(q.id);
+    }
+
+    const stream = document.getElementById('scMessagesStream');
+    if (!stream) return;
+
+    // Display formatted date and time
+    const displayDateTime = q.datetime || (q.date ? `${q.date}, ${q.time}` : 'Just now');
+    const displayTime = q.time || 'Delivered';
+
+    // 1. User Message Bubble
+    const userRow = document.createElement('div');
+    userRow.className = 'sc-msg-row sc-msg-user';
+    userRow.innerHTML = `
+        <div class="sc-msg-bubble sc-user-bubble">
+            <div class="sc-bubble-text">${escapeHtmlSupport(q.query)}</div>
+            <div class="sc-bubble-meta">
+                <span class="sc-bubble-time">📅 ${escapeHtmlSupport(displayDateTime)}</span>
+                <span class="sc-bubble-check" title="Sent to support">✓✓</span>
+            </div>
+        </div>
+    `;
+    stream.appendChild(userRow);
+
+    // 2. Bot Confirmation Bubble
+    const botRow = document.createElement('div');
+    botRow.className = 'sc-msg-row sc-msg-bot';
+    const emailToReach = q.email || 'your email';
+    botRow.innerHTML = `
+        <div class="sc-msg-avatar">🤖</div>
+        <div class="sc-msg-bubble sc-bot-bubble">
+            <div class="sc-bubble-text">
+                We received this query. Our support team is reviewing it and will reach out to <strong>${escapeHtmlSupport(emailToReach)}</strong>.
+            </div>
+            <div class="sc-bubble-meta">
+                <span class="sc-bubble-time">${escapeHtmlSupport(displayTime)}</span>
+            </div>
+        </div>
+    `;
+    stream.appendChild(botRow);
+}
+
+async function loadSupportHistory() {
+    const loadingEl = document.getElementById('scLoadingHistory');
+    if (loadingEl && !scHistoryLoaded) loadingEl.style.display = 'flex';
+
+    const token = localStorage.getItem('access_token');
+    const username = localStorage.getItem('username') || '';
+    const emailInput = document.getElementById('scUserEmail');
+    const email = emailInput ? emailInput.value.trim() : '';
+
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+    }
+
+    const params = new URLSearchParams();
+    if (email) params.append('email', email);
+    if (username) params.append('username', username);
+
+    try {
+        const res = await fetch(`/accounts/support-api/?${params.toString()}`, {
+            method: 'GET',
+            headers: headers
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            if (data && Array.isArray(data.queries)) {
+                data.queries.forEach(q => renderUserQueryMessage(q));
+                scHistoryLoaded = true;
+                scrollToBottomSupport();
+            }
+        }
+    } catch (err) {
+        console.warn('Could not load previous support history:', err);
+    } finally {
+        if (loadingEl) loadingEl.style.display = 'none';
+    }
+}
+
+function openSupportChatbox(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // Close any open profile dropdown
+    const pd = document.getElementById('profileDropdown');
+    if (pd) pd.classList.remove('open');
+
+    const win = document.getElementById('supportChatWindow');
+    const backdrop = document.getElementById('supportChatBackdrop');
+    if (!win) return;
+
+    win.classList.add('active');
+    if (backdrop) backdrop.classList.add('active');
+
+    // Pre-populate user name & email
+    const username = localStorage.getItem('username') || 'there';
+    const nameEl = document.getElementById('scUserName');
+    if (nameEl) nameEl.textContent = username;
+
+    const emailInput = document.getElementById('scUserEmail');
+    const token = localStorage.getItem('access_token');
+
+    if (emailInput && !emailInput.value && token) {
+        // Fetch current user email from /accounts/me/
+        fetch('/accounts/me/', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+            if (data && data.email) {
+                emailInput.value = data.email;
+            }
+            // Load history after email is resolved
+            loadSupportHistory();
+        })
+        .catch(() => {
+            loadSupportHistory();
+        });
+    } else {
+        loadSupportHistory();
+    }
+
+    // Focus textarea after opening
+    setTimeout(() => {
+        const txt = document.getElementById('scQueryText');
+        if (txt) txt.focus();
+        scrollToBottomSupport();
+    }, 200);
+}
+
+function closeSupportChatbox() {
+    const win = document.getElementById('supportChatWindow');
+    const backdrop = document.getElementById('supportChatBackdrop');
+    if (win) win.classList.remove('active');
+    if (backdrop) backdrop.classList.remove('active');
+}
+
+function showSupportError(msg) {
+    const errEl = document.getElementById('scErrorMessage');
+    if (errEl) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+    }
+}
+
+function hideSupportError() {
+    const errEl = document.getElementById('scErrorMessage');
+    if (errEl) errEl.style.display = 'none';
+}
+
+async function submitSupportChatbox() {
+    hideSupportError();
+
+    const queryInput = document.getElementById('scQueryText');
+    const emailInput = document.getElementById('scUserEmail');
+    const submitBtn = document.getElementById('scSubmitBtn');
+    const spinner = document.getElementById('scBtnSpinner');
+    const sendIcon = document.getElementById('scSendIcon');
+
+    const query = queryInput ? queryInput.value.trim() : '';
+    const email = emailInput ? emailInput.value.trim() : '';
+
+    if (!query) {
+        showSupportError('Please enter your query or message.');
+        if (queryInput) queryInput.focus();
+        return;
+    }
+
+    if (!email) {
+        showSupportError('Please provide your contact email so we can reach you.');
+        if (emailInput) emailInput.focus();
+        return;
+    }
+
+    // Set loading state
+    submitBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    if (sendIcon) sendIcon.style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('query', query);
+    formData.append('email', email);
+    formData.append('username', localStorage.getItem('username') || '');
+    formData.append('role', localStorage.getItem('role') || '');
+
+    const token = localStorage.getItem('access_token');
+    const headers = {};
+    if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+    }
+
+    // Read csrftoken cookie if available
+    const csrfMatch = document.cookie.match(/(^|;)\s*csrftoken\s*=\s*([^;]+)/);
+    if (csrfMatch) {
+        headers['X-CSRFToken'] = csrfMatch[2];
+    }
+
+    try {
+        const res = await fetch('/accounts/support-api/', {
+            method: 'POST',
+            headers: headers,
+            body: formData
+        });
+
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (e) {
+            data = { error: 'Server returned status ' + res.status };
+        }
+
+        if (!res.ok) {
+            throw new Error(data.error || data.detail || 'Failed to submit support query (' + res.status + ').');
+        }
+
+        // Render the newly submitted query in the chat timeline with date and time!
+        if (data && data.query) {
+            renderUserQueryMessage(data.query);
+        } else {
+            // Fallback object if not returned
+            const now = new Date();
+            renderUserQueryMessage({
+                query: query,
+                email: email,
+                datetime: now.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
+                time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+            });
+        }
+
+        // Clear query input so user can send another response!
+        if (queryInput) {
+            queryInput.value = '';
+            queryInput.style.height = 'auto';
+            queryInput.focus();
+        }
+
+        // Auto-scroll chat to latest message
+        scrollToBottomSupport();
+
+    } catch (err) {
+        showSupportError(err.message || 'An error occurred while sending your query. Please try again.');
+    } finally {
+        submitBtn.disabled = false;
+        if (spinner) spinner.style.display = 'none';
+        if (sendIcon) sendIcon.style.display = '';
+    }
+}
+</script>

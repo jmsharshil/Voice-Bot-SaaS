@@ -1083,6 +1083,9 @@
                         <a href="#" id="manageTeamMenuItem" onclick="openTeamManagementModal(event)" class="pd-item" style="display:flex; align-items:center; gap:8px; padding:10px 14px; color:#1e293b; text-decoration:none; font-size:0.88rem; font-weight:600; border-top:1px solid #f1f5f9; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
                             <i class="fa-solid fa-users-gear" style="color:#6366f1;"></i> Manage Team
                         </a>
+                        <button type="button" class="pd-item" onclick="openSupportChatbox(event)" style="width: 100%; border: none; background: transparent; text-align: left; padding: 10px 14px; color: #1e293b; font-size: 0.88rem; font-weight: 600; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                            <i class="fa-solid fa-headset" style="color: #6366f1;"></i> Support
+                        </button>
                         <button class="pd-logout" onclick="logout()">
                             <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
                         </button>
@@ -3714,6 +3717,8 @@
 
         setTimeout(runDynamicPoll, 5000);
     </script>
+    {% include "support_chatbox_modal.html" %}
+
 </body>
 </html>
 

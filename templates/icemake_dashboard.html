@@ -165,6 +165,8 @@
         .stat-icon.cyan { background: #ecfeff; color: #0891b2; }
         .stat-icon.green { background: #f0fdf4; color: #16a34a; }
         .stat-icon.amber { background: #fffbeb; color: #d97706; }
+        .stat-icon.purple { background: #f3e8ff; color: #7c3aed; }
+        .stat-icon.emerald { background: #ecfdf5; color: #059669; }
 
         .stat-info h3 {
             font-size: 1.5rem;
@@ -562,7 +564,10 @@
                 <p>24x7 Customer Complaint Records & Call Audio Recordings</p>
             </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div id="headerMinutesBadge" style="display: inline-flex; align-items: center; gap: 0.5rem; background: #eef2ff; border: 1px solid #c7d2fe; color: #4338ca; padding: 0.4rem 0.9rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600;" title="Remaining Call Minutes / Total Allocated Quota">
+                <i class="fa-solid fa-hourglass-half"></i> <span id="headerMinutesText">-- / -- min</span>
+            </div>
             <div class="live-badge">
                 <div class="pulse-dot"></div>
                 Live Service Active
@@ -935,6 +940,34 @@
         document.getElementById('statVoiceCalls').textContent = voiceCount;
         document.getElementById('statWhatsappInquiries').textContent = waCount;
         document.getElementById('statSyncedSheet').textContent = syncedCount;
+
+        // Allocated & Remaining Call Minutes
+        const allocated = apiData && apiData.allocated_minutes !== undefined ? apiData.allocated_minutes : 0;
+        const remaining = apiData && apiData.remaining_minutes !== undefined ? apiData.remaining_minutes : 0;
+        const used = apiData && apiData.used_minutes !== undefined ? apiData.used_minutes : 0;
+
+        const allocEl = document.getElementById('statAllocatedMinutes');
+        if (allocEl) allocEl.textContent = `${Number(allocated).toLocaleString()} min`;
+
+        const remEl = document.getElementById('statRemainingMinutes');
+        if (remEl) {
+            remEl.textContent = `${Number(remaining).toLocaleString()} min`;
+            if (remaining <= 100) {
+                remEl.style.color = '#dc2626'; // low balance danger
+            } else if (remaining <= 500) {
+                remEl.style.color = '#d97706'; // warning
+            } else {
+                remEl.style.color = '#059669'; // healthy emerald
+            }
+        }
+
+        const remSub = document.getElementById('statRemainingSubtext');
+        if (remSub) remSub.textContent = `Remaining (Used: ${used} min)`;
+
+        const headerMin = document.getElementById('headerMinutesText');
+        if (headerMin) {
+            headerMin.textContent = `${Number(remaining).toLocaleString()} / ${Number(allocated).toLocaleString()} min`;
+        }
     }
 
     function playTicketAudio(ticketId, url, ticketNum, custName) {
