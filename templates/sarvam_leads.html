@@ -6,6 +6,7 @@
     <title>{{ agent_name|default:'Voice AI Agent' }} — Voice Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --bg-page: #f1f5f9;
@@ -1822,11 +1823,11 @@
         }
 
         .kanban-grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(285px, 1fr));
+            display: flex;
             gap: 16px;
             align-items: flex-start;
-            min-width: 1450px;
+            min-width: 1350px;
+            width: 100%;
         }
 
         .kanban-col {
@@ -1835,9 +1836,12 @@
             border-radius: 14px;
             display: flex;
             flex-direction: column;
-            max-height: calc(100vh - 280px);
-            min-height: 480px;
-            transition: all 0.2s ease;
+            flex: 1 1 270px;
+            min-width: 270px;
+            max-height: calc(100vh - 270px);
+            min-height: 520px;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
         }
 
         .kanban-col.drag-over {
@@ -1847,6 +1851,7 @@
         }
 
         .kanban-col-head {
+            position: relative;
             padding: 14px 16px;
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -1857,40 +1862,57 @@
             background: #ffffff;
             border-top-left-radius: 14px;
             border-top-right-radius: 14px;
-            border-top: 3px solid transparent;
+            overflow: hidden;
         }
 
-        .kanban-col-head.head-new { border-top-color: #0284c7; }
-        .kanban-col-head.head-interested { border-top-color: #10b981; }
-        .kanban-col-head.head-callback { border-top-color: #f59e0b; }
-        .kanban-col-head.head-converted { border-top-color: #8b5cf6; }
-        .kanban-col-head.head-lost { border-top-color: #ef4444; }
+        .kanban-col-head::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3.5px;
+        }
+
+        .kanban-col-head.head-new::before { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+        .kanban-col-head.head-interested::before { background: linear-gradient(90deg, #059669, #34d399); }
+        .kanban-col-head.head-callback::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
+        .kanban-col-head.head-converted::before { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+        .kanban-col-head.head-lost::before { background: linear-gradient(90deg, #e11d48, #fb7185); }
 
         .kanban-col-title {
             display: flex;
             align-items: center;
             gap: 8px;
             color: var(--text-primary);
+            font-weight: 700;
+            letter-spacing: -0.01em;
         }
 
-        .col-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
+        .col-icon-pill {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
         }
-        .dot-new { background: #0284c7; }
-        .dot-interested { background: #10b981; }
-        .dot-callback { background: #f59e0b; }
-        .dot-converted { background: #8b5cf6; }
-        .dot-lost { background: #ef4444; }
+        .pill-new { background: #e0f2fe; color: #0284c7; }
+        .pill-interested { background: #d1fae5; color: #059669; }
+        .pill-callback { background: #fef3c7; color: #d97706; }
+        .pill-converted { background: #ede9fe; color: #7c3aed; }
+        .pill-lost { background: #fee2e2; color: #dc2626; }
 
         .kanban-col-badge {
             background: #f1f5f9;
-            color: var(--text-secondary);
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-weight: 700;
+            color: #475569;
+            font-size: 0.74rem;
+            padding: 2px 9px;
+            border-radius: 20px;
+            font-weight: 800;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
         }
 
         .kanban-cards-list {
@@ -1904,18 +1926,24 @@
 
         .kanban-card {
             background: #ffffff;
-            border: 1px solid var(--border);
+            border: 1px solid #e2e8f0;
             border-radius: 12px;
-            padding: 14px;
-            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+            padding: 13px 14px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
             cursor: grab;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
         }
 
+        .kanban-card.card-stage-NEW { border-left: 3.5px solid #0284c7; }
+        .kanban-card.card-stage-INTERESTED { border-left: 3.5px solid #10b981; }
+        .kanban-card.card-stage-CALLBACK { border-left: 3.5px solid #f59e0b; }
+        .kanban-card.card-stage-CONVERTED { border-left: 3.5px solid #8b5cf6; }
+        .kanban-card.card-stage-LOST { border-left: 3.5px solid #ef4444; }
+
         .kanban-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 10px 22px -4px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
             border-color: #cbd5e1;
         }
 
@@ -1929,48 +1957,85 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: 8px;
+            gap: 8px;
         }
 
         .k-card-profile {
             display: flex;
             align-items: center;
-            gap: 9px;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
         }
 
         .k-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.78rem;
-            font-weight: 700;
+            font-size: 0.8rem;
+            font-weight: 800;
             flex-shrink: 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
         }
 
         .k-name {
             font-weight: 700;
             font-size: 0.88rem;
-            color: var(--text-primary);
-            line-height: 1.2;
+            color: #0f172a;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .k-phone {
-            font-size: 0.78rem;
-            color: var(--text-secondary);
+            font-size: 0.76rem;
+            color: #64748b;
+            font-weight: 500;
+            margin-top: 1px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .k-phone a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.15s;
+        }
+        .k-phone a:hover {
+            color: #0284c7;
+        }
+
+        .k-stage-select {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .k-stage-select:hover {
+            border-color: #94a3b8;
+            background: #ffffff;
         }
 
         .k-product-pill {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            background: #f0f9ff;
-            color: #0369a1;
-            border: 1px solid #bae6fd;
+            background: #f8fafc;
+            color: #334155;
+            border: 1px solid #e2e8f0;
             padding: 3px 8px;
             border-radius: 6px;
-            font-size: 0.75rem;
+            font-size: 0.74rem;
             font-weight: 600;
             margin: 6px 0;
             max-width: 100%;
@@ -1983,22 +2048,39 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            margin-top: 6px;
+            font-size: 0.73rem;
+            color: #64748b;
+            margin-top: 8px;
             padding-top: 6px;
             border-top: 1px dashed #f1f5f9;
+        }
+
+        .k-audio-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #ecfdf5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 1px 7px;
         }
 
         .k-cb-pill {
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-size: 0.75rem;
+            gap: 6px;
+            font-size: 0.74rem;
             font-weight: 700;
-            padding: 4px 8px;
-            border-radius: 6px;
+            padding: 5px 9px;
+            border-radius: 8px;
             margin-top: 8px;
+            transition: all 0.15s;
+        }
+        .k-cb-pill:hover {
+            filter: brightness(0.96);
         }
 
         .k-cb-overdue {
@@ -2020,11 +2102,11 @@
         }
 
         .k-notes-box {
-            background: #f8fafc;
+            background: #fffbeb;
             border-left: 3px solid #f59e0b;
-            padding: 5px 8px;
-            font-size: 0.75rem;
-            color: #475569;
+            padding: 5px 9px;
+            font-size: 0.74rem;
+            color: #92400e;
             border-radius: 0 6px 6px 0;
             margin-top: 8px;
             line-height: 1.35;
@@ -2042,50 +2124,386 @@
 
         .k-btn-action {
             border: none;
-            background: #f1f5f9;
-            color: var(--text-primary);
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
+            background: #f8fafc;
+            color: #475569;
+            padding: 5px 9px;
+            border-radius: 7px;
+            font-size: 0.74rem;
+            font-weight: 700;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 4px;
             transition: all 0.15s;
+            border: 1px solid #e2e8f0;
         }
 
         .k-btn-action:hover {
-            background: #e2e8f0;
+            background: #f1f5f9;
+            color: #0f172a;
+            border-color: #cbd5e1;
         }
 
         .k-btn-call {
-            background: #ecfdf5;
-            color: #059669;
-            border: 1px solid #a7f3d0;
+            background: #059669;
+            color: #ffffff;
+            border: none;
+            box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
         }
         .k-btn-call:hover {
-            background: #d1fae5;
+            background: #047857;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(5, 150, 105, 0.3);
         }
 
         .k-btn-cb {
-            background: #fffbeb;
-            color: #d97706;
+            background: #ffffff;
+            color: #b45309;
             border: 1px solid #fde68a;
         }
         .k-btn-cb:hover {
             background: #fef3c7;
+            color: #92400e;
+            border-color: #fcd34d;
         }
 
-        .k-stage-select {
-            font-size: 0.72rem;
+        /* ── KANBAN CONTROLS & PAGINATION STYLES ── */
+        .kanban-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 12px 16px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .k-toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+
+        .k-search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+            min-width: 260px;
+            max-width: 380px;
+            flex: 1;
+        }
+
+        .k-search-box i.fa-magnifying-glass {
+            position: absolute;
+            left: 12px;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+
+        .k-search-box input {
+            width: 100%;
+            padding: 8px 32px 8px 34px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.84rem;
+            background: #f8fafc;
+            color: var(--text-primary);
+            transition: all 0.2s;
+        }
+
+        .k-search-box input:focus {
+            outline: none;
+            background: #ffffff;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .k-search-clear {
+            position: absolute;
+            right: 8px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px;
+            font-size: 0.8rem;
+        }
+        .k-search-clear:hover { color: #475569; }
+
+        .k-filter-pills {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f1f5f9;
+            padding: 3px;
+            border-radius: 8px;
+        }
+
+        .k-pill-filter {
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .k-pill-filter.active {
+            background: #ffffff;
+            color: #2563eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .k-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .k-control-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .k-select-control {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .k-select-control:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .k-toolbar-btn {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+        }
+
+        .k-toolbar-btn:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+            border-color: #cbd5e1;
+        }
+
+        /* ── COLLAPSIBLE COLUMNS ── */
+        .k-col-collapse-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
             padding: 3px 6px;
             border-radius: 6px;
-            border: 1px solid #cbd5e1;
+            font-size: 0.78rem;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .k-col-collapse-btn:hover {
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .k-showing-sub {
+            font-size: 0.7rem;
+            color: #64748b;
+            font-weight: 500;
+            margin-left: 2px;
+        }
+
+        .kanban-col.is-collapsed {
+            flex: 0 0 48px !important;
+            min-width: 48px !important;
+            max-width: 48px !important;
+            width: 48px !important;
+            min-height: 480px;
+            cursor: pointer;
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            box-shadow: none;
+        }
+
+        .kanban-col.is-collapsed .kanban-col-head {
+            flex-direction: column;
+            padding: 14px 6px;
+            gap: 12px;
+            border-bottom: none;
+            background: transparent;
+            height: 100%;
+        }
+
+        .kanban-col.is-collapsed .kanban-col-title {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-size: 0.82rem;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
+            white-space: nowrap;
+        }
+
+        .kanban-col.is-collapsed .k-col-collapse-btn i {
+            transform: rotate(180deg);
+        }
+
+        .kanban-col.is-collapsed .kanban-cards-list,
+        .kanban-col.is-collapsed .kanban-col-footer,
+        .kanban-col.is-collapsed .k-scroll-top-btn,
+        .kanban-col.is-collapsed .k-showing-sub {
+            display: none !important;
+        }
+
+        /* ── STICKY HEAD & CUSTOM SCROLLBAR ── */
+        .kanban-cards-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .kanban-cards-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .kanban-cards-list::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* ── COLUMN FOOTER PAGINATION ── */
+        .kanban-col-footer {
+            padding: 10px 12px;
             background: #ffffff;
-            color: var(--text-primary);
+            border-top: 1px solid var(--border);
+            border-bottom-left-radius: 14px;
+            border-bottom-right-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.76rem;
+            color: #64748b;
+        }
+
+        .k-footer-count {
+            font-weight: 600;
+            color: #64748b;
+        }
+
+        .k-footer-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .k-btn-load-more {
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s ease;
+        }
+
+        .k-btn-load-more:hover {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-color: #93c5fd;
+            transform: translateY(-1px);
+        }
+
+        .k-btn-show-all {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 0.72rem;
+            text-decoration: underline;
+            cursor: pointer;
+            padding: 2px 4px;
+            font-weight: 600;
+        }
+        .k-btn-show-all:hover {
+            color: #0f172a;
+        }
+
+        .k-btn-collapse-leads {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 0.72rem;
             font-weight: 600;
             cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .k-btn-collapse-leads:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        /* ── FLOATING SCROLL TO TOP ── */
+        .k-scroll-top-btn {
+            position: absolute;
+            bottom: 48px;
+            right: 14px;
+            background: #1e293b;
+            color: #ffffff;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 4px;
+            z-index: 10;
+            opacity: 0.9;
+            transition: all 0.2s;
+        }
+        .k-scroll-top-btn:hover {
+            background: #0f172a;
+            opacity: 1;
+            transform: translateY(-2px);
         }
 
         /* ── CALLBACKS SECTION & CARDS ── */
@@ -2194,6 +2612,566 @@
         .btn-quick-time:hover {
             background: #e2e8f0;
             border-color: #cbd5e1;
+        }
+
+        /* ═════════════════════════════════════════════════════════════════════
+           INQUIRIES VISUAL ANALYTICS & INTERACTIVE CALENDAR STYLES
+           ═════════════════════════════════════════════════════════════════════ */
+        .inquiries-visual-row {
+            display: grid;
+            grid-template-columns: 1fr 1.18fr;
+            gap: 1.25rem;
+            margin: 1.25rem 0 1.5rem 0;
+        }
+
+        @media (max-width: 1040px) {
+            .inquiries-visual-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .visual-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.25rem 1.4rem;
+            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .visual-card:hover {
+            box-shadow: 0 8px 28px -4px rgba(15, 23, 42, 0.09), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+            border-color: #cbd5e1;
+        }
+
+        .visual-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.1rem;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid #f1f5f9;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .visual-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .visual-header-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .visual-card-title {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            letter-spacing: -0.2px;
+            margin-bottom: 2px;
+        }
+
+        .visual-card-sub {
+            font-size: 0.76rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .visual-header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+
+        /* ─── GRAPHICAL OUTCOMES CHART ─── */
+        .chart-content-layout {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex: 1;
+        }
+
+        @media (max-width: 640px) {
+            .chart-content-layout {
+                flex-direction: column;
+            }
+        }
+
+        .chart-donut-wrapper {
+            position: relative;
+            width: 175px;
+            height: 175px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-donut-wrapper canvas {
+            max-width: 100% !important;
+            max-height: 100% !important;
+        }
+
+        .donut-center-kpi {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .donut-center-num {
+            display: block;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1.1;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.5px;
+        }
+
+        .donut-center-lbl {
+            display: block;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-top: 1px;
+        }
+
+        .chart-breakdown-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+            flex: 1;
+            width: 100%;
+        }
+
+        .breakdown-item {
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.16s ease;
+            user-select: none;
+        }
+
+        .breakdown-item:hover {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.04);
+            transform: translateY(-1px);
+        }
+
+        .breakdown-item.is-active-row {
+            border-color: var(--accent);
+            background: #eff6ff;
+            box-shadow: 0 0 0 1.5px var(--accent);
+        }
+
+        .breakdown-item-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .breakdown-label-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .breakdown-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .breakdown-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .breakdown-value-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .breakdown-count {
+            font-size: 0.86rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .breakdown-pct {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 10px;
+            background: rgba(100, 116, 139, 0.1);
+            color: #475569;
+        }
+
+        .breakdown-item.is-interested .breakdown-pct {
+            background: rgba(16, 185, 129, 0.12);
+            color: #059669;
+        }
+
+        .breakdown-item.is-callback .breakdown-pct {
+            background: rgba(245, 158, 11, 0.12);
+            color: #d97706;
+        }
+
+        .breakdown-item.is-not-interested .breakdown-pct {
+            background: rgba(239, 68, 68, 0.12);
+            color: #dc2626;
+        }
+
+        .breakdown-item.is-total .breakdown-pct {
+            background: rgba(59, 130, 246, 0.12);
+            color: #2563eb;
+        }
+
+        .breakdown-bar-track {
+            height: 5px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .breakdown-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ─── INTERACTIVE INQUIRIES CALENDAR ─── */
+        .cal-nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .cal-nav-btn {
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: var(--text-primary);
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.15s ease;
+        }
+
+        .cal-nav-btn:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+            color: var(--accent);
+        }
+
+        .cal-month-display {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            min-width: 120px;
+            text-align: center;
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.2px;
+        }
+
+        .cal-today-btn {
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: var(--accent);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 9px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-left: 2px;
+        }
+
+        .cal-today-btn:hover {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        .cal-active-filter-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 14px;
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+            border: 1.5px solid #a5b4fc;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            animation: fadeIn 0.2s ease;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.08);
+        }
+
+        .cal-filter-text {
+            font-size: 0.82rem;
+            color: #3730a3;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .cal-active-badge {
+            background: #4f46e5;
+            color: #ffffff;
+            padding: 2px 9px;
+            border-radius: 12px;
+            font-weight: 800;
+            font-size: 0.72rem;
+            box-shadow: 0 1px 4px rgba(79, 70, 229, 0.3);
+        }
+
+        .cal-clear-filter-btn {
+            border: 1px solid #fca5a5;
+            background: #ffffff;
+            color: #dc2626;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 7px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .cal-clear-filter-btn:hover {
+            background: #fef2f2;
+            border-color: #ef4444;
+            transform: scale(1.02);
+        }
+
+        .cal-calendar-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .cal-weekdays-row {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            text-align: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 0.5px;
+            padding: 4px 0 2px 0;
+        }
+
+        .cal-days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        .cal-day-cell {
+            min-height: 48px;
+            border-radius: 10px;
+            border: 1px solid #f1f5f9;
+            background: #ffffff;
+            padding: 5px 6px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+
+        .cal-day-cell:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+        }
+
+        .cal-day-cell.other-month {
+            opacity: 0.35;
+            background: #fafafa;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .cal-day-cell.is-today {
+            border-color: #6366f1;
+            font-weight: 700;
+            background: rgba(99, 102, 241, 0.04);
+        }
+
+        .cal-day-cell.is-today .cal-day-num {
+            color: #4f46e5;
+            font-weight: 800;
+        }
+
+        .cal-day-cell.has-inquiries {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border-color: #a7f3d0;
+        }
+
+        .cal-day-cell.has-inquiries:hover {
+            background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%);
+            border-color: #6ee7b7;
+            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.15);
+        }
+
+        .cal-day-cell.is-active-filter {
+            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+            border-color: #312e81 !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4) !important;
+            transform: scale(1.03) !important;
+            z-index: 2;
+        }
+
+        .cal-day-cell.is-active-filter .cal-day-num {
+            color: #ffffff !important;
+            font-weight: 800;
+        }
+
+        .cal-day-cell.is-active-filter .cal-today-chip {
+            color: #fbcfe8 !important;
+        }
+
+        .cal-day-cell.is-active-filter .cal-inquiry-pill {
+            background: #ffffff !important;
+            color: #4338ca !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+            font-weight: 800;
+        }
+
+        .cal-day-num {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .cal-today-chip {
+            font-size: 0.58rem;
+            font-weight: 700;
+            color: #4f46e5;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .cal-inquiry-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            align-self: flex-end;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 12px;
+            background: #10b981;
+            color: #ffffff;
+            line-height: 1.3;
+            box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+            white-space: nowrap;
+        }
+
+        .cal-footer-legend {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 0.74rem;
+            color: var(--text-secondary);
+        }
+
+        .cal-legend-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .cal-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .cal-legend-chip {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .cal-legend-chip.has-leads {
+            background: #10b981;
+        }
+
+        .cal-legend-chip.is-today {
+            border: 2px solid #4f46e5;
+            background: #ffffff;
+        }
+
+        .cal-legend-chip.is-selected {
+            background: #4f46e5;
+        }
+
+        .cal-footer-tip {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #6366f1;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -2488,6 +3466,190 @@
                     </div>
                 </div>
 
+                <!-- INQUIRIES VISUAL ANALYTICS & INTERACTIVE CALENDAR -->
+                <div class="inquiries-visual-row" id="inquiriesVisualRow">
+                    <!-- LEFT CARD: Graphical Representation (Outcomes Breakdown) -->
+                    <div class="visual-card visual-chart-card">
+                        <div class="visual-card-header">
+                            <div class="visual-header-left">
+                                <div class="visual-header-icon" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5;">
+                                    <i class="fa-solid fa-chart-pie"></i>
+                                </div>
+                                <div>
+                                    <h3 class="visual-card-title">Inquiry Outcomes Breakdown</h3>
+                                    <p class="visual-card-sub" id="chartSubTitle">Live interest &amp; disposition distribution</p>
+                                </div>
+                            </div>
+                            <div class="visual-header-badge" id="chartScopeBadge" title="Current inquiries scope">
+                                <i class="fa-solid fa-circle-dot" style="font-size: 0.65rem; color: #10b981;"></i>
+                                <span id="chartScopeText">All Calls</span>
+                            </div>
+                        </div>
+
+                        <div class="chart-content-layout">
+                            <!-- Donut Chart with Center KPI -->
+                            <div class="chart-donut-wrapper">
+                                <canvas id="inquiryOutcomesChart" width="180" height="180"></canvas>
+                                <div class="donut-center-kpi" id="donutCenterKpi">
+                                    <span class="donut-center-num" id="donutTotalCount">0</span>
+                                    <span class="donut-center-lbl">Total Inquiries</span>
+                                </div>
+                            </div>
+
+                            <!-- Detailed Outcomes Breakdown List with 1-Click Status Filter -->
+                            <div class="chart-breakdown-list" id="chartBreakdownList">
+                                <!-- 1. Total Inquiries Row -->
+                                <div class="breakdown-item is-total" id="breakdownRowTotal" onclick="filterByStatCard('ALL')" title="Click to show All Leads">
+                                    <div class="breakdown-item-top">
+                                        <div class="breakdown-label-wrap">
+                                            <span class="breakdown-dot" style="background: #3b82f6;"></span>
+                                            <span class="breakdown-name">Total Inquiries</span>
+                                        </div>
+                                        <div class="breakdown-value-wrap">
+                                            <span class="breakdown-count" id="chartCountTotal">0</span>
+                                            <span class="breakdown-pct" id="chartPctTotal">100%</span>
+                                        </div>
+                                    </div>
+                                    <div class="breakdown-bar-track">
+                                        <div class="breakdown-bar-fill" id="chartBarTotal" style="width: 100%; background: #3b82f6;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Interested / High Intent Row -->
+                                <div class="breakdown-item is-interested" id="breakdownRowInterested" onclick="filterByStatCard('INTERVIEW')" title="Click to filter by Interested">
+                                    <div class="breakdown-item-top">
+                                        <div class="breakdown-label-wrap">
+                                            <span class="breakdown-dot" style="background: #10b981;"></span>
+                                            <span class="breakdown-name">Interested / High Intent</span>
+                                        </div>
+                                        <div class="breakdown-value-wrap">
+                                            <span class="breakdown-count" id="chartCountInterested">0</span>
+                                            <span class="breakdown-pct" id="chartPctInterested">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="breakdown-bar-track">
+                                        <div class="breakdown-bar-fill" id="chartBarInterested" style="width: 0%; background: #10b981;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- 3. Call Back Requested Row -->
+                                <div class="breakdown-item is-callback" id="breakdownRowCallback" onclick="filterByStatCard('CALLBACK')" title="Click to filter by Callback">
+                                    <div class="breakdown-item-top">
+                                        <div class="breakdown-label-wrap">
+                                            <span class="breakdown-dot" style="background: #f59e0b;"></span>
+                                            <span class="breakdown-name">Call Back Requested</span>
+                                        </div>
+                                        <div class="breakdown-value-wrap">
+                                            <span class="breakdown-count" id="chartCountCallback">0</span>
+                                            <span class="breakdown-pct" id="chartPctCallback">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="breakdown-bar-track">
+                                        <div class="breakdown-bar-fill" id="chartBarCallback" style="width: 0%; background: #f59e0b;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- 4. Not Interested Row -->
+                                <div class="breakdown-item is-not-interested" id="breakdownRowNotInt" onclick="filterByStatCard('NOT_INTERESTED')" title="Click to filter by Not Interested">
+                                    <div class="breakdown-item-top">
+                                        <div class="breakdown-label-wrap">
+                                            <span class="breakdown-dot" style="background: #ef4444;"></span>
+                                            <span class="breakdown-name">Not Interested / Other</span>
+                                        </div>
+                                        <div class="breakdown-value-wrap">
+                                            <span class="breakdown-count" id="chartCountNotInt">0</span>
+                                            <span class="breakdown-pct" id="chartPctNotInt">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="breakdown-bar-track">
+                                        <div class="breakdown-bar-fill" id="chartBarNotInt" style="width: 0%; background: #ef4444;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT CARD: Interactive Inquiries Calendar -->
+                    <div class="visual-card visual-calendar-card">
+                        <div class="visual-card-header">
+                            <div class="visual-header-left">
+                                <div class="visual-header-icon" style="background: rgba(14, 165, 233, 0.1); color: #0284c7;">
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                </div>
+                                <div>
+                                    <h3 class="visual-card-title">Inquiries Calendar</h3>
+                                    <p class="visual-card-sub">Daily inquiries count • Click date to filter</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Calendar Navigation Header -->
+                            <div class="cal-nav-controls">
+                                <button type="button" class="cal-nav-btn" onclick="navigateCalendarMonth(-1)" title="Previous Month">
+                                    <i class="fa-solid fa-chevron-left"></i>
+                                </button>
+                                <div class="cal-month-display" id="calCurrentMonthYear">October 2026</div>
+                                <button type="button" class="cal-nav-btn" onclick="navigateCalendarMonth(1)" title="Next Month">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                                <button type="button" class="cal-today-btn" onclick="jumpCalendarToToday()" title="Jump to Today">
+                                    Today
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Active Filter Alert Bar (displays when date is clicked) -->
+                        <div class="cal-active-filter-bar" id="calActiveFilterBar" style="display: none;">
+                            <div class="cal-filter-text">
+                                <i class="fa-solid fa-filter" style="color: #4f46e5;"></i>
+                                <span>Showing inquiries for <strong id="calActiveDateLabel">14 Oct 2026</strong>: <span class="cal-active-badge" id="calActiveCountBadge">5 Inquiries</span></span>
+                            </div>
+                            <button type="button" class="cal-clear-filter-btn" onclick="clearDateFilter()" title="Clear date filter and show all">
+                                <i class="fa-solid fa-xmark"></i> Clear Date Filter
+                            </button>
+                        </div>
+
+                        <!-- Calendar Days Grid -->
+                        <div class="cal-calendar-wrapper">
+                            <!-- Day of Week Headers -->
+                            <div class="cal-weekdays-row">
+                                <div class="cal-weekday">Sun</div>
+                                <div class="cal-weekday">Mon</div>
+                                <div class="cal-weekday">Tue</div>
+                                <div class="cal-weekday">Wed</div>
+                                <div class="cal-weekday">Thu</div>
+                                <div class="cal-weekday">Fri</div>
+                                <div class="cal-weekday">Sat</div>
+                            </div>
+
+                            <!-- Dynamic Day Cells -->
+                            <div class="cal-days-grid" id="calDaysGrid">
+                                <!-- Injected via JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Calendar Footer Legend -->
+                        <div class="cal-footer-legend">
+                            <div class="cal-legend-group">
+                                <div class="cal-legend-item">
+                                    <span class="cal-legend-chip has-leads"></span>
+                                    <span>Has Inquiries</span>
+                                </div>
+                                <div class="cal-legend-item">
+                                    <span class="cal-legend-chip is-today"></span>
+                                    <span>Today</span>
+                                </div>
+                                <div class="cal-legend-item">
+                                    <span class="cal-legend-chip is-selected"></span>
+                                    <span>Selected Filter</span>
+                                </div>
+                            </div>
+                            <div class="cal-footer-tip">
+                                <i class="fa-regular fa-lightbulb"></i> Click date to filter inquiries
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Filter Controls -->
                 <div class="filter-section">
                     <div class="search-box">
@@ -2596,65 +3758,161 @@
 
                 <!-- Kanban Board Container (View mode switcher or tab switches between table-card and this) -->
                 <div class="kanban-board-container" id="kanbanBoardContainer" style="display: none;">
+                    <!-- Kanban Controls Toolbar -->
+                    <div class="kanban-toolbar">
+                        <div class="k-toolbar-left">
+                            <div class="k-search-box">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="kanbanSearchInput" placeholder="Filter cards by name, phone, requirement..." oninput="handleKanbanSearch(this.value)">
+                                <button type="button" class="k-search-clear" id="kanbanSearchClearBtn" onclick="clearKanbanSearch()" style="display: none;" title="Clear search">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                            <div class="k-filter-pills" id="kanbanFilterPills">
+                                <button type="button" class="k-pill-filter active" data-filter="all" onclick="setKanbanPillFilter('all')">All Leads</button>
+                                <button type="button" class="k-pill-filter" data-filter="callbacks" onclick="setKanbanPillFilter('callbacks')">
+                                    <i class="fa-solid fa-calendar-check" style="color: #d97706;"></i> Has Callback
+                                </button>
+                                <button type="button" class="k-pill-filter" data-filter="today" onclick="setKanbanPillFilter('today')">
+                                    <i class="fa-solid fa-clock" style="color: #0284c7;"></i> Today's Calls
+                                </button>
+                            </div>
+                        </div>
+                        <div class="k-toolbar-right">
+                            <div class="k-control-group">
+                                <span class="k-control-label"><i class="fa-solid fa-arrow-down-wide-short"></i> Sort:</span>
+                                <select id="kanbanSortSelect" class="k-select-control" onchange="handleKanbanSortChange(this.value)">
+                                    <option value="newest">Newest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                    <option value="callbacks_due">Due Callbacks First</option>
+                                    <option value="duration">Longest Call</option>
+                                </select>
+                            </div>
+                            <div class="k-control-group">
+                                <span class="k-control-label"><i class="fa-solid fa-layer-group"></i> Per Stage:</span>
+                                <select id="kanbanLimitSelect" class="k-select-control" onchange="handleKanbanLimitChange(this.value)">
+                                    <option value="15" selected>15 cards</option>
+                                    <option value="30">30 cards</option>
+                                    <option value="50">50 cards</option>
+                                    <option value="100">100 cards</option>
+                                    <option value="all">All cards</option>
+                                </select>
+                            </div>
+                            <button type="button" class="k-toolbar-btn" id="toggleLostColumnBtn" onclick="toggleQuickCollapseLost()" title="Collapse / Expand Closed/Lost column">
+                                <i class="fa-solid fa-eye-slash"></i> <span id="toggleLostBtnText">Hide Lost</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="kanban-grid" id="kanbanGrid">
                         <!-- Column 1: New / Contacted -->
-                        <div class="kanban-col" id="col-NEW" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'NEW')">
+                        <div class="kanban-col" id="col-NEW" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'NEW')" onclick="handleKanbanColClick('NEW', event)">
                             <div class="kanban-col-head head-new">
                                 <div class="kanban-col-title">
-                                    <span class="col-dot dot-new"></span>
+                                    <span class="col-icon-pill pill-new"><i class="fa-solid fa-inbox"></i></span>
                                     <span>New / Inquired</span>
+                                    <span class="k-showing-sub" id="sub-NEW"></span>
                                 </div>
-                                <span class="kanban-col-badge" id="badge-NEW">0</span>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span class="kanban-col-badge" id="badge-NEW">0</span>
+                                    <button type="button" class="k-col-collapse-btn" onclick="toggleKanbanColumnCollapse('NEW', event)" title="Collapse column to save space">
+                                        <i class="fa-solid fa-chevron-left"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="kanban-cards-list" id="cards-NEW"></div>
+                            <button type="button" class="k-scroll-top-btn" id="scrollTop-NEW" onclick="scrollKanbanStageTop('NEW')" title="Scroll to top of stage">
+                                <i class="fa-solid fa-arrow-up"></i> Top
+                            </button>
+                            <div class="kanban-col-footer" id="footer-NEW" style="display: none;"></div>
                         </div>
 
                         <!-- Column 2: Interested / Qualified -->
-                        <div class="kanban-col" id="col-INTERESTED" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'INTERESTED')">
+                        <div class="kanban-col" id="col-INTERESTED" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'INTERESTED')" onclick="handleKanbanColClick('INTERESTED', event)">
                             <div class="kanban-col-head head-interested">
                                 <div class="kanban-col-title">
-                                    <span class="col-dot dot-interested"></span>
+                                    <span class="col-icon-pill pill-interested"><i class="fa-solid fa-star"></i></span>
                                     <span>Interested / High Intent</span>
+                                    <span class="k-showing-sub" id="sub-INTERESTED"></span>
                                 </div>
-                                <span class="kanban-col-badge" id="badge-INTERESTED">0</span>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span class="kanban-col-badge" id="badge-INTERESTED">0</span>
+                                    <button type="button" class="k-col-collapse-btn" onclick="toggleKanbanColumnCollapse('INTERESTED', event)" title="Collapse column to save space">
+                                        <i class="fa-solid fa-chevron-left"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="kanban-cards-list" id="cards-INTERESTED"></div>
+                            <button type="button" class="k-scroll-top-btn" id="scrollTop-INTERESTED" onclick="scrollKanbanStageTop('INTERESTED')" title="Scroll to top of stage">
+                                <i class="fa-solid fa-arrow-up"></i> Top
+                            </button>
+                            <div class="kanban-col-footer" id="footer-INTERESTED" style="display: none;"></div>
                         </div>
 
                         <!-- Column 3: Callback Scheduled -->
-                        <div class="kanban-col" id="col-CALLBACK" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'CALLBACK')">
+                        <div class="kanban-col" id="col-CALLBACK" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'CALLBACK')" onclick="handleKanbanColClick('CALLBACK', event)">
                             <div class="kanban-col-head head-callback">
                                 <div class="kanban-col-title">
-                                    <span class="col-dot dot-callback"></span>
+                                    <span class="col-icon-pill pill-callback"><i class="fa-solid fa-phone-volume"></i></span>
                                     <span>Callback / Follow-Up</span>
+                                    <span class="k-showing-sub" id="sub-CALLBACK"></span>
                                 </div>
-                                <span class="kanban-col-badge" id="badge-CALLBACK">0</span>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span class="kanban-col-badge" id="badge-CALLBACK">0</span>
+                                    <button type="button" class="k-col-collapse-btn" onclick="toggleKanbanColumnCollapse('CALLBACK', event)" title="Collapse column to save space">
+                                        <i class="fa-solid fa-chevron-left"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="kanban-cards-list" id="cards-CALLBACK"></div>
+                            <button type="button" class="k-scroll-top-btn" id="scrollTop-CALLBACK" onclick="scrollKanbanStageTop('CALLBACK')" title="Scroll to top of stage">
+                                <i class="fa-solid fa-arrow-up"></i> Top
+                            </button>
+                            <div class="kanban-col-footer" id="footer-CALLBACK" style="display: none;"></div>
                         </div>
 
                         <!-- Column 4: Converted / Won -->
-                        <div class="kanban-col" id="col-CONVERTED" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'CONVERTED')">
+                        <div class="kanban-col" id="col-CONVERTED" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'CONVERTED')" onclick="handleKanbanColClick('CONVERTED', event)">
                             <div class="kanban-col-head head-converted">
                                 <div class="kanban-col-title">
-                                    <span class="col-dot dot-converted"></span>
+                                    <span class="col-icon-pill pill-converted"><i class="fa-solid fa-trophy"></i></span>
                                     <span>Converted / Won</span>
+                                    <span class="k-showing-sub" id="sub-CONVERTED"></span>
                                 </div>
-                                <span class="kanban-col-badge" id="badge-CONVERTED">0</span>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span class="kanban-col-badge" id="badge-CONVERTED">0</span>
+                                    <button type="button" class="k-col-collapse-btn" onclick="toggleKanbanColumnCollapse('CONVERTED', event)" title="Collapse column to save space">
+                                        <i class="fa-solid fa-chevron-left"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="kanban-cards-list" id="cards-CONVERTED"></div>
+                            <button type="button" class="k-scroll-top-btn" id="scrollTop-CONVERTED" onclick="scrollKanbanStageTop('CONVERTED')" title="Scroll to top of stage">
+                                <i class="fa-solid fa-arrow-up"></i> Top
+                            </button>
+                            <div class="kanban-col-footer" id="footer-CONVERTED" style="display: none;"></div>
                         </div>
 
                         <!-- Column 5: Closed / Lost -->
-                        <div class="kanban-col" id="col-LOST" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'LOST')">
+                        <div class="kanban-col" id="col-LOST" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'LOST')" onclick="handleKanbanColClick('LOST', event)">
                             <div class="kanban-col-head head-lost">
                                 <div class="kanban-col-title">
-                                    <span class="col-dot dot-lost"></span>
+                                    <span class="col-icon-pill pill-lost"><i class="fa-solid fa-ban"></i></span>
                                     <span>Closed / Lost</span>
+                                    <span class="k-showing-sub" id="sub-LOST"></span>
                                 </div>
-                                <span class="kanban-col-badge" id="badge-LOST">0</span>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span class="kanban-col-badge" id="badge-LOST">0</span>
+                                    <button type="button" class="k-col-collapse-btn" onclick="toggleKanbanColumnCollapse('LOST', event)" title="Collapse column to save space">
+                                        <i class="fa-solid fa-chevron-left"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="kanban-cards-list" id="cards-LOST"></div>
+                            <button type="button" class="k-scroll-top-btn" id="scrollTop-LOST" onclick="scrollKanbanStageTop('LOST')" title="Scroll to top of stage">
+                                <i class="fa-solid fa-arrow-up"></i> Top
+                            </button>
+                            <div class="kanban-col-footer" id="footer-LOST" style="display: none;"></div>
                         </div>
                     </div>
                 </div>
@@ -3175,6 +4433,13 @@
         let cachedPipelineCounts = {};
         let cachedCallbackStats = {};
 
+        // Inquiries Visual Analytics & Interactive Calendar State
+        let inquiryChartInstance = null;
+        let currentCalYear = new Date().getFullYear();
+        let currentCalMonth = new Date().getMonth(); // 0-indexed (0=Jan, 9=Oct)
+        let selectedCalDate = null; // 'YYYY-MM-DD'
+        let cachedDailyInquiries = {}; // { 'YYYY-MM-DD': count }
+
         function getCsrfToken() {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -3579,8 +4844,125 @@
             }
         }
 
+        // ── KANBAN CONTROLS & PAGINATION STATE ──
+        let kanbanStageLimits = { NEW: 15, INTERESTED: 15, CALLBACK: 15, CONVERTED: 15, LOST: 15 };
+        let kanbanDefaultLimit = 15;
+        let kanbanSearchQuery = '';
+        let kanbanActivePillFilter = 'all';
+        let kanbanSortBy = 'newest';
+        let kanbanCollapsedColumns = (function() {
+            try {
+                return JSON.parse(localStorage.getItem('sarvam_kanban_collapsed_cols') || '[]');
+            } catch(e) { return []; }
+        })();
+
+        function saveKanbanCollapsedColumns() {
+            try {
+                localStorage.setItem('sarvam_kanban_collapsed_cols', JSON.stringify(kanbanCollapsedColumns));
+            } catch(e) {}
+        }
+
+        function handleKanbanColClick(stage, e) {
+            const col = document.getElementById(`col-${stage}`);
+            if (col && col.classList.contains('is-collapsed')) {
+                toggleKanbanColumnCollapse(stage, e);
+            }
+        }
+
+        function toggleKanbanColumnCollapse(stage, e) {
+            if (e) e.stopPropagation();
+            const idx = kanbanCollapsedColumns.indexOf(stage);
+            if (idx >= 0) {
+                kanbanCollapsedColumns.splice(idx, 1);
+            } else {
+                kanbanCollapsedColumns.push(stage);
+            }
+            saveKanbanCollapsedColumns();
+            renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+        }
+
+        function toggleQuickCollapseLost() {
+            toggleKanbanColumnCollapse('LOST');
+        }
+
+        function loadMoreKanbanStage(stage, e) {
+            if (e) e.stopPropagation();
+            const curr = kanbanStageLimits[stage] || kanbanDefaultLimit;
+            kanbanStageLimits[stage] = (curr === 'ALL') ? 'ALL' : (curr + 15);
+            renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+        }
+
+        function showAllKanbanStage(stage, e) {
+            if (e) e.stopPropagation();
+            kanbanStageLimits[stage] = 'ALL';
+            renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+        }
+
+        function collapseKanbanStageLeads(stage, e) {
+            if (e) e.stopPropagation();
+            kanbanStageLimits[stage] = kanbanDefaultLimit;
+            renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+            scrollKanbanStageTop(stage);
+        }
+
+        function scrollKanbanStageTop(stage) {
+            const container = document.getElementById(`cards-${stage}`);
+            if (container) {
+                container.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function handleKanbanSearch(val) {
+            kanbanSearchQuery = val || '';
+            const clearBtn = document.getElementById('kanbanSearchClearBtn');
+            if (clearBtn) clearBtn.style.display = kanbanSearchQuery ? 'inline-block' : 'none';
+            renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+        }
+
+        function clearKanbanSearch() {
+            kanbanSearchQuery = '';
+            const input = document.getElementById('kanbanSearchInput');
+            const clearBtn = document.getElementById('kanbanSearchClearBtn');
+            if (input) input.value = '';
+            if (clearBtn) clearBtn.style.display = 'none';
+            renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+        }
+
+        function setKanbanPillFilter(filter) {
+            kanbanActivePillFilter = filter;
+            document.querySelectorAll('.k-pill-filter').forEach(btn => {
+                if (btn.getAttribute('data-filter') === filter) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+        }
+
+        function handleKanbanSortChange(val) {
+            kanbanSortBy = val;
+            renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+        }
+
+        function handleKanbanLimitChange(val) {
+            kanbanDefaultLimit = (val === 'all') ? 'ALL' : parseInt(val, 10);
+            ['NEW', 'INTERESTED', 'CALLBACK', 'CONVERTED', 'LOST'].forEach(st => {
+                kanbanStageLimits[st] = kanbanDefaultLimit;
+            });
+            renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+        }
+
         function renderKanbanBoard(leads, pipelineCounts) {
             const stages = ['NEW', 'INTERESTED', 'CALLBACK', 'CONVERTED', 'LOST'];
+            const stageLabels = {
+                NEW: 'New / Inquired',
+                INTERESTED: 'Interested / High Intent',
+                CALLBACK: 'Callback / Follow-Up',
+                CONVERTED: 'Converted / Won',
+                LOST: 'Closed / Lost'
+            };
+
             const grouped = {
                 NEW: [],
                 INTERESTED: [],
@@ -3589,8 +4971,58 @@
                 LOST: []
             };
 
-            const leadsArr = Array.isArray(leads) ? leads : [];
-            leadsArr.forEach(lead => {
+            const leadsArr = Array.isArray(leads) ? [...leads] : [];
+
+            // 1. Filter leads by Kanban Search & Active Pill Filter
+            const searchQ = (kanbanSearchQuery || '').toLowerCase().trim();
+            const now = new Date();
+            const todayStr = now.toDateString();
+
+            const filteredLeads = leadsArr.filter(lead => {
+                if (searchQ) {
+                    const s = lead.summary || {};
+                    const custName = (lead.candidate_name || s.user_name || s.customer_name || s.candidate_name || '').toLowerCase();
+                    const contact = (lead.contact || lead.phone_number || '').toLowerCase();
+                    const req = (s.car_model || s.product_interest || s.product_name || s.requirement || lead.applied_position || '').toLowerCase();
+                    const notes = (lead.callback_notes || '').toLowerCase();
+                    const outcome = (lead.final_status || '').toLowerCase();
+                    const matchesSearch = custName.includes(searchQ) || contact.includes(searchQ) || req.includes(searchQ) || notes.includes(searchQ) || outcome.includes(searchQ);
+                    if (!matchesSearch) return false;
+                }
+
+                if (kanbanActivePillFilter === 'callbacks') {
+                    if (!lead.callback_datetime) return false;
+                } else if (kanbanActivePillFilter === 'today') {
+                    const leadDate = new Date(lead.start_time || lead.created_at || lead.callback_datetime);
+                    if (isNaN(leadDate.getTime()) || leadDate.toDateString() !== todayStr) return false;
+                }
+
+                return true;
+            });
+
+            // 2. Sort leads according to kanbanSortBy
+            filteredLeads.sort((a, b) => {
+                if (kanbanSortBy === 'oldest') {
+                    const tA = new Date(a.start_time || a.created_at || 0).getTime();
+                    const tB = new Date(b.start_time || b.created_at || 0).getTime();
+                    return tA - tB;
+                } else if (kanbanSortBy === 'callbacks_due') {
+                    const cA = a.callback_datetime ? new Date(a.callback_datetime).getTime() : Infinity;
+                    const cB = b.callback_datetime ? new Date(b.callback_datetime).getTime() : Infinity;
+                    return cA - cB;
+                } else if (kanbanSortBy === 'duration') {
+                    const dA = parseFloat(a.duration || a.call_duration || 0);
+                    const dB = parseFloat(b.duration || b.call_duration || 0);
+                    return dB - dA;
+                } else { // 'newest' default
+                    const tA = new Date(a.start_time || a.created_at || 0).getTime();
+                    const tB = new Date(b.start_time || b.created_at || 0).getTime();
+                    return tB - tA;
+                }
+            });
+
+            // 3. Group filtered leads into stages
+            filteredLeads.forEach(lead => {
                 let st = (lead.pipeline_stage || lead.effective_pipeline_stage || 'NEW').toUpperCase().trim();
                 if (!grouped[st]) {
                     st = 'NEW';
@@ -3598,28 +5030,109 @@
                 grouped[st].push(lead);
             });
 
+            // 4. Render each column with pagination & controls
             stages.forEach(stage => {
+                const colEl = document.getElementById(`col-${stage}`);
                 const countBadge = document.getElementById(`badge-${stage}`);
+                const subBadge = document.getElementById(`sub-${stage}`);
                 const container = document.getElementById(`cards-${stage}`);
-                const count = (pipelineCounts && pipelineCounts[stage] !== undefined)
+                const footer = document.getElementById(`footer-${stage}`);
+                const scrollTopBtn = document.getElementById(`scrollTop-${stage}`);
+
+                const totalInStage = (pipelineCounts && pipelineCounts[stage] !== undefined && !searchQ && kanbanActivePillFilter === 'all')
                     ? pipelineCounts[stage]
                     : grouped[stage].length;
 
-                if (countBadge) countBadge.textContent = count;
+                if (countBadge) countBadge.textContent = totalInStage;
+
+                // Handle collapsed column state
+                const isCollapsed = kanbanCollapsedColumns.includes(stage);
+                if (colEl) {
+                    if (isCollapsed) {
+                        colEl.classList.add('is-collapsed');
+                        colEl.setAttribute('title', `Click to expand ${stageLabels[stage]}`);
+                    } else {
+                        colEl.classList.remove('is-collapsed');
+                        colEl.removeAttribute('title');
+                    }
+                }
 
                 if (container) {
-                    if (grouped[stage].length === 0) {
+                    const stageLeads = grouped[stage];
+                    const limit = kanbanStageLimits[stage] || kanbanDefaultLimit;
+                    const visibleLeads = (limit === 'ALL') ? stageLeads : stageLeads.slice(0, limit);
+
+                    if (subBadge) {
+                        if (stageLeads.length > visibleLeads.length) {
+                            subBadge.textContent = `(${visibleLeads.length}/${stageLeads.length})`;
+                        } else {
+                            subBadge.textContent = '';
+                        }
+                    }
+
+                    if (stageLeads.length === 0) {
                         container.innerHTML = `
                             <div style="text-align:center; padding: 32px 14px; color: #94a3b8; font-size: 0.82rem; border: 1.5px dashed #e2e8f0; border-radius: 12px; background: rgba(255,255,255,0.6);">
                                 <i class="fa-solid fa-inbox" style="font-size: 1.5rem; display:block; margin-bottom: 8px; opacity: 0.5;"></i>
-                                No leads in this stage
+                                ${searchQ ? 'No matching leads' : 'No leads in this stage'}
                             </div>
                         `;
                     } else {
-                        container.innerHTML = grouped[stage].map(lead => renderKanbanCard(lead, stage)).join('');
+                        container.innerHTML = visibleLeads.map(lead => renderKanbanCard(lead, stage)).join('');
                     }
+
+                    // Render footer pagination controls
+                    if (footer) {
+                        if (stageLeads.length > limit && limit !== 'ALL') {
+                            footer.style.display = 'flex';
+                            footer.innerHTML = `
+                                <span class="k-footer-count">Showing <strong>${visibleLeads.length}</strong> of <strong>${stageLeads.length}</strong></span>
+                                <div class="k-footer-actions">
+                                    <button type="button" class="k-btn-load-more" onclick="loadMoreKanbanStage('${stage}', event)">
+                                        <i class="fa-solid fa-angles-down"></i> +15 More
+                                    </button>
+                                    <button type="button" class="k-btn-show-all" onclick="showAllKanbanStage('${stage}', event)" title="Show all ${stageLeads.length} leads in this stage">
+                                        All (${stageLeads.length})
+                                    </button>
+                                </div>
+                            `;
+                        } else if (stageLeads.length > 15 && (limit === 'ALL' || visibleLeads.length >= stageLeads.length)) {
+                            footer.style.display = 'flex';
+                            footer.innerHTML = `
+                                <span class="k-footer-count">All <strong>${stageLeads.length}</strong> shown</span>
+                                <button type="button" class="k-btn-collapse-leads" onclick="collapseKanbanStageLeads('${stage}', event)" title="Collapse back to top 15">
+                                    <i class="fa-solid fa-angles-up"></i> Top 15
+                                </button>
+                            `;
+                        } else {
+                            footer.style.display = 'none';
+                            footer.innerHTML = '';
+                        }
+                    }
+
+                    // Setup scroll listener for floating Top button
+                    container.onscroll = function() {
+                        if (scrollTopBtn) {
+                            if (container.scrollTop > 240) {
+                                scrollTopBtn.style.display = 'inline-flex';
+                            } else {
+                                scrollTopBtn.style.display = 'none';
+                            }
+                        }
+                    };
                 }
             });
+
+            // Update Quick Collapse Lost button text and icon
+            const lostBtn = document.getElementById('toggleLostColumnBtn');
+            const lostText = document.getElementById('toggleLostBtnText');
+            if (lostBtn && lostText) {
+                const isLostCollapsed = kanbanCollapsedColumns.includes('LOST');
+                lostText.textContent = isLostCollapsed ? 'Show Lost' : 'Hide Lost';
+                lostBtn.innerHTML = isLostCollapsed 
+                    ? '<i class="fa-solid fa-eye"></i> <span id="toggleLostBtnText">Show Lost</span>'
+                    : '<i class="fa-solid fa-eye-slash"></i> <span id="toggleLostBtnText">Hide Lost</span>';
+            }
         }
 
         function renderKanbanCard(lead, currentStage) {
@@ -3673,14 +5186,26 @@
                 `;
             }
 
+            const durVal = parseFloat(lead.duration || lead.call_duration || 0);
+            const durFormatted = durVal > 0 ? (durVal >= 60 ? `${Math.floor(durVal/60)}m ${Math.round(durVal%60)}s` : `${Math.round(durVal)}s`) : '';
+
+            const audioBadge = lead.audio_url 
+                ? `<span class="k-audio-chip" title="Call recording audio available"><i class="fa-solid fa-headphones"></i> Audio</span>` 
+                : '';
+
+            const telHref = (!isHashContact && rawContact) ? `href="tel:${escapeHtml(rawContact)}"` : '';
+            const phoneHtml = telHref 
+                ? `<a ${telHref} onclick="event.stopPropagation()" title="Call ${phoneDisplay}"><i class="fa-solid fa-phone" style="font-size:0.68rem; color:#94a3b8;"></i> ${phoneDisplay}</a>`
+                : `<span><i class="fa-solid fa-phone" style="font-size:0.68rem; color:#94a3b8;"></i> ${phoneDisplay}</span>`;
+
             return `
-                <div class="kanban-card" id="card-${cardId}" draggable="true" ondragstart="handleCardDragStart(event, '${cardId}')">
+                <div class="kanban-card card-stage-${currentStage}" id="card-${cardId}" draggable="true" ondragstart="handleCardDragStart(event, '${cardId}')">
                     <div class="k-card-header">
                         <div class="k-card-profile" onclick='openModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})' style="cursor:pointer;" title="Click to view interaction details">
                             <div class="k-avatar" style="${avatarStyle}">${initials}</div>
-                            <div>
-                                <div class="k-name">${escapeHtml(custName)}</div>
-                                <div class="k-phone"><i class="fa-solid fa-phone" style="font-size:0.7rem; color:#94a3b8;"></i> ${phoneDisplay}</div>
+                            <div style="min-width:0; flex:1;">
+                                <div class="k-name" title="${escapeHtml(custName)}">${escapeHtml(custName)}</div>
+                                <div class="k-phone">${phoneHtml}</div>
                             </div>
                         </div>
                         <select class="k-stage-select" onchange="updateLeadPipelineStage('${cardId}', this.value)" title="Change Pipeline Stage">
@@ -3696,8 +5221,9 @@
                         <i class="fa-solid fa-clipboard-list"></i> ${escapeHtml(reqDetails)}
                     </div>
 
-                    <div style="margin: 4px 0;">
-                        ${statusBadge}
+                    <div style="margin: 4px 0; display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                        <div>${statusBadge}</div>
+                        ${audioBadge}
                     </div>
 
                     ${callbackHtml}
@@ -3705,11 +5231,11 @@
 
                     <div class="k-meta-row">
                         <span><i class="fa-regular fa-clock"></i> ${formattedDate}</span>
-                        ${lead.audio_url ? '<span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-headphones"></i> Audio</span>' : ''}
+                        ${durFormatted ? `<span style="font-weight:600; color:#64748b;"><i class="fa-solid fa-stopwatch" style="font-size:0.7rem; color:#94a3b8; margin-right:2px;"></i> ${durFormatted}</span>` : ''}
                     </div>
 
                     <div class="k-actions-bar">
-                        <div style="display:flex; gap:4px;">
+                        <div style="display:flex; gap:6px;">
                             <button type="button" class="k-btn-action k-btn-call" title="Call Customer" onclick="openTriggerCallModal('${escapeHtml(rawContact)}', '${escapeHtml(custName)}')">
                                 <i class="fa-solid fa-phone"></i> Call
                             </button>
@@ -4145,6 +5671,264 @@
             }
         }
 
+        // ═════════════════════════════════════════════════════════════════════
+        // INQUIRY OUTCOMES CHART & INTERACTIVE CALENDAR CONTROLLERS
+        // ═════════════════════════════════════════════════════════════════════
+
+        function updateOutcomesChart(total, interested, callback, notInterested) {
+            const elCountTotal = document.getElementById('chartCountTotal');
+            const elCountInterested = document.getElementById('chartCountInterested');
+            const elCountCallback = document.getElementById('chartCountCallback');
+            const elCountNotInt = document.getElementById('chartCountNotInt');
+
+            const elPctTotal = document.getElementById('chartPctTotal');
+            const elPctInterested = document.getElementById('chartPctInterested');
+            const elPctCallback = document.getElementById('chartPctCallback');
+            const elPctNotInt = document.getElementById('chartPctNotInt');
+
+            const elBarInterested = document.getElementById('chartBarInterested');
+            const elBarCallback = document.getElementById('chartBarCallback');
+            const elBarNotInt = document.getElementById('chartBarNotInt');
+
+            const donutTotal = document.getElementById('donutTotalCount');
+
+            const safeTotal = (total && total > 0) ? total : (interested + callback + notInterested);
+
+            if (donutTotal) donutTotal.textContent = total;
+            if (elCountTotal) elCountTotal.textContent = total;
+            if (elCountInterested) elCountInterested.textContent = interested;
+            if (elCountCallback) elCountCallback.textContent = callback;
+            if (elCountNotInt) elCountNotInt.textContent = notInterested;
+
+            const pctInt = safeTotal > 0 ? Math.round((interested / safeTotal) * 100) : 0;
+            const pctCb = safeTotal > 0 ? Math.round((callback / safeTotal) * 100) : 0;
+            const pctNot = safeTotal > 0 ? Math.round((notInterested / safeTotal) * 100) : 0;
+
+            if (elPctInterested) elPctInterested.textContent = `${pctInt}%`;
+            if (elPctCallback) elPctCallback.textContent = `${pctCb}%`;
+            if (elPctNotInt) elPctNotInt.textContent = `${pctNot}%`;
+
+            if (elBarInterested) elBarInterested.style.width = `${Math.min(100, pctInt)}%`;
+            if (elBarCallback) elBarCallback.style.width = `${Math.min(100, pctCb)}%`;
+            if (elBarNotInt) elBarNotInt.style.width = `${Math.min(100, pctNot)}%`;
+
+            const canvas = document.getElementById('inquiryOutcomesChart');
+            if (!canvas) return;
+
+            if (typeof Chart === 'undefined') {
+                setTimeout(() => {
+                    if (typeof Chart !== 'undefined') {
+                        updateOutcomesChart(total, interested, callback, notInterested);
+                    }
+                }, 250);
+                return;
+            }
+
+            const hasData = (interested + callback + notInterested) > 0;
+            const chartData = hasData ? [interested, callback, notInterested] : [1, 1, 1];
+            const chartColors = hasData 
+                ? ['#10b981', '#f59e0b', '#ef4444'] 
+                : ['#e2e8f0', '#cbd5e1', '#e2e8f0'];
+
+            if (inquiryChartInstance) {
+                inquiryChartInstance.data.datasets[0].data = chartData;
+                inquiryChartInstance.data.datasets[0].backgroundColor = chartColors;
+                inquiryChartInstance.options.plugins.tooltip.enabled = hasData;
+                inquiryChartInstance.update();
+            } else {
+                const ctx = canvas.getContext('2d');
+                inquiryChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Interested / High Intent', 'Call Back Requested', 'Not Interested / Other'],
+                        datasets: [{
+                            data: chartData,
+                            backgroundColor: chartColors,
+                            borderWidth: 3,
+                            borderColor: '#ffffff',
+                            hoverOffset: 6,
+                            cutout: '74%'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        onClick: (event, elements) => {
+                            if (elements && elements.length > 0) {
+                                const idx = elements[0].index;
+                                const statusMap = ['INTERVIEW', 'CALLBACK', 'NOT_INTERESTED'];
+                                if (statusMap[idx]) {
+                                    filterByStatCard(statusMap[idx]);
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: hasData,
+                                backgroundColor: '#0f172a',
+                                titleFont: { family: "'Outfit', sans-serif", size: 12 },
+                                bodyFont: { family: "'Inter', sans-serif", size: 11 },
+                                padding: 10,
+                                cornerRadius: 8,
+                                callbacks: {
+                                    label: function(context) {
+                                        const val = context.raw || 0;
+                                        const pct = safeTotal > 0 ? Math.round((val / safeTotal) * 100) : 0;
+                                        return ` ${context.label}: ${val} (${pct}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        animation: { duration: 600 }
+                    }
+                });
+            }
+        }
+
+        function renderInquiriesCalendar() {
+            const monthYearEl = document.getElementById('calCurrentMonthYear');
+            const gridEl = document.getElementById('calDaysGrid');
+            if (!gridEl) return;
+
+            const monthNames = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ];
+
+            if (monthYearEl) {
+                monthYearEl.textContent = `${monthNames[currentCalMonth]} ${currentCalYear}`;
+            }
+
+            const firstDayIndex = new Date(currentCalYear, currentCalMonth, 1).getDay(); // 0 = Sunday
+            const totalDays = new Date(currentCalYear, currentCalMonth + 1, 0).getDate();
+            const prevMonthDays = new Date(currentCalYear, currentCalMonth, 0).getDate();
+
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+            let cellsHtml = '';
+
+            // Leading days from previous month
+            for (let i = firstDayIndex - 1; i >= 0; i--) {
+                const d = prevMonthDays - i;
+                cellsHtml += `
+                    <div class="cal-day-cell other-month">
+                        <span class="cal-day-num">${d}</span>
+                    </div>
+                `;
+            }
+
+            // Days for current month
+            for (let day = 1; day <= totalDays; day++) {
+                const mStr = String(currentCalMonth + 1).padStart(2, '0');
+                const dStr = String(day).padStart(2, '0');
+                const dateKey = `${currentCalYear}-${mStr}-${dStr}`;
+
+                const isToday = (dateKey === todayStr);
+                const isSelected = (dateKey === selectedCalDate);
+                const count = cachedDailyInquiries[dateKey] || 0;
+                const hasInquiries = count > 0;
+
+                const classList = ['cal-day-cell'];
+                if (isToday) classList.push('is-today');
+                if (hasInquiries) classList.push('has-inquiries');
+                if (isSelected) classList.push('is-active-filter');
+
+                const badgeHtml = count > 0 
+                    ? `<span class="cal-inquiry-pill" title="${count} Inquiries on this date"><i class="fa-solid fa-phone" style="font-size: 0.55rem;"></i> ${count}</span>` 
+                    : '';
+
+                cellsHtml += `
+                    <div class="${classList.join(' ')}" onclick="handleCalendarDateClick('${dateKey}')" title="${dateKey}: ${count} inquiries">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <span class="cal-day-num">${day}</span>
+                            ${isToday ? '<span class="cal-today-chip">Today</span>' : ''}
+                        </div>
+                        ${badgeHtml}
+                    </div>
+                `;
+            }
+
+            // Trailing days from next month
+            const totalRendered = firstDayIndex + totalDays;
+            const remaining = (7 - (totalRendered % 7)) % 7;
+            for (let day = 1; day <= remaining; day++) {
+                cellsHtml += `
+                    <div class="cal-day-cell other-month">
+                        <span class="cal-day-num">${day}</span>
+                    </div>
+                `;
+            }
+
+            gridEl.innerHTML = cellsHtml;
+        }
+
+        function navigateCalendarMonth(direction) {
+            currentCalMonth += direction;
+            if (currentCalMonth < 0) {
+                currentCalMonth = 11;
+                currentCalYear--;
+            } else if (currentCalMonth > 11) {
+                currentCalMonth = 0;
+                currentCalYear++;
+            }
+            renderInquiriesCalendar();
+        }
+
+        function jumpCalendarToToday() {
+            const now = new Date();
+            currentCalYear = now.getFullYear();
+            currentCalMonth = now.getMonth();
+            renderInquiriesCalendar();
+        }
+
+        function handleCalendarDateClick(dateKey) {
+            if (selectedCalDate === dateKey) {
+                clearDateFilter();
+                return;
+            }
+
+            selectedCalDate = dateKey;
+            renderInquiriesCalendar();
+
+            const bar = document.getElementById('calActiveFilterBar');
+            const label = document.getElementById('calActiveDateLabel');
+            const badge = document.getElementById('calActiveCountBadge');
+
+            const [y, m, d] = dateKey.split('-');
+            const dateObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+            const formattedDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+            const cnt = cachedDailyInquiries[dateKey] || 0;
+
+            if (bar) bar.style.display = 'flex';
+            if (label) label.textContent = formattedDate;
+            if (badge) badge.textContent = `${cnt} Inquir${cnt === 1 ? 'y' : 'ies'}`;
+
+            const scopeBadge = document.getElementById('chartScopeText');
+            if (scopeBadge) scopeBadge.textContent = formattedDate;
+
+            currentPage = 1;
+            leadsPageCache = {};
+            fetchLeadsData(false);
+        }
+
+        function clearDateFilter() {
+            selectedCalDate = null;
+            renderInquiriesCalendar();
+
+            const bar = document.getElementById('calActiveFilterBar');
+            if (bar) bar.style.display = 'none';
+
+            const scopeBadge = document.getElementById('chartScopeText');
+            if (scopeBadge) scopeBadge.textContent = 'All Calls';
+
+            currentPage = 1;
+            leadsPageCache = {};
+            fetchLeadsData(false);
+        }
+
         function applyLeadsDataResponse(data) {
             if (data.agent_minutes) {
                 updateMinutesUI(data.agent_minutes);
@@ -4168,6 +5952,32 @@
             if (interviewEl) interviewEl.innerText = highIntentVal;
             if (callbackEl) callbackEl.innerText = callbackVal;
             if (notIntEl) notIntEl.innerText = notIntVal;
+
+            // Cache daily inquiries for calendar
+            if (data.daily_inquiries && typeof data.daily_inquiries === 'object') {
+                if (!selectedCalDate) {
+                    cachedDailyInquiries = Object.assign({}, data.daily_inquiries);
+                } else {
+                    cachedDailyInquiries = Object.assign({}, cachedDailyInquiries, data.daily_inquiries);
+                }
+            }
+            if (newLeads && Array.isArray(newLeads)) {
+                newLeads.forEach(lead => {
+                    const at = lead.attempted_at;
+                    if (at) {
+                        const dStr = at.slice(0, 10);
+                        if (dStr && cachedDailyInquiries[dStr] === undefined) {
+                            cachedDailyInquiries[dStr] = 1;
+                        }
+                    }
+                });
+            }
+
+            // Update outcomes chart & breakdown
+            updateOutcomesChart(totalVal, highIntentVal, callbackVal, notIntVal);
+
+            // Re-render inquiries calendar
+            renderInquiriesCalendar();
 
             if (data.callback_stats) {
                 cachedCallbackStats = data.callback_stats;
@@ -4198,7 +6008,8 @@
             const status = statusSelect ? statusSelect.value : currentCardFilter;
             const tbody = document.getElementById('leadsTableBody');
             const reqPageSize = pageSize === 'ALL' ? 1000 : (parseInt(pageSize, 10) || 10);
-            const cacheKey = `${days}_${search}_${status}_${currentPage}_${reqPageSize}`;
+            const dateKeyPart = selectedCalDate || '';
+            const cacheKey = `${days}_${search}_${status}_${dateKeyPart}_${currentPage}_${reqPageSize}`;
 
             if (!silent && tbody) {
                 const isSamsung = isSamsungAgentMode();
@@ -4223,6 +6034,9 @@
                     search: search,
                     status: status
                 });
+                if (selectedCalDate) {
+                    queryParams.set('date', selectedCalDate);
+                }
 
                 const response = await fetch(`${SARVAM_API_PREFIX}/data/?${queryParams.toString()}`);
                 const data = await response.json();
@@ -4623,15 +6437,35 @@
                 'MISMATCH': 'statCard4',
             };
 
+            const breakdownMap = {
+                'ALL': 'breakdownRowTotal',
+                'INTERVIEW': 'breakdownRowInterested',
+                'CALLBACK': 'breakdownRowCallback',
+                'NOT_INTERESTED': 'breakdownRowNotInt'
+            };
+
             ['statCard1', 'statCard2', 'statCard3', 'statCard4'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.remove('card-active');
+            });
+
+            ['breakdownRowTotal', 'breakdownRowInterested', 'breakdownRowCallback', 'breakdownRowNotInt'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('is-active-row');
             });
 
             const activeId = cardMap[statusKey] || 'statCard1';
             const activeEl = document.getElementById(activeId);
             if (activeEl) {
                 activeEl.classList.add('card-active');
+            }
+
+            const activeBreakdownId = breakdownMap[statusKey];
+            if (activeBreakdownId) {
+                const bEl = document.getElementById(activeBreakdownId);
+                if (bEl && statusKey !== 'ALL') {
+                    bEl.classList.add('is-active-row');
+                }
             }
         }
 
@@ -4667,7 +6501,8 @@
             const statusSelect = document.getElementById('statusFilter');
             const status = statusSelect ? statusSelect.value : currentCardFilter;
             const reqPageSize = pageSize === 'ALL' ? 1000 : (parseInt(pageSize, 10) || 10);
-            const cacheKey = `${days}_${search}_${status}_${currentPage}_${reqPageSize}`;
+            const dateKeyPart = selectedCalDate || '';
+            const cacheKey = `${days}_${search}_${status}_${dateKeyPart}_${currentPage}_${reqPageSize}`;
 
             if (leadsPageCache[cacheKey] && (Date.now() - leadsPageCache[cacheKey].timestamp < 60000)) {
                 // INSTANT 0ms PAGE SWITCHING (No loading spinner!)
@@ -6042,6 +7877,7 @@
             initUserProfile();
             applyAgentTheme();
             loadUserAssignedAgents();
+            renderInquiriesCalendar();
             if (currentLeadsViewMode === 'kanban') {
                 switchLeadsViewMode('kanban');
             }

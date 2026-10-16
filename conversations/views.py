@@ -3538,6 +3538,7 @@ def sarvam_leads_data(request, agent_slug=None):
 
     search_q = (request.GET.get("search") or "").strip()
     status_q = (request.GET.get("status") or "").strip().upper()
+    date_q = (request.GET.get("date") or "").strip()
 
     if search_q:
         from django.db.models import Q
@@ -3547,6 +3548,23 @@ def sarvam_leads_data(request, agent_slug=None):
             Q(applied_position__icontains=search_q) |
             Q(call_type__icontains=search_q)
         )
+
+    # Compute daily inquiry counts across the agent's scope for the interactive calendar
+    from django.db.models.functions import TruncDate
+    from django.db.models import Count
+    cal_date_rows = agent_qs.annotate(d=TruncDate('created_at')).values('d').annotate(cnt=Count('id'))
+    daily_inquiries = {
+        row['d'].strftime('%Y-%m-%d'): row['cnt']
+        for row in cal_date_rows if row['d']
+    }
+
+    # Filter by specific date when user clicks on a calendar date
+    if date_q:
+        try:
+            target_date = datetime.strptime(date_q, "%Y-%m-%d").date()
+            agent_qs = agent_qs.filter(created_at__date=target_date)
+        except (ValueError, TypeError):
+            pass
 
     # stats_qs is the base queryset used for summary card metrics (keeps stat cards fixed on tab click)
     stats_qs = agent_qs
@@ -3979,6 +3997,7 @@ def sarvam_leads_data(request, agent_slug=None):
         "page_size": page_size,
         "total_pages": total_pages,
         "stats": stats,
+        "daily_inquiries": daily_inquiries,
         "pipeline_counts": pipeline_counts,
         "callback_stats": callback_stats,
         "agent_minutes": agent_minutes_info,
