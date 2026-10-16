@@ -894,8 +894,9 @@
                              (localStorage.getItem('username') || '').toLowerCase().includes('sarvam') ||
                              (assignedSarvam.length > 0 && !isAdmin);
             if (isSarvam) {
-                if (assignedSarvam.length > 0 && assignedSarvam[0].slug) {
-                    return `/api/sarvam/${assignedSarvam[0].slug}/leads/`;
+                const primarySlug = localStorage.getItem('primary_sarvam_slug') || (assignedSarvam.length > 0 ? assignedSarvam[0].slug : '');
+                if (primarySlug) {
+                    return `/api/sarvam/${primarySlug}/leads/`;
                 }
                 return '/sarvam-leads/';
             }
@@ -1020,6 +1021,10 @@
                     localStorage.setItem('role', data.role || 'No Role');
                     localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
                     localStorage.setItem('assigned_sarvam_agents', JSON.stringify(data.assigned_sarvam_agents || []));
+                    const primarySlug = data.primary_sarvam_slug || (data.assigned_sarvam_agents?.[0]?.slug || '');
+                    if (primarySlug) {
+                        localStorage.setItem('primary_sarvam_slug', primarySlug);
+                    }
                     localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
                     localStorage.setItem('is_icemake_user', data.is_icemake_user ? 'true' : 'false');
                     localStorage.setItem('is_sarvam_user', data.is_sarvam_user ? 'true' : 'false');

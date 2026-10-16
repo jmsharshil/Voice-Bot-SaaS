@@ -71,6 +71,34 @@ class UserProfile(models.Model):
                 break
         return None
 
+    def get_profile_picture_url(self):
+        """
+        Safely returns profile picture URL without raising ValueError if empty.
+        """
+        if self.profile_picture_url:
+            return self.profile_picture_url
+        if self.profile_picture:
+            try:
+                return self.profile_picture.url
+            except ValueError:
+                return None
+        return None
+
+    def get_company_logo_url(self):
+        """
+        Safely returns company logo URL without raising ValueError if empty.
+        """
+        resolved = self.get_company_logo()
+        if not resolved:
+            return None
+        if isinstance(resolved, str):
+            return resolved
+        try:
+            return resolved.url
+        except Exception:
+            return None
+
+
     def save(self, *args, **kwargs):
         # Automatically upload to Azure Blob Storage if USE_AZURE_MEDIA is True
         from django.conf import settings
@@ -81,17 +109,16 @@ class UserProfile(models.Model):
             if self.company_logo and not str(self.company_logo).startswith("http"):
                 try:
                     azure_service = AzureBlobService()
-                    # Read the file content
                     self.company_logo.file.seek(0)
                     file_content = self.company_logo.file.read()
                     self.company_logo.file.seek(0)
                     
-                    # Generate unique name
                     import uuid
-                    ext = self.company_logo.name.split('.')[-1]
+                    ext = self.company_logo.name.split('.')[-1].lower()
                     filename = f"company_logos/logo_{uuid.uuid4().hex}.{ext}"
+                    mime_type = f"image/{'jpeg' if ext in ['jpg', 'jpeg'] else ext}"
                     
-                    url = azure_service.upload_image(file_content, filename)
+                    url = azure_service.upload_image(file_content, filename, content_type=mime_type)
                     if url:
                         self.company_logo_url = url
                 except Exception as e:
@@ -103,17 +130,16 @@ class UserProfile(models.Model):
             if self.profile_picture and not str(self.profile_picture).startswith("http"):
                 try:
                     azure_service = AzureBlobService()
-                    # Read the file content
                     self.profile_picture.file.seek(0)
                     file_content = self.profile_picture.file.read()
                     self.profile_picture.file.seek(0)
                     
-                    # Generate unique name
                     import uuid
-                    ext = self.profile_picture.name.split('.')[-1]
+                    ext = self.profile_picture.name.split('.')[-1].lower()
                     filename = f"profile_pics/pic_{uuid.uuid4().hex}.{ext}"
+                    mime_type = f"image/{'jpeg' if ext in ['jpg', 'jpeg'] else ext}"
                     
-                    url = azure_service.upload_image(file_content, filename)
+                    url = azure_service.upload_image(file_content, filename, content_type=mime_type)
                     if url:
                         self.profile_picture_url = url
                 except Exception as e:

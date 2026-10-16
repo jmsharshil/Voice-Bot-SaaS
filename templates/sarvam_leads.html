@@ -55,6 +55,652 @@
             to   { opacity: 1; transform: scale(1); }
         }
 
+        /* ── APP SHELL LAYOUT & SIDEBAR ── */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+            width: 100%;
+            background: var(--bg-page);
+        }
+
+        .app-sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: -285px;
+            width: 285px;
+            min-width: 285px;
+            background: #ffffff;
+            color: #0f172a;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 10000;
+            border-right: 1px solid #e2e8f0;
+            box-shadow: 4px 0 28px rgba(15, 23, 42, 0.08);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateX(0);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .app-sidebar.open {
+            transform: translateX(285px);
+        }
+
+        .sidebar-brand {
+            padding: 20px 18px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #ffffff;
+        }
+
+        .brand-icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 19px;
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+            line-height: 1.2;
+        }
+
+        .brand-subtitle {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+
+        .sidebar-close-btn {
+            display: inline-flex;
+            margin-left: auto;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .sidebar-close-btn:hover {
+            background: #fee2e2;
+            color: #dc2626;
+            border-color: #fca5a5;
+        }
+
+        .sidebar-agent-container {
+            padding: 12px 14px 8px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #f8fafc;
+        }
+
+        .sidebar-agent-select {
+            width: 100%;
+            padding: 8px 10px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            color: #0f172a;
+            font-size: 12.5px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        .sidebar-agent-select:focus {
+            border-color: #4f46e5;
+        }
+
+        /* ── Sidebar Status Indicators (Agent Line & Call Minutes) ── */
+        .sidebar-status-container {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-status-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-status-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        }
+
+        .sidebar-phone-card {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .sidebar-minutes-card {
+            background: #f0f9ff;
+            border-color: #bae6fd;
+        }
+
+        .sidebar-status-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13.5px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-phone-icon {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .sidebar-minutes-icon {
+            background: #e0f2fe;
+            color: #0284c7;
+        }
+
+        .sidebar-status-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .sidebar-status-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+        }
+
+        .sidebar-status-val {
+            font-size: 12px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+            margin-top: 2px;
+        }
+
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: #ffffff;
+        }
+
+        .sidebar-group-title {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 0.8px;
+            padding: 8px 12px 4px;
+            text-transform: uppercase;
+        }
+
+        .sidebar-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 11px 14px;
+            border-radius: 10px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #334155;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            text-decoration: none;
+            position: relative;
+        }
+
+        .sidebar-btn:hover {
+            color: #0f172a;
+            background: #f1f5f9;
+            transform: translateX(2px);
+        }
+
+        .sidebar-btn.active {
+            color: #ffffff;
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+            border-color: transparent;
+        }
+        .sidebar-btn.active .sidebar-btn-icon i {
+            color: #ffffff !important;
+        }
+
+        .sidebar-btn-trigger {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1.5px solid #a7f3d0;
+            margin: 4px 0;
+            font-weight: 700;
+        }
+        .sidebar-btn-trigger:hover {
+            background: #10b981;
+            color: #ffffff;
+            border-color: #10b981;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+            transform: translateX(2px);
+        }
+        .sidebar-btn-trigger:hover .sidebar-btn-icon i {
+            color: #ffffff !important;
+        }
+
+        .sidebar-btn-icon {
+            font-size: 16px;
+            width: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #64748b;
+        }
+
+        .sidebar-btn-text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-pill-badge {
+            background: #ef4444;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        /* User Profile & Logout section */
+        .sidebar-user-section {
+            padding: 14px 12px 16px;
+            border-top: 1px solid #f1f5f9;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar-profile-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        }
+
+        .sidebar-profile-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .sidebar-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 2px solid #e0f2fe;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .sidebar-user-details {
+            min-width: 0;
+        }
+
+        .sidebar-user-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-user-role {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-photo-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .sidebar-photo-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .sidebar-logout-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 8px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .sidebar-logout-btn:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+            transform: translateY(-1px);
+        }
+
+        /* ── MAIN APP CONTENT WRAPPER ── */
+        .app-main-area {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .app-topbar {
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+            padding: 12px clamp(14px, 2vw, 28px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            gap: 14px;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .sidebar-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            width: 38px;
+            height: 38px;
+            font-size: 16px;
+            color: var(--text-primary);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: #f1f5f9;
+            color: var(--accent);
+            border-color: #94a3b8;
+            transform: translateY(-1px);
+        }
+
+        .sidebar-toggle-btn:active {
+            transform: translateY(0);
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .sidebar-backdrop.open {
+            display: block;
+            opacity: 1;
+        }
+
+        .topbar-heading {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            letter-spacing: -0.02em;
+            margin: 0;
+        }
+
+        .topbar-subheading {
+            margin-top: 4px;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .topbar-action-btn {
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+            color: #ffffff;
+        }
+        .topbar-btn-campaign {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+        }
+        .topbar-btn-campaign:hover {
+            background: #0284c7;
+            transform: translateY(-1px);
+        }
+        .topbar-btn-call {
+            background: var(--accent-green);
+        }
+        .topbar-btn-call:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+
+        .topbar-refresh-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .topbar-refresh-btn:hover {
+            background: #f1f5f9;
+            color: var(--text-primary);
+            border-color: #cbd5e1;
+        }
+
+        /* ── Topbar User Profile Pill (Matches Sidebar Profile) ── */
+        .topbar-profile-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 12px 5px 6px;
+            border-radius: 30px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            user-select: none;
+            text-decoration: none;
+        }
+
+        .topbar-profile-pill:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+        }
+
+        .topbar-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 2px solid #e0f2fe;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .topbar-user-details {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            line-height: 1.2;
+        }
+
+        .topbar-user-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+        }
+
+        .topbar-user-role {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+        }
+
+        @media (max-width: 640px) {
+            .topbar-user-details {
+                display: none;
+            }
+            .topbar-profile-pill {
+                padding: 4px;
+                border-radius: 50%;
+            }
+        }
+
+
+
+        /* Responsive Breakpoints */
+        @media (max-width: 1024px) {
+            .hide-sm {
+                display: none;
+            }
+        }
+
         .container {
             width: 100%;
             max-width: 100%;
@@ -1041,58 +1687,680 @@
         .agent-select-nav:focus {
             border-color: var(--accent);
         }
+
+        /* ── VIEW MODE TOGGLE ── */
+        .view-mode-toggle {
+            display: inline-flex;
+            background: #e2e8f0;
+            padding: 3px;
+            border-radius: 10px;
+            gap: 2px;
+        }
+
+        .view-toggle-btn {
+            border: none;
+            background: transparent;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .view-toggle-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .view-toggle-btn.active {
+            background: #ffffff;
+            color: var(--accent);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* ── FOLLOW-UPS & CALLBACKS BANNER / SUMMARY CARD ── */
+        .callbacks-summary-bar {
+            background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+            border: 1px solid #fde68a;
+            border-radius: 14px;
+            padding: 12px 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.08);
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .callbacks-summary-bar:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.14);
+        }
+
+        .cb-summary-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .cb-icon-box {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: rgba(245, 158, 11, 0.15);
+            color: #d97706;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .cb-summary-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .cb-summary-sub {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .cb-pills-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .cb-pill-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        .cb-pill-today {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .cb-pill-overdue {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+            animation: pulseAlert 1.5s infinite;
+        }
+
+        .cb-pill-pending {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+        }
+
+        @keyframes pulseAlert {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.03); }
+        }
+
+        /* ── KANBAN BOARD STYLES ── */
+        .kanban-board-container {
+            width: 100%;
+            overflow-x: auto;
+            padding-bottom: 24px;
+        }
+
+        .kanban-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(285px, 1fr));
+            gap: 16px;
+            align-items: flex-start;
+            min-width: 1450px;
+        }
+
+        .kanban-col {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 280px);
+            min-height: 480px;
+            transition: all 0.2s ease;
+        }
+
+        .kanban-col.drag-over {
+            background: #eef2ff;
+            border: 2px dashed #6366f1;
+            transform: scale(1.01);
+        }
+
+        .kanban-col-head {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 700;
+            font-size: 0.88rem;
+            background: #ffffff;
+            border-top-left-radius: 14px;
+            border-top-right-radius: 14px;
+            border-top: 3px solid transparent;
+        }
+
+        .kanban-col-head.head-new { border-top-color: #0284c7; }
+        .kanban-col-head.head-interested { border-top-color: #10b981; }
+        .kanban-col-head.head-callback { border-top-color: #f59e0b; }
+        .kanban-col-head.head-converted { border-top-color: #8b5cf6; }
+        .kanban-col-head.head-lost { border-top-color: #ef4444; }
+
+        .kanban-col-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+        }
+
+        .col-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .dot-new { background: #0284c7; }
+        .dot-interested { background: #10b981; }
+        .dot-callback { background: #f59e0b; }
+        .dot-converted { background: #8b5cf6; }
+        .dot-lost { background: #ef4444; }
+
+        .kanban-col-badge {
+            background: #f1f5f9;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+        .kanban-cards-list {
+            padding: 12px;
+            overflow-y: auto;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .kanban-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+            cursor: grab;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+        }
+
+        .kanban-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+            border-color: #cbd5e1;
+        }
+
+        .kanban-card.is-dragging {
+            opacity: 0.4;
+            transform: scale(0.98);
+        }
+
+        .k-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .k-card-profile {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+        .k-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .k-name {
+            font-weight: 700;
+            font-size: 0.88rem;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .k-phone {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .k-product-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #f0f9ff;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 6px 0;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .k-meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed #f1f5f9;
+        }
+
+        .k-cb-pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+
+        .k-cb-overdue {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 1px solid #fca5a5;
+        }
+
+        .k-cb-today {
+            background: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .k-cb-upcoming {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .k-notes-box {
+            background: #f8fafc;
+            border-left: 3px solid #f59e0b;
+            padding: 5px 8px;
+            font-size: 0.75rem;
+            color: #475569;
+            border-radius: 0 6px 6px 0;
+            margin-top: 8px;
+            line-height: 1.35;
+        }
+
+        .k-actions-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid #f1f5f9;
+            gap: 6px;
+        }
+
+        .k-btn-action {
+            border: none;
+            background: #f1f5f9;
+            color: var(--text-primary);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s;
+        }
+
+        .k-btn-action:hover {
+            background: #e2e8f0;
+        }
+
+        .k-btn-call {
+            background: #ecfdf5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+        }
+        .k-btn-call:hover {
+            background: #d1fae5;
+        }
+
+        .k-btn-cb {
+            background: #fffbeb;
+            color: #d97706;
+            border: 1px solid #fde68a;
+        }
+        .k-btn-cb:hover {
+            background: #fef3c7;
+        }
+
+        .k-stage-select {
+            font-size: 0.72rem;
+            padding: 3px 6px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: var(--text-primary);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* ── CALLBACKS SECTION & CARDS ── */
+        .callbacks-hero-bar {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .cb-hero-left h2 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+
+        .cb-hero-left p {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .cb-filter-tabs {
+            display: flex;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 10px;
+            gap: 4px;
+        }
+
+        .cb-tab-btn {
+            border: none;
+            background: transparent;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cb-tab-btn.active {
+            background: #ffffff;
+            color: #d97706;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+
+        .callbacks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .cb-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+
+        .cb-card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+
+        .cb-card.cb-overdue {
+            border-left: 4px solid #ef4444;
+        }
+
+        .cb-card.cb-today {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .cb-card.cb-upcoming {
+            border-left: 4px solid #10b981;
+        }
+
+        .btn-quick-time {
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: var(--text-primary);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-quick-time:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <div class="header-title">
-                <h1 id="pageMainHeading"><i class="fa-solid fa-robot"></i> {{ agent_name|default:'Voice AI Agent' }} — Voice Dashboard</h1>
-                <div id="pageSubHeading" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
-                    <span class="agent-number-badge"><i class="fa-solid fa-phone"></i> Agent Line: <strong>{{ agent_phone|default:'+917971414121' }}</strong></span>
-                    <span class="agent-minutes-badge" id="headerMinutesBadge" title="Call Minutes Balance" style="display:inline-flex; align-items:center; gap:5px; background:{% if is_minutes_exhausted %}#fee2e2; color:#dc2626; border:1px solid #fca5a5{% else %}#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe{% endif %}; padding:3px 10px; border-radius:20px; font-size:0.78rem; font-weight:700;">
-                        <i class="fa-solid fa-bolt" style="color:{% if is_minutes_exhausted %}#dc2626{% else %}#2563eb{% endif %};"></i>
-                        <span>Call Minutes: <strong>{{ remaining_minutes|floatformat:1 }} / {{ allocated_minutes|floatformat:0 }}m</strong></span>
-                    </span>
+    <!-- APPLICATION SHELL WITH SIDEBAR -->
+    <div class="app-layout">
+        <!-- APP SIDEBAR -->
+        <aside class="app-sidebar" id="appSidebar">
+            <!-- Sidebar Brand Header -->
+            <div class="sidebar-brand">
+                <div class="brand-icon-box">
+                    <i class="fa-solid fa-microphone-lines"></i>
                 </div>
+                <div class="brand-text-box">
+                    <div class="brand-title">Voice AI Bot</div>
+                    <div class="brand-subtitle">Automated Calling SaaS</div>
+                </div>
+                <button type="button" class="sidebar-close-btn" onclick="toggleSidebar(false)" title="Close Sidebar">✕</button>
             </div>
-            <div class="header-actions">
-                <div id="agentSwitcherContainer" style="display:{% if all_agents|length > 1 %}inline-block{% else %}none{% endif %};">
-                    <select id="sarvamAgentSelect" onchange="onAgentSelectChange(this.value)" class="agent-select-nav">
-                        {% for ag in all_agents %}
-                        <option value="{{ ag.slug }}" {% if ag.slug == agent_slug %}selected{% endif %}>{{ ag.name }}</option>
-                        {% endfor %}
-                    </select>
+
+            <!-- Agent Selector in Sidebar -->
+            <div class="sidebar-agent-container" id="sidebarAgentContainer" style="display:{% if all_agents|length > 1 %}block{% else %}none{% endif %};">
+                <label class="sidebar-group-title" style="padding-left: 0;">Active AI Agent</label>
+                <select id="sarvamAgentSelect" onchange="onAgentSelectChange(this.value)" class="sidebar-agent-select">
+                    {% for ag in all_agents %}
+                    <option value="{{ ag.slug }}" {% if ag.slug == agent_slug %}selected{% endif %}>{{ ag.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Agent Line & Call Minutes in Sidebar -->
+            <div class="sidebar-status-container">
+                <!-- Agent Line Card -->
+                <div class="sidebar-status-card sidebar-phone-card" title="Active AI Agent Calling Line">
+                    <div class="sidebar-status-icon sidebar-phone-icon">
+                        <i class="fa-solid fa-phone"></i>
+                    </div>
+                    <div class="sidebar-status-info">
+                        <span class="sidebar-status-label">Agent Line</span>
+                        <span class="sidebar-status-val" id="sidebarAgentPhone">{{ agent_phone|default:'+917971414121' }}</span>
+                    </div>
                 </div>
-                <button class="trigger-call-btn" onclick="openCampaignModal()" style="background: linear-gradient(135deg, #0284c7, #0369a1);">
-                    <i class="fa-solid fa-file-excel"></i> Excel Campaign
-                </button>
-                <button class="trigger-call-btn" onclick="openTriggerCallModal()">
-                    <i class="fa-solid fa-phone-volume"></i> Trigger Call
-                </button>
-                
-                <!-- Profile Dropdown -->
-                <div class="profile-wrap" id="profileWrap">
-                    <div class="profile-avatar" id="profileAvatar" onclick="toggleProfile(event)">?</div>
-                    <div class="profile-dropdown" id="profileDropdown">
-                        <div class="pd-header">
-                            <div class="pd-name" id="pdName">User</div>
-                            <div class="pd-label" id="pdRole">Logged in</div>
-                        </div>
-                        <a href="#" id="manageTeamMenuItem" onclick="openTeamManagementModal(event)" class="pd-item" style="display:flex; align-items:center; gap:8px; padding:10px 14px; color:#1e293b; text-decoration:none; font-size:0.88rem; font-weight:600; border-top:1px solid #f1f5f9; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-                            <i class="fa-solid fa-users-gear" style="color:#6366f1;"></i> Manage Team
-                        </a>
-                        <button type="button" class="pd-item" onclick="openSupportChatbox(event)" style="width: 100%; border: none; background: transparent; text-align: left; padding: 10px 14px; color: #1e293b; font-size: 0.88rem; font-weight: 600; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
-                            <i class="fa-solid fa-headset" style="color: #6366f1;"></i> Support
-                        </button>
-                        <button class="pd-logout" onclick="logout()">
-                            <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
-                        </button>
+
+                <!-- Call Minutes Balance Card -->
+                <div class="sidebar-status-card sidebar-minutes-card" id="sidebarMinutesCard" title="Call Minutes Balance">
+                    <div class="sidebar-status-icon sidebar-minutes-icon" id="sidebarMinutesIconBox">
+                        <i class="fa-solid fa-bolt" id="sidebarMinutesIcon"></i>
+                    </div>
+                    <div class="sidebar-status-info">
+                        <span class="sidebar-status-label">Call Minutes</span>
+                        <span class="sidebar-status-val" id="headerMinutesBadge">
+                            <strong>{{ remaining_minutes|floatformat:1 }} / {{ allocated_minutes|floatformat:0 }}m</strong>
+                        </span>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <!-- Sidebar Navigation Menu -->
+            <nav class="sidebar-nav">
+                <div class="sidebar-group-title">MAIN NAVIGATION</div>
+
+                <!-- All Calls & Leads -->
+                <button type="button" class="sidebar-btn active" id="sideBtnScreenings" onclick="switchDashboardTab('screenings'); toggleSidebar(false);">
+                    <span class="sidebar-btn-icon"><i class="fa-solid fa-chart-pie"></i></span>
+                    <span class="sidebar-btn-text">All Calls &amp; Leads</span>
+                </button>
+
+                <!-- Visual Lead Pipeline -->
+                <button type="button" class="sidebar-btn" id="sideBtnKanban" onclick="switchDashboardTab('kanban'); toggleSidebar(false);">
+                    <span class="sidebar-btn-icon"><i class="fa-solid fa-table-columns" style="color: #6366f1;"></i></span>
+                    <span class="sidebar-btn-text">Lead Pipeline</span>
+                </button>
+
+                <!-- Follow-Ups & Callbacks -->
+                <button type="button" class="sidebar-btn" id="sideBtnCallbacks" onclick="switchDashboardTab('callbacks'); toggleSidebar(false);">
+                    <span class="sidebar-btn-icon"><i class="fa-solid fa-calendar-check" style="color: #f59e0b;"></i></span>
+                    <span class="sidebar-btn-text">Follow-Ups &amp; Callbacks</span>
+                    <span class="sidebar-pill-badge" id="sideCallbacksCountBadge" style="display:none; background:#f59e0b; color:white;">0</span>
+                </button>
+
+                <!-- Excel Campaign -->
+                <button type="button" class="sidebar-btn" id="sideBtnCampaigns" onclick="handleSidebarCampaignClick()">
+                    <span class="sidebar-btn-icon"><i class="fa-solid fa-file-excel" style="color: #0284c7;"></i></span>
+                    <span class="sidebar-btn-text">Excel Campaign</span>
+                    <span class="sidebar-pill-badge" id="sideLiveCampaignBadge" style="display:none;">LIVE</span>
+                </button>
+
+                <!-- Trigger Call -->
+                <button type="button" class="sidebar-btn sidebar-btn-trigger" onclick="openTriggerCallModal(); toggleSidebar(false);">
+                    <span class="sidebar-btn-icon"><i class="fa-solid fa-phone-volume"></i></span>
+                    <span class="sidebar-btn-text">Trigger Call</span>
+                </button>
+
+                <div class="sidebar-group-title" style="margin-top: 18px;">SETTINGS &amp; HELP</div>
+
+                <!-- Manage Team -->
+                <button type="button" class="sidebar-btn" id="sideManageTeamBtn" onclick="openTeamManagementModal(event); toggleSidebar(false);">
+                    <span class="sidebar-btn-icon"><i class="fa-solid fa-users-gear" style="color: #7c3aed;"></i></span>
+                    <span class="sidebar-btn-text">Manage Team</span>
+                </button>
+
+                <!-- Support -->
+                <button type="button" class="sidebar-btn" onclick="openSupportChatbox(event); toggleSidebar(false);">
+                    <span class="sidebar-btn-icon"><i class="fa-solid fa-headset" style="color: #db2777;"></i></span>
+                    <span class="sidebar-btn-text">Support</span>
+                </button>
+            </nav>
+
+            <!-- Sidebar Footer: Profile & Logout -->
+            <div class="sidebar-user-section">
+                <div class="sidebar-profile-card">
+                    <div class="sidebar-profile-left">
+                        <div class="sidebar-avatar" id="profileAvatar" onclick="toggleProfile(event)" style="{% if request.user.profile.get_profile_picture_url %}background-image: url('{{ request.user.profile.get_profile_picture_url }}');{% endif %}">
+                            {% if not request.user.profile.get_profile_picture_url %}{{ request.user.username|slice:":1"|upper|default:"U" }}{% endif %}
+                        </div>
+                        <div class="sidebar-user-details">
+                            <div class="sidebar-user-name" id="pdName">{{ request.user.username|default:"User" }}</div>
+                            <div class="sidebar-user-role" id="pdRole">{% if request.user.profile.role %}{{ request.user.profile.role.name }}{% elif request.user.is_superuser %}System Admin{% else %}Logged in{% endif %}</div>
+                        </div>
+                    </div>
+                    <!-- Upload Photo Trigger -->
+                    <label for="profilePicInput" class="sidebar-photo-btn" title="Upload Profile Photo">
+                        <i class="fa-solid fa-camera"></i>
+                    </label>
+                    <input type="file" id="profilePicInput" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif, image/bmp" style="display: none;" onchange="uploadProfilePicture(event)">
+                </div>
+
+                <!-- Logout Button -->
+                <button type="button" class="sidebar-logout-btn" onclick="logout()" title="Logout from system">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Mobile Overlay Backdrop -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar(false)"></div>
+
+        <!-- MAIN APP CONTENT AREA -->
+        <div class="app-main-area">
+            <!-- Top Navigation Bar -->
+            <header class="app-topbar">
+                <div class="topbar-left">
+                    <button type="button" class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Toggle Sidebar Menu" aria-label="Toggle Sidebar Menu" id="sidebarToggleBtn">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="topbar-titles">
+                        <h1 id="pageMainHeading" class="topbar-heading">
+                            <i class="fa-solid fa-robot" style="color:#0284c7;"></i> {{ agent_name|default:'Voice AI Agent' }} — Voice Dashboard
+                        </h1>
+                        <div id="pageSubHeading" class="topbar-subheading" style="display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="topbar-right">
+                    <!-- User Profile Logo in Navbar (Matches Sidebar Profile Logo) -->
+                    <div class="topbar-profile-pill" id="topbarProfilePill" onclick="toggleSidebar()" title="User Profile — Click to toggle sidebar menu">
+                        <div class="topbar-avatar" id="topbarAvatar" style="{% if request.user.profile.get_profile_picture_url %}background-image: url('{{ request.user.profile.get_profile_picture_url }}');{% endif %}">
+                            {% if not request.user.profile.get_profile_picture_url %}{{ request.user.username|slice:":1"|upper|default:"U" }}{% endif %}
+                        </div>
+                        <div class="topbar-user-details">
+                            <span class="topbar-user-name" id="topbarUserName">{{ request.user.username|default:"User" }}</span>
+                            <span class="topbar-user-role" id="topbarUserRole">{% if request.user.profile.role %}{{ request.user.profile.role.name }}{% elif request.user.is_superuser %}System Admin{% else %}Logged in{% endif %}</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
 
         <!-- System Maintenance Live Alert Banner -->
         <div id="maintenanceBanner" style="display:none; background: linear-gradient(135deg, #fef3c7, #fde68a); border: 1.5px solid #f59e0b; border-radius: 12px; padding: 14px 20px; margin: 16px clamp(14px, 2vw, 32px) 0 clamp(14px, 2vw, 32px); color: #92400e; font-weight: 600; font-size: 0.92rem; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15); animation: fadeIn 0.3s ease;">
@@ -1112,6 +2380,13 @@
         <div class="dashboard-tabs">
             <button class="dash-tab-btn active" id="tabScreeningsBtn" onclick="switchDashboardTab('screenings')">
                 <i class="fa-solid fa-list-check"></i> <span id="tabScreeningsLabel">All Calls &amp; Inquiries</span>
+            </button>
+            <button class="dash-tab-btn" id="tabKanbanBtn" onclick="switchDashboardTab('kanban')">
+                <i class="fa-solid fa-table-columns" style="color: #6366f1;"></i> <span>Lead Pipeline</span>
+            </button>
+            <button class="dash-tab-btn" id="tabCallbacksBtn" onclick="switchDashboardTab('callbacks')">
+                <i class="fa-solid fa-calendar-check" style="color: #f59e0b;"></i> <span>Follow-Ups &amp; Callbacks</span>
+                <span class="campaign-live-indicator" id="tabCallbacksCountBadge" style="display:none; background:#f59e0b; color:white; margin-left:6px;">0</span>
             </button>
             <button class="dash-tab-btn" id="tabCampaignsBtn" onclick="switchDashboardTab('campaigns')">
                 <i class="fa-solid fa-bullhorn"></i> Campaign
@@ -1220,6 +2495,15 @@
                         <input type="text" id="searchInput" placeholder="Search customer name, contact, requirement..." onkeyup="filterLeads(true)">
                     </div>
                     <div class="filter-options">
+                        <!-- Table vs Kanban View Switcher -->
+                        <div class="view-mode-toggle" id="leadsViewModeToggle">
+                            <button type="button" class="view-toggle-btn active" id="viewModeTableBtn" onclick="switchLeadsViewMode('table')" title="Tabular View">
+                                <i class="fa-solid fa-table-list"></i> Table
+                            </button>
+                            <button type="button" class="view-toggle-btn" id="viewModeKanbanBtn" onclick="switchLeadsViewMode('kanban')" title="Visual Kanban Pipeline">
+                                <i class="fa-solid fa-table-columns"></i> Kanban
+                            </button>
+                        </div>
                         <select class="select-filter" id="statusFilter" onchange="filterLeads(true)">
                             <option value="ALL">All Call Outcomes</option>
                             <option value="INTERVIEW">Interested / High Intent</option>
@@ -1232,7 +2516,7 @@
                             <option value="30" selected>Last 30 Days</option>
                             <option value="90">Last 90 Days</option>
                         </select>
-                        <div class="page-size-wrapper" title="Number of inquiries per page">
+                        <div class="page-size-wrapper" id="pageSizeWrapper" title="Number of inquiries per page">
                             <label for="pageSizeSelect"><i class="fa-solid fa-list-ol" style="color:var(--accent);"></i> Show:</label>
                             <select id="pageSizeSelect" onchange="onPageSizeChange(this.value)">
                                 <option value="10" selected>10</option>
@@ -1245,8 +2529,35 @@
                     </div>
                 </div>
 
+                <!-- Real-time Callbacks & Follow-ups Summary Banner -->
+                <div class="callbacks-summary-bar" id="callbacksSummaryBar" onclick="switchDashboardTab('callbacks')" title="Click to view Follow-Up &amp; Callback Management">
+                    <div class="cb-summary-left">
+                        <div class="cb-icon-box">
+                            <i class="fa-solid fa-calendar-day"></i>
+                        </div>
+                        <div>
+                            <div class="cb-summary-title">Follow-Ups &amp; Callbacks Management</div>
+                            <div class="cb-summary-sub">Track scheduled prospect callbacks, appointments &amp; overdue reminders</div>
+                        </div>
+                    </div>
+                    <div class="cb-pills-wrap">
+                        <span class="cb-pill-badge cb-pill-today" id="cbSummaryTodayPill" style="display:none;">
+                            <i class="fa-solid fa-clock"></i> <strong id="cbSummaryTodayCount">0</strong> Today
+                        </span>
+                        <span class="cb-pill-badge cb-pill-overdue" id="cbSummaryOverduePill" style="display:none;">
+                            <i class="fa-solid fa-triangle-exclamation"></i> <strong id="cbSummaryOverdueCount">0</strong> Overdue
+                        </span>
+                        <span class="cb-pill-badge cb-pill-pending" id="cbSummaryPendingPill">
+                            <i class="fa-solid fa-calendar-check"></i> <strong id="cbSummaryPendingCount">0</strong> Pending
+                        </span>
+                        <span style="font-size:0.8rem; font-weight:700; color:var(--accent); display:inline-flex; align-items:center; gap:4px; margin-left:4px;">
+                            Manage <i class="fa-solid fa-arrow-right"></i>
+                        </span>
+                    </div>
+                </div>
+
                 <!-- Leads Table Card -->
-                <div class="table-card">
+                <div class="table-card" id="leadsTableCard">
                     <div class="table-responsive">
                         <table>
                             <thead>
@@ -1282,10 +2593,113 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Kanban Board Container (View mode switcher or tab switches between table-card and this) -->
+                <div class="kanban-board-container" id="kanbanBoardContainer" style="display: none;">
+                    <div class="kanban-grid" id="kanbanGrid">
+                        <!-- Column 1: New / Contacted -->
+                        <div class="kanban-col" id="col-NEW" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'NEW')">
+                            <div class="kanban-col-head head-new">
+                                <div class="kanban-col-title">
+                                    <span class="col-dot dot-new"></span>
+                                    <span>New / Inquired</span>
+                                </div>
+                                <span class="kanban-col-badge" id="badge-NEW">0</span>
+                            </div>
+                            <div class="kanban-cards-list" id="cards-NEW"></div>
+                        </div>
+
+                        <!-- Column 2: Interested / Qualified -->
+                        <div class="kanban-col" id="col-INTERESTED" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'INTERESTED')">
+                            <div class="kanban-col-head head-interested">
+                                <div class="kanban-col-title">
+                                    <span class="col-dot dot-interested"></span>
+                                    <span>Interested / High Intent</span>
+                                </div>
+                                <span class="kanban-col-badge" id="badge-INTERESTED">0</span>
+                            </div>
+                            <div class="kanban-cards-list" id="cards-INTERESTED"></div>
+                        </div>
+
+                        <!-- Column 3: Callback Scheduled -->
+                        <div class="kanban-col" id="col-CALLBACK" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'CALLBACK')">
+                            <div class="kanban-col-head head-callback">
+                                <div class="kanban-col-title">
+                                    <span class="col-dot dot-callback"></span>
+                                    <span>Callback / Follow-Up</span>
+                                </div>
+                                <span class="kanban-col-badge" id="badge-CALLBACK">0</span>
+                            </div>
+                            <div class="kanban-cards-list" id="cards-CALLBACK"></div>
+                        </div>
+
+                        <!-- Column 4: Converted / Won -->
+                        <div class="kanban-col" id="col-CONVERTED" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'CONVERTED')">
+                            <div class="kanban-col-head head-converted">
+                                <div class="kanban-col-title">
+                                    <span class="col-dot dot-converted"></span>
+                                    <span>Converted / Won</span>
+                                </div>
+                                <span class="kanban-col-badge" id="badge-CONVERTED">0</span>
+                            </div>
+                            <div class="kanban-cards-list" id="cards-CONVERTED"></div>
+                        </div>
+
+                        <!-- Column 5: Closed / Lost -->
+                        <div class="kanban-col" id="col-LOST" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'LOST')">
+                            <div class="kanban-col-head head-lost">
+                                <div class="kanban-col-title">
+                                    <span class="col-dot dot-lost"></span>
+                                    <span>Closed / Lost</span>
+                                </div>
+                                <span class="kanban-col-badge" id="badge-LOST">0</span>
+                            </div>
+                            <div class="kanban-cards-list" id="cards-LOST"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- SECTION 2: CAMPAIGN -->
+        <!-- SECTION 2: FOLLOW-UP & CALLBACK MANAGEMENT -->
+        <div id="callbacksSection" style="display: none;">
+            <div class="content-container">
+                <!-- Callbacks Hero Bar -->
+                <div class="callbacks-hero-bar">
+                    <div class="cb-hero-left">
+                        <h2><i class="fa-solid fa-headset" style="color:#d97706;"></i> Follow-Up &amp; Callback Management</h2>
+                        <p>Track prospect callbacks scheduled by the voice AI bot, set custom callback dates, and prioritize follow-ups</p>
+                    </div>
+                    <div class="cb-filter-tabs">
+                        <button type="button" class="cb-tab-btn active" id="cbTabPending" onclick="switchCallbacksFilter('pending')">
+                            All Pending (<span id="cbPendingCount">0</span>)
+                        </button>
+                        <button type="button" class="cb-tab-btn" id="cbTabToday" onclick="switchCallbacksFilter('today')">
+                            Today (<span id="cbTodayCount">0</span>)
+                        </button>
+                        <button type="button" class="cb-tab-btn" id="cbTabOverdue" onclick="switchCallbacksFilter('overdue')">
+                            Overdue (<span id="cbOverdueCount">0</span>)
+                        </button>
+                        <button type="button" class="cb-tab-btn" id="cbTabUpcoming" onclick="switchCallbacksFilter('upcoming')">
+                            Upcoming (<span id="cbUpcomingCount">0</span>)
+                        </button>
+                        <button type="button" class="cb-tab-btn" id="cbTabCompleted" onclick="switchCallbacksFilter('completed')">
+                            Completed
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Callbacks Grid Container -->
+                <div id="callbacksContainer" class="callbacks-grid">
+                    <div class="loading-container" style="grid-column: 1 / -1; padding: 40px; text-align: center;">
+                        <div class="spinner"></div>
+                        <p style="margin-top: 10px; color: var(--text-secondary);">Loading Scheduled Callbacks...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION 3: CAMPAIGN -->
         <div id="campaignsSection" style="display: none;">
             <div class="content-container">
                 <!-- Campaigns Summary Stats -->
@@ -1411,6 +2825,8 @@
             </div>
         </div>
     </div>
+        </div><!-- /.app-main-area -->
+    </div><!-- /.app-layout -->
 
     <!-- Trigger Call Modal -->
     <div class="modal-overlay" id="triggerCallModal">
@@ -1652,6 +3068,100 @@
         </div>
     </div>
 
+    <!-- Schedule / Reschedule Callback Modal -->
+    <div class="modal-overlay" id="scheduleCallbackModal" style="display:none; z-index:99999;">
+        <div class="modal-card" style="max-width: 520px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+            <div class="modal-header" style="background: linear-gradient(135deg, #fffbeb, #fef3c7); border-bottom: 1px solid #fde68a; padding: 1.25rem 1.5rem; border-radius: 20px 20px 0 0;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(217, 119, 6, 0.15); color: #d97706; display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <div>
+                        <h2 style="font-size: 1.2rem; font-weight: 800; color: #92400e; margin: 0;">Schedule Follow-Up Callback</h2>
+                        <p style="font-size: 0.8rem; color: #b45309; margin: 2px 0 0 0;">Set callback date, time, and custom reminders</p>
+                    </div>
+                </div>
+                <button class="close-btn" onclick="closeScheduleCallbackModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <!-- Lead Info Card -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <strong id="cbModalCustName" style="font-size: 1rem; color: #0f172a; display: block;">Customer Name</strong>
+                        <span id="cbModalPhone" style="font-size: 0.85rem; color: #64748b; font-weight: 600;"><i class="fa-solid fa-phone"></i> +91...</span>
+                    </div>
+                    <span id="cbModalStageBadge" style="background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">CALLBACK</span>
+                </div>
+
+                <form id="scheduleCallbackForm" onsubmit="handleScheduleCallbackSubmit(event)">
+                    <input type="hidden" id="cbModalLeadId" value="">
+                    
+                    <!-- Quick Preset Buttons -->
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
+                            <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> Quick Schedule Presets
+                        </label>
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <button type="button" class="btn-quick-time" onclick="setQuickCallbackTime('+1h')">+1 Hour</button>
+                            <button type="button" class="btn-quick-time" onclick="setQuickCallbackTime('+3h')">+3 Hours</button>
+                            <button type="button" class="btn-quick-time" onclick="setQuickCallbackTime('tomorrow_10am')">Tomorrow 10 AM</button>
+                            <button type="button" class="btn-quick-time" onclick="setQuickCallbackTime('tomorrow_3pm')">Tomorrow 3 PM</button>
+                            <button type="button" class="btn-quick-time" onclick="setQuickCallbackTime('next_mon')">Next Monday</button>
+                        </div>
+                    </div>
+
+                    <!-- Date & Time Input -->
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
+                            Callback Date &amp; Time *
+                        </label>
+                        <input type="datetime-local" id="cbModalDatetime" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.92rem; outline: none; background: white;">
+                    </div>
+
+                    <!-- Pipeline Stage Selector -->
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
+                            Pipeline Stage
+                        </label>
+                        <select id="cbModalStage" style="width: 100%; padding: 9px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem; outline: none; background: white; font-weight: 600;">
+                            <option value="CALLBACK">Callback / Follow-Up</option>
+                            <option value="INTERESTED">Interested / High Intent</option>
+                            <option value="NEW">New / Inquired</option>
+                            <option value="CONVERTED">Converted / Won</option>
+                            <option value="LOST">Closed / Lost</option>
+                        </select>
+                    </div>
+
+                    <!-- Follow-Up Notes -->
+                    <div style="margin-bottom: 1.25rem;">
+                        <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
+                            Follow-Up Notes &amp; Agenda
+                        </label>
+                        <textarea id="cbModalNotes" rows="3" placeholder="e.g. Call to discuss pricing offer; asked to speak after office hours..." style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.88rem; outline: none; background: white; resize: vertical;"></textarea>
+                    </div>
+
+                    <!-- Completed Checkbox (if already has callback) -->
+                    <div style="margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 10px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <input type="checkbox" id="cbModalCompleted" style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+                        <label for="cbModalCompleted" style="font-size: 0.85rem; font-weight: 600; color: #334155; cursor: pointer;">
+                            Mark this follow-up as completed / done
+                        </label>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" onclick="closeScheduleCallbackModal()" style="padding: 9px 18px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; font-weight: 600; font-size: 0.88rem; cursor: pointer; color: #475569;">
+                            Cancel
+                        </button>
+                        <button type="submit" id="btnSubmitCallback" style="padding: 9px 22px; border-radius: 8px; border: none; background: linear-gradient(135deg, #d97706, #b45309); color: white; font-weight: 700; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);">
+                            <i class="fa-solid fa-calendar-check"></i> Save Follow-Up
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         let allLeadsData = [];
@@ -1659,6 +3169,11 @@
         let currentPage = 1;
         let pageSize = 10;
         let filteredLeadsCache = [];
+        let currentDashboardTab = 'screenings';
+        let currentLeadsViewMode = localStorage.getItem('leads_view_mode') || 'table';
+        let currentCallbacksFilter = 'pending';
+        let cachedPipelineCounts = {};
+        let cachedCallbackStats = {};
 
         function getCsrfToken() {
             let cookieValue = null;
@@ -1945,19 +3460,38 @@
             const remDisplay = remMins.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
             const allocDisplay = allocMins.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
 
-            // Subtitle Badge only
             const badge = document.getElementById('headerMinutesBadge');
+            const card = document.getElementById('sidebarMinutesCard');
+            const iconBox = document.getElementById('sidebarMinutesIconBox');
+            const icon = document.getElementById('sidebarMinutesIcon');
+
             if (badge) {
                 if (isExhausted) {
-                    badge.style.background = '#fee2e2';
-                    badge.style.borderColor = '#fca5a5';
-                    badge.style.color = '#dc2626';
-                    badge.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:#dc2626;"></i> <span>Call Minutes: <strong>0 / ${allocDisplay}m (Limit Over)</strong></span>`;
+                    badge.innerHTML = `<strong style="color: #dc2626;">0 / ${allocDisplay}m</strong> <span style="font-size: 10px; color: #dc2626; font-weight: 700; display: block;">(Limit Over)</span>`;
+                    if (card) {
+                        card.style.background = '#fef2f2';
+                        card.style.borderColor = '#fecaca';
+                    }
+                    if (iconBox) {
+                        iconBox.style.background = '#fee2e2';
+                        iconBox.style.color = '#dc2626';
+                    }
+                    if (icon) {
+                        icon.className = 'fa-solid fa-circle-exclamation';
+                    }
                 } else {
-                    badge.style.background = '#eff6ff';
-                    badge.style.borderColor = '#bfdbfe';
-                    badge.style.color = '#1d4ed8';
-                    badge.innerHTML = `<i class="fa-solid fa-bolt" style="color:#2563eb;"></i> <span>Call Minutes: <strong>${remDisplay} / ${allocDisplay}m</strong></span>`;
+                    badge.innerHTML = `<strong>${remDisplay} / ${allocDisplay}m</strong>`;
+                    if (card) {
+                        card.style.background = '#f0f9ff';
+                        card.style.borderColor = '#bae6fd';
+                    }
+                    if (iconBox) {
+                        iconBox.style.background = '#e0f2fe';
+                        iconBox.style.color = '#0284c7';
+                    }
+                    if (icon) {
+                        icon.className = 'fa-solid fa-bolt';
+                    }
                 }
             }
         }
@@ -2017,6 +3551,600 @@
 
         let leadsPageCache = {};
 
+        // ── KANBAN & VIEW MODE FUNCTIONS ──
+
+        function switchLeadsViewMode(mode) {
+            currentLeadsViewMode = mode;
+            try { localStorage.setItem('leads_view_mode', mode); } catch(e){}
+
+            const tableCard = document.getElementById('leadsTableCard');
+            const kanbanContainer = document.getElementById('kanbanBoardContainer');
+            const pageSizeWrapper = document.getElementById('pageSizeWrapper');
+            const btnTable = document.getElementById('viewModeTableBtn');
+            const btnKanban = document.getElementById('viewModeKanbanBtn');
+
+            if (mode === 'kanban') {
+                if (tableCard) tableCard.style.display = 'none';
+                if (kanbanContainer) kanbanContainer.style.display = 'block';
+                if (pageSizeWrapper) pageSizeWrapper.style.display = 'none';
+                if (btnTable) btnTable.classList.remove('active');
+                if (btnKanban) btnKanban.classList.add('active');
+                renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+            } else {
+                if (tableCard) tableCard.style.display = 'block';
+                if (kanbanContainer) kanbanContainer.style.display = 'none';
+                if (pageSizeWrapper) pageSizeWrapper.style.display = 'inline-flex';
+                if (btnTable) btnTable.classList.add('active');
+                if (btnKanban) btnKanban.classList.remove('active');
+            }
+        }
+
+        function renderKanbanBoard(leads, pipelineCounts) {
+            const stages = ['NEW', 'INTERESTED', 'CALLBACK', 'CONVERTED', 'LOST'];
+            const grouped = {
+                NEW: [],
+                INTERESTED: [],
+                CALLBACK: [],
+                CONVERTED: [],
+                LOST: []
+            };
+
+            const leadsArr = Array.isArray(leads) ? leads : [];
+            leadsArr.forEach(lead => {
+                let st = (lead.pipeline_stage || lead.effective_pipeline_stage || 'NEW').toUpperCase().trim();
+                if (!grouped[st]) {
+                    st = 'NEW';
+                }
+                grouped[st].push(lead);
+            });
+
+            stages.forEach(stage => {
+                const countBadge = document.getElementById(`badge-${stage}`);
+                const container = document.getElementById(`cards-${stage}`);
+                const count = (pipelineCounts && pipelineCounts[stage] !== undefined)
+                    ? pipelineCounts[stage]
+                    : grouped[stage].length;
+
+                if (countBadge) countBadge.textContent = count;
+
+                if (container) {
+                    if (grouped[stage].length === 0) {
+                        container.innerHTML = `
+                            <div style="text-align:center; padding: 32px 14px; color: #94a3b8; font-size: 0.82rem; border: 1.5px dashed #e2e8f0; border-radius: 12px; background: rgba(255,255,255,0.6);">
+                                <i class="fa-solid fa-inbox" style="font-size: 1.5rem; display:block; margin-bottom: 8px; opacity: 0.5;"></i>
+                                No leads in this stage
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = grouped[stage].map(lead => renderKanbanCard(lead, stage)).join('');
+                    }
+                }
+            });
+        }
+
+        function renderKanbanCard(lead, currentStage) {
+            const s = lead.summary || {};
+            let custName = lead.candidate_name && !['Candidate', 'Customer', 'Unknown Candidate', 'Unknown', ''].includes(lead.candidate_name)
+                ? lead.candidate_name
+                : (s.user_name || s.customer_name || s.candidate_name || 'Customer');
+            if (custName.toLowerCase() === 'candidate' || custName.toLowerCase() === 'unknown candidate') {
+                custName = 'Customer';
+            }
+
+            const rawContact = lead.contact || lead.phone_number || '';
+            const isHashContact = rawContact && (rawContact.length > 20 || /^[a-f0-9]{32,64}$/i.test(rawContact));
+            const phoneDisplay = rawContact
+                ? (isHashContact ? 'Web Call' : escapeHtml(rawContact))
+                : 'Private Line';
+
+            const initials = (custName || 'C').split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2) || 'C';
+            const avatarStyle = getAvatarStyle(custName);
+            const reqDetails = s.car_model || s.product_interest || s.product_name || s.flat_type || s.loan_type || s.course_name || s.requirement || lead.applied_position || 'General Inquiry';
+            const formattedDate = formatCallDateTime(lead);
+            const statusBadge = getStatusBadge(lead.final_status);
+            const cardId = escapeHtml(String(lead.interaction_id || lead.id || ''));
+
+            let callbackHtml = '';
+            if (lead.callback_datetime) {
+                const cbDate = new Date(lead.callback_datetime);
+                const now = new Date();
+                const isOverdue = !lead.is_callback_completed && (cbDate < now);
+                const isToday = !lead.is_callback_completed && (cbDate.toDateString() === now.toDateString());
+                const pillClass = isOverdue ? 'k-cb-overdue' : (isToday ? 'k-cb-today' : 'k-cb-upcoming');
+                const cbIcon = isOverdue ? 'fa-triangle-exclamation' : (isToday ? 'fa-clock' : 'fa-calendar-check');
+                const cbLabel = lead.callback_display || cbDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const notesAttr = lead.callback_notes ? `title="Notes: ${escapeHtml(lead.callback_notes)}"` : '';
+
+                callbackHtml = `
+                    <div class="k-cb-pill ${pillClass}" ${notesAttr} onclick='openScheduleCallbackModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})' style="cursor: pointer;">
+                        <i class="fa-solid ${cbIcon}"></i>
+                        <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${lead.is_callback_completed ? '✅ Done: ' : 'Follow-up: '}${escapeHtml(cbLabel)}</span>
+                        <i class="fa-solid fa-pencil" style="font-size: 0.68rem; opacity: 0.7;"></i>
+                    </div>
+                `;
+            }
+
+            let notesHtml = '';
+            if (lead.callback_notes) {
+                notesHtml = `
+                    <div class="k-notes-box" title="${escapeHtml(lead.callback_notes)}">
+                        <i class="fa-solid fa-note-sticky" style="color: #d97706; margin-right: 4px;"></i>${escapeHtml(lead.callback_notes.length > 55 ? lead.callback_notes.substring(0, 55) + '...' : lead.callback_notes)}
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="kanban-card" id="card-${cardId}" draggable="true" ondragstart="handleCardDragStart(event, '${cardId}')">
+                    <div class="k-card-header">
+                        <div class="k-card-profile" onclick='openModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})' style="cursor:pointer;" title="Click to view interaction details">
+                            <div class="k-avatar" style="${avatarStyle}">${initials}</div>
+                            <div>
+                                <div class="k-name">${escapeHtml(custName)}</div>
+                                <div class="k-phone"><i class="fa-solid fa-phone" style="font-size:0.7rem; color:#94a3b8;"></i> ${phoneDisplay}</div>
+                            </div>
+                        </div>
+                        <select class="k-stage-select" onchange="updateLeadPipelineStage('${cardId}', this.value)" title="Change Pipeline Stage">
+                            <option value="NEW" ${currentStage === 'NEW' ? 'selected' : ''}>New</option>
+                            <option value="INTERESTED" ${currentStage === 'INTERESTED' ? 'selected' : ''}>Interested</option>
+                            <option value="CALLBACK" ${currentStage === 'CALLBACK' ? 'selected' : ''}>Callback</option>
+                            <option value="CONVERTED" ${currentStage === 'CONVERTED' ? 'selected' : ''}>Converted</option>
+                            <option value="LOST" ${currentStage === 'LOST' ? 'selected' : ''}>Lost</option>
+                        </select>
+                    </div>
+
+                    <div class="k-product-pill" title="${escapeHtml(reqDetails)}">
+                        <i class="fa-solid fa-clipboard-list"></i> ${escapeHtml(reqDetails)}
+                    </div>
+
+                    <div style="margin: 4px 0;">
+                        ${statusBadge}
+                    </div>
+
+                    ${callbackHtml}
+                    ${notesHtml}
+
+                    <div class="k-meta-row">
+                        <span><i class="fa-regular fa-clock"></i> ${formattedDate}</span>
+                        ${lead.audio_url ? '<span style="color:#10b981; font-weight:700;"><i class="fa-solid fa-headphones"></i> Audio</span>' : ''}
+                    </div>
+
+                    <div class="k-actions-bar">
+                        <div style="display:flex; gap:4px;">
+                            <button type="button" class="k-btn-action k-btn-call" title="Call Customer" onclick="openTriggerCallModal('${escapeHtml(rawContact)}', '${escapeHtml(custName)}')">
+                                <i class="fa-solid fa-phone"></i> Call
+                            </button>
+                            <button type="button" class="k-btn-action k-btn-cb" title="Schedule Callback / Set Reminder" onclick='openScheduleCallbackModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})'>
+                                <i class="fa-solid fa-calendar-plus"></i> Follow-Up
+                            </button>
+                        </div>
+                        <button type="button" class="k-btn-action" title="View Transcript &amp; Summary" onclick='openModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})'>
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        let draggedLeadId = null;
+
+        function handleCardDragStart(event, leadId) {
+            draggedLeadId = leadId;
+            event.dataTransfer.setData('text/plain', leadId);
+            event.dataTransfer.effectAllowed = 'move';
+            if (event.target && event.target.classList) {
+                event.target.classList.add('is-dragging');
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            const col = event.currentTarget;
+            if (col && !col.classList.contains('drag-over')) {
+                col.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(event) {
+            const col = event.currentTarget;
+            if (col) col.classList.remove('drag-over');
+        }
+
+        function handleDrop(event, targetStage) {
+            event.preventDefault();
+            const col = event.currentTarget;
+            if (col) col.classList.remove('drag-over');
+            const leadId = event.dataTransfer.getData('text/plain') || draggedLeadId;
+            document.querySelectorAll('.kanban-card.is-dragging').forEach(el => el.classList.remove('is-dragging'));
+            if (!leadId) return;
+
+            updateLeadPipelineStage(leadId, targetStage);
+        }
+
+        async function updateLeadPipelineStage(leadId, targetStage) {
+            if (!leadId || !targetStage) return;
+
+            const findAndUpdate = (arr) => {
+                const item = arr.find(l => String(l.interaction_id || l.id) === String(leadId) || String(l.id) === String(leadId));
+                if (item) {
+                    item.pipeline_stage = targetStage;
+                    item.effective_pipeline_stage = targetStage;
+                    return item;
+                }
+                return null;
+            };
+
+            const updatedLead = findAndUpdate(allLeadsData) || findAndUpdate(filteredLeadsCache);
+            if (updatedLead) {
+                renderKanbanBoard(filteredLeadsCache.length ? filteredLeadsCache : allLeadsData, cachedPipelineCounts);
+            }
+
+            try {
+                const response = await fetch(`${SARVAM_API_PREFIX}/${encodeURIComponent(leadId)}/update-stage/`, {
+                    method: 'POST',
+                    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ stage: targetStage })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.status === 'success') {
+                    showToast(`Lead moved to <strong>${targetStage}</strong>`, 'success');
+                } else {
+                    showToast(`Failed to update stage: ${data.error || 'Server error'}`, 'error');
+                    fetchLeadsData(true);
+                }
+            } catch (err) {
+                console.error('Error updating lead stage:', err);
+                showToast('Network error while updating stage', 'error');
+                fetchLeadsData(true);
+            }
+        }
+
+        // ── CALLBACK & FOLLOW-UP MANAGEMENT FUNCTIONS ──
+
+        function updateCallbackStatsUI(stats) {
+            if (!stats) return;
+            const todayPill = document.getElementById('cbSummaryTodayPill');
+            const overduePill = document.getElementById('cbSummaryOverduePill');
+            const pendingPill = document.getElementById('cbSummaryPendingPill');
+
+            const todayCnt = document.getElementById('cbSummaryTodayCount');
+            const overdueCnt = document.getElementById('cbSummaryOverdueCount');
+            const pendingCnt = document.getElementById('cbSummaryPendingCount');
+
+            const sideBadge = document.getElementById('sideCallbacksCountBadge');
+            const tabBadge = document.getElementById('tabCallbacksCountBadge');
+
+            if (todayCnt) todayCnt.textContent = stats.today || 0;
+            if (overdueCnt) overdueCnt.textContent = stats.overdue || 0;
+            if (pendingCnt) pendingCnt.textContent = stats.pending || 0;
+
+            if (todayPill) todayPill.style.display = (stats.today > 0) ? 'inline-flex' : 'none';
+            if (overduePill) overduePill.style.display = (stats.overdue > 0) ? 'inline-flex' : 'none';
+            if (pendingPill) pendingPill.style.display = (stats.pending > 0) ? 'inline-flex' : 'none';
+
+            if (sideBadge) {
+                if (stats.pending > 0) {
+                    sideBadge.textContent = stats.pending;
+                    sideBadge.style.display = 'inline-block';
+                } else {
+                    sideBadge.style.display = 'none';
+                }
+            }
+            if (tabBadge) {
+                if (stats.pending > 0) {
+                    tabBadge.textContent = stats.pending;
+                    tabBadge.style.display = 'inline-block';
+                } else {
+                    tabBadge.style.display = 'none';
+                }
+            }
+        }
+
+        function openScheduleCallbackModal(lead) {
+            if (!lead) return;
+            const modal = document.getElementById('scheduleCallbackModal');
+            const custNameEl = document.getElementById('cbModalCustName');
+            const phoneEl = document.getElementById('cbModalPhone');
+            const leadIdInput = document.getElementById('cbModalLeadId');
+            const datetimeInput = document.getElementById('cbModalDatetime');
+            const stageSelect = document.getElementById('cbModalStage');
+            const notesTextarea = document.getElementById('cbModalNotes');
+            const completedCheckbox = document.getElementById('cbModalCompleted');
+            const stageBadge = document.getElementById('cbModalStageBadge');
+
+            const s = lead.summary || {};
+            let custName = lead.candidate_name && !['Candidate', 'Customer', 'Unknown Candidate', 'Unknown', ''].includes(lead.candidate_name)
+                ? lead.candidate_name
+                : (s.user_name || s.customer_name || s.candidate_name || 'Customer');
+
+            const rawContact = lead.contact || lead.phone_number || '';
+            const isHashContact = rawContact && (rawContact.length > 20 || /^[a-f0-9]{32,64}$/i.test(rawContact));
+            const phoneDisplay = rawContact ? (isHashContact ? 'Web Call' : rawContact) : 'Private Line';
+
+            if (custNameEl) custNameEl.textContent = custName;
+            if (phoneEl) phoneEl.innerHTML = `<i class="fa-solid fa-phone"></i> ${escapeHtml(phoneDisplay)}`;
+            if (leadIdInput) leadIdInput.value = lead.interaction_id || lead.id || '';
+
+            const currentStage = (lead.pipeline_stage || lead.effective_pipeline_stage || 'CALLBACK').toUpperCase();
+            if (stageSelect) stageSelect.value = currentStage;
+            if (stageBadge) stageBadge.textContent = currentStage;
+
+            if (notesTextarea) notesTextarea.value = lead.callback_notes || '';
+            if (completedCheckbox) completedCheckbox.checked = !!lead.is_callback_completed;
+
+            if (datetimeInput) {
+                if (lead.callback_datetime) {
+                    const d = new Date(lead.callback_datetime);
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hours = String(d.getHours()).padStart(2, '0');
+                    const mins = String(d.getMinutes()).padStart(2, '0');
+                    datetimeInput.value = `${year}-${month}-${day}T${hours}:${mins}`;
+                } else {
+                    const now = new Date();
+                    now.setHours(now.getHours() + 2);
+                    now.setMinutes(Math.ceil(now.getMinutes() / 15) * 15, 0, 0);
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const mins = String(now.getMinutes()).padStart(2, '0');
+                    datetimeInput.value = `${year}-${month}-${day}T${hours}:${mins}`;
+                }
+            }
+
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeScheduleCallbackModal() {
+            const modal = document.getElementById('scheduleCallbackModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function setQuickCallbackTime(preset) {
+            const dtInput = document.getElementById('cbModalDatetime');
+            if (!dtInput) return;
+
+            const d = new Date();
+            if (preset === '+1h') {
+                d.setHours(d.getHours() + 1);
+            } else if (preset === '+3h') {
+                d.setHours(d.getHours() + 3);
+            } else if (preset === 'tomorrow_10am') {
+                d.setDate(d.getDate() + 1);
+                d.setHours(10, 0, 0, 0);
+            } else if (preset === 'tomorrow_3pm') {
+                d.setDate(d.getDate() + 1);
+                d.setHours(15, 0, 0, 0);
+            } else if (preset === 'next_mon') {
+                const day = d.getDay();
+                const diff = (day === 0 ? 1 : 8 - day);
+                d.setDate(d.getDate() + diff);
+                d.setHours(10, 0, 0, 0);
+            }
+
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const mins = String(d.getMinutes()).padStart(2, '0');
+            dtInput.value = `${year}-${month}-${day}T${hours}:${mins}`;
+        }
+
+        async function handleScheduleCallbackSubmit(e) {
+            e.preventDefault();
+            const submitBtn = document.getElementById('btnSubmitCallback');
+            const leadId = document.getElementById('cbModalLeadId').value;
+            const datetimeVal = document.getElementById('cbModalDatetime').value;
+            const stageVal = document.getElementById('cbModalStage').value;
+            const notesVal = document.getElementById('cbModalNotes').value;
+            const isCompleted = document.getElementById('cbModalCompleted').checked;
+
+            if (!leadId) return;
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+            }
+
+            try {
+                const isoDt = datetimeVal ? new Date(datetimeVal).toISOString() : null;
+
+                const response = await fetch(`${SARVAM_API_PREFIX}/${encodeURIComponent(leadId)}/callback/`, {
+                    method: 'POST',
+                    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({
+                        callback_datetime: isoDt,
+                        callback_notes: notesVal,
+                        is_callback_completed: isCompleted,
+                        stage: stageVal
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok && data.status === 'success') {
+                    showToast('Follow-up callback saved successfully!', 'success');
+                    closeScheduleCallbackModal();
+
+                    fetchLeadsData(true);
+                    if (currentDashboardTab === 'callbacks') {
+                        loadCallbacksList(currentCallbacksFilter);
+                    }
+                } else {
+                    alert(data.error || 'Failed to save callback details');
+                }
+            } catch (err) {
+                console.error('Error saving callback:', err);
+                alert('Network error while scheduling callback.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-calendar-check"></i> Save Follow-Up';
+                }
+            }
+        }
+
+        function switchCallbacksFilter(filter) {
+            currentCallbacksFilter = filter;
+            const tabs = ['pending', 'today', 'overdue', 'upcoming', 'completed'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`cbTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+                if (btn) {
+                    if (t === filter) btn.classList.add('active');
+                    else btn.classList.remove('active');
+                }
+            });
+            loadCallbacksList(filter);
+        }
+
+        async function loadCallbacksList(filter = 'pending') {
+            const container = document.getElementById('callbacksContainer');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="loading-container" style="grid-column: 1 / -1; padding: 40px; text-align: center;">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px; color: var(--text-secondary);">Loading Scheduled Callbacks...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${SARVAM_API_PREFIX}/callbacks/?filter=${encodeURIComponent(filter)}`, {
+                    headers: getAuthHeaders()
+                });
+
+                const data = await response.json();
+                if (!response.ok || data.status !== 'success') {
+                    container.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #dc2626;">
+                            <i class="fa-solid fa-circle-exclamation" style="font-size: 2rem;"></i>
+                            <p style="margin-top: 8px; font-weight:600;">Failed to load callbacks: ${data.error || 'Server error'}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const callbacks = data.callbacks || [];
+                const tabPending = document.getElementById('cbPendingCount');
+                if (tabPending && filter === 'pending') tabPending.textContent = callbacks.length;
+
+                if (callbacks.length === 0) {
+                    container.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 50px 20px; background: #ffffff; border: 1px solid var(--border); border-radius: 14px;">
+                            <div style="width: 56px; height: 56px; border-radius: 50%; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; margin: 0 auto 12px;">
+                                <i class="fa-solid fa-calendar-check"></i>
+                            </div>
+                            <h3 style="font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px;">No ${filter.toUpperCase()} Callbacks</h3>
+                            <p style="color: #64748b; font-size: 0.88rem; max-width: 420px; margin: 0 auto 16px;">
+                                All prospect callbacks in this category are up to date! You can schedule callbacks anytime from the Lead Pipeline or Calls table.
+                            </p>
+                            <button type="button" class="btn-action" onclick="switchDashboardTab('screenings')" style="padding: 8px 18px; font-weight: 600; background: #0284c7; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                                <i class="fa-solid fa-list-check"></i> View All Calls
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = callbacks.map(cb => {
+                    const isOverdue = cb.is_overdue;
+                    const isToday = cb.is_today;
+                    const cardClass = isOverdue ? 'cb-overdue' : (isToday ? 'cb-today' : 'cb-upcoming');
+                    const badgeClass = isOverdue ? 'cb-pill-overdue' : (isToday ? 'cb-pill-today' : 'cb-pill-pending');
+                    const badgeIcon = isOverdue ? 'fa-triangle-exclamation' : (isToday ? 'fa-clock' : 'fa-calendar-check');
+                    const badgeText = isOverdue ? 'Overdue' : (isToday ? 'Today' : 'Upcoming');
+
+                    const s = cb.summary || {};
+                    let custName = cb.candidate_name || s.user_name || 'Customer';
+                    const initials = (custName || 'C').split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2) || 'C';
+                    const avatarStyle = getAvatarStyle(custName);
+
+                    const rawPhone = cb.phone_number || '';
+                    const isHash = rawPhone && (rawPhone.length > 20 || /^[a-f0-9]{32,64}$/i.test(rawPhone));
+                    const phoneDisplay = rawPhone ? (isHash ? 'Web Call' : rawPhone) : 'Private Line';
+
+                    return `
+                        <div class="cb-card ${cardClass}" id="cb-item-${cb.id}">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <div class="avatar" style="${avatarStyle}; width:38px; height:38px; font-size:0.85rem;">${initials}</div>
+                                        <div>
+                                            <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0;">${escapeHtml(custName)}</h4>
+                                            <span style="font-size: 0.8rem; color: #64748b; font-weight: 600;"><i class="fa-solid fa-phone" style="font-size:0.7rem;"></i> ${escapeHtml(phoneDisplay)}</span>
+                                        </div>
+                                    </div>
+                                    <span class="cb-pill-badge ${badgeClass}">
+                                        <i class="fa-solid ${badgeIcon}"></i> ${badgeText}
+                                    </span>
+                                </div>
+
+                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; font-size: 0.82rem;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                                        <strong style="color: #334155;"><i class="fa-regular fa-clock" style="color: #0284c7;"></i> Scheduled For:</strong>
+                                        <span style="color: ${isOverdue ? '#dc2626' : '#0f172a'}; font-weight: 700;">${escapeHtml(cb.callback_display || 'N/A')}</span>
+                                    </div>
+                                    ${cb.applied_position ? `<div style="color: #64748b;"><i class="fa-solid fa-tag"></i> ${escapeHtml(cb.applied_position)}</div>` : ''}
+                                </div>
+
+                                ${cb.callback_notes ? `
+                                    <div style="background: #fffbeb; border-left: 3px solid #f59e0b; padding: 6px 10px; font-size: 0.8rem; color: #78350f; border-radius: 0 6px 6px 0; margin-bottom: 12px; line-height: 1.35;">
+                                        <strong style="display:block; font-size: 0.72rem; text-transform: uppercase; color: #b45309; margin-bottom: 2px;">Follow-up Notes:</strong>
+                                        ${escapeHtml(cb.callback_notes)}
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; pt-2; border-top: 1px solid #f1f5f9; padding-top: 10px; gap: 8px; flex-wrap: wrap;">
+                                <div style="display: flex; gap: 6px;">
+                                    <button type="button" class="k-btn-action k-btn-call" style="padding: 6px 12px; font-size: 0.8rem;" onclick="openTriggerCallModal('${escapeHtml(rawPhone)}', '${escapeHtml(custName)}')">
+                                        <i class="fa-solid fa-phone"></i> Call Now
+                                    </button>
+                                    <button type="button" class="btn-action" style="padding: 6px 10px; font-size: 0.8rem;" onclick='openScheduleCallbackModal(${JSON.stringify(cb).replace(/'/g, "&apos;")})'>
+                                        <i class="fa-solid fa-pencil"></i> Reschedule
+                                    </button>
+                                </div>
+                                <button type="button" class="btn-action" style="padding: 6px 10px; font-size: 0.78rem; background: ${cb.is_callback_completed ? '#f0fdf4' : '#ffffff'}; color: ${cb.is_callback_completed ? '#16a34a' : '#475569'}; border-color: ${cb.is_callback_completed ? '#86efac' : '#cbd5e1'}; font-weight: 600;" onclick="toggleCallbackComplete('${cb.interaction_id || cb.id}', ${!cb.is_callback_completed})">
+                                    <i class="fa-solid ${cb.is_callback_completed ? 'fa-circle-check' : 'fa-circle'}"></i> ${cb.is_callback_completed ? 'Completed' : 'Mark Done'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Error loading callbacks:', err);
+                container.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #dc2626;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 2rem;"></i>
+                        <p style="margin-top: 8px; font-weight:600;">Network error while loading callbacks.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function toggleCallbackComplete(leadId, isCompleted) {
+            try {
+                const response = await fetch(`${SARVAM_API_PREFIX}/${encodeURIComponent(leadId)}/callback/`, {
+                    method: 'POST',
+                    headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ is_callback_completed: isCompleted })
+                });
+
+                if (response.ok) {
+                    showToast(isCompleted ? 'Callback marked as completed!' : 'Callback reopened', 'success');
+                    fetchLeadsData(true);
+                    loadCallbacksList(currentCallbacksFilter);
+                } else {
+                    showToast('Failed to update callback status', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
         function applyLeadsDataResponse(data) {
             if (data.agent_minutes) {
                 updateMinutesUI(data.agent_minutes);
@@ -2041,6 +4169,14 @@
             if (callbackEl) callbackEl.innerText = callbackVal;
             if (notIntEl) notIntEl.innerText = notIntVal;
 
+            if (data.callback_stats) {
+                cachedCallbackStats = data.callback_stats;
+                updateCallbackStatsUI(data.callback_stats);
+            }
+            if (data.pipeline_counts) {
+                cachedPipelineCounts = data.pipeline_counts;
+            }
+
             const reqPageSize = pageSize === 'ALL' ? 1000 : (parseInt(pageSize, 10) || 10);
             const serverTotal = data.total ?? newLeads.length;
             const totalPages = data.total_pages ?? (pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(serverTotal / reqPageSize)));
@@ -2049,6 +4185,7 @@
 
             renderLeads(newLeads);
             renderPaginationControls(serverTotal, startIdx, endIdx, totalPages);
+            renderKanbanBoard(newLeads, data.pipeline_counts || cachedPipelineCounts);
 
             const lastUpdEl = document.getElementById('last-updated-time');
             if (lastUpdEl) lastUpdEl.innerText = new Date().toLocaleTimeString();
@@ -2362,6 +4499,9 @@
                                     <button class="btn-action btn-call-quick" title="Trigger Call to Customer" onclick="openTriggerCallModal('${escapeHtml(lead.contact)}', '${escapeHtml(custName)}')">
                                         <i class="fa-solid fa-phone"></i> Call
                                     </button>
+                                    <button class="btn-action" title="Schedule Follow-Up Callback" onclick='openScheduleCallbackModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})' style="background:#fffbeb; color:#d97706; border-color:#fde68a;">
+                                        <i class="fa-solid fa-calendar-plus"></i>
+                                    </button>
                                     <button class="btn-action btn-detail" title="View Interaction Details" onclick='openModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})'>
                                         <i class="fa-solid fa-eye"></i> Detail
                                     </button>
@@ -2406,6 +4546,9 @@
                             <div style="display: flex; gap: 0.4rem; align-items: center;">
                                 <button class="btn-action btn-call-quick" title="Trigger Call" onclick="openTriggerCallModal('${escapeHtml(lead.contact)}', '${escapeHtml(custName)}')">
                                     <i class="fa-solid fa-phone"></i> Call
+                                </button>
+                                <button class="btn-action" title="Schedule Follow-Up Callback" onclick='openScheduleCallbackModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})' style="background:#fffbeb; color:#d97706; border-color:#fde68a;">
+                                    <i class="fa-solid fa-calendar-plus"></i>
                                 </button>
                                 <button class="btn-action btn-detail" title="View Interaction Details" onclick='openModal(${JSON.stringify(lead).replace(/'/g, "&apos;")})'>
                                     <i class="fa-solid fa-eye"></i> Detail
@@ -2982,34 +5125,108 @@
             }
         }
 
-        let currentDashboardTab = 'screenings';
         let campaignPollingTimer = null;
+
+        function toggleSidebar(forceState) {
+            const sidebar = document.getElementById('appSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            if (!sidebar) return;
+
+            if (typeof forceState === 'boolean') {
+                if (forceState) {
+                    sidebar.classList.add('open');
+                    if (backdrop) backdrop.classList.add('open');
+                } else {
+                    sidebar.classList.remove('open');
+                    if (backdrop) backdrop.classList.remove('open');
+                }
+            } else {
+                const willOpen = !sidebar.classList.contains('open');
+                if (willOpen) {
+                    sidebar.classList.add('open');
+                    if (backdrop) backdrop.classList.add('open');
+                } else {
+                    sidebar.classList.remove('open');
+                    if (backdrop) backdrop.classList.remove('open');
+                }
+            }
+        }
+
+        // Close sidebar on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                toggleSidebar(false);
+            }
+        });
+
+        function handleSidebarCampaignClick() {
+            switchDashboardTab('campaigns');
+            openCampaignModal();
+            toggleSidebar(false);
+        }
 
         function switchDashboardTab(tab) {
             currentDashboardTab = tab;
             const screeningsSec = document.getElementById('screeningsSection');
             const campaignsSec = document.getElementById('campaignsSection');
+            const callbacksSec = document.getElementById('callbacksSection');
+
             const tabScreeningsBtn = document.getElementById('tabScreeningsBtn');
+            const tabKanbanBtn = document.getElementById('tabKanbanBtn');
+            const tabCallbacksBtn = document.getElementById('tabCallbacksBtn');
             const tabCampaignsBtn = document.getElementById('tabCampaignsBtn');
 
+            const sideBtnScreenings = document.getElementById('sideBtnScreenings');
+            const sideBtnKanban = document.getElementById('sideBtnKanban');
+            const sideBtnCallbacks = document.getElementById('sideBtnCallbacks');
+            const sideBtnCampaigns = document.getElementById('sideBtnCampaigns');
+
+            // Reset active states
+            [tabScreeningsBtn, tabKanbanBtn, tabCallbacksBtn, tabCampaignsBtn].forEach(b => b && b.classList.remove('active'));
+            [sideBtnScreenings, sideBtnKanban, sideBtnCallbacks, sideBtnCampaigns].forEach(b => b && b.classList.remove('active'));
+
             if (tab === 'campaigns') {
-                screeningsSec.style.display = 'none';
-                campaignsSec.style.display = 'block';
-                tabScreeningsBtn.classList.remove('active');
-                tabCampaignsBtn.classList.add('active');
+                if (screeningsSec) screeningsSec.style.display = 'none';
+                if (callbacksSec) callbacksSec.style.display = 'none';
+                if (campaignsSec) campaignsSec.style.display = 'block';
+                if (tabCampaignsBtn) tabCampaignsBtn.classList.add('active');
+                if (sideBtnCampaigns) sideBtnCampaigns.classList.add('active');
                 fetchCampaignsData();
-            } else {
-                screeningsSec.style.display = 'block';
-                campaignsSec.style.display = 'none';
-                tabScreeningsBtn.classList.add('active');
-                tabCampaignsBtn.classList.remove('active');
-                fetchLeadsData();
+            } else if (tab === 'callbacks') {
+                if (screeningsSec) screeningsSec.style.display = 'none';
+                if (campaignsSec) campaignsSec.style.display = 'none';
+                if (callbacksSec) callbacksSec.style.display = 'block';
+                if (tabCallbacksBtn) tabCallbacksBtn.classList.add('active');
+                if (sideBtnCallbacks) sideBtnCallbacks.classList.add('active');
+                loadCallbacksList(currentCallbacksFilter);
+            } else if (tab === 'kanban') {
+                if (campaignsSec) campaignsSec.style.display = 'none';
+                if (callbacksSec) callbacksSec.style.display = 'none';
+                if (screeningsSec) screeningsSec.style.display = 'block';
+                if (tabKanbanBtn) tabKanbanBtn.classList.add('active');
+                if (sideBtnKanban) sideBtnKanban.classList.add('active');
+                switchLeadsViewMode('kanban');
+                if (!allLeadsData || allLeadsData.length === 0) {
+                    fetchLeadsData();
+                }
+            } else { // 'screenings' (All Calls & Leads)
+                if (campaignsSec) campaignsSec.style.display = 'none';
+                if (callbacksSec) callbacksSec.style.display = 'none';
+                if (screeningsSec) screeningsSec.style.display = 'block';
+                if (tabScreeningsBtn) tabScreeningsBtn.classList.add('active');
+                if (sideBtnScreenings) sideBtnScreenings.classList.add('active');
+                switchLeadsViewMode('table');
+                if (!allLeadsData || allLeadsData.length === 0) {
+                    fetchLeadsData();
+                }
             }
         }
 
         function refreshCurrentTab() {
             if (currentDashboardTab === 'campaigns') {
                 fetchCampaignsData();
+            } else if (currentDashboardTab === 'callbacks') {
+                loadCallbacksList(currentCallbacksFilter);
             } else {
                 fetchLeadsData();
             }
@@ -3272,7 +5489,9 @@
 
             // Toggle live indicator badge
             const liveBadge = document.getElementById('liveCampaignBadge');
+            const sideLiveBadge = document.getElementById('sideLiveCampaignBadge');
             if (liveBadge) liveBadge.style.display = hasRunningCampaign ? 'inline-block' : 'none';
+            if (sideLiveBadge) sideLiveBadge.style.display = hasRunningCampaign ? 'inline-block' : 'none';
             isCampaignActive = hasRunningCampaign;
         }
 
@@ -3533,24 +5752,36 @@
             const username = localStorage.getItem('username') || '{{ request.user.username|default:"User" }}';
             const role = localStorage.getItem('role') || 'User';
             const isAdmin = localStorage.getItem('is_admin') === 'true' || '{{ request.user.is_superuser|yesno:"true,false" }}' === 'true';
-            const profilePic = localStorage.getItem('profile_picture');
+            const profilePic = localStorage.getItem('profile_picture') || '{% if request.user.profile.profile_picture %}{{ request.user.profile.profile_picture.url }}{% elif request.user.profile.profile_picture_url %}{{ request.user.profile.profile_picture_url }}{% endif %}';
             const avatar = document.getElementById('profileAvatar');
+            const topbarAvatar = document.getElementById('topbarAvatar');
             const pdName = document.getElementById('pdName');
+            const topbarUserName = document.getElementById('topbarUserName');
             const pdRole = document.getElementById('pdRole');
+            const topbarUserRole = document.getElementById('topbarUserRole');
             const manageTeamMenu = document.getElementById('manageTeamMenuItem');
 
             if (pdName) pdName.textContent = username;
-            if (pdRole) pdRole.textContent = role && role !== 'No Role' ? role : (isAdmin ? 'System Admin' : 'Logged in');
+            if (topbarUserName) topbarUserName.textContent = username;
 
-            if (avatar) {
+            const displayRole = role && role !== 'No Role' ? role : (isAdmin ? 'System Admin' : 'Logged in');
+            if (pdRole) pdRole.textContent = displayRole;
+            if (topbarUserRole) topbarUserRole.textContent = displayRole;
+
+            const updateAvatarEl = (el) => {
+                if (!el) return;
                 if (profilePic && profilePic !== 'null' && profilePic !== '') {
-                    avatar.style.backgroundImage = `url('${profilePic}')`;
-                    avatar.textContent = '';
+                    el.style.backgroundImage = `url('${profilePic}')`;
+                    el.textContent = '';
                 } else {
-                    avatar.style.backgroundImage = 'linear-gradient(135deg, #0284c7, #0369a1)';
-                    avatar.textContent = (username.charAt(0) || 'U').toUpperCase();
+                    el.style.backgroundImage = 'linear-gradient(135deg, #0284c7, #0369a1)';
+                    el.textContent = (username.charAt(0) || 'U').toUpperCase();
                 }
-            }
+            };
+
+            updateAvatarEl(avatar);
+            updateAvatarEl(topbarAvatar);
+
 
             // Parse sub-user access permissions
             let permissions = {};
@@ -3569,19 +5800,31 @@
             if (manageTeamMenu) {
                 manageTeamMenu.style.display = canManageTeam ? 'flex' : 'none';
             }
+            const sideManageTeamBtn = document.getElementById('sideManageTeamBtn');
+            if (sideManageTeamBtn) {
+                sideManageTeamBtn.style.display = canManageTeam ? 'flex' : 'none';
+            }
 
             // Check campaign permission
             const canViewCampaigns = permissions.can_view_campaigns !== false;
             const campaignTabBtn = document.getElementById('tabCampaignsBtn');
+            const sideBtnCampaigns = document.getElementById('sideBtnCampaigns');
             if (campaignTabBtn && !canViewCampaigns) {
                 campaignTabBtn.style.display = 'none';
+            }
+            if (sideBtnCampaigns && !canViewCampaigns) {
+                sideBtnCampaigns.style.display = 'none';
             }
 
             // Check calls/leads permission
             const canViewLeads = permissions.can_view_leads !== false;
             const screeningsTabBtn = document.getElementById('tabScreeningsBtn');
+            const sideBtnScreenings = document.getElementById('sideBtnScreenings');
             if (screeningsTabBtn && !canViewLeads) {
                 screeningsTabBtn.style.display = 'none';
+            }
+            if (sideBtnScreenings && !canViewLeads) {
+                sideBtnScreenings.style.display = 'none';
             }
         }
 
@@ -3598,6 +5841,111 @@
             localStorage.removeItem('profile_picture');
             localStorage.removeItem('company_logo');
             window.location.replace('/accounts/login/');
+        }
+
+        async function uploadProfilePicture(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 1. Client-side validation: image extensions & MIME check only
+            const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'];
+            const fileName = (file.name || '').toLowerCase();
+            const hasValidExt = allowedExtensions.some(ext => fileName.endsWith(ext));
+            const hasValidMime = file.type ? file.type.startsWith('image/') : hasValidExt;
+
+            if (!hasValidExt || !hasValidMime) {
+                alert('Only image files (JPG, PNG, WebP, GIF, BMP) are allowed. Please select a valid image.');
+                event.target.value = '';
+                return;
+            }
+
+            // 2. Client-side validation: file size limit (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Image file is too large. Maximum allowed size is 10MB.');
+                event.target.value = '';
+                return;
+            }
+
+            const avatar = document.getElementById('profileAvatar');
+            const topbarAvatar = document.getElementById('topbarAvatar');
+            const originalText = avatar ? avatar.textContent : '';
+            const originalBg = avatar ? avatar.style.backgroundImage : '';
+            const topbarOriginalText = topbarAvatar ? topbarAvatar.textContent : '';
+            const topbarOriginalBg = topbarAvatar ? topbarAvatar.style.backgroundImage : '';
+
+            // Immediate local preview so the user instantly sees their photo in both sidebar & navbar
+            try {
+                const previewUrl = URL.createObjectURL(file);
+                if (avatar) {
+                    avatar.style.backgroundImage = `url('${previewUrl}')`;
+                    avatar.textContent = '';
+                }
+                if (topbarAvatar) {
+                    topbarAvatar.style.backgroundImage = `url('${previewUrl}')`;
+                    topbarAvatar.textContent = '';
+                }
+            } catch (err) {
+                console.warn('Preview error:', err);
+            }
+
+            const formData = new FormData();
+            formData.append('profile_picture', file);
+
+            try {
+                const headers = getAuthHeaders();
+                delete headers['Content-Type'];
+
+                const response = await fetch('/api/accounts/profile/upload-picture/', {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const picUrl = data.profile_picture_url || data.profile_picture;
+                    if (picUrl) {
+                        localStorage.setItem('profile_picture', picUrl);
+                        if (avatar) {
+                            avatar.style.backgroundImage = `url('${picUrl}')`;
+                            avatar.textContent = '';
+                        }
+                        if (topbarAvatar) {
+                            topbarAvatar.style.backgroundImage = `url('${picUrl}')`;
+                            topbarAvatar.textContent = '';
+                        }
+                    }
+                } else {
+                    const errData = await response.json().catch(() => ({}));
+                    const errMsg = errData.error || 'Failed to upload image. Please ensure you upload a valid image file.';
+                    alert(errMsg);
+                    if (!localStorage.getItem('profile_picture')) {
+                        if (avatar) {
+                            avatar.style.backgroundImage = originalBg;
+                            avatar.textContent = originalText;
+                        }
+                        if (topbarAvatar) {
+                            topbarAvatar.style.backgroundImage = topbarOriginalBg;
+                            topbarAvatar.textContent = topbarOriginalText;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to upload profile picture:', e);
+                alert('Network error while uploading profile picture.');
+                if (!localStorage.getItem('profile_picture')) {
+                    if (avatar) {
+                        avatar.style.backgroundImage = originalBg;
+                        avatar.textContent = originalText;
+                    }
+                    if (topbarAvatar) {
+                        topbarAvatar.style.backgroundImage = topbarOriginalBg;
+                        topbarAvatar.textContent = topbarOriginalText;
+                    }
+                }
+            } finally {
+                event.target.value = '';
+            }
         }
 
         function getAgentType() {
@@ -3655,17 +6003,14 @@
             }
 
             const phoneVal = SARVAM_AGENT_PHONE || '+917971414121';
-            const badgesHtml = `
-                <span class="agent-number-badge"><i class="fa-solid fa-phone"></i> Agent Line: <strong>${escapeHtml(phoneVal)}</strong></span>
-                <span class="agent-minutes-badge" id="headerMinutesBadge" title="Call Minutes Balance" style="display:inline-flex; align-items:center; gap:5px; background:{% if is_minutes_exhausted %}#fee2e2; color:#dc2626; border:1px solid #fca5a5{% else %}#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe{% endif %}; padding:3px 10px; border-radius:20px; font-size:0.78rem; font-weight:700;">
-                    <i class="fa-solid fa-bolt" style="color:{% if is_minutes_exhausted %}#dc2626{% else %}#2563eb{% endif %};"></i>
-                    <span>Call Minutes: <strong>{{ remaining_minutes|floatformat:1 }} / {{ allocated_minutes|floatformat:0 }}m</strong></span>
-                </span>
-            `;
+            const sidebarPhone = document.getElementById('sidebarAgentPhone');
+            if (sidebarPhone) {
+                sidebarPhone.textContent = phoneVal;
+            }
 
             if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-robot" style="color:#0284c7;"></i> ${escapeHtml(SARVAM_AGENT_NAME)} — Voice Dashboard`;
             document.title = `${SARVAM_AGENT_NAME} — Voice Dashboard`;
-            if (subEl) subEl.innerHTML = badgesHtml;
+            if (subEl) subEl.innerHTML = '';
             if (tabScreeningsLabel) tabScreeningsLabel.innerText = 'All Calls & Inquiries';
             if (searchEl) searchEl.placeholder = 'Search customer name, contact, requirement...';
 
@@ -3697,6 +6042,9 @@
             initUserProfile();
             applyAgentTheme();
             loadUserAssignedAgents();
+            if (currentLeadsViewMode === 'kanban') {
+                switchLeadsViewMode('kanban');
+            }
             fetchLeadsData();
             checkSystemMaintenanceStatus();
         });
@@ -3707,6 +6055,8 @@
             checkSystemMaintenanceStatus();
             if (currentDashboardTab === 'campaigns') {
                 fetchCampaignsData(true);
+            } else if (currentDashboardTab === 'callbacks') {
+                loadCallbacksList(currentCallbacksFilter);
             } else {
                 fetchLeadsData(true);
             }

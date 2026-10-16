@@ -201,6 +201,12 @@ def login_view(request):
         except Exception:
             pass
 
+    primary_sarvam_slug = (
+        assigned_sarvam_agents[0]["slug"]
+        if assigned_sarvam_agents
+        else None
+    )
+
     return Response(
         {
             "access": str(refresh.access_token),
@@ -211,6 +217,7 @@ def login_view(request):
             "permissions": permissions,
             "assigned_agent_id": assigned_agent_id,
             "assigned_sarvam_agents": assigned_sarvam_agents,
+            "primary_sarvam_slug": primary_sarvam_slug,
             "is_superuser": user.is_superuser,
             "is_icemake_user": is_icemake_user,
             "is_sarvam_user": is_sarvam_user,
@@ -438,15 +445,73 @@ class UploadProfilePictureView(APIView):
         file_obj = request.FILES.get('profile_picture')
         if not file_obj:
             return Response({"error": "No image file provided."}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+        # 1. Strict extension check - image files only
+        import os
+        import time
+        import uuid
+        from django.conf import settings
+        from PIL import Image
+
+        name_lower = (file_obj.name or '').lower()
+        ext = os.path.splitext(name_lower)[1]
+        ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'}
+        if ext not in ALLOWED_EXTENSIONS:
+            return Response({
+                "error": f"Invalid file type '{ext}'. Only image files (JPG, JPEG, PNG, WebP, GIF, BMP) are allowed."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Strict MIME type check
+        content_type = (file_obj.content_type or '').lower()
+        ALLOWED_CONTENT_TYPES = {
+            'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/x-ms-bmp'
+        }
+        if content_type and content_type not in ALLOWED_CONTENT_TYPES and not content_type.startswith('image/'):
+            return Response({
+                "error": "Invalid content type. Only genuine image files are allowed."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 3. File size limit (10MB)
+        MAX_SIZE = 10 * 1024 * 1024
+        if file_obj.size > MAX_SIZE:
+            return Response({
+                "error": "Image file size exceeds the 10MB limit. Please upload a smaller image."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 4. Deep image verification with PIL (Pillow) to ensure real image data (not disguised script/malware)
+        try:
+            img = Image.open(file_obj)
+            img.verify()
+            file_obj.seek(0)
+        except Exception:
+            return Response({
+                "error": "The uploaded file is corrupted or not a valid image file."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 5. Sanitize filename
+        clean_filename = f"user_{request.user.id}_{int(time.time())}_{uuid.uuid4().hex[:8]}{ext}"
+        file_obj.name = clean_filename
+
         profile = request.user.profile
+
+        # 6. Save through model (UserProfile.save automatically uploads to Azure Blob Storage on live server if configured)
         profile.profile_picture = file_obj
         profile.save()
-        
-        image_url = request.build_absolute_uri(profile.profile_picture.url)
+
+        # 7. Resolve public URL: prefer Azure Blob URL if present, otherwise local media URL
+        if profile.profile_picture_url and (profile.profile_picture_url.startswith("http://") or profile.profile_picture_url.startswith("https://")):
+            image_url = profile.profile_picture_url
+        elif profile.profile_picture and hasattr(profile.profile_picture, 'url'):
+            image_url = request.build_absolute_uri(profile.profile_picture.url)
+            profile.profile_picture_url = image_url
+            profile.save(update_fields=['profile_picture_url'])
+        else:
+            image_url = profile.profile_picture_url or ''
+
         return Response({
             "message": "Profile picture updated successfully.",
-            "profile_picture": image_url
+            "profile_picture": image_url,
+            "profile_picture_url": image_url
         }, status=status.HTTP_200_OK)
 
 

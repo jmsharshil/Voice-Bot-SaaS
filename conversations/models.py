@@ -182,6 +182,7 @@ def calculate_billed_seconds(duration_seconds):
     return int(billed_mins * 60)
 
 
+
 class SarvamAgent(models.Model):
     """
     Stores Sarvam AI Agent platform credentials for each configured voice agent.
@@ -222,9 +223,20 @@ class SarvamAgent(models.Model):
     @property
     def total_used_seconds(self):
         """Calculates total billed seconds from all call records using 60s (1 min) pulse."""
+        if hasattr(self, '_cached_used_seconds'):
+            return self._cached_used_seconds
+        from django.core.cache import cache
+        c_key = f"sarvam_agent_used_sec_{self.id}"
+        cached_val = cache.get(c_key)
+        if cached_val is not None:
+            self._cached_used_seconds = cached_val
+            return cached_val
         from django.db.models import Sum
         billed_sum = self.call_records.aggregate(total=Sum('billed_seconds'))['total'] or 0
-        return float(billed_sum) + float(self.extra_used_seconds)
+        used = float(billed_sum) + float(self.extra_used_seconds)
+        cache.set(c_key, used, timeout=30)
+        self._cached_used_seconds = used
+        return self._cached_used_seconds
 
     @property
     def total_used_minutes(self):
@@ -345,8 +357,37 @@ class SarvamCallRecord(models.Model):
     audio_url = models.TextField(blank=True, null=True)
     summary = models.JSONField(default=dict, blank=True)
     transcript = models.TextField(blank=True, null=True)
+    
+    # CRM Lead Pipeline & Callback Management
+    pipeline_stage = models.CharField(
+        max_length=50,
+        default="NEW",
+        blank=True,
+        db_index=True,
+        help_text="CRM Stage: NEW, INTERESTED, CALLBACK, CONVERTED, LOST"
+    )
+    callback_datetime = models.DateTimeField(null=True, blank=True, db_index=True)
+    callback_notes = models.TextField(blank=True, default="")
+    is_callback_completed = models.BooleanField(default=False, db_index=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def effective_pipeline_stage(self):
+        """Returns manual pipeline_stage if set and not default, otherwise infers from call outcome."""
+        if self.pipeline_stage and self.pipeline_stage != "NEW":
+            return self.pipeline_stage
+        st = (self.status or "").upper().strip()
+        if st in ["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED", "BOOKING_CONFIRMED"]:
+            return "INTERESTED"
+        elif st in ["CALLBACK", "FOLLOW_UP", "WHATSAPP"] or (self.callback_datetime and not self.is_callback_completed):
+            return "CALLBACK"
+        elif st in ["CONVERTED", "WON", "ENROLLED"]:
+            return "CONVERTED"
+        elif st in ["NOT_INTERESTED", "DECLINED", "REJECTED", "MISMATCH", "ROLE_MISMATCH"]:
+            return "LOST"
+        return self.pipeline_stage or "NEW"
 
     def save(self, *args, **kwargs):
         self.billed_seconds = calculate_billed_seconds(self.duration_seconds)
@@ -535,4 +576,4 @@ class SystemMaintenanceConfig(models.Model):
         return config
 
 
-
+
