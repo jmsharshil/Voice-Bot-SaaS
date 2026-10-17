@@ -3538,6 +3538,7 @@ def sarvam_leads_data(request, agent_slug=None):
 
     search_q = (request.GET.get("search") or "").strip()
     status_q = (request.GET.get("status") or "").strip().upper()
+    date_q = (request.GET.get("date") or "").strip()
 
     if search_q:
         from django.db.models import Q
@@ -4025,6 +4026,7 @@ def sarvam_leads_data(request, agent_slug=None):
     daily_trend = list(day_map.values())
     active_dates = list(day_map.keys())
     daily_counts = {k: v.get("total", 0) for k, v in day_map.items()}
+    daily_inquiries = daily_counts
 
     return Response({
         "total": total_count,
@@ -4033,6 +4035,7 @@ def sarvam_leads_data(request, agent_slug=None):
         "page_size": page_size,
         "total_pages": total_pages,
         "stats": stats,
+        "daily_inquiries": daily_inquiries,
         "pipeline_counts": pipeline_counts,
         "callback_stats": callback_stats,
         "agent_minutes": agent_minutes_info,
