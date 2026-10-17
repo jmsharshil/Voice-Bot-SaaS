@@ -3548,11 +3548,27 @@ def sarvam_leads_data(request, agent_slug=None):
             Q(call_type__icontains=search_q)
         )
 
-    # stats_qs is the base queryset used for summary card metrics (keeps stat cards fixed on tab click)
-    stats_qs = agent_qs
+    # Parse optional date filter
+    date_q = (request.GET.get("date") or "").strip()
+    target_date = None
+    if date_q:
+        try:
+            from datetime import datetime
+            target_date = datetime.strptime(date_q, "%Y-%m-%d").date()
+        except Exception:
+            target_date = None
 
-    # base_qs is filtered by status_q for table rows and table pagination
+    # stats_qs is the base queryset used for summary card metrics
+    # When user selects a date, card metrics calculate ONLY that day's leads!
+    stats_qs = agent_qs
+    if target_date:
+        stats_qs = stats_qs.filter(created_at__date=target_date)
+
+    # base_qs is filtered by target_date and status_q for table rows and table pagination
     base_qs = agent_qs
+    if target_date:
+        base_qs = base_qs.filter(created_at__date=target_date)
+
     if status_q and status_q != "ALL":
         if status_q == "INTERVIEW":
             base_qs = base_qs.filter(status__in=["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED"])
@@ -3566,30 +3582,32 @@ def sarvam_leads_data(request, agent_slug=None):
     total_count = base_qs.count()
 
     raw_page = request.GET.get("page")
-    raw_page_size = request.GET.get("page_size") or request.GET.get("limit")
-    try:
-        page = max(int(raw_page or 1), 1)
-    except (ValueError, TypeError):
+    raw_page_size = str(request.GET.get("page_size") or request.GET.get("limit") or "").strip()
+    is_kanban_or_all = raw_page_size.upper() in ["ALL", "1000"] or request.GET.get("view_mode") == "kanban" or request.GET.get("kanban") in ["1", "true", "True"]
+
+    if is_kanban_or_all:
         page = 1
+        page_size = 1000
+        total_pages = 1
+        local_records = base_qs.order_by("-created_at")[:1000]
+    else:
+        try:
+            page = max(int(raw_page or 1), 1)
+        except (ValueError, TypeError):
+            page = 1
 
-    try:
-        page_size = int(raw_page_size or 10)
-    except (ValueError, TypeError):
-        page_size = 10
+        try:
+            page_size = int(raw_page_size or 10)
+        except (ValueError, TypeError):
+            page_size = 10
 
-    import math
-    if page_size > 0 and page_size != 1000:
+        import math
         total_pages = math.ceil(total_count / page_size) if total_count > 0 else 1
         if page > total_pages:
             page = total_pages
         start_idx = (page - 1) * page_size
         end_idx = start_idx + page_size
         local_records = base_qs.order_by("-created_at")[start_idx:end_idx]
-    else:
-        local_records = base_qs.order_by("-created_at")[:100]
-        total_pages = 1
-        page = 1
-        page_size = total_count
 
     for r in local_records:
         # 🟥 FIX: Skip and merge orphaned dummy webhook records with unknown phone number into valid sibling records
@@ -3771,7 +3789,7 @@ def sarvam_leads_data(request, agent_slug=None):
             "attempted_at_display": attempted_at_display,
             "audio_url": rec_audio_url,
             "final_status": r.status,
-            "pipeline_stage": r.pipeline_stage or "NEW",
+            "pipeline_stage": r.effective_pipeline_stage,
             "effective_pipeline_stage": r.effective_pipeline_stage,
             "callback_datetime": r.callback_datetime.isoformat() if r.callback_datetime else None,
             "callback_display": local_cb.strftime("%d %b, %I:%M %p") if local_cb else None,
@@ -3950,6 +3968,7 @@ def sarvam_leads_data(request, agent_slug=None):
     }
 
     pipeline_counts = {
+        "ALL": stats_qs.count(),
         "NEW": 0,
         "INTERESTED": 0,
         "CALLBACK": 0,
@@ -3972,6 +3991,41 @@ def sarvam_leads_data(request, agent_slug=None):
         else:
             pipeline_counts["NEW"] += 1
 
+    # Daily activity trend & active calendar dates (always calculated across the agent's full timeline)
+    from django.db.models.functions import TruncDate
+    from django.db.models import Count
+    daily_recs = agent_qs.annotate(day=TruncDate('created_at')).values('day', 'status').annotate(total=Count('id')).order_by('day')
+    day_map = {}
+    for item in daily_recs:
+        day_val = item.get('day')
+        if not day_val:
+            continue
+        d_str = day_val.strftime('%Y-%m-%d')
+        if d_str not in day_map:
+            day_map[d_str] = {
+                "date": d_str,
+                "display_date": day_val.strftime('%d %b'),
+                "total": 0,
+                "interested": 0,
+                "callback": 0,
+                "not_interested": 0
+            }
+        cnt = item.get('total') or 0
+        day_map[d_str]["total"] += cnt
+        st = (item.get('status') or "").upper()
+        if st in ["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED", "BOOKING_CONFIRMED"]:
+            day_map[d_str]["interested"] += cnt
+        elif st in ["CALLBACK", "FOLLOW_UP", "WHATSAPP"]:
+            day_map[d_str]["callback"] += cnt
+        elif st in ["NOT_INTERESTED", "NO_ANSWER", "MISSED", "MISMATCH", "BUSY", "FAILED", "DECLINED", "REJECTED"]:
+            day_map[d_str]["not_interested"] += cnt
+        else:
+            day_map[d_str]["not_interested"] += cnt
+
+    daily_trend = list(day_map.values())
+    active_dates = list(day_map.keys())
+    daily_counts = {k: v.get("total", 0) for k, v in day_map.items()}
+
     return Response({
         "total": total_count,
         "total_unfiltered": total_count,
@@ -3982,6 +4036,10 @@ def sarvam_leads_data(request, agent_slug=None):
         "pipeline_counts": pipeline_counts,
         "callback_stats": callback_stats,
         "agent_minutes": agent_minutes_info,
+        "daily_trend": daily_trend,
+        "active_dates": active_dates,
+        "daily_counts": daily_counts,
+        "selected_date": date_q,
         "leads": processed_leads,
         "agent_name": sarvam_agent.name if sarvam_agent else "Sarvam AI Agent",
         "agent_slug": sarvam_agent.slug if sarvam_agent else "default",
@@ -4136,6 +4194,8 @@ def sarvam_update_lead_stage_api(request, interaction_id=None, agent_slug=None):
     from urllib.parse import unquote
     from conversations.models import SarvamCallRecord
     stage = (request.data.get("stage") or "").upper().strip()
+    if stage == "CLOSED":
+        stage = "LOST"
     valid_stages = ["NEW", "INTERESTED", "CALLBACK", "CONVERTED", "LOST"]
     if stage not in valid_stages:
         return Response({"error": f"Invalid stage. Allowed: {valid_stages}"}, status=400)

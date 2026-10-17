@@ -383,17 +383,29 @@ class TeamDetailView(APIView):
         if email:
             user_to_edit.email = email
 
-        if password:
-            user_to_edit.set_password(password)
+        if password and str(password).strip():
+            user_to_edit.set_password(str(password).strip())
+
+        if "is_active" in request.data:
+            user_to_edit.is_active = bool(request.data.get("is_active"))
 
         user_to_edit.save()
 
+        # Ensure user has a profile
+        if not hasattr(user_to_edit, 'profile') or user_to_edit.profile is None:
+            UserProfile.objects.get_or_create(user=user_to_edit)
+
         # Update permissions
-        if any(k in permissions for k in ["can_view_leads", "can_view_calls", "can_view_campaigns", "can_manage_team", "assigned_stores"]):
+        if permissions or any(k in permissions for k in ["can_view_leads", "can_view_calls", "can_view_campaigns", "can_manage_team", "assigned_stores"]):
             p_manage = permissions.get("can_manage_team", False)
             p_campaigns = permissions.get("can_view_campaigns", False) or p_manage
             p_leads = permissions.get("can_view_leads", True) or p_campaigns or p_manage
-            assigned_stores = permissions.get("assigned_stores", user_to_edit.profile.custom_permissions.get("assigned_stores", []))
+            
+            current_cp = user_to_edit.profile.custom_permissions or {}
+            if "assigned_stores" in permissions:
+                assigned_stores = permissions.get("assigned_stores", [])
+            else:
+                assigned_stores = current_cp.get("assigned_stores", [])
 
             user_to_edit.profile.custom_permissions = {
                 "can_view_leads": p_leads,
@@ -406,6 +418,9 @@ class TeamDetailView(APIView):
 
         serializer = UserSerializer(user_to_edit)
         return Response(serializer.data)
+
+    def patch(self, request, pk):
+        return self.put(request, pk)
 
     def delete(self, request, pk):
         if not check_can_manage_team(request.user):
