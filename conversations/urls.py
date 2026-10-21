@@ -17,6 +17,7 @@ from .views import (
     sarvam_agent_minutes_status_api, sarvam_adjust_agent_minutes_api, sarvam_toggle_agent_active_api,
     sarvam_admin_all_campaigns_api, sarvam_admin_campaign_action_api,
     system_maintenance_enable_api, system_maintenance_disable_api, system_maintenance_status_api,
+    sarvam_agent_demo_page, sarvam_agent_demo_trigger_call_api, sarvam_agent_demo_call_status_api,
 )
 from .incoming_webhooks import incoming_trigger_webhook
 from django.urls import path, re_path
@@ -95,6 +96,13 @@ urlpatterns = [
     path("sarvam/<slug:agent_slug>/leads/<path:interaction_id>/callback/", sarvam_schedule_callback_api, name="sarvam-agent-lead-callback"),
     path("sarvam/<slug:agent_slug>/leads/upload-campaign/", sarvam_upload_campaign_api, name="sarvam-agent-upload-campaign"),
     path("sarvam/<slug:agent_slug>/leads/transcript/<path:interaction_id>/", sarvam_transcript_detail, name="sarvam-agent-transcript"),
+
+    # Dedicated Public Client Demo Link & Public Call Trigger API (Per Agent)
+    path("demo/<slug:agent_slug>/", sarvam_agent_demo_page, name="sarvam-agent-demo"),
+    path("demo/<slug:agent_slug>/call/", sarvam_agent_demo_trigger_call_api, name="sarvam-agent-demo-call"),
+    path("demo/<slug:agent_slug>/status/<int:call_id>/", sarvam_agent_demo_call_status_api, name="sarvam-agent-demo-status"),
+    path("api/demo/<slug:agent_slug>/call/", sarvam_agent_demo_trigger_call_api, name="api-sarvam-agent-demo-call"),
+    path("api/demo/<slug:agent_slug>/status/<int:call_id>/", sarvam_agent_demo_call_status_api, name="api-sarvam-agent-demo-status"),
 
 
     # Ice Make Support Dashboard

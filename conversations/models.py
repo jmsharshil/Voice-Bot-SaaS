@@ -216,9 +216,68 @@ class SarvamAgent(models.Model):
         help_text="Additional manual seconds used adjustment by Superadmin"
     )
 
+    # Public Demo Link Configuration
+    is_demo_active = models.BooleanField(
+        default=True,
+        help_text="Allow public client demo testing via unique demo link"
+    )
+    demo_title = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+        help_text="Custom title for demo page, e.g. 'Royal Enfield AI Voice Consultant'"
+    )
+    demo_subtitle = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Custom description for demo page, e.g. 'Experience real-time motorcycle test drive inquiries'"
+    )
+    demo_company_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Company/Brand name shown on demo page"
+    )
+    demo_accent_color = models.CharField(
+        max_length=30,
+        blank=True,
+        default="#0284c7",
+        help_text="Brand accent color hex for demo page (e.g. #0284c7, #e11d48, #d97706)"
+    )
+    demo_max_daily_calls_per_number = models.PositiveIntegerField(
+        default=3,
+        help_text="Maximum demo calls allowed per phone number in 24 hours"
+    )
+    demo_allow_recording_playback = models.BooleanField(
+        default=True,
+        help_text="Show audio recording and AI call summary on demo page after call ends"
+    )
+
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def demo_url(self):
+        """Relative public demo link for this agent."""
+        return f"/demo/{self.slug}/"
+
+    @property
+    def display_demo_title(self):
+        return self.demo_title.strip() if self.demo_title else f"{self.name} — AI Voice Bot"
+
+    @property
+    def display_demo_subtitle(self):
+        if self.demo_subtitle:
+            return self.demo_subtitle.strip()
+        if self.description:
+            return self.description.strip()
+        return "Experience real-time interactive voice AI conversations"
+
+    @property
+    def display_demo_company(self):
+        return self.demo_company_name.strip() if self.demo_company_name else self.name
 
     @property
     def total_used_seconds(self):
@@ -347,7 +406,12 @@ class SarvamCallRecord(models.Model):
     language = models.CharField(max_length=50, default="hi-IN")
     applied_position = models.CharField(max_length=255, default="Admission Counselor")
     status = models.CharField(max_length=100, default="DIALING")
-    call_type = models.CharField(max_length=50, default="Live Call")   # e.g. "Live Call", "Test Call", "Excel: Campaign"
+    call_type = models.CharField(max_length=50, default="Live Call")   # e.g. "Live Call", "Test Call", "Excel: Campaign", "Demo Call"
+    is_demo_call = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True if this call was triggered via the public agent demo link"
+    )
     duration_seconds = models.FloatField(default=0.0)
     billed_seconds = models.IntegerField(
         default=0,

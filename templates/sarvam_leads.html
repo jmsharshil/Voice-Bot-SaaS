@@ -580,8 +580,36 @@
         .topbar-right {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             flex-shrink: 0;
+        }
+
+        .topbar-demo-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 7px 15px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .topbar-demo-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+            filter: brightness(1.08);
+        }
+        @media (max-width: 640px) {
+            .topbar-demo-btn-text { display: none; }
+            .topbar-demo-btn { padding: 8px 10px; border-radius: 50%; }
         }
 
         .topbar-profile-pill {
@@ -3622,6 +3650,12 @@
                 </div>
 
                 <div class="topbar-right">
+                    <!-- Client Pitch Demo Link Button -->
+                    <button type="button" class="topbar-demo-btn" onclick="openShareDemoModal()" title="Client Pitch Demo Link — Share with prospective clients">
+                        <i class="fa-solid fa-share-nodes"></i>
+                        <span class="topbar-demo-btn-text">Client Demo Link</span>
+                    </button>
+
                     <!-- User Profile in Navbar (Only existing details: Avatar, Username, Role) -->
                     <div class="topbar-profile-pill" id="topbarProfilePill" onclick="toggleSidebar()" title="User Profile — Click to toggle sidebar menu">
                         <div class="topbar-avatar" id="topbarAvatar" style="{% if request.user.profile.get_profile_picture_url %}background-image: url('{{ request.user.profile.get_profile_picture_url }}');{% endif %}">
@@ -4855,6 +4889,78 @@
         </div>
     </div>
 
+    <!-- ── Public Client Demo Pitch Link Modal ── -->
+    <div class="modal-overlay" id="shareDemoModal" style="display:none; z-index:99999;" onclick="if(event.target===this) closeShareDemoModal()">
+        <div class="modal-card" style="max-width: 560px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(2, 132, 199, 0.25); border: 1px solid rgba(2, 132, 199, 0.2); overflow: hidden;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-bottom: 1px solid #bae6fd; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: linear-gradient(135deg, #0284c7, #0369a1); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3);">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #0c4a6e;">Client Demo Link</h3>
+                        <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #0369a1; font-weight: 500;">Direct pitch link for prospective clients</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeShareDemoModal()" style="background: white; border: 1px solid #bae6fd; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #0369a1; font-size: 0.9rem; transition: all 0.2s;">
+                    ✕
+                </button>
+            </div>
+            
+            <div class="modal-body" style="padding: 1.5rem;">
+                <!-- Security isolation card -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 1.25rem; display: flex; gap: 10px; align-items: flex-start;">
+                    <i class="fa-solid fa-shield-halved" style="color: #0284c7; font-size: 1rem; margin-top: 2px;"></i>
+                    <div style="font-size: 0.8rem; color: #475569; line-height: 1.45;">
+                        <strong style="color: #0f172a;">Safe for Client Demos:</strong> Prospective clients can test live voice calls with this bot. Internal dashboard metrics, customer leads, and private campaign data are completely hidden.
+                    </div>
+                </div>
+
+                <!-- Select Agent Dropdown (if multiple agents exist) -->
+                {% if all_agents|length > 1 %}
+                <div style="margin-bottom: 1.1rem;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
+                        Select Bot Demo Link
+                    </label>
+                    <select id="shareDemoAgentSelect" onchange="updateShareDemoModalUrl()" style="width: 100%; padding: 10px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.9rem; outline: none; background: white; font-weight: 600; color: #0f172a;">
+                        {% for ag in all_agents %}
+                        <option value="{{ ag.slug }}" {% if ag.slug == agent_slug %}selected{% endif %}>{{ ag.name }} ({{ ag.slug }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
+
+                <!-- Demo URL input and Copy button -->
+                <div style="margin-bottom: 1.25rem;">
+                    <label style="display: block; font-size: 0.8rem; font-weight: 700; color: #334155; margin-bottom: 0.4rem;">
+                        Public Demo URL
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="shareDemoUrlInput" readonly style="flex: 1; padding: 10px 14px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 0.88rem; background: #f8fafc; color: #0f172a; font-family: monospace; font-weight: 600; outline: none;" onclick="this.select()">
+                        <button type="button" id="copyShareDemoBtn" onclick="copyShareDemoUrl()" style="padding: 10px 18px; border-radius: 10px; background: #0284c7; color: white; border: none; font-weight: 700; font-size: 0.86rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s; white-space: nowrap;">
+                            <i class="fa-regular fa-copy" id="copyShareDemoIcon"></i>
+                            <span id="copyShareDemoText">Copy</span>
+                        </button>
+                    </div>
+                    <div id="copySuccessNotice" style="display: none; margin-top: 6px; font-size: 0.76rem; color: #059669; font-weight: 600;">
+                        <i class="fa-solid fa-check-circle"></i> Link copied to clipboard! Ready to share with client.
+                    </div>
+                </div>
+
+                <!-- Action Footer Buttons -->
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem; border-top: 1px solid #f1f5f9; padding-top: 1rem;">
+                    <button type="button" onclick="closeShareDemoModal()" style="padding: 9px 18px; border-radius: 10px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; font-weight: 600; font-size: 0.85rem; cursor: pointer;">
+                        Close
+                    </button>
+                    <a id="openDemoPageBtn" href="#" target="_blank" style="padding: 9px 18px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #0369a1); color: white; text-decoration: none; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);">
+                        <span>Open Demo Page</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.75rem;"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <script>
         let allLeadsData = [];
@@ -4868,6 +4974,62 @@
         let cachedPipelineCounts = {};
         let cachedCallbackStats = {};
         let cachedTotalInquiries = 0;
+
+        /* ── Client Demo Modal Logic ── */
+        function openShareDemoModal() {
+            const modal = document.getElementById('shareDemoModal');
+            if (!modal) return;
+            updateShareDemoModalUrl();
+            modal.style.display = 'flex';
+        }
+
+        function closeShareDemoModal() {
+            const modal = document.getElementById('shareDemoModal');
+            if (modal) modal.style.display = 'none';
+            const notice = document.getElementById('copySuccessNotice');
+            if (notice) notice.style.display = 'none';
+        }
+
+        function updateShareDemoModalUrl() {
+            const selectEl = document.getElementById('shareDemoAgentSelect');
+            const activeSlug = selectEl ? selectEl.value : (typeof SARVAM_AGENT_SLUG !== 'undefined' ? SARVAM_AGENT_SLUG : 'default');
+            const demoUrl = `${window.location.origin}/demo/${activeSlug}/`;
+            
+            const inputEl = document.getElementById('shareDemoUrlInput');
+            if (inputEl) inputEl.value = demoUrl;
+
+            const openBtn = document.getElementById('openDemoPageBtn');
+            if (openBtn) openBtn.href = demoUrl;
+        }
+
+        function copyShareDemoUrl() {
+            const inputEl = document.getElementById('shareDemoUrlInput');
+            if (!inputEl) return;
+            
+            inputEl.select();
+            inputEl.setSelectionRange(0, 99999);
+            
+            navigator.clipboard.writeText(inputEl.value).then(() => {
+                const copyBtnText = document.getElementById('copyShareDemoText');
+                const copyBtnIcon = document.getElementById('copyShareDemoIcon');
+                const notice = document.getElementById('copySuccessNotice');
+                
+                if (copyBtnText) copyBtnText.innerText = 'Copied!';
+                if (copyBtnIcon) copyBtnIcon.className = 'fa-solid fa-check';
+                if (notice) notice.style.display = 'block';
+                
+                setTimeout(() => {
+                    if (copyBtnText) copyBtnText.innerText = 'Copy';
+                    if (copyBtnIcon) copyBtnIcon.className = 'fa-regular fa-copy';
+                }, 3000);
+            }).catch(() => {
+                try {
+                    document.execCommand('copy');
+                    const notice = document.getElementById('copySuccessNotice');
+                    if (notice) notice.style.display = 'block';
+                } catch(e) {}
+            });
+        }
 
         function getCsrfToken() {
             let cookieValue = null;

@@ -6700,4 +6700,270 @@ def system_maintenance_status_api(request):
     }, status=200)
 
 
+# ======================================================
+# PUBLIC PER-AGENT CLIENT DEMO PORTAL & CALL APIS
+# ======================================================
+
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import AllowAny
+
+def sarvam_agent_demo_page(request, agent_slug):
+    """
+    Renders an isolated, client-facing public demo landing page for a specific Sarvam Voice AI Agent.
+    Allows prospective clients to experience a live AI voice call without login or access to internal CRM data.
+    """
+    from conversations.models import SarvamAgent, SystemMaintenanceConfig
+    from django.shortcuts import render
+
+    slug = (agent_slug or "").strip()
+    agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
+    if not agent:
+        agent = SarvamAgent.objects.filter(slug__iexact=slug, is_active=True).first()
+
+    if not agent:
+        return render(request, "sarvam_agent_demo.html", {
+            "error_mode": "not_found",
+            "requested_slug": slug,
+        }, status=404)
+
+    m_config = SystemMaintenanceConfig.get_config()
+    is_maintenance = bool(m_config.is_active)
+
+    # Determine languages supported
+    slug_lower = agent.slug.lower()
+    languages = [
+        {"code": "hi-IN", "label": "Hindi (हिंदी)", "default": True},
+        {"code": "en-IN", "label": "English", "default": False},
+    ]
+    if "gujarati" in slug_lower or "guj" in slug_lower:
+        languages.insert(0, {"code": "gu-IN", "label": "Gujarati (ગુજરાતી)", "default": True})
+        languages[1]["default"] = False
+
+    context = {
+        "agent": agent,
+        "agent_slug": agent.slug,
+        "agent_name": agent.name,
+        "demo_title": agent.display_demo_title,
+        "demo_subtitle": agent.display_demo_subtitle,
+        "demo_company": agent.display_demo_company,
+        "demo_color": agent.demo_accent_color or "#0284c7",
+        "agent_phone": agent.agent_phone or "+917965853278",
+        "is_demo_active": agent.is_demo_active,
+        "is_minutes_exhausted": getattr(agent, "is_minutes_exhausted", False),
+        "is_maintenance": is_maintenance,
+        "maintenance_message": m_config.message if is_maintenance else "",
+        "languages": languages,
+        "max_daily_calls": agent.demo_max_daily_calls_per_number or 3,
+        "allow_playback": agent.demo_allow_recording_playback,
+    }
+    return render(request, "sarvam_agent_demo.html", context)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def sarvam_agent_demo_trigger_call_api(request, agent_slug):
+    """
+    Public API: Triggers a live demo call from the Sarvam voice agent to the prospect's mobile phone.
+    Includes rate-limiting (cooldown + max calls per day) and minute-exhaustion protection.
+    """
+    import re
+    from datetime import timedelta
+    from django.utils import timezone
+    from conversations.models import SarvamAgent, SarvamCallRecord, SystemMaintenanceConfig
+    from conversations.services.kylas_sarvam_bridge import SarvamAgentService
+
+    # 1. Maintenance Mode Check
+    m_config = SystemMaintenanceConfig.get_config()
+    if m_config.is_active:
+        return Response({
+            "status": "error",
+            "error": m_config.message or "System is temporarily undergoing maintenance. Please try again in a few minutes.",
+            "code": "MAINTENANCE"
+        }, status=503)
+
+    # 2. Agent Resolution
+    slug = (agent_slug or "").strip()
+    agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
+    if not agent:
+        agent = SarvamAgent.objects.filter(slug__iexact=slug, is_active=True).first()
+
+    if not agent:
+        return Response({"status": "error", "error": "AI Voice Agent not found or inactive."}, status=404)
+
+    if not agent.is_demo_active:
+        return Response({
+            "status": "error",
+            "error": f"Public demo calls for {agent.name} are currently paused by the administrator."
+        }, status=403)
+
+    # 3. Minute Allocation Check
+    if getattr(agent, "is_minutes_exhausted", False):
+        return Response({
+            "status": "error",
+            "code": "MINUTES_EXHAUSTED",
+            "error": f"The demo capacity for {agent.name} is currently full for today. Please contact our team for a live walkthrough."
+        }, status=400)
+
+    # 4. Input Parsing & Validation
+    data = request.data or {}
+    raw_phone = str(data.get("phone_number") or data.get("phone") or "").strip()
+    slug_lower = agent.slug.lower()
+    default_lang = "gu-IN" if ("gujarati" in slug_lower or "guj" in slug_lower) else "hi-IN"
+    language = str(data.get("language") or default_lang).strip()
+
+    # Sanitize phone number (strip spaces, dashes, parentheses)
+    clean_digits = re.sub(r"[^\d]", "", raw_phone)
+    if not clean_digits:
+        return Response({"status": "error", "error": "Phone number is required."}, status=400)
+
+    # Validate phone length (10 digits for India mobile, or 10-15 digits international)
+    if len(clean_digits) == 10:
+        phone_e164 = f"+91{clean_digits}"
+        phone_suffix = clean_digits
+    elif len(clean_digits) == 12 and clean_digits.startswith("91"):
+        phone_e164 = f"+{clean_digits}"
+        phone_suffix = clean_digits[2:]
+    elif len(clean_digits) >= 10 and len(clean_digits) <= 15:
+        phone_e164 = f"+{clean_digits}" if not raw_phone.startswith("+") else raw_phone
+        phone_suffix = clean_digits[-10:]
+    else:
+        return Response({
+            "status": "error",
+            "error": "Please enter a valid 10-digit mobile number."
+        }, status=400)
+
+    # 5. Rate Limiting Protection (Anti-Spam & Cost Control)
+    now = timezone.now()
+    cooldown_window = now - timedelta(seconds=90)
+    recent_call = SarvamCallRecord.objects.filter(
+        sarvam_agent=agent,
+        phone_number__endswith=phone_suffix,
+        created_at__gte=cooldown_window
+    ).first()
+
+    if recent_call:
+        return Response({
+            "status": "error",
+            "code": "COOLDOWN",
+            "error": "A demo call was just initiated to this number. Please check your phone or wait 90 seconds before requesting another call."
+        }, status=429)
+
+    # Daily limit per phone number
+    daily_window = now - timedelta(hours=24)
+    daily_count = SarvamCallRecord.objects.filter(
+        sarvam_agent=agent,
+        phone_number__endswith=phone_suffix,
+        created_at__gte=daily_window,
+        is_demo_call=True
+    ).count()
+
+    max_calls = agent.demo_max_daily_calls_per_number or 3
+    if daily_count >= max_calls:
+        return Response({
+            "status": "error",
+            "code": "DAILY_LIMIT_REACHED",
+            "error": f"You have reached the maximum daily demo calls ({max_calls}/{max_calls}) for this number. Contact our sales team for an extended consultation!"
+        }, status=429)
+
+    # 6. Extra variables for the bot prompt
+    extra_vars = {
+        "source": "Client Public Demo",
+        "demo_agent": agent.name,
+        "caller_name": candidate_name,
+    }
+
+    # 7. Trigger the Outbound Call via Sarvam
+    result = SarvamAgentService.trigger_outbound_call(
+        phone_number=phone_e164,
+        lead_id=0,
+        customer_name=candidate_name,
+        language=language,
+        sarvam_agent=agent,
+        extra_variables=extra_vars,
+    )
+
+    if isinstance(result, dict) and (result.get("code") == "MINUTES_EXHAUSTED" or result.get("status") == "error"):
+        return Response({
+            "status": "error",
+            "code": "MINUTES_EXHAUSTED",
+            "error": result.get("error") or "Demo capacity limit reached. Please contact support."
+        }, status=400)
+
+    attempt_id = result.get("attempt_id") if isinstance(result, dict) else None
+
+    # 8. Record Demo Call
+    rec = SarvamCallRecord.objects.create(
+        sarvam_agent=agent,
+        attempt_id=attempt_id,
+        phone_number=phone_e164,
+        candidate_name=candidate_name,
+        language=language,
+        status="DIALING",
+        call_type="Demo Call",
+        is_demo_call=True,
+        applied_position=f"{agent.name} Demo",
+        summary={"source": "Public Demo Link", "demo_slug": agent.slug},
+    )
+
+    caller_id = agent.agent_phone or "+917965853278"
+
+    return Response({
+        "status": "success",
+        "call_id": rec.id,
+        "attempt_id": attempt_id,
+        "phone_number": phone_e164,
+        "agent_phone": caller_id,
+        "message": f"Calling {phone_e164} from our AI agent ({caller_id}). Please answer your phone!",
+    }, status=200)
+
+
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def sarvam_agent_demo_call_status_api(request, agent_slug, call_id):
+    """
+    Public API: Polls real-time status of a demo call.
+    Returns status ('DIALING', 'RINGING', 'IN_PROGRESS', 'COMPLETED'), duration, and summary.
+    """
+    from conversations.models import SarvamAgent, SarvamCallRecord
+
+    slug = (agent_slug or "").strip()
+    agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
+    if not agent:
+        agent = SarvamAgent.objects.filter(slug__iexact=slug, is_active=True).first()
+
+    if not agent:
+        return Response({"status": "error", "error": "Agent not found."}, status=404)
+
+    rec = SarvamCallRecord.objects.filter(
+        id=call_id,
+        sarvam_agent=agent,
+        is_demo_call=True
+    ).first()
+
+    if not rec:
+        return Response({"status": "error", "error": "Demo call record not found."}, status=404)
+
+    is_completed = rec.status in ["COMPLETED", "INTERVIEW", "INTERESTED", "CALLBACK", "NOT_INTERESTED", "LOST", "BUSY", "NO_ANSWER", "FAILED"]
+
+    response_data = {
+        "status": "success",
+        "call_status": rec.status,
+        "is_completed": is_completed,
+        "duration_seconds": rec.duration_seconds,
+        "phone_number": rec.phone_number,
+        "candidate_name": rec.candidate_name,
+    }
+
+    if is_completed and agent.demo_allow_recording_playback:
+        response_data["audio_url"] = rec.audio_url or None
+        response_data["summary"] = rec.summary or {}
+        if rec.transcript:
+            response_data["has_transcript"] = True
+
+    return Response(response_data, status=200)
+
+
+
 
