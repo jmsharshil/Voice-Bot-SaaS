@@ -180,6 +180,17 @@ except ImportError:
     icemake_finalize = None
 
 try:
+    from icemake_v2_bot.strategy import (
+        icemake_v2_strategy,
+        icemake_v2_prepare,
+        icemake_v2_finalize,
+    )
+except ImportError:
+    icemake_v2_strategy = None
+    icemake_v2_prepare = None
+    icemake_v2_finalize = None
+
+try:
     from priya_naavya_bot.strategy import (
         priya_naavya_strategy,
         priya_naavya_prepare,
@@ -231,6 +242,8 @@ if raahi_iiiem_strategy:
     STRATEGY_MAP["raahi_iiiem_strategy"] = raahi_iiiem_strategy
 if icemake_strategy:
     STRATEGY_MAP["icemake"] = icemake_strategy
+if icemake_v2_strategy:
+    STRATEGY_MAP["icemake_v2"] = icemake_v2_strategy
 if priya_naavya_strategy:
     STRATEGY_MAP["priya_naavya_strategy"] = priya_naavya_strategy
 
@@ -272,6 +285,8 @@ if raahi_iiiem_prepare:
     PREPARE_MAP["raahi_iiiem_strategy"] = raahi_iiiem_prepare
 if icemake_prepare:
     PREPARE_MAP["icemake"] = icemake_prepare
+if icemake_v2_prepare:
+    PREPARE_MAP["icemake_v2"] = icemake_v2_prepare
 if priya_naavya_prepare:
     PREPARE_MAP["priya_naavya_strategy"] = priya_naavya_prepare
 
@@ -312,6 +327,8 @@ if raahi_iiiem_finalize:
     FINALIZE_MAP["raahi_iiiem_strategy"] = raahi_iiiem_finalize
 if icemake_finalize:
     FINALIZE_MAP["icemake"] = icemake_finalize
+if icemake_v2_finalize:
+    FINALIZE_MAP["icemake_v2"] = icemake_v2_finalize
 if priya_naavya_finalize:
     FINALIZE_MAP["priya_naavya_strategy"] = priya_naavya_finalize
 

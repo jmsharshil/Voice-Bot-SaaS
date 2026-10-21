@@ -679,7 +679,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             self.language = "en"
         elif strategy_key == "kia_syros_strategy":
             self.language = "hi"
-        elif strategy_key in ["raahi_iiiem_strategy", "icemake_strategy"]:
+        elif strategy_key in ["raahi_iiiem_strategy", "icemake_strategy", "icemake", "icemake_v2", "icemake_v2_strategy"]:
             self.language = "auto"
 
         # ── STT SETUP ──────────────────────────────────────────
@@ -731,7 +731,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 tts_lang = "gu"
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
-            elif strategy_key in ["kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy", "icemake"]:
+            elif strategy_key in ["kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy", "icemake", "icemake_v2"]:
                 tts_lang = "hi"
             else:
                 tts_lang = "en"
@@ -783,6 +783,13 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     greeting = "Hi, I am Raahi calling from Triple i E M, how can I help you today?"
             elif strategy_key == "icemake":
                 greeting = "Welcome to Ice Make twenty four by seven service support. आप किस भाषा में बात करना पसंद करेंगे?"
+            elif strategy_key == "icemake_v2":
+                from icemake_v2_bot.strategy import _get_time_greeting
+                time_greeting = _get_time_greeting(language)
+                if language == "hi":
+                    greeting = f"{time_greeting}। आइस मेक रेफ्रिजरेशन लिमिटेड में आपका स्वागत है। कृपया बताइए आज मैं आपकी क्या सहायता कर सकती हूँ?"
+                else:
+                    greeting = f"{time_greeting}. Welcome to Ice Make Refrigeration Limited. Please let me know how I can help you today."
             elif strategy_key == "priya_naavya_strategy":
                 greeting = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
             else:
@@ -857,7 +864,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         elif self.strategy_key == "kia_syros_strategy":
             greeting_file = "kia_syros_bot/kia_syros_greeting.raw"
-        elif self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy"]:
+        elif self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy", "icemake_v2"]:
             greeting_file = None
         elif self.strategy_key == "icemake":
             greeting_file = "icemake_bot/icemake_greeting.raw"
@@ -865,7 +872,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             greeting_file = f"{self.language}_step1_greeting.raw"
             
         is_dynamic_greeting = (
-            (self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy"])
+            (self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy", "icemake_v2"])
             or (self.strategy_key == "samsung_store_strategy" and customer_name is not None)
             or (self.strategy_key == "kia_syros_strategy")
             or (self.strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"])
@@ -874,7 +881,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy", "icemake"
+                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy", "icemake", "icemake_v2"
             ])
         )
         
@@ -2276,7 +2283,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         is_kia_syros = (lang == "hi" and getattr(self, "strategy_key", None) == "kia_syros_strategy")
         is_shreyas_en = (lang == "en" and getattr(self, "strategy_key", None) == "shreyas_strategy")
         is_raahi = (getattr(self, "strategy_key", None) == "raahi_iiiem_strategy")
-        is_icemake = (getattr(self, "strategy_key", None) == "icemake")
+        is_icemake = (getattr(self, "strategy_key", None) in ["icemake", "icemake_v2"])
         is_priya_naavya = (getattr(self, "strategy_key", None) == "priya_naavya_strategy")
 
         if lang == "gu" or is_loan_hi or is_shreyas_en or is_kia_syros or is_raahi or is_icemake or is_priya_naavya:
