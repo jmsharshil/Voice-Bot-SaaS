@@ -1,51 +1,106 @@
 <!-- ============================================================ -->
-<!-- SUPPORT CHATBOX POPUP MODAL                                  -->
+<!-- JMS TECH SUPPORT - DIRECT QUERY SUBMISSION MODAL             -->
 <!-- ============================================================ -->
 
 <div id="supportChatBackdrop" class="support-chat-backdrop" onclick="closeSupportChatbox()"></div>
 
 <div id="supportChatWindow" class="support-chat-window" role="dialog" aria-modal="true" aria-labelledby="supportChatTitle">
+    <!-- Top Accent Gradient Line -->
+    <div class="sc-top-accent"></div>
+
     <!-- Header -->
     <div class="support-chat-header">
         <div class="sc-header-left">
             <div class="sc-avatar-wrap">
-                <span class="sc-avatar-icon">🎧</span>
-                <span class="sc-status-dot" title="Online"></span>
+                <svg class="sc-avatar-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    <path d="M9 10h.01"></path>
+                    <path d="M12 10h.01"></path>
+                    <path d="M15 10h.01"></path>
+                </svg>
+                <span class="sc-status-dot" title="Support Team Online">
+                    <span class="sc-status-ping"></span>
+                </span>
             </div>
             <div>
-                <div class="sc-header-title" id="supportChatTitle">Support Assistant</div>
-                <div class="sc-header-subtitle">We reply to your queries via email</div>
+                <div class="sc-header-title-row">
+                    <span class="sc-header-title" id="supportChatTitle">JMS Tech Support</span>
+                    <span class="sc-header-badge">Direct Desk</span>
+                </div>
+                <div class="sc-header-subtitle">
+                    <span class="sc-online-bullet">●</span> Submit queries directly to our technical team
+                </div>
             </div>
         </div>
-        <button type="button" class="sc-close-btn" onclick="closeSupportChatbox()" title="Close Support Chat">✕</button>
+        <button type="button" class="sc-close-btn" onclick="closeSupportChatbox()" title="Close Support Desk" aria-label="Close">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
     </div>
 
     <!-- Chat Messages Body -->
     <div class="support-chat-body" id="supportChatBody">
-        <!-- Initial Bot Greeting Bubble -->
-        <div class="sc-msg-row sc-msg-bot">
-            <div class="sc-msg-avatar">🤖</div>
-            <div class="sc-msg-bubble sc-bot-bubble">
-                <p style="margin: 0;">👋 Hi <strong id="scUserName">there</strong>! Have a question, query, or facing an issue?</p>
-                <p style="margin: 6px 0 0; color: #475569; font-size: 12.5px;">Write down your query below. All your previous queries and updates are saved in this chat.</p>
+        <!-- Initial Support Desk Welcome Card -->
+        <div class="sc-welcome-card">
+            <div class="sc-welcome-header">
+                <div class="sc-welcome-icon-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                    </svg>
+                </div>
+                <div>
+                    <div class="sc-welcome-title">Welcome to JMS Tech Support, <strong id="scUserName">there</strong>!</div>
+                    <div class="sc-welcome-subtitle">Direct Ticket & Technical Assistance Desk</div>
+                </div>
+            </div>
+            <p class="sc-welcome-text">
+                Need help with your Voice Bot, campaigns, or have a technical query? Submit your details below. 
+                Your query is directly routed to our engineering and support specialists.
+            </p>
+            <div class="sc-welcome-notice">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>We reply directly to your contact email with priority updates.</span>
+            </div>
+
+            <!-- Quick Topic Selector -->
+            <div class="sc-topics-wrap">
+                <span class="sc-topics-label">Quick topics:</span>
+                <div class="sc-chips-list">
+                    <button type="button" class="sc-chip" onclick="fillQueryTopic('Campaign Assistance: ')">🚀 Campaign</button>
+                    <button type="button" class="sc-chip" onclick="fillQueryTopic('Voice Bot Issue: ')">🎙️ Bot Behavior</button>
+                    <button type="button" class="sc-chip" onclick="fillQueryTopic('Account & Access: ')">🔑 Account</button>
+                    <button type="button" class="sc-chip" onclick="fillQueryTopic('Feature Request: ')">💡 Feature</button>
+                </div>
             </div>
         </div>
 
         <!-- History Loading Indicator -->
         <div id="scLoadingHistory" class="sc-loading-history" style="display: none;">
-            <span class="sc-spinner-sm"></span> Loading previous messages...
+            <span class="sc-spinner-sm"></span> Loading your previous queries...
         </div>
 
-        <!-- Dynamic Messages Stream (Previous queries and new responses) -->
+        <!-- Dynamic Messages Stream (Previous queries and team confirmations) -->
         <div id="scMessagesStream" class="sc-messages-stream"></div>
     </div>
 
     <!-- Chat Footer Composer Area -->
     <div class="support-chat-footer" id="supportChatFooter">
-        <!-- Email Confirmation Row -->
+        <!-- Contact Email Pill Bar -->
         <div class="sc-email-bar">
-            <span class="sc-email-label">Reply To:</span>
-            <input type="email" id="scUserEmail" class="sc-email-input" placeholder="e.g. yourname@company.com" required>
+            <span class="sc-email-label">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                Reply To:
+            </span>
+            <input type="email" id="scUserEmail" class="sc-email-input" placeholder="Enter your email for our team's reply" required>
         </div>
 
         <!-- Error Banner -->
@@ -57,12 +112,12 @@
                 id="scQueryText" 
                 class="sc-textarea" 
                 rows="1" 
-                placeholder="Write your query or message..." 
+                placeholder="Type your query or describe your issue here..." 
                 onkeydown="handleSupportKey(event)" 
                 oninput="autoResizeSupportInput(this)"
                 required
             ></textarea>
-            <button type="button" id="scSubmitBtn" class="sc-send-btn" onclick="submitSupportChatbox()" title="Send Query">
+            <button type="button" id="scSubmitBtn" class="sc-send-btn" onclick="submitSupportChatbox()" title="Submit Query to JMS Tech Support">
                 <span id="scBtnSpinner" class="sc-spinner" style="display: none;"></span>
                 <svg id="scSendIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -70,19 +125,31 @@
                 </svg>
             </button>
         </div>
-        <div class="sc-composer-hint">Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for new line</div>
+        <div class="sc-composer-footer">
+            <span class="sc-footer-security">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Direct submission to JMS Tech Team
+            </span>
+            <span class="sc-composer-hint"><strong>Enter</strong> to send &bull; <strong>Shift + Enter</strong> for new line</span>
+        </div>
     </div>
 </div>
 
 <style>
-/* ===== SUPPORT CHATBOX STYLING ===== */
+/* ============================================================ */
+/* JMS TECH SUPPORT - SUBTLE LIGHT THEME STYLES                */
+/* ============================================================ */
+
 .support-chat-backdrop {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.38);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    background: rgba(15, 23, 42, 0.28);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     z-index: 99998;
     opacity: 0;
     transition: opacity 0.25s ease;
@@ -97,20 +164,20 @@
     position: fixed;
     bottom: 24px;
     right: 24px;
-    width: 410px;
+    width: 420px;
     max-width: calc(100vw - 32px);
-    height: 580px;
+    height: 600px;
     max-height: calc(100vh - 48px);
     background: #ffffff;
-    border-radius: 20px;
-    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.06);
+    border-radius: 18px;
+    box-shadow: 0 16px 40px -8px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(15, 23, 42, 0.08);
     flex-direction: column;
     z-index: 99999;
     overflow: hidden;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    transform: translateY(24px) scale(0.96);
+    transform: translateY(20px) scale(0.97);
     opacity: 0;
-    transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.26s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .support-chat-window.active {
     display: flex;
@@ -118,14 +185,22 @@
     opacity: 1;
 }
 
+/* Sleek top accent line */
+.sc-top-accent {
+    height: 4px;
+    width: 100%;
+    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 50%, #06b6d4 100%);
+    flex-shrink: 0;
+}
+
+/* Header: Clean subtle white/light slate */
 .support-chat-header {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-    padding: 15px 18px;
+    background: #ffffff;
+    padding: 13px 18px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    color: #ffffff;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+    border-bottom: 1px solid #e2e8f0;
     flex-shrink: 0;
 }
 
@@ -138,71 +213,225 @@
 .sc-avatar-wrap {
     width: 40px;
     height: 40px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
+    background: #eff6ff;
+    border: 1.5px solid #bfdbfe;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 19px;
     position: relative;
-    border: 1.5px solid rgba(255, 255, 255, 0.35);
+    color: #2563eb;
+    flex-shrink: 0;
+}
+
+.sc-avatar-svg {
+    width: 20px;
+    height: 20px;
 }
 
 .sc-status-dot {
     position: absolute;
-    bottom: 0px;
-    right: 0px;
-    width: 10px;
-    height: 10px;
-    background: #22c55e;
+    bottom: -2px;
+    right: -2px;
+    width: 11px;
+    height: 11px;
+    background: #10b981;
     border-radius: 50%;
-    border: 2px solid #4f46e5;
-    box-shadow: 0 0 6px #22c55e;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.6);
+}
+
+.sc-status-ping {
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.4);
+    animation: scPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes scPulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    70% { transform: scale(2.2); opacity: 0; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+
+.sc-header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .sc-header-title {
     font-size: 15px;
     font-weight: 700;
+    color: #0f172a;
     letter-spacing: -0.2px;
-    line-height: 1.2;
+    line-height: 1.25;
+}
+
+.sc-header-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    padding: 1px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
 }
 
 .sc-header-subtitle {
     font-size: 11.5px;
-    opacity: 0.9;
+    color: #64748b;
     margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.sc-online-bullet {
+    color: #10b981;
+    font-size: 8px;
 }
 
 .sc-close-btn {
-    background: rgba(255, 255, 255, 0.15);
-    border: none;
-    color: #ffffff;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    font-size: 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s, transform 0.15s;
+    transition: all 0.18s ease;
 }
 .sc-close-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.08);
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+    transform: scale(1.04);
 }
 
+/* Body: Subtle Light Background */
 .support-chat-body {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 16px 20px;
+    padding: 16px;
     background: #f8fafc;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     scroll-behavior: smooth;
 }
 
+/* Welcome Card */
+.sc-welcome-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.sc-welcome-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.sc-welcome-icon-box {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sc-welcome-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.3;
+}
+
+.sc-welcome-subtitle {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.sc-welcome-text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #334155;
+}
+
+.sc-welcome-notice {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 7px 10px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 11.5px;
+    color: #166534;
+    font-weight: 500;
+}
+
+/* Quick Topic Chips */
+.sc-topics-wrap {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.sc-topics-label {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 6px;
+}
+
+.sc-chips-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.sc-chip {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 4px 10px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.16s ease;
+    font-family: inherit;
+}
+.sc-chip:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+/* Chat Messages */
 .sc-messages-stream {
     display: flex;
     flex-direction: column;
@@ -213,7 +442,7 @@
 .sc-msg-row {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    gap: 9px;
     width: 100%;
 }
 .sc-msg-row.sc-msg-user {
@@ -223,56 +452,93 @@
 .sc-msg-avatar {
     width: 28px;
     height: 28px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ede9fe, #e0e7ff);
+    border-radius: 8px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 13px;
+    color: #2563eb;
     flex-shrink: 0;
     margin-top: 2px;
 }
 
 .sc-msg-bubble {
-    border-radius: 14px;
-    padding: 10px 14px;
+    border-radius: 12px;
+    padding: 11px 14px;
     font-size: 13px;
     line-height: 1.5;
-    max-width: 82%;
+    max-width: 86%;
     word-break: break-word;
 }
 
+/* Support Team Response Card (Official Helpdesk Look) */
 .sc-bot-bubble {
     background: #ffffff;
     border: 1px solid #e2e8f0;
+    border-left: 3.5px solid #10b981;
     border-top-left-radius: 4px;
     color: #1e293b;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
 }
 
+.sc-ticket-badge-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.sc-ticket-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: #2563eb;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.sc-ticket-status {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #15803d;
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+    padding: 1px 7px;
+    border-radius: 10px;
+}
+
+/* User Message: Clean Light Blue Aesthetic */
 .sc-user-bubble {
-    background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-    color: #ffffff;
+    background: #eff6ff;
+    color: #0f172a;
+    border: 1px solid #bfdbfe;
     border-top-right-radius: 4px;
-    white-space: pre-wrap;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.06);
+    width: fit-content;
+    max-width: 86%;
 }
 
 .sc-bubble-text {
     line-height: 1.5;
+    font-size: 13px;
+    white-space: pre-wrap;
 }
 
 .sc-bubble-meta {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 5px;
+    gap: 8px;
+    margin-top: 6px;
     font-size: 10.5px;
+    white-space: nowrap;
 }
 .sc-msg-user .sc-bubble-meta {
     justify-content: flex-end;
-    opacity: 0.9;
-    color: #e0e7ff;
+    color: #475569;
 }
 .sc-msg-bot .sc-bubble-meta {
     justify-content: flex-start;
@@ -282,12 +548,19 @@
 .sc-bubble-time {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
+    white-space: nowrap;
+    font-size: 10.5px;
 }
+
 .sc-bubble-check {
-    font-weight: 700;
-    letter-spacing: -1px;
-    color: #c7d2fe;
+    font-weight: 600;
+    color: #2563eb;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+    font-size: 10.5px;
 }
 
 .sc-loading-history {
@@ -300,11 +573,11 @@
     padding: 8px;
 }
 
-/* Chat Footer Composer */
+/* Composer Area */
 .support-chat-footer {
     background: #ffffff;
     border-top: 1px solid #e2e8f0;
-    padding: 12px 14px 12px;
+    padding: 12px 14px 10px;
     flex-shrink: 0;
 }
 
@@ -315,22 +588,26 @@
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 4px 10px;
+    padding: 5px 10px;
     margin-bottom: 8px;
-    transition: border-color 0.2s;
+    transition: all 0.2s ease;
 }
 .sc-email-bar:focus-within {
-    border-color: #a5b4fc;
+    border-color: #93c5fd;
     background: #ffffff;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
 }
 
 .sc-email-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 11px;
     font-weight: 700;
-    color: #64748b;
+    color: #475569;
     white-space: nowrap;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px;
 }
 
 .sc-email-input {
@@ -342,21 +619,24 @@
     font-family: inherit;
     color: #0f172a;
 }
+.sc-email-input::placeholder {
+    color: #94a3b8;
+}
 
 .sc-composer-box {
     display: flex;
     align-items: flex-end;
     gap: 8px;
     background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
+    border: 1.5px solid #cbd5e1;
     border-radius: 12px;
     padding: 6px 8px 6px 12px;
     transition: all 0.2s ease;
 }
 .sc-composer-box:focus-within {
-    border-color: #4f46e5;
+    border-color: #2563eb;
     background: #ffffff;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .sc-textarea {
@@ -374,12 +654,15 @@
     padding: 4px 0;
     box-sizing: border-box;
 }
+.sc-textarea::placeholder {
+    color: #94a3b8;
+}
 
 .sc-send-btn {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: #2563eb;
     border: none;
     color: #ffffff;
     cursor: pointer;
@@ -387,12 +670,13 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+    transition: all 0.18s ease;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 .sc-send-btn:hover:not(:disabled) {
+    background: #1d4ed8;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
 }
 .sc-send-btn:disabled {
     opacity: 0.55;
@@ -400,11 +684,26 @@
     transform: none;
 }
 
-.sc-composer-hint {
+.sc-composer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
     font-size: 10.5px;
     color: #94a3b8;
-    margin-top: 5px;
+}
+
+.sc-footer-security {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.sc-composer-hint {
     text-align: right;
+    color: #94a3b8;
 }
 
 .sc-error-banner {
@@ -432,7 +731,7 @@
     width: 12px;
     height: 12px;
     border: 2px solid #cbd5e1;
-    border-top-color: #4f46e5;
+    border-top-color: #2563eb;
     border-radius: 50%;
     animation: scSpin 0.7s linear infinite;
     display: inline-block;
@@ -448,8 +747,8 @@
         right: 0;
         width: 100vw;
         max-width: 100vw;
-        height: 90vh;
-        max-height: 90vh;
+        height: 92vh;
+        max-height: 92vh;
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
     }
@@ -458,10 +757,9 @@
 
 <script>
 /* ============================================================ */
-/* SUPPORT CHATBOX LOGIC WITH PERSISTENT QUERY HISTORY          */
+/* JMS TECH SUPPORT - CHATBOX CLIENT LOGIC                      */
 /* ============================================================ */
 
-// Set to keep track of rendered query IDs to avoid duplicate bubbles
 const scRenderedQueryIds = new Set();
 let scHistoryLoaded = false;
 
@@ -482,6 +780,16 @@ function handleSupportKey(e) {
         e.preventDefault();
         submitSupportChatbox();
     }
+}
+
+function fillQueryTopic(topicPrefix) {
+    const txt = document.getElementById('scQueryText');
+    if (!txt) return;
+    if (!txt.value.includes(topicPrefix)) {
+        txt.value = topicPrefix + txt.value;
+    }
+    txt.focus();
+    autoResizeSupportInput(txt);
 }
 
 function scrollToBottomSupport() {
@@ -508,29 +816,37 @@ function renderUserQueryMessage(q) {
     const displayDateTime = q.datetime || (q.date ? `${q.date}, ${q.time}` : 'Just now');
     const displayTime = q.time || 'Delivered';
 
-    // 1. User Message Bubble
+    // 1. User Message Bubble (Clean subtle light-blue aesthetic)
     const userRow = document.createElement('div');
     userRow.className = 'sc-msg-row sc-msg-user';
     userRow.innerHTML = `
         <div class="sc-msg-bubble sc-user-bubble">
             <div class="sc-bubble-text">${escapeHtmlSupport(q.query)}</div>
             <div class="sc-bubble-meta">
-                <span class="sc-bubble-time">📅 ${escapeHtmlSupport(displayDateTime)}</span>
-                <span class="sc-bubble-check" title="Sent to support">✓✓</span>
+                <span class="sc-bubble-time"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>${escapeHtmlSupport(displayDateTime)}</span>
+                <span class="sc-bubble-check" title="Submitted to JMS Tech Support"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Submitted</span>
             </div>
         </div>
     `;
     stream.appendChild(userRow);
 
-    // 2. Bot Confirmation Bubble
+    // 2. JMS Tech Support Official Acknowledgment Card
     const botRow = document.createElement('div');
     botRow.className = 'sc-msg-row sc-msg-bot';
-    const emailToReach = q.email || 'your email';
+    const emailToReach = q.email || 'your registered email';
     botRow.innerHTML = `
-        <div class="sc-msg-avatar">🤖</div>
+        <div class="sc-msg-avatar" title="JMS Tech Support">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+        </div>
         <div class="sc-msg-bubble sc-bot-bubble">
+            <div class="sc-ticket-badge-row">
+                <span class="sc-ticket-tag">JMS Tech Support</span>
+                <span class="sc-ticket-status">● Ticket Received</span>
+            </div>
             <div class="sc-bubble-text">
-                We received this query. Our support team is reviewing it and will reach out to <strong>${escapeHtmlSupport(emailToReach)}</strong>.
+                Your query has been logged and assigned to our technical support team. Our engineers are reviewing it and will reach out directly to <strong>${escapeHtmlSupport(emailToReach)}</strong>.
             </div>
             <div class="sc-bubble-meta">
                 <span class="sc-bubble-time">${escapeHtmlSupport(displayTime)}</span>
@@ -605,7 +921,6 @@ function openSupportChatbox(e) {
     const token = localStorage.getItem('access_token');
 
     if (emailInput && !emailInput.value && token) {
-        // Fetch current user email from /accounts/me/
         fetch('/accounts/me/', {
             headers: { 'Authorization': 'Bearer ' + token }
         })
@@ -614,7 +929,6 @@ function openSupportChatbox(e) {
             if (data && data.email) {
                 emailInput.value = data.email;
             }
-            // Load history after email is resolved
             loadSupportHistory();
         })
         .catch(() => {
@@ -665,13 +979,13 @@ async function submitSupportChatbox() {
     const email = emailInput ? emailInput.value.trim() : '';
 
     if (!query) {
-        showSupportError('Please enter your query or message.');
+        showSupportError('Please describe your query or technical issue.');
         if (queryInput) queryInput.focus();
         return;
     }
 
     if (!email) {
-        showSupportError('Please provide your contact email so we can reach you.');
+        showSupportError('Please provide your contact email so our team can reply to you.');
         if (emailInput) emailInput.focus();
         return;
     }
@@ -717,11 +1031,10 @@ async function submitSupportChatbox() {
             throw new Error(data.error || data.detail || 'Failed to submit support query (' + res.status + ').');
         }
 
-        // Render the newly submitted query in the chat timeline with date and time!
+        // Render the newly submitted query in the chat timeline with date and time
         if (data && data.query) {
             renderUserQueryMessage(data.query);
         } else {
-            // Fallback object if not returned
             const now = new Date();
             renderUserQueryMessage({
                 query: query,
@@ -731,7 +1044,7 @@ async function submitSupportChatbox() {
             });
         }
 
-        // Clear query input so user can send another response!
+        // Clear query input
         if (queryInput) {
             queryInput.value = '';
             queryInput.style.height = 'auto';
@@ -742,7 +1055,7 @@ async function submitSupportChatbox() {
         scrollToBottomSupport();
 
     } catch (err) {
-        showSupportError(err.message || 'An error occurred while sending your query. Please try again.');
+        showSupportError(err.message || 'An error occurred while submitting your query. Please try again.');
     } finally {
         submitBtn.disabled = false;
         if (spinner) spinner.style.display = 'none';

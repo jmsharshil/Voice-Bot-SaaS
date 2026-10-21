@@ -180,4 +180,27 @@ class SupportQuery(models.Model):
         verbose_name_plural = "Support Queries"
 
     def __str__(self):
-        return f"SupportQuery from {self.username or self.email} at {self.created_at}"
+        return f"SupportQuery from {self.username or self.email} at {self.created_at}"
+
+
+class EmailOTPVerification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="otp_verifications")
+    session_token = models.CharField(max_length=64, unique=True, db_index=True)
+    otp_code = models.CharField(max_length=6)
+    email = models.EmailField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    attempts = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Email OTP Verification"
+        verbose_name_plural = "Email OTP Verifications"
+
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+
+    def __str__(self):
+        return f"OTP for {self.user.username} ({self.email}) - used={self.is_used}"
