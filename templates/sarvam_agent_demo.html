@@ -617,10 +617,16 @@
                     })
                 });
 
-                const data = await response.json();
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (parseErr) {
+                    data = null;
+                }
 
-                if (!response.ok || data.status !== 'success') {
-                    showAlert(data.error || 'Failed to trigger demo call. Please try again.');
+                if (!response.ok || !data || data.status !== 'success') {
+                    const errMsg = (data && data.error) ? data.error : 'Server is temporarily busy. Please try again in a few moments.';
+                    showAlert(errMsg);
                     btn.disabled = false;
                     btn.innerHTML = `<i class="fa-solid fa-phone"></i> Experience Live AI Call`;
                     return;

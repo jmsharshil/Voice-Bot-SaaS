@@ -3650,11 +3650,13 @@
                 </div>
 
                 <div class="topbar-right">
-                    <!-- Client Pitch Demo Link Button -->
+                    <!-- Client Pitch Demo Link Button (Superadmin Only) -->
+                    {% if request.user.is_superuser %}
                     <button type="button" class="topbar-demo-btn" onclick="openShareDemoModal()" title="Client Pitch Demo Link — Share with prospective clients">
                         <i class="fa-solid fa-share-nodes"></i>
                         <span class="topbar-demo-btn-text">Client Demo Link</span>
                     </button>
+                    {% endif %}
 
                     <!-- User Profile in Navbar (Only existing details: Avatar, Username, Role) -->
                     <div class="topbar-profile-pill" id="topbarProfilePill" onclick="toggleSidebar()" title="User Profile — Click to toggle sidebar menu">
@@ -4889,7 +4891,8 @@
         </div>
     </div>
 
-    <!-- ── Public Client Demo Pitch Link Modal ── -->
+    {% if request.user.is_superuser %}
+    <!-- ── Public Client Demo Pitch Link Modal (Superadmin Only) ── -->
     <div class="modal-overlay" id="shareDemoModal" style="display:none; z-index:99999;" onclick="if(event.target===this) closeShareDemoModal()">
         <div class="modal-card" style="max-width: 560px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(2, 132, 199, 0.25); border: 1px solid rgba(2, 132, 199, 0.2); overflow: hidden;">
             <div class="modal-header" style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border-bottom: 1px solid #bae6fd; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between;">
@@ -4960,6 +4963,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
 
     <script>

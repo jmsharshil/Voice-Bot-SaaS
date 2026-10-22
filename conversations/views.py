@@ -6808,6 +6808,7 @@ def sarvam_agent_demo_trigger_call_api(request, agent_slug):
     # 4. Input Parsing & Validation
     data = request.data or {}
     raw_phone = str(data.get("phone_number") or data.get("phone") or "").strip()
+    candidate_name = str(data.get("name") or data.get("candidate_name") or "Demo Guest").strip()
     slug_lower = agent.slug.lower()
     default_lang = "gu-IN" if ("gujarati" in slug_lower or "guj" in slug_lower) else "hi-IN"
     language = str(data.get("language") or default_lang).strip()
@@ -6821,6 +6822,9 @@ def sarvam_agent_demo_trigger_call_api(request, agent_slug):
     if len(clean_digits) == 10:
         phone_e164 = f"+91{clean_digits}"
         phone_suffix = clean_digits
+    elif len(clean_digits) == 11 and clean_digits.startswith("0"):
+        phone_e164 = f"+91{clean_digits[1:]}"
+        phone_suffix = clean_digits[1:]
     elif len(clean_digits) == 12 and clean_digits.startswith("91"):
         phone_e164 = f"+{clean_digits}"
         phone_suffix = clean_digits[2:]
@@ -6868,9 +6872,7 @@ def sarvam_agent_demo_trigger_call_api(request, agent_slug):
 
     # 6. Extra variables for the bot prompt
     extra_vars = {
-        "source": "Client Public Demo",
-        "demo_agent": agent.name,
-        "caller_name": candidate_name,
+        "user_name": candidate_name,
     }
 
     # 7. Trigger the Outbound Call via Sarvam

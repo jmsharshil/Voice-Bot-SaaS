@@ -1512,6 +1512,7 @@
                                 <button class="action-btn" style="padding:0.25rem 0.6rem; font-size:0.75rem; border-color: var(--primary); color: var(--primary); font-weight: 600; background: #f5f3ff;" onclick="openAssignBotsModal(${user.id})">⚡ Assign Bots</button>
                             </td>
                             <td>
+                                <button class="action-btn" style="padding:0.3rem 0.65rem; font-size:0.8rem; margin-right: 0.5rem; background: #ecfdf5; color: #047857; border-color: #a7f3d0; font-weight: 600;" onclick="loginAsUser(${user.id}, '${user.username}')" title="Directly open this user's dashboard without 2FA">🚀 Open Dashboard</button>
                                 <button class="action-btn" style="padding:0.3rem 0.6rem; font-size:0.8rem; margin-right: 0.5rem;" onclick="openEditUserModal(${user.id})">Edit</button>
                                 <button class="logout-btn" style="padding:0.3rem 0.6rem; font-size:0.8rem;" onclick="deleteUser(${user.id}, '${user.username}')">Delete</button>
                             </td>
@@ -2494,6 +2495,54 @@
                 showAlert('agentAlert', 'Network Error.', 'error');
             }
         });
+
+        // Direct One-Click Impersonation (Super Admin accessing any User's Dashboard without 2FA)
+        async function loginAsUser(userId, username) {
+            if (!confirm(`Switch to ${username}'s dashboard without 2FA?`)) return;
+            try {
+                const res = await fetch(`${API_BASE}/impersonate/`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ user_id: userId })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    localStorage.setItem('username', data.username);
+                    localStorage.setItem('role', data.role || 'No Role');
+                    localStorage.setItem('is_admin', data.permissions?.is_admin ? 'true' : 'false');
+                    localStorage.setItem('permissions', JSON.stringify(data.permissions || {}));
+                    localStorage.setItem('assigned_agent_id', data.assigned_agent_id || '');
+                    localStorage.setItem('assigned_sarvam_agents', JSON.stringify(data.assigned_sarvam_agents || []));
+                    const primarySlug = data.primary_sarvam_slug || (data.assigned_sarvam_agents?.[0]?.slug || '');
+                    if (primarySlug) {
+                        localStorage.setItem('primary_sarvam_slug', primarySlug);
+                    }
+                    localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
+                    localStorage.setItem('is_icemake_user', data.is_icemake_user ? 'true' : 'false');
+                    localStorage.setItem('is_sarvam_user', data.is_sarvam_user ? 'true' : 'false');
+                    localStorage.setItem('profile_picture', data.profile_picture || '');
+                    localStorage.setItem('company_logo', data.company_logo || '');
+
+                    let redirectUrl = '/dashboard/';
+                    if (data.is_sarvam_user) {
+                        redirectUrl = primarySlug ? `/api/sarvam/${primarySlug}/leads/` : '/sarvam-leads/';
+                    } else if (data.is_icemake_user) {
+                        redirectUrl = '/icemake-dashboard/';
+                    } else if (data.permissions?.can_view_leads) {
+                        redirectUrl = '/dashboard/';
+                    } else if (data.permissions?.can_view_calls) {
+                        redirectUrl = '/analytics/';
+                    }
+                    window.location.href = redirectUrl;
+                } else {
+                    alert(data.error || 'Failed to access user dashboard.');
+                }
+            } catch (err) {
+                alert('Network error while opening user dashboard.');
+            }
+        }
 
         init();
     </script>
