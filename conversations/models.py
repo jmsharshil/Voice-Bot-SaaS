@@ -390,6 +390,12 @@ class SarvamCallRecord(models.Model):
         return self.pipeline_stage or "NEW"
 
     def save(self, *args, **kwargs):
+        if not self.language:
+            self.language = "hi-IN"
+        if not self.candidate_name:
+            self.candidate_name = "Candidate"
+        if not self.applied_position:
+            self.applied_position = "Admission Counselor"
         self.billed_seconds = calculate_billed_seconds(self.duration_seconds)
         super().save(*args, **kwargs)
 

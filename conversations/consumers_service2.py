@@ -51,9 +51,13 @@ def get_matcher(name: str, intents_file: str) -> AutomobileMatcher:
             _MATCHERS[name] = None
     return _MATCHERS[name]
 
-from elevenlabs import ElevenLabs, VoiceSettings
-
-ELEVENLABS_CLIENT = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+try:
+    from elevenlabs import ElevenLabs, VoiceSettings
+    ELEVENLABS_CLIENT = ElevenLabs(api_key=os.getenv("ELEVENLABS_API_KEY"))
+except Exception as e_eleven:
+    ElevenLabs = None
+    VoiceSettings = None
+    ELEVENLABS_CLIENT = None
 
 ELEVENLABS_VOICE_MAP = {
     "en": "aSFxChEgBmCyExpaDqHd",  # Kanika
@@ -644,6 +648,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         # are still treated as "spoken during bot turn" and discarded.
         self._post_speech_grace = 0.05  # 50ms — tight enough since we gate silence not real audio
         self.current_phase = "GREETING_REPLY"
+        self.language_locked = False
 
         # ── DUPLICATE PREVENTION ───────────────────────────────
         # Tracks whether VAD partial-dispatch already fired for current utterance.
@@ -742,7 +747,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             elif strategy_key == "interview_bot":
                 tts_lang = "interview_en"
             elif strategy_key in ["kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy", "icemake", "icemake_v2"]:
-                tts_lang = "hi"
+                tts_lang = "gu" if language == "gu" else ("hi" if language == "hi" else "en")
             else:
                 tts_lang = "en"
                 
@@ -756,7 +761,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     name_part = customer_name if customer_name else "you"
                     greeting = f"Hello! Am I speaking with {name_part}?"
                 else:
-                    greeting = f"Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge!Kya meri baat {name_part} se ho rahi hai?"
+                    greeting = f"Hello! Namaste... main Aaisha bol rahi hoon, West-coast Kia se. Umeed hai aap bilkul theek honge!Kya meri बात {name_part} se ho rahi hai?"
             elif tts_lang == "gu":
                 if strategy_key == "reminder_strategy":
                     greeting = "નમસ્તે! હું જે એમ એસ બેંકમાંથી નવ્યા બોલું છું. તમારી ઈ એમ આઈ ની તારીખ નજીક છે, તમે ક્યારે ચુકવણી કરશો?"
@@ -790,14 +795,16 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 else:
                     greeting = "Hi, I am Raahi calling from Triple i E M, how can I help you today?"
             elif strategy_key == "icemake":
-                greeting = "Welcome to Ice Make twenty four by seven service support. आप किस भाषा में बात करना पसंद करेंगे?"
+                greeting = "Welcome to Ice Make twenty four by seven service support. આપ किस भाषा में बात करना पसंद करेंगे?"
             elif strategy_key == "icemake_v2":
                 from icemake_v2_bot.strategy import _get_time_greeting
                 time_greeting = _get_time_greeting(language)
-                if language == "hi":
-                    greeting = f"{time_greeting}। आइस मेक रेफ्रिजरेशन लिमिटेड में आपका स्वागत है। कृपया बताइए आज मैं आपकी क्या सहायता कर सकती हूँ?"
+                if language == "gu":
+                    greeting = f"{time_greeting}! આઈસ મેક રેફ્રિજરેશનમાં આપનું ખૂબ ખૂબ સ્વાગત છે. તમે કઈ ભાષામાં વાત કરવાનું પસંદ કરશો?"
+                elif language == "hi":
+                    greeting = f"{time_greeting}! आइस मेक रेफ्रिजरेशन में आपका बहुत-बहुत स्वागत है। आप किस भाषा में बात करना पसंद करेंगे?"
                 else:
-                    greeting = f"{time_greeting}. Welcome to Ice Make Refrigeration Limited. Please let me know how I can help you today."
+                    greeting = f"{time_greeting}. Welcome to Ice Make Refrigeration Limited. Which language would you prefer to speak in?"
             elif strategy_key == "priya_naavya_strategy":
                 greeting = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
             else:
@@ -815,6 +822,12 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 state["step"] = "confirm_interest"
             elif strategy_key == "kia_syros_strategy":
                 state["step"] = "greeting"
+            elif strategy_key == "icemake_v2":
+                state["current_step"] = 1
+                state["selected_language"] = language
+                if "conversation_history" not in state:
+                    state["conversation_history"] = []
+                state["conversation_history"].append(f"Agent: {greeting}")
             elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "enogic_strategy", "fold8_prereserve_strategy", "carekay_strategy", "carekay_insurance_strategy"]:
                 if strategy_key == "temp_real_estate_strategy":
                     state["call_phase"] = "collect_flat_type"
@@ -1116,6 +1129,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         self.partial_text = text
 
     def _set_language(self, lang_code):
+        # ⚡ ICE MAKE V2: Once customer selects a language, lock it completely (no auto-switching)
+        if getattr(self, "strategy_key", None) in ["icemake_v2", "icemake_v2_strategy"] and getattr(self, "language_locked", False):
+            return
+
         # ⚡ STICKY REGIONAL LANGUAGE: Once the conversation has entered a regional language (Hindi or Gujarati),
         # do NOT automatically switch back to English ('en'). Users frequently use English loanwords 
         # (Hinglish/Gujlish) like "City mein", "Automatic car", which Azure STT detects as 'en-IN',
@@ -1199,7 +1216,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
         step_last_time = 0.0
 
         while self.is_connected:
-            is_icemake = getattr(self, "strategy_key", None) in ["icemake", "icemake_strategy"]
+            is_icemake = getattr(self, "strategy_key", None) in ["icemake", "icemake_strategy", "icemake_v2", "icemake_v2_strategy"]
             if is_icemake and getattr(self, "recognizer", None):
                 try:
                     import azure.cognitiveservices.speech as speechsdk
@@ -1208,7 +1225,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         lambda: ConversationSession.objects.filter(session_id=self.session_id).first()
                     )()
                     active_step = session.state.get("current_step") if (session and session.state) else None
-                    if active_step in (3, 4):
+                    is_v2 = getattr(self, "strategy_key", None) in ["icemake_v2", "icemake_v2_strategy"]
+                    target_steps = (3, 7, 9) if is_v2 else (3, 4)
+                    if active_step in target_steps:
                         self.recognizer.properties.set_property(speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2500")
                         self.recognizer.properties.set_property(speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "1800")
                     else:
@@ -1419,7 +1438,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     self.speech_active = False
                     self.silence_start_time = None
 
-                    is_samsung_or_icemake = (getattr(self, "strategy_key", None) in ["samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy", "icemake", "icemake_strategy"])
+                    is_samsung_or_icemake = (getattr(self, "strategy_key", None) in [
+                        "samsung_store_strategy", "samsung_llm_strategy", "fold8_prereserve_strategy",
+                        "icemake", "icemake_strategy", "icemake_v2", "icemake_v2_strategy"
+                    ])
                     if (
                         not is_samsung_or_icemake
                         and not self.is_bot_speaking
@@ -1901,6 +1923,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 self.recognizer.start_continuous_recognition_async()
             except Exception as e_stt:
                 print(f"⚠️ STT switch error: {e_stt}")
+
+        if prep_result.get("language_locked"):
+            self.language_locked = True
 
         skip_output_translation = prep_result.get("skip_output_translation", False)
         skip_input_translation = prep_result.get("skip_input_translation", False)

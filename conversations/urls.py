@@ -17,6 +17,7 @@ from .views import (
     sarvam_agent_minutes_status_api, sarvam_adjust_agent_minutes_api, sarvam_toggle_agent_active_api,
     sarvam_admin_all_campaigns_api, sarvam_admin_campaign_action_api,
     system_maintenance_enable_api, system_maintenance_disable_api, system_maintenance_status_api,
+    dashboard_ai_copilot_api,
 )
 from .incoming_webhooks import incoming_trigger_webhook
 from django.urls import path, re_path
@@ -128,4 +129,8 @@ urlpatterns = [
     path("api/system/maintenance/enable/", system_maintenance_enable_api),
     path("api/system/maintenance/disable/", system_maintenance_disable_api),
     path("api/system/maintenance/status/", system_maintenance_status_api),
+
+    # Dashboard AI Intelligence Copilot
+    path("api/dashboard/ai-copilot/", dashboard_ai_copilot_api, name="dashboard-ai-copilot"),
+    path("dashboard/ai-copilot/", dashboard_ai_copilot_api),
 ]

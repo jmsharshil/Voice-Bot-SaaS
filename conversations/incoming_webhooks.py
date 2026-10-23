@@ -82,7 +82,7 @@ def _extract_lead_fields(raw_data):
         or raw_data.get("langauge")
         or raw_data.get("lang")
         or raw_data.get("locale")
-        or None
+        or "hi-IN"
     )
     applied_position = entity.get("applied_position") or entity.get("position") or "Admission Counselor"
 
@@ -200,12 +200,20 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
 
         attempt_id = f"wh_{int(time.time())}_{uuid.uuid4().hex[:6]}"
         event_name = raw_data.get("event") or raw_data.get("event_type") or "CRM Webhook"
+        
+        call_language = str(language).strip() if language else "hi-IN"
+        if not call_language or call_language.lower() in ["none", "null"]:
+            call_language = "hi-IN"
+
+        candidate_name = candidate_name or "Candidate"
+        applied_position = applied_position or "Admission Counselor"
+
         call_record = SarvamCallRecord.objects.create(
             sarvam_agent=target_agent,
             attempt_id=attempt_id,
             phone_number=clean_phone,
             candidate_name=candidate_name,
-            language=language,
+            language=call_language,
             applied_position=applied_position,
             call_type=f"Webhook: {event_name}",
             status="DIALING",
@@ -218,7 +226,7 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
             phone_number=clean_phone,
             lead_id=call_record.id,
             customer_name=candidate_name,
-            language=language,
+            language=call_language,
             sarvam_agent=target_agent,
             extra_variables=extra_variables
         )

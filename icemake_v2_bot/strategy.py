@@ -21,16 +21,25 @@ def _get_time_greeting(lang: str = "en") -> str:
         hour = datetime.now().hour
 
     if 5 <= hour < 12:
-        return "Good Morning" if lang == "en" else "शुभ प्रभात"
+        if lang == "gu":
+            return "નમસ્તે, ગુડ મોર્નિંગ"
+        return "Good Morning" if lang == "en" else "नमस्कार, गुड मॉर्निंग"
     elif 12 <= hour < 17:
+        if lang == "gu":
+            return "નમસ્તે, શુભ બપોર"
         return "Good Afternoon" if lang == "en" else "नमस्कार"
     else:
-        return "Good Evening" if lang == "en" else "शुभ संध्या"
+        if lang == "gu":
+            return "નમસ્તે, ગુડ ઇવનિંગ"
+        return "Good Evening" if lang == "en" else "नमस्कार, गुड इवनिंग"
 
 def _format_spoken_number(phone_num: str, lang: str = "en") -> str:
-    """Formats phone number digit-by-digit into clear English or Hindi spoken words for TTS."""
+    """Formats phone number digit-by-digit into clear English, Hindi or Gujarati spoken words for TTS."""
     clean_digits = "".join(filter(str.isdigit, str(phone_num)))
-    if lang == "hi":
+    if lang == "gu":
+        gu_digit_words = {'0': 'ઝીરો', '1': 'એક', '2': 'બે', '3': 'ત્રણ', '4': 'ચાર', '5': 'પાંચ', '6': 'છ', '7': 'સાત', '8': 'આઠ', '9': 'નવ'}
+        return " ".join(gu_digit_words.get(d, d) for d in clean_digits)
+    elif lang == "hi":
         hi_digit_words = {'0': 'शून्य', '1': 'एक', '2': 'दो', '3': 'तीन', '4': 'चार', '5': 'पांच', '6': 'छह', '7': 'सात', '8': 'आठ', '9': 'नौ'}
         return " ".join(hi_digit_words.get(d, d) for d in clean_digits)
     else:
@@ -47,6 +56,7 @@ def _format_spoken_ticket(ticket_number: str, lang: str = "en") -> str:
     
     clean_str = ticket_number.replace(" ", "")
     char_map = {
+        "gu": ({'0': 'ઝીરો', '1': 'એક', '2': 'બે', '3': 'ત્રણ', '4': 'ચાર', '5': 'પાંચ', '6': 'છ', '7': 'સાત', '8': 'આઠ', '9': 'નવ'}, {'S': 'એસ', 'R': 'આર'}),
         "hi": ({'0': 'शून्य', '1': 'एक', '2': 'दो', '3': 'तीन', '4': 'चार', '5': 'पांच', '6': 'छह', '7': 'सात', '8': 'आठ', '9': 'नौ'}, {'S': 'एस', 'R': 'आर'}),
         "en": ({'0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four', '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine'}, {'S': 'S', 'R': 'R'}),
     }
@@ -85,12 +95,56 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
         state["conversation_history"] = []
 
     current_step = state.get("current_step", 0)
-    lang = state.get("selected_language", "en")
+    lang = state.get("selected_language")
 
-    # Detect language if user switches or communicates in Hindi
-    if detected_language == "hi" or re.search(r'[\u0900-\u097f]', raw_message) or any(w in msg for w in ["hindi", "हिंदी", "हिन्दी", "नमस्ते", "हाँ", "हा", "ना", "नहीं", "नाम", "शिकायत"]):
-        lang = "hi"
-        state["selected_language"] = "hi"
+    # If language is NOT yet locked, detect and lock it based on caller's choice / speech
+    if not state.get("language_locked"):
+        # Detect if user requested or spoke in Gujarati, Hindi, or English
+        is_gu = (
+            detected_language == "gu"
+            or bool(re.search(r'[\u0a80-\u0aff]', raw_message))
+            or any(w in msg for w in ["gujarati", "ગુજરાતી", "gujrati", "gujarathi", "gujju", "kem cho"])
+            or any(w == msg.strip(".?,!") for w in ["gu", "guj"])
+        )
+        is_hi = (
+            detected_language == "hi"
+            or bool(re.search(r'[\u0900-\u097f]', raw_message))
+            or any(re.search(r'\b' + re.escape(w) + r'\b', msg) for w in ["hindi", "हिंदी", "हिन्दी", "namaste", "नमस्ते", "haan", "shikayat", "madad"])
+            or any(w == msg.strip(".?,!") for w in ["hi", "hin"])
+        )
+        is_en = (
+            any(re.search(r'\b' + re.escape(w) + r'\b', msg) for w in ["english", "eng", "angrezi", "angreji"])
+            or any(w in msg for w in ["speak in english", "english please", "in english"])
+            or any(w == msg.strip(".?,!") for w in ["en"])
+        )
+
+        if is_gu:
+            lang = "gu"
+            state["selected_language"] = "gu"
+            state["language_locked"] = True
+        elif is_hi:
+            lang = "hi"
+            state["selected_language"] = "hi"
+            state["language_locked"] = True
+        elif is_en:
+            lang = "en"
+            state["selected_language"] = "en"
+            state["language_locked"] = True
+        elif current_step >= 1:
+            # Caller spoke their first utterance (e.g. name or query) without explicitly naming the language:
+            # Lock whatever language was detected or default to English
+            if detected_language in ["en", "hi", "gu"]:
+                lang = detected_language
+            else:
+                lang = lang or "en"
+            state["selected_language"] = lang
+            state["language_locked"] = True
+        else:
+            lang = lang or (detected_language if detected_language in ["en", "hi", "gu"] else "en")
+            state["selected_language"] = lang
+    else:
+        # Language is already locked: strictly maintain the selected language for ALL subsequent turns (NO AUTO SWITCH)
+        lang = state.get("selected_language", "en")
 
     # Pre-process spoken numbers
     raw_message = _convert_all_spoken_numbers_to_digits(raw_message, lang)
@@ -98,25 +152,34 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
 
     # ── STEP 0: GREETING ──
     if current_step == 0:
-        time_greeting = _get_time_greeting(lang)
-        if lang == "hi":
-            greeting = f"{time_greeting}। आइस मेक रेफ्रिजरेशन लिमिटेड में आपका स्वागत है। कृपया बताइए आज मैं आपकी क्या सहायता कर सकती हूँ?"
+        # If the introductory greeting was already played (by telephony consumer) or caller has already sent input:
+        if state.get("intro_shown") or raw_message:
+            current_step = 1
+            state["current_step"] = 1
         else:
-            greeting = f"{time_greeting}. Welcome to Ice Make Refrigeration Limited. Please let me know how I can help you today."
+            time_greeting = _get_time_greeting(lang)
+            if lang == "gu":
+                greeting = f"{time_greeting}! આઈસ મેક રેફ્રિજરેશનમાં આપનું ખૂબ ખૂબ સ્વાગત છે. તમે કઈ ભાષામાં વાત કરવાનું પસંદ કરશો?"
+            elif lang == "hi":
+                greeting = f"{time_greeting}! आइस मेक रेफ्रिजरेशन में आपका बहुत-बहुत स्वागत है। आप किस भाषा में बात करना पसंद करेंगे?"
+            else:
+                greeting = f"{time_greeting}. Welcome to Ice Make Refrigeration Limited. Which language would you prefer to speak in?"
 
-        state["current_step"] = 1
-        state["conversation_history"].append(f"Agent: {greeting}")
-        save_session(session, state)
+            state["intro_shown"] = True
+            state["current_step"] = 1
+            state["conversation_history"].append(f"Agent: {greeting}")
+            save_session(session, state)
 
-        return {
-            "static_reply": greeting,
-            "tts_language": lang,
-            "skip_output_translation": True,
-            "strategy_key": STRATEGY_KEY,
-            "mode": mode,
-            "session": session,
-            "state": state
-        }
+            return {
+                "static_reply": greeting,
+                "tts_language": lang,
+                "skip_output_translation": True,
+                "strategy_key": STRATEGY_KEY,
+                "mode": mode,
+                "session": session,
+                "state": state,
+                "language_locked": state.get("language_locked", False)
+            }
 
     prev_step = current_step
 
@@ -129,30 +192,80 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
 
     # ── STEP 1: Process Customer Response to Greeting ──
     if prev_step == 1:
-        # In response to the opening greeting (e.g. "I have a complaint"), ask for customer name
-        explicit_name_match = re.search(r'\b(my\s+name\s+is|mera\s+naam\s+hai|mera\s+naam)\s+([a-zA-Z\u0900-\u097F]+)', raw_message, re.IGNORECASE)
+        # In response to the opening greeting (e.g. language selection or complaint), ask for customer name
+        explicit_name_match = re.search(r'\b(my\s+name\s+is|mera\s+naam\s+hai|mera\s+naam|maru\s+naam\s+che|maru\s+naam|મારું\s+નામ\s+છે|મારું\s+નામ)\s+([a-zA-Z\u0900-\u097F\u0A80-\u0AFF]+)', raw_message, re.IGNORECASE)
+        is_only_lang_choice = any(w == msg.strip(".?,!") for w in ["hindi", "हिंदी", "हिन्दी", "english", "angrezi", "angreji", "gujarati", "gujrati", "ગુજરાતી"]) or (
+            any(w in msg for w in ["speak in hindi", "hindi mein", "hindi me", "हिंदी में", "speak in english", "english please", "speak in gujarati", "gujarati ma", "ગુજરાતીમાં"]) and len(msg.split()) <= 4
+        )
+
         if explicit_name_match:
-            state["customer_name"] = explicit_name_match.group(2).strip().title()
+            cust_name = explicit_name_match.group(2).strip().title()
+            state["customer_name"] = cust_name
             state["current_step"] = 3
-            reply = "Please provide your postal pincode." if lang == "en" else "कृपया अपना पोस्टल पिनकोड बताइए।"
+            if lang == "gu":
+                reply = f"આભાર {cust_name} જી! કૃપા કરીને આપનું પૂરું સરનામું જણાવી દો, અને જો પિનકોડ યાદ હોય તો એ પણ સાથે જણાવી દેશો."
+            elif lang == "hi":
+                reply = f"धन्यवाद {cust_name} जी! कृपया अपना पूरा पता बता दीजिए, और अगर पिनकोड याद हो तो वो भी बता दीजिएगा।"
+            else:
+                reply = "Tell me your address with pincode if available."
+        elif is_only_lang_choice:
+            state["current_step"] = 2
+            if lang == "gu":
+                reply = "જી, આભાર! શું હું આપનું શુભ નામ જાણી શકું છું?"
+            elif lang == "hi":
+                reply = "जी, धन्यवाद! क्या मैं आपका शुभ नाम जान सकती हूँ?"
+            else:
+                reply = "Thank you! May I know your name, please?"
         else:
             state["current_step"] = 2
-            reply = "May I know your name, please?" if lang == "en" else "क्या मैं आपका नाम जान सकती हूँ?"
+            if lang == "gu":
+                reply = "જી, શું હું આપનું શુભ નામ જાણી શકું છું?"
+            elif lang == "hi":
+                reply = "जी, क्या मैं आपका शुभ नाम जान सकती हूँ?"
+            else:
+                reply = "May I know your name, please?"
 
     # ── STEP 2: Process Customer Name ──
     elif prev_step == 2:
         clean_name = _extract_person_name(raw_message, lang)
-        state["customer_name"] = clean_name if clean_name and clean_name != "Not Provided" else raw_message.strip()
+        cust_name = clean_name if clean_name and clean_name != "Not Provided" else raw_message.strip()
+        state["customer_name"] = cust_name
         state["current_step"] = 3
-        reply = "Please provide your postal pincode." if lang == "en" else "कृपया अपना पोस्टल पिनकोड बताइए।"
+        if lang == "gu":
+            reply = f"આભાર {cust_name} જી! કૃપા કરીને આપનું પૂરું સરનામું જણાવી દો, અને જો પિનકોડ યાદ હોય તો એ પણ સાથે જણાવી દેશો."
+        elif lang == "hi":
+            reply = f"धन्यवाद {cust_name} जी! कृपया अपना पूरा पता बता दीजिए, और अगर पिनकोड याद हो तो वो भी बता दीजिएगा।"
+        else:
+            reply = "Tell me your address with pincode if available."
 
-    # ── STEP 3: Process Postal Pincode (6 Digits Mandatory) ──
+    # ── STEP 3: Process Address with Pincode (if available) ──
     elif prev_step == 3:
         pincode_extracted = _extract_pincode_ai(raw_message, lang)
-        
-        # Validation: 6 digits mandatory
-        if not pincode_extracted or len(pincode_extracted) != 6:
-            reply = "Postal pincode must be exactly 6 digits. Please provide your postal pincode." if lang == "en" else "पोस्टल पिनकोड 6 अंकों का होना अनिवार्य है। कृपया अपना 6 अंकों का पिनकोड फिर से बताइए।"
+
+        # Check if caller explicitly attempted to provide a pincode that is NOT 6 digits
+        pin_kw = re.search(r'\b(?:pincode|pin\s*code|pin|पिनकोड|पिन|પિનકોડ|પિન)\b[^\d]*(\d+)', raw_message, re.IGNORECASE)
+        if not pin_kw:
+            pin_kw = re.search(r'(\d+)[^\d]*\b(?:pincode|pin\s*code|pin|पिनकोड|पिन|પિનકોડ|પિન)\b', raw_message, re.IGNORECASE)
+
+        digits_only = "".join(filter(str.isdigit, raw_message))
+        is_only_digits = digits_only and re.sub(r'[\s\d.,\-]', '', raw_message).strip() == ""
+
+        has_invalid_pin = False
+        if pin_kw:
+            pin_digits = pin_kw.group(1).strip()
+            if len(pin_digits) != 6:
+                has_invalid_pin = True
+        elif is_only_digits and len(digits_only) not in (6, 10):
+            # If user just spoke 3, 4, 5, 7, 8 digits without words, treat as invalid pincode attempt
+            has_invalid_pin = True
+
+        if has_invalid_pin and not (pincode_extracted and len(pincode_extracted) == 6):
+            if lang == "gu":
+                reply = "માફ કરશો, પિનકોડ 6 અંકનો હોય છે. શું તમે 6 અંકના સાચા પિનકોડ સાથે તમારું સરનામું ફરીથી જણાવી શકો છો?"
+            elif lang == "hi":
+                reply = "माफ़ कीजिएगा, पिनकोड 6 अंकों का होता है। क्या आप 6 अंकों के सही पिनकोड के साथ अपना पता एक बार फिर बता सकते हैं?"
+            else:
+                reply = "Postal pincode must be exactly 6 digits. Kindly tell me your address with your 6-digit pincode if available."
             state["current_step"] = 3
             state["conversation_history"].append(f"Agent: {reply}")
             save_session(session, state)
@@ -163,107 +276,131 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
                 "strategy_key": STRATEGY_KEY,
                 "mode": mode,
                 "session": session,
-                "state": state
+                "state": state,
+                "language_locked": state.get("language_locked", False)
             }
 
-        state["pin_code"] = pincode_extracted
-        
-        # Step 5 in script: Address Confirmation as per Pincode
-        lookup_res = lookup_pincode(pincode_extracted)
-        formatted_address = lookup_res.get("formatted", "")
-        
-        if formatted_address:
-            state["pincode_address"] = formatted_address
-            state["city_state"] = f"{lookup_res.get('district', '')}, {lookup_res.get('state', '')}".strip(", ")
-            state["state_name"] = lookup_res.get("state", "")
-            state["city_name"] = lookup_res.get("district", "")
-            state["current_step"] = 4
-            
-            if lang == "hi":
-                reply = f"प्रदान किए गए पिनकोड के अनुसार, आपका पता {formatted_address} है। कृपया पुष्टि करें कि क्या यह सही है?"
-            else:
-                reply = f"As per the pincode provided, your address is {formatted_address}. Kindly confirm if this is correct."
+        # Store pincode and enrich location if valid 6-digit pincode was given
+        if pincode_extracted and len(pincode_extracted) == 6:
+            state["pin_code"] = pincode_extracted
+            lookup_res = lookup_pincode(pincode_extracted)
+            formatted_address = lookup_res.get("formatted", "")
+            if formatted_address:
+                state["pincode_address"] = formatted_address
+                state["city_state"] = f"{lookup_res.get('district', '')}, {lookup_res.get('state', '')}".strip(", ")
+                state["state_name"] = lookup_res.get("state", "")
+                state["city_name"] = lookup_res.get("district", "")
         else:
-            # Fallback if pincode address could not be resolved
-            state["current_step"] = 5
-            reply = "Kindly tell me your state." if lang == "en" else "कृपया अपना राज्य बताइए।"
+            state["pin_code"] = "Not Provided"
+            state["city_state"] = raw_message.strip()
 
-    # ── STEP 4: Address Confirmation (As per Pincode) ──
-    elif prev_step == 4:
-        cust_name = state.get("customer_name", "Customer")
-        is_yes = any(w in msg for w in ["yes", "yeah", "yep", "correct", "right", "ok", "haan", "sahi", "ha", "ji", "हाँ", "सही", "ठीक"])
-        is_no = any(w in msg for w in ["no", "nope", "incorrect", "wrong", "nahi", "na", "गलत", "नहीं", "ना"])
-
-        if is_yes or not is_no:
-            # If Customer says "Yes": Proceed to full address with landmark
-            state["current_step"] = 6
-            if lang == "hi":
-                reply = f"धन्यवाद, {cust_name} जी। कृपया लैंडमार्क के साथ अपना पूरा पता बताइए।"
-            else:
-                reply = f"Thank you, Mr. {cust_name}. Kindly provide your address with a landmark."
-        else:
-            # If Customer says "No": Ask for their state
-            state["current_step"] = 5
-            reply = "Kindly tell me your state." if lang == "en" else "कृपया अपना राज्य बताइए।"
-
-    # ── STEP 5: Manual State Collection (Fallback when pincode is not confirmed) ──
-    elif prev_step == 5:
-        cust_name = state.get("customer_name", "Customer")
-        state["state_name"] = raw_message.strip()
-        state["city_state"] = raw_message.strip()
-        state["current_step"] = 6
-        if lang == "hi":
-            reply = f"धन्यवाद, {cust_name} जी। कृपया लैंडमार्क के साथ अपना पूरा पता बताइए।"
-        else:
-            reply = f"Thank you, Mr. {cust_name}. Kindly provide your address with a landmark."
-
-    # ── STEP 6: Full Address with Landmark ──
-    elif prev_step == 6:
-        state["company_name"] = raw_message.strip()  # Full address
         state["full_address"] = raw_message.strip()
+        state["company_name"] = raw_message.strip()
+
+        # Step 3 completed: Ask for caller's State in the next turn
+        state["current_step"] = 4
+        if lang == "gu":
+            reply = "જી આભાર! કૃપા કરીને આપના રાજ્યનું નામ જણાવી દો."
+        elif lang == "hi":
+            reply = "जी धन्यवाद! कृपया अपने राज्य का नाम बता दीजिए।"
+        else:
+            reply = "Could you please tell me which state you are calling from?"
+
+    # ── STEP 4: Process State ──
+    elif prev_step == 4:
+        clean_state = _clean_state_name(raw_message)
+        state["state_name"] = clean_state
+        if state.get("city_state") and clean_state.lower() not in state["city_state"].lower():
+            state["city_state"] = f"{state['city_state']}, {clean_state}".strip(", ")
+        elif not state.get("city_state"):
+            state["city_state"] = clean_state
+
+        cust_name = state.get("customer_name", "")
+        name_en = f", {cust_name}" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
+        name_hi = f" {cust_name} जी" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
+        name_gu = f" {cust_name} જી" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
         state["current_step"] = 7
-        
-        reply = "Kindly provide the machine serial number." if lang == "en" else "कृपया मशीन का सीरियल नंबर बताइए।"
+        if lang == "gu":
+            reply = f"ખૂબ ખૂબ આભાર{name_gu}! હવે કૃપા કરીને આપના મશીનનો સિરીયલ નંબર જણાવી દો."
+        elif lang == "hi":
+            reply = f"बहुत-बहुत धन्यवाद{name_hi}! अब कृपया अपनी मशीन का सीरियल नंबर बता दीजिए।"
+        else:
+            reply = f"Thank you{name_en}. Kindly provide the machine serial number."
+
+    # Legacy step fallback (if any session was suspended on step 5 or 6)
+    elif prev_step in [5, 6]:
+        cust_name = state.get("customer_name", "")
+        name_en = f", {cust_name}" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
+        name_hi = f" {cust_name} जी" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
+        name_gu = f" {cust_name} જી" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
+        state["current_step"] = 7
+        if lang == "gu":
+            reply = f"ખૂબ ખૂબ આભાર{name_gu}! હવે કૃપા કરીને આપના મશીનનો સિરીયલ નંબર જણાવી દો."
+        elif lang == "hi":
+            reply = f"बहुत-बहुत धन्यवाद{name_hi}! अब कृपया अपनी मशीन का सीरियल नंबर बता दीजिए।"
+        else:
+            reply = f"Thank you{name_en}. Kindly provide the machine serial number."
 
     # ── STEP 7: Machine Serial Number ──
     elif prev_step == 7:
         has_no_serial = any(w in msg for w in [
             "don't have", "dont have", "not available", "no serial", "pata nahi", "maloom nahi",
-            "nahi hai", "nhi hai", "invoice nahi hai", "baad me", "later", "nahi pata", "no"
+            "nahi hai", "nhi hai", "invoice nahi hai", "baad me", "later", "nahi pata", "no",
+            "નથી", "ખબર નથી", "નથી ખબર", "નથી મળતો", "બિલ નથી", "પછી આપીશ", "ના", "નથી યાદ"
         ])
         
         if has_no_serial:
             # Caller does not have serial number -> Gracefully guide and proceed to mobile number
             state["machine_sr_no"] = "Not Provided"
             state["current_step"] = 9
-            if lang == "hi":
-                reply = "सर/मैडम, उत्पाद का सीरियल नंबर उत्पाद पर या खरीद चालान पर मिल सकता है। कोई बात नहीं, हम अभी इसके बिना आगे बढ़ते हैं। कृपया अपना मोबाइल नंबर बताइए।"
+            if lang == "gu":
+                reply = "અરે કોઈ વાંધો નહીં જી! સિરીયલ નંબર સામાન્ય રીતે મશીન પર અથવા તેના બિલ પર લખેલો હોય છે. પણ ચિંતા કરવાની કોઈ જરૂર નથી, અમે તેના વગર જ ફરિયાદ નોંધી લઈએ છીએ. આપ કૃપા કરીને આપનો 10 અંકનો મોબાઈલ નંબર જણાવી દો."
+            elif lang == "hi":
+                reply = "अरे कोई बात नहीं जी! सीरियल नंबर वैसे मशीन पर या उसके बिल पर लिखा होता है। पर कोई चिंता की बात नहीं, हम इसके बिना ही शिकायत दर्ज कर लेते हैं। आप कृपया अपना मोबाइल नंबर बता दीजिए।"
             else:
-                reply = "Sir/Ma'am, to assist you further, you can find the serial number on the product or in your purchase invoice. No problem at all, we will proceed for now. Kindly provide your mobile number."
+                reply = "To assist you further, you can find the serial number on the product or purchase invoice later. No problem at all, we will proceed for now. Kindly provide your mobile number."
         else:
             # Extract serial number string
             clean_sr = _clean_serial_number(raw_message)
             state["temp_serial_no"] = clean_sr
             state["current_step"] = 8
             
-            if lang == "hi":
-                reply = f"आपने बताया {clean_sr}। आगे बढ़ने के लिए कृपया 'हाँ' कहें, या सीरियल नंबर फिर से दर्ज करने के लिए 'ना' कहें।"
+            if lang == "gu":
+                reply = f"તમે સિરીયલ નંબર {clean_sr} જણાવ્યો છે. શું આ બિલકુલ સાચો છે?"
+            elif lang == "hi":
+                reply = f"आपने सीरियल नंबर {clean_sr} बताया है। क्या यह बिल्कुल सही है?"
             else:
                 reply = f"You said {clean_sr}. Please say 'Yes' to proceed, or 'No' to re-enter the serial number."
 
     # ── STEP 8: Serial Number Confirmation ──
     elif prev_step == 8:
-        is_yes = any(w in msg for w in ["yes", "yeah", "yep", "correct", "right", "ok", "haan", "sahi", "ha", "हाँ", "सही", "ठीक"])
-        is_no = any(w in msg for w in ["no", "nope", "incorrect", "wrong", "nahi", "na", "गलत", "नहीं", "ना"])
+        is_yes = any(w in msg for w in [
+            "yes", "yeah", "yep", "correct", "right", "ok", "haan", "sahi", "ha", "हाँ", "सही", "ठीक", "okay", "बिल्कुल", "हा", "हॉ", "जी",
+            "હા", "હાજી", "સાચો", "સાચું", "બરાબર", "ઠીક છે", "બરાબર છે"
+        ])
+        is_no = any(w in msg for w in [
+            "no", "nope", "incorrect", "wrong", "nahi", "na", "गलत", "नहीं", "ना",
+            "ના", "નહીં", "ખોટો", "ખોટું"
+        ])
 
         if is_yes or not is_no:
             state["machine_sr_no"] = state.get("temp_serial_no", "Not Provided")
             state["current_step"] = 9
-            reply = "Kindly provide your mobile number." if lang == "en" else "कृपया अपना मोबाइल नंबर बताइए।"
+            if lang == "gu":
+                reply = "જી, કૃપા કરીને આપનો 10 અંકનો મોબાઈલ નંબર જણાવી દો."
+            elif lang == "hi":
+                reply = "जी, कृपया अपना 10 अंकों का मोबाइल नंबर बता दीजिए।"
+            else:
+                reply = "Kindly provide your mobile number."
         else:
             # Caller said "No" -> Re-enter serial number
             state["current_step"] = 7
-            reply = "Kindly provide the machine serial number once again." if lang == "en" else "कृपया मशीन का सीरियल नंबर एक बार फिर बताइए।"
+            if lang == "gu":
+                reply = "કોઈ વાંધો નહીં, કૃપા કરીને સાચો સિરીયલ નંબર ફરીથી જણાવી દો."
+            elif lang == "hi":
+                reply = "कोई बात नहीं, कृपया सही सीरियल नंबर एक बार फिर से बता दीजिए।"
+            else:
+                reply = "Kindly provide the machine serial number once again."
 
     # ── STEP 9: Mobile Number (10 Digits Validation) ──
     elif prev_step == 9:
@@ -275,14 +412,21 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
         combined_digits = (accumulated + new_digits).strip()
 
         valid_phone = ""
-        if len(combined_digits) == 10:
+        # 1. Did the caller provide all 10 digits in this current utterance? (e.g. caller restarted from beginning)
+        if len(raw_digits) == 10:
+            valid_phone = raw_digits
+        elif len(raw_digits) in (11, 12) and raw_digits.startswith("91"):
+            valid_phone = raw_digits[-10:]
+        elif len(extracted_digits) == 10:
+            valid_phone = extracted_digits
+        # 2. Or did the accumulated digits + new digits complete 10 digits?
+        elif len(combined_digits) == 10:
             valid_phone = combined_digits
         elif len(combined_digits) in (11, 12) and combined_digits.startswith("91"):
             valid_phone = combined_digits[-10:]
-        elif len(extracted_digits) == 10:
-            valid_phone = extracted_digits
 
         if not valid_phone:
+            # If the user spoke partial digits (< 10), wait silently without cutting off or interrupting
             if 0 < len(combined_digits) < 10:
                 state["partial_phone_digits"] = combined_digits
                 state["current_step"] = 9
@@ -294,10 +438,31 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
                     "strategy_key": STRATEGY_KEY,
                     "mode": mode,
                     "session": session,
-                    "state": state
+                    "state": state,
+                    "language_locked": state.get("language_locked", False)
+                }
+            elif 0 < len(new_digits) < 10:
+                # If combined was distorted by old partial, reset to the new partial digits
+                state["partial_phone_digits"] = new_digits
+                state["current_step"] = 9
+                save_session(session, state)
+                return {
+                    "static_reply": "",
+                    "tts_language": lang,
+                    "skip_output_translation": True,
+                    "strategy_key": STRATEGY_KEY,
+                    "mode": mode,
+                    "session": session,
+                    "state": state,
+                    "language_locked": state.get("language_locked", False)
                 }
             
-            reply = "Your mobile number seems invalid. Kindly provide your 10-digit mobile number." if lang == "en" else "आपका मोबाइल नंबर अमान्य लग रहा है। कृपया अपना 10 अंकों का मोबाइल नंबर बताइए।"
+            if lang == "gu":
+                reply = "માફ કરશો, આ નંબર સાચો લાગતો નથી. કૃપા કરીને આપનો 10 અંકનો સાચો મોબાઈલ નંબર જણાવો."
+            elif lang == "hi":
+                reply = "माफ़ कीजिएगा, यह नंबर सही नहीं लग रहा है। कृपया अपना 10 अंकों का सही मोबाइल नंबर बताइए।"
+            else:
+                reply = "Your mobile number seems invalid. Kindly provide your 10-digit mobile number."
             state["current_step"] = 9
             state["conversation_history"].append(f"Agent: {reply}")
             save_session(session, state)
@@ -308,7 +473,8 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
                 "strategy_key": STRATEGY_KEY,
                 "mode": mode,
                 "session": session,
-                "state": state
+                "state": state,
+                "language_locked": state.get("language_locked", False)
             }
         else:
             phone_num = valid_phone
@@ -317,28 +483,40 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
             state["current_step"] = 10
             
             spoken_num = _format_spoken_number(phone_num, lang)
-            if lang == "hi":
-                reply = f"आपने बताया कि आपका मोबाइल नंबर {spoken_num} है। यदि यह सही है, तो कृपया 'हाँ' या 'ठीक है' कहें। यदि यह गलत है, तो 'नहीं' कहें।"
+            if lang == "gu":
+                reply = f"આપનો નંબર છે — {spoken_num}। શું મેં નંબર બિલકુલ સાચો નોંધ્યો છે?"
+            elif lang == "hi":
+                reply = f"आपका नंबर है — {spoken_num}। क्या मैंने नंबर बिल्कुल सही नोट किया है?"
             else:
                 reply = f"You said your mobile number is {spoken_num}. If this is correct, please say 'Yes' or 'OK.' If it is incorrect, please say 'No.'"
 
     # ── STEP 10: Number Confirmation ──
     elif prev_step == 10:
-        is_yes = any(w in msg for w in ["yes", "yeah", "yep", "correct", "right", "ok", "haan", "sahi", "ha", "हाँ", "सही", "ठीक", "okay"])
-        is_no = any(w in msg for w in ["no", "nope", "incorrect", "wrong", "nahi", "na", "गलत", "नहीं", "ना"])
+        is_yes = any(w in msg for w in [
+            "yes", "yeah", "yep", "correct", "right", "ok", "haan", "sahi", "ha", "हाँ", "सही", "ठीक", "okay", "बिल्कुल", "हा", "हॉ", "जी",
+            "હા", "હાજી", "સાચો", "સાચું", "બરાબર", "ઠીક છે", "બરાબર છે"
+        ])
+        is_no = any(w in msg for w in [
+            "no", "nope", "incorrect", "wrong", "nahi", "na", "गलत", "नहीं", "ना",
+            "ના", "નહીં", "ખોટો", "ખોટું"
+        ])
 
         if is_yes or not is_no:
             # Proceed to Step 10 in Script: Complaint Recording
             state["current_step"] = 11
-            if lang == "hi":
-                reply = "धन्यवाद। कृपया अपने फ्रीजर या मशीन की समस्या विस्तार से बताइए। आप दो मिनट तक अपनी समस्या बता सकते हैं। आपका संदेश रिकॉर्ड किया जाएगा और तुरंत कार्रवाई के लिए हमारे सर्विस इंजीनियर को भेजा जाएगा। कृपया शुरू करें।"
+            if lang == "gu":
+                reply = "આભાર! હવે કૃપા કરીને આપના ફ્રીઝર અથવા મશીનમાં આવી રહેલી સમસ્યા વિશે જણાવો. આપ શાંતિથી પૂરી વાત જણાવી શકો છો, આપનો સંદેશ સીધો અમારા સર્વિસ એન્જિનિયર સુધી પહોંચાડવામાં આવશે. જણાવો, શું તકલીફ આવી રહી છે?"
+            elif lang == "hi":
+                reply = "धन्यवाद! अब कृपया अपने फ्रीज़र या मशीन में आ रही समस्या के बारे में बताइए। आप आराम से पूरी बात बता सकते हैं, आपका संदेश सीधे हमारे सर्विस इंजीनियर तक पहुँचा जाएगा। बताइए, क्या परेशानी आ रही है?"
             else:
                 reply = "Thank you. Kindly describe the issue with your Freezer. You may speak for up to 2 minutes. Your message will be recorded and forwarded to our Service Engineer for immediate action. Please begin after the beep."
         else:
             # If Customer says "No"
             state["current_step"] = 9
-            if lang == "hi":
-                reply = "क्षमा करें। कृपया अपना मोबाइल नंबर एक बार फिर दोहराएं।"
+            if lang == "gu":
+                reply = "માફ કરશો! કૃપા કરીને આપનો સાચો મોબાઈલ નંબર ફરીથી જણાવી દો."
+            elif lang == "hi":
+                reply = "माफ़ कीजिएगा! कृपया अपना सही मोबाइल नंबर एक बार फिर से बता दीजिए।"
             else:
                 reply = "I apologize. Kindly repeat your mobile number once again."
 
@@ -359,18 +537,27 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
         else:
             logger.warning("Conversation record not found for session_id: %s", session.session_id)
 
-        cust_name = state.get("customer_name", "Customer")
+        cust_name = state.get("customer_name", "")
+        name_en = f", {cust_name}" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
+        name_hi = f" {cust_name} जी" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
+        name_gu = f" {cust_name} જી" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
         spoken_ticket = _format_spoken_ticket(ticket_number, lang)
 
-        if lang == "hi":
+        if lang == "gu":
             reply = (
-                f"धन्यवाद {cust_name} जी। आपकी शिकायत आइस मेक रेफ्रिजरेशन लिमिटेड में सफलतापूर्वक दर्ज कर ली गई है। "
-                f"कृपया भविष्य के संदर्भ के लिए अपना शिकायत नंबर {ticket_number} (नोट: {spoken_ticket}) लिख लें। "
-                f"हमारी सर्विस टीम जल्द ही आपसे संपर्क करेगी। आइस मेक चुनने के लिए धन्यवाद। आपका दिन शुभ हो। [FLOW_COMPLETE]"
+                f"ખૂબ ખૂબ આભાર{name_gu}! આપની ફરિયાદ નોંધાઈ ગઈ છે. "
+                f"કૃપા કરીને આપનો ફરિયાદ નંબર નોંધી લેશો — {ticket_number}, એટલે કે {spoken_ticket}। "
+                f"અમારા સર્વિસ એન્જિનિયર ટૂંક સમયમાં જ આપનો સંપર્ક કરશે. આઈસ મેકમાં કોલ કરવા બદલ આભાર, આપનો દિવસ શુભ રહે! [FLOW_COMPLETE]"
+            )
+        elif lang == "hi":
+            reply = (
+                f"बहुत-बहुत धन्यवाद{name_hi}! आपकी शिकायत दर्ज कर ली गई है। "
+                f"कृपया अपना कंप्लेंट नंबर नोट कर लीजिए — {ticket_number}, यानी {spoken_ticket}। "
+                f"हमारे सर्विस इंजीनियर जल्द ही आपसे संपर्क करेंगे। आइस मेक में कॉल करने के लिए धन्यवाद, आपका दिन बहुत शुभ हो! [FLOW_COMPLETE]"
             )
         else:
             reply = (
-                f"Thank you, Mr. {cust_name}. Your complaint has been successfully registered with Ice Make Refrigeration Limited. "
+                f"Thank you{name_en}. Your complaint has been successfully registered with Ice Make Refrigeration Limited. "
                 f"Please note your complaint number {ticket_number} for future reference. "
                 f"Our service team will contact you shortly. Thank you for choosing Ice Make. Have a wonderful day. [FLOW_COMPLETE]"
             )
@@ -387,7 +574,8 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
             "session": session,
             "state": state,
             "auto_disconnect": True,
-            "skip_name_collection": True
+            "skip_name_collection": True,
+            "language_locked": state.get("language_locked", False)
         }
 
     state["conversation_history"].append(f"Agent: {reply}")
@@ -400,7 +588,8 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
         "strategy_key": STRATEGY_KEY,
         "mode": mode,
         "session": session,
-        "state": state
+        "state": state,
+        "language_locked": state.get("language_locked", False)
     }
 
 # ── Helpers for Entity Extraction, DB Logging & Notifications ──
@@ -408,9 +597,19 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
 def _clean_serial_number(text: str) -> str:
     """Cleans machine serial number input."""
     clean = text.strip()
-    clean = re.sub(r'^(machine|serial|model|sr|no|number|serial\s+number|सीरियल\s+नंबर|मशीन)\s+', '', clean, flags=re.IGNORECASE).strip()
+    clean = re.sub(r'^(machine|serial|model|sr|no|number|serial\s+number|सीरियल\s+नंबर|मशीन|મશીન|સિરીયલ\s+નંબર|મશીનનો\s+નંબર|સિરીયલ)\s+', '', clean, flags=re.IGNORECASE).strip()
     clean = re.sub(r'[.,!?\s]', '', clean).upper()
     return clean if clean else text.strip()
+
+def _clean_state_name(text: str) -> str:
+    """Cleans and extracts Indian state name from spoken text."""
+    if not text:
+        return ""
+    clean = text.strip()
+    clean = re.sub(r'^(i\s+am\s+from|from|state\s+is|state|main|hum|mera\s+state|mein|se|હું|મારું\s+રાજ્ય|માંથી|થી)\s+', '', clean, flags=re.IGNORECASE).strip()
+    clean = re.sub(r'\s+(se\s+bol\s+raha\s+hu|se\s+hai|se|state|માંથી|થી|છે|રાજ્ય)$', '', clean, flags=re.IGNORECASE).strip()
+    clean = re.sub(r'[.,!?]', '', clean).strip()
+    return clean.title() if clean else text.strip().title()
 
 def _create_v2_ticket_db_record(conversation, state):
     """Logs ticket in IcemakeTicket DB model."""
@@ -501,12 +700,13 @@ def _extract_person_name(raw_message: str, lang: str = "en") -> str:
         return "Not Provided"
     
     clean = raw_message.strip()
-    clean = re.sub(r'^(my\s+name\s+is|i\s+am|iam|this\s+is|name\s+is|मेरा\s+नाम|नाम|मैं)\s+', '', clean, flags=re.IGNORECASE).strip()
-    clean = re.sub(r'\s+(is\s+my\s+name|speaking|here|है|हूं)$', '', clean, flags=re.IGNORECASE).strip()
+    clean = re.sub(r'^(my\s+name\s+is|i\s+am|iam|this\s+is|name\s+is|मेरा\s+नाम|नाम|मैं|મારું\s+નામ\s+છે|મારું\s+નામ|નામ|હું)\s+', '', clean, flags=re.IGNORECASE).strip()
+    clean = re.sub(r'\s+(is\s+my\s+name|speaking|here|है|हूं|છે|બોલું\s+છું)$', '', clean, flags=re.IGNORECASE).strip()
     clean = re.sub(r'[।!?,.\-]', '', clean).strip()
 
     words = clean.split()
-    if 1 <= len(words) <= 3 and len(clean) <= 30 and not any(w in clean.lower() for w in ["complaint", "issue", "problem", "freezer", "chiller"]):
+    excluded = ["complaint", "issue", "problem", "freezer", "chiller", "hindi", "हिंदी", "हिन्दी", "english", "अंग्रेज़ी", "अंग्रेजी", "gujarati", "ગુજરાતી", "gujrati", "ફરિયાદ", "તકલીફ", "સમસ્યા"]
+    if 1 <= len(words) <= 3 and len(clean) <= 30 and not any(w in clean.lower() for w in excluded):
         return clean.title()
 
     try:
@@ -596,6 +796,7 @@ Input: "{raw_message}"
 def _map_regional_digits_to_ascii(text: str) -> str:
     regional_digit_map = {
         '०': '0', '१': '1', '२': '2', '३': '3', '४': '4', '५': '5', '६': '6', '७': '7', '८': '8', '९': '9',
+        '૦': '0', '૧': '1', '૨': '2', '૩': '3', '૪': '4', '૫': '5', '૬': '6', '૭': '7', '૮': '8', '૯': '9',
     }
     return "".join(regional_digit_map.get(ch, ch) for ch in text)
 
@@ -607,7 +808,9 @@ def _convert_all_spoken_numbers_to_digits(text: str, lang: str = "en") -> str:
         "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4",
         "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9",
         "ten": "10", "शून्य": "0", "एक": "1", "दो": "2", "तीन": "3", "चार": "4",
-        "पांच": "5", "पाँच": "5", "छह": "6", "सात": "7", "आठ": "8", "नौ": "9", "दस": "10"
+        "पांच": "5", "पाँच": "5", "छह": "6", "सात": "7", "आठ": "8", "नौ": "9", "दस": "10",
+        "ઝીરો": "0", "મીંડું": "0", "એક": "1", "બે": "2", "ત્રણ": "3", "ચાર": "4",
+        "પાંચ": "5", "છ": "6", "સાત": "7", "આઠ": "8", "નવ": "9", "દસ": "10"
     }
     sorted_words = sorted(num_map.keys(), key=lambda x: len(x), reverse=True)
     result = text
@@ -621,15 +824,115 @@ def _check_and_handle_out_of_flow(raw_message: str, lang: str, current_step: int
     if not raw_message or len(raw_message.strip()) < 3 or current_step in (0, 11, 12):
         return None
 
+    # Steps 3 & 4 are actively collecting customer location/address & state.
+    # Never treat an address, city, or state name as an out-of-flow query.
+    if current_step in (3, 4):
+        has_explicit_company_question = bool(re.search(
+            r'\b(?:where\s+is\s+(?:your|the)\s+(?:office|factory|plant|company)|aapka\s+office|aapki\s+factory|company\s+kahan|tamari\s+office|tamari\s+factory)\b',
+            raw_message, re.IGNORECASE
+        ))
+        if not has_explicit_company_question:
+            return None
+
     digits = _extract_phone_number_ai(raw_message, lang)
     if len(digits) == 10:
         return None
 
-    query_triggers = [
-        "where", "office", "head office", "location", "factory", "ahmedabad", "gandhinagar",
-        "kahan", "kaha", "price", "cost", "warranty", "repeat", "फिर से"
+    # Handle polite repeats
+    repeat_patterns = [
+        r'\b(?:can\s+you\s+)?repeat\b',
+        r'\bpardon\b',
+        r'\b(?:fir\s+se|dobara|ek\s+baar\s+fir|wapas)\s+(?:boli(?:ye)?|bata(?:iye)?|kaho)\b',
+        r'\b(?:फिर\s+से|दोबारा)\b',
+        r'\b(?:ફરીથી|ફરી\s+બોલો|ફરી\s+કહો|પાછું\s+બોલો|એક\s+વાર\s+ફરી)\b'
     ]
-    if not any(t in raw_message.lower() for t in query_triggers):
+    if any(re.search(pat, raw_message, re.IGNORECASE) for pat in repeat_patterns):
+        cust_name = state.get("customer_name", "")
+        name_en = f", {cust_name}" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
+        name_hi = f" {cust_name} जी" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
+        name_gu = f" {cust_name} જી" if (cust_name and cust_name.lower() not in ["customer", "not provided", "none"]) else ""
+        if current_step == 2:
+            if lang == "gu":
+                reply = "જી, શું હું આપનું શુભ નામ જાણી શકું છું?"
+            elif lang == "hi":
+                reply = "जी, क्या मैं आपका शुभ नाम जान सकती हूँ?"
+            else:
+                reply = "May I know your name, please?"
+        elif current_step == 3:
+            if lang == "gu":
+                reply = f"આભાર{name_gu}! કૃપા કરીને આપનું પૂરું સરનામું જણાવી દો, અને જો પિનકોડ યાદ હોય તો એ પણ સાથે જણાવી દેશો."
+            elif lang == "hi":
+                reply = f"धन्यवाद{name_hi}! कृपया अपना पूरा पता बता दीजिए, और अगर पिनकोड याद हो तो वो भी साथ में बता दीजिएगा।"
+            else:
+                reply = "Tell me your address with pincode if available."
+        elif current_step == 4:
+            if lang == "gu":
+                reply = "જી આભાર! કૃપા કરીને આપના રાજ્યનું નામ જણાવી દો."
+            elif lang == "hi":
+                reply = "जी धन्यवाद! कृपया अपने राज्य का नाम बता दीजिए।"
+            else:
+                reply = "Could you please tell me which state you are calling from?"
+        elif current_step == 7:
+            if lang == "gu":
+                reply = f"ખૂબ ખૂબ આભાર{name_gu}! હવે કૃપા કરીને આપના મશીનનો સિરીયલ નંબર જણાવી દો."
+            elif lang == "hi":
+                reply = f"बहुत-बहुत धन्यवाद{name_hi}! अब कृपया अपनी मशीन का सीरियल नंबर बता दीजिए।"
+            else:
+                reply = f"Thank you{name_en}. Kindly provide the machine serial number."
+        elif current_step == 8:
+            clean_sr = state.get("temp_serial_no", "")
+            if lang == "gu":
+                reply = f"તમે સિરીયલ નંબર {clean_sr} જણાવ્યો છે. શું આ બિલકુલ સાચો છે?"
+            elif lang == "hi":
+                reply = f"आपने सीरियल नंबर {clean_sr} बताया है। क्या यह बिल्कुल सही है?"
+            else:
+                reply = f"You said {clean_sr}. Please say 'Yes' to proceed, or 'No' to re-enter the serial number."
+        elif current_step == 9:
+            if lang == "gu":
+                reply = "જી, કૃપા કરીને આપનો 10 અંકનો મોબાઈલ નંબર જણાવી દો."
+            elif lang == "hi":
+                reply = "जी, कृपया अपना 10 अंकों का मोबाइल नंबर बता दीजिए।"
+            else:
+                reply = "Kindly provide your mobile number."
+        elif current_step == 10:
+            phone_num = state.get("registered_mobile", "")
+            spoken_num = _format_spoken_number(phone_num, lang)
+            if lang == "gu":
+                reply = f"આપનો નંબર છે — {spoken_num}। શું મેં નંબર બિલકુલ સાચો નોંધ્યો છે?"
+            elif lang == "hi":
+                reply = f"आपका नंबर है — {spoken_num}। क्या मैंने नंबर बिल्कुल सही नोट किया है?"
+            else:
+                reply = f"You said your mobile number is {spoken_num}. If this is correct, please say 'Yes' or 'OK.' If it is incorrect, please say 'No.'"
+        elif current_step == 11:
+            if lang == "gu":
+                reply = "આભાર! હવે કૃપા કરીને આપના ફ્રીઝર અથવા મશીનમાં આવી રહેલી સમસ્યા વિશે જણાવો. આપ શાંતિથી પૂરી વાત જણાવી શકો છો, આપનો સંદેશ સીધો અમારા સર્વિસ એન્જિનિયર સુધી પહોંચાડવામાં આવશે. જણાવો, શું તકલીફ આવી રહી છે?"
+            elif lang == "hi":
+                reply = "धन्यवाद! अब कृपया अपने फ्रीज़र या मशीन में आ रही समस्या के बारे में बताइए। आप आराम से पूरी बात बता सकते हैं, आपका संदेश सीधे हमारे सर्विस इंजीनियर तक पहुँचा दिया जाएगा। बताइए, क्या परेशानी आ रही है?"
+            else:
+                reply = "Thank you. Kindly describe the issue with your Freezer. You may speak for up to 2 minutes. Your message will be recorded and forwarded to our Service Engineer for immediate action. Please begin after the beep."
+        else:
+            return None
+
+        state["conversation_history"].append(f"Agent: {reply}")
+        save_session(session, state)
+        return {
+            "static_reply": reply,
+            "tts_language": lang,
+            "skip_output_translation": True,
+            "strategy_key": STRATEGY_KEY,
+            "mode": mode,
+            "session": session,
+            "state": state,
+            "language_locked": state.get("language_locked", False)
+        }
+
+    company_query_patterns = [
+        r'\b(?:where\s+is|where\s+are)\b.*\b(?:your|ice\s*make|office|factory|plant|company)\b',
+        r'\b(?:aapka|aapki|tumhara|company\s+ka|tamari)\b.*\b(?:office|factory|plant|kahan|kaha|kidhar|kyan)\b',
+        r'\b(?:head\s+office|factory|plant)\s+(?:kahan|kaha|kidhar|kyan)\b',
+        r'\b(?:what\s+is\s+the|kya\s+hai|su\s+che)\b.*\b(?:warranty|guarantee|price|cost)\b',
+    ]
+    if not any(re.search(pat, raw_message, re.IGNORECASE) for pat in company_query_patterns):
         return None
 
     try:
@@ -640,9 +943,10 @@ def _check_and_handle_out_of_flow(raw_message: str, lang: str, current_step: int
 The caller asked a question: "{raw_message}".
 Ice Make Info: Head office & factory at Dantali, Gandhinagar - Ahmedabad Highway, Gujarat. Manufactures Cold Storage, Blast Freezers, Chillers.
 Instructions:
-1. Always maintain a polite, courteous female persona. In Hindi, strictly use feminine verb forms and self-references (e.g., 'सकती हूँ', 'करती हूँ', 'बताती हूँ', 'समझ गई').
-2. Answer their question concisely and politely in language '{lang}'.
-3. Then smoothly transition back to asking them for their complaint detail.
+1. Always maintain a warm, polite, courteous female customer care persona. In Gujarati or Hindi, strictly use feminine verb forms and self-references.
+2. In Gujarati or Hindi, speak in very warm, natural, human conversational tone (જેમ કે એક સાચી કસ્ટમર કેર એક્ઝિક્યુટિવ આદરપૂર્વક વાત કરે છે).
+3. Answer their question concisely and politely in language '{lang}'.
+4. Then smoothly transition back to asking them for their complaint detail.
 Response:"""
         res = client.chat.completions.create(
             model=settings.AZURE_OPENAI_DEPLOYMENT,
@@ -662,7 +966,8 @@ Response:"""
                 "strategy_key": STRATEGY_KEY,
                 "mode": mode,
                 "session": session,
-                "state": state
+                "state": state,
+                "language_locked": state.get("language_locked", False)
             }
     except Exception:
         pass

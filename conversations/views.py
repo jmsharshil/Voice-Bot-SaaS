@@ -6700,4 +6700,61 @@ def system_maintenance_status_api(request):
     }, status=200)
 
 
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def dashboard_ai_copilot_api(request):
+    """
+    Dashboard AI Intelligence Copilot API.
+    Resolves natural language queries regarding dashboard leads,
+    appointments, bot metrics, and call performance.
+    """
+    user = request.user if (request.user and request.user.is_authenticated) else None
+    
+    # Try resolving user from JWT Authorization header if not authenticated in session
+    auth_header = request.headers.get("Authorization", "")
+    if not user and auth_header.startswith("Bearer "):
+        token_str = auth_header.split(" ", 1)[1]
+        try:
+            from rest_framework_simplejwt.tokens import AccessToken
+            from django.contrib.auth.models import User
+            token = AccessToken(token_str)
+            user_id = token.get("user_id")
+            if user_id:
+                user = User.objects.filter(id=user_id).first()
+        except Exception:
+            pass
 
+    # Fallback: resolve user from username parameter if provided in request
+    if not user:
+        client_username = request.data.get("username")
+        if client_username:
+            from django.contrib.auth.models import User
+            user = User.objects.filter(username=client_username).first()
+
+    user_query = request.data.get("message") or request.data.get("query") or ""
+    user_query = str(user_query).strip()
+
+    if not user_query:
+        return Response({"error": "Please provide a query message."}, status=400)
+
+    history = request.data.get("history") or []
+    agent_slug = request.data.get("agent_slug") or ""
+    agent_name = request.data.get("agent_name") or ""
+    screen_stats = request.data.get("screen_stats") or None
+
+    from conversations.services.dashboard_ai_copilot import process_copilot_query
+    result = process_copilot_query(
+        user_query=user_query,
+        user=user,
+        history=history,
+        current_agent_slug=agent_slug,
+        current_agent_name=agent_name,
+        screen_stats=screen_stats
+    )
+
+    return Response({
+        "status": "success",
+        "reply": result.get("reply", ""),
+        "tools_used": result.get("tools_used", []),
+        "username": user.username if user else "Executive"
+    }, status=200)

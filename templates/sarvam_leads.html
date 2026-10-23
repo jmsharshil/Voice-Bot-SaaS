@@ -3565,6 +3565,12 @@
                     <span class="sidebar-btn-text">Manage Team</span>
                 </button>
 
+                <!-- AI Copilot -->
+                <button type="button" class="sidebar-btn" onclick="openDashboardAiCopilot(); toggleSidebar(false);">
+                    <span class="sidebar-btn-icon"><i class="fa-solid fa-wand-magic-sparkles" style="color: #2563eb;"></i></span>
+                    <span class="sidebar-btn-text">AI Copilot</span>
+                </button>
+
                 <!-- Support -->
                 <button type="button" class="sidebar-btn" onclick="openSupportChatbox(event); toggleSidebar(false);">
                     <span class="sidebar-btn-icon"><i class="fa-solid fa-headset" style="color: #db2777;"></i></span>
@@ -7781,24 +7787,21 @@
         function toggleSidebar(forceState) {
             const sidebar = document.getElementById('appSidebar');
             const backdrop = document.getElementById('sidebarBackdrop');
+            const copilotLauncher = document.getElementById('aiCopilotLauncherBtn');
             if (!sidebar) return;
 
-            if (typeof forceState === 'boolean') {
-                if (forceState) {
-                    sidebar.classList.add('open');
-                    if (backdrop) backdrop.classList.add('open');
-                } else {
-                    sidebar.classList.remove('open');
-                    if (backdrop) backdrop.classList.remove('open');
+            const willOpen = (typeof forceState === 'boolean') ? forceState : !sidebar.classList.contains('open');
+            if (willOpen) {
+                sidebar.classList.add('open');
+                if (backdrop) backdrop.classList.add('open');
+                if (copilotLauncher) {
+                    copilotLauncher.style.display = 'none';
                 }
             } else {
-                const willOpen = !sidebar.classList.contains('open');
-                if (willOpen) {
-                    sidebar.classList.add('open');
-                    if (backdrop) backdrop.classList.add('open');
-                } else {
-                    sidebar.classList.remove('open');
-                    if (backdrop) backdrop.classList.remove('open');
+                sidebar.classList.remove('open');
+                if (backdrop) backdrop.classList.remove('open');
+                if (copilotLauncher) {
+                    copilotLauncher.style.display = 'inline-flex';
                 }
             }
         }
@@ -8730,6 +8733,7 @@
         setTimeout(runDynamicPoll, 5000);
     </script>
     {% include "support_chatbox_modal.html" %}
+    {% include "dashboard_ai_copilot_modal.html" %}
 
 </body>
 </html>
