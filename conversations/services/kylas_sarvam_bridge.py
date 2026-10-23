@@ -22,36 +22,163 @@ SARVAM_WORKSPACE_ID = os.getenv("SARVAM_WORKSPACE_ID") or "01a03cbf-1bfb-770a-bb
 MY_PUBLIC_DOMAIN = os.getenv("MY_PUBLIC_DOMAIN", "https://unprecious-waltraud-nasological.ngrok-free.dev")
 
 
+def get_kylas_api_key():
+    k = os.getenv("KYLAS_API_KEY", "")
+    if not k:
+        try:
+            from dotenv import dotenv_values
+            env_dict = dotenv_values()
+            k = env_dict.get("KYLAS_API_KEY", "")
+        except Exception:
+            pass
+    return k.strip() if k else ""
+
+
 class KylasService:
     """
-    [ON HOLD / DISABLED FOR NOW]
     Service class for interacting with Kylas CRM REST APIs.
-    Preserved for future re-activation.
+    Dispatches post-call details (outcome, duration, recording, notes)
+    to https://api.kylas.io/v1/call-logs/
     """
 
     @staticmethod
-    def get_headers():
+    def get_headers(api_key=None):
+        key = api_key or get_kylas_api_key()
         return {
-            "api-key": KYLAS_API_KEY,
+            "api-key": key,
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
 
     @classmethod
-    def log_call_activity(cls, lead_id: int, call_data: dict):
+    def log_call_activity(cls, lead_id, phone_number, cdr_data: dict, recording_url: str = None, api_key: str = None):
         """
-        [ON HOLD] Creates a Call Activity in Kylas under the specified Lead ID.
+        Creates a Call Log in Kylas CRM under the specified Lead ID.
+        Endpoint: POST https://api.kylas.io/v1/call-logs/
         """
-        logger.info(f"ℹ️ [KYLAS INTEGRATION ON HOLD] Skipped logging call activity for Lead #{lead_id}")
-        return {"status": "disabled", "message": "Kylas CRM integration is on hold"}
+        key = api_key or get_kylas_api_key()
+        if not key:
+            logger.warning("⚠️ [KYLAS CRM] KYLAS_API_KEY not found in environment. Skipping call log dispatch.")
+            return {"status": "error", "message": "KYLAS_API_KEY not set in .env"}
+
+        try:
+            # 1. Duration in seconds
+            dur = cdr_data.get("call_duration_seconds")
+            if dur is None:
+                dur = cdr_data.get("duration") or cdr_data.get("duration_seconds") or 0
+            try:
+                duration_int = int(float(dur))
+            except Exception:
+                duration_int = 0
+
+            # 2. Determine outcome: "connected" vs "missed" / "busy"
+            raw_outcome = str(cdr_data.get("call_outcome") or cdr_data.get("status") or "").lower()
+            if duration_int > 0 and raw_outcome not in ["unreachable", "failed", "busy", "no_answer"]:
+                outcome = "connected"
+            elif raw_outcome in ["busy"]:
+                outcome = "busy"
+            else:
+                outcome = "missed"
+
+            # 3. Format start time in ISO 8601 (e.g., 2026-10-23T14:36:52.000Z)
+            st = str(cdr_data.get("call_start_time") or cdr_data.get("start_time") or "").strip()
+            if st:
+                if not st.endswith("Z") and "+" not in st:
+                    st += ".000Z"
+            else:
+                from datetime import datetime, timezone as py_tz
+                st = datetime.now(py_tz.utc).isoformat().replace("+00:00", "Z")
+
+            # 4. Clean phone number
+            clean_phone = "".join(filter(str.isdigit, str(phone_number or "")))
+            if len(clean_phone) > 10:
+                clean_phone = clean_phone[-10:]
+
+            # 5. Build rich notes from AI summary & lead evaluation
+            notes = []
+            call_sum = str(cdr_data.get("call_summary") or "").strip()
+            if call_sum:
+                notes.append({"description": f"AI Summary: {call_sum}"})
+
+            meta_details = []
+            if cdr_data.get("call_outcome"):
+                meta_details.append(f"Outcome: {cdr_data.get('call_outcome')}")
+            if cdr_data.get("lead_temperature"):
+                meta_details.append(f"Temperature: {cdr_data.get('lead_temperature')}")
+            if cdr_data.get("lead_stage"):
+                meta_details.append(f"Stage: {cdr_data.get('lead_stage')}")
+            if cdr_data.get("caller_sentiment"):
+                meta_details.append(f"Sentiment: {cdr_data.get('caller_sentiment')}")
+            if cdr_data.get("plan_interest"):
+                meta_details.append(f"Interest: {cdr_data.get('plan_interest')}")
+            if meta_details:
+                notes.append({"description": " | ".join(meta_details)})
+
+            if not notes:
+                notes.append({"description": "AI Outbound Voice Call Completed."})
+
+            # 6. Audio recording object
+            interaction_id = str(cdr_data.get("interaction_id") or "call").replace("/", "_")
+            call_recording = {
+                "data": "",
+                "fileName": f"call_{interaction_id}.mp3",
+                "url": str(recording_url or cdr_data.get("recording_url") or cdr_data.get("audio_url") or "")
+            }
+
+            payload = {
+                "outcome": outcome,
+                "startTime": st,
+                "phoneNumber": clean_phone,
+                "callType": "outgoing",
+                "duration": str(duration_int),
+                "notes": notes,
+                "relatedTo": {
+                    "id": int(lead_id),
+                    "entity": "lead",
+                    "phoneNumber": clean_phone
+                },
+                "callRecording": call_recording
+            }
+
+            url = f"{KYLAS_API_BASE_URL.rstrip('/')}/call-logs/"
+            headers = {
+                "api-key": key,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+
+            logger.info(f"📤 [KYLAS CRM] Sending Call Log for Lead #{lead_id} to {url}...")
+            resp = requests.post(url, json=payload, headers=headers, timeout=12)
+
+            if resp.status_code in [200, 201]:
+                logger.info(f"✅ [KYLAS CRM] Successfully logged call for Lead #{lead_id} (Status {resp.status_code})")
+                return {"status": "success", "code": resp.status_code, "data": resp.json() if resp.text else {}}
+            else:
+                logger.error(f"❌ [KYLAS CRM ERROR]: HTTP {resp.status_code} - {resp.text}")
+                return {"status": "error", "code": resp.status_code, "response": resp.text}
+
+        except Exception as e:
+            logger.error(f"❌ [KYLAS CRM EXCEPTION]: {e}", exc_info=True)
+            return {"status": "error", "message": str(e)}
 
     @classmethod
     def update_lead_status(cls, lead_id: int, stage_id: str = None, custom_fields: dict = None):
-        """
-        [ON HOLD] Updates lead stage or custom fields in Kylas CRM.
-        """
-        logger.info(f"ℹ️ [KYLAS INTEGRATION ON HOLD] Skipped updating Lead #{lead_id}")
-        return {"status": "disabled", "message": "Kylas CRM integration is on hold"}
+        """Updates lead stage or custom fields in Kylas CRM."""
+        key = os.getenv("KYLAS_API_KEY", "")
+        if not key:
+            return {"status": "error", "message": "KYLAS_API_KEY not set in .env"}
+        try:
+            url = f"{KYLAS_API_BASE_URL.rstrip('/')}/leads/{lead_id}/"
+            payload = {}
+            if stage_id:
+                payload["stageId"] = stage_id
+            if custom_fields:
+                payload["customFieldValues"] = custom_fields
+            resp = requests.put(url, json=payload, headers=cls.get_headers(key), timeout=10)
+            return {"status": "success", "code": resp.status_code}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
 
 
 SARVAM_CONNECTION_ID = os.getenv("SARVAM_CONNECTION_ID", "b2c7589b-ba-50612cf7-e15f")

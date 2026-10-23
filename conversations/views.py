@@ -1482,6 +1482,26 @@ def sarvam_cdr_webhook(request):
         from conversations.services.kylas_sarvam_bridge import SarvamAgentService
         from conversations.models import SarvamCallRecord, SarvamAgent
 
+        output_vars = raw_data.get("output_agent_variables") or raw_data.get("final_agent_variables") or {}
+        if not isinstance(output_vars, dict):
+            output_vars = {}
+
+        candidate_name = (
+            raw_data.get("candidate_name")
+            or raw_data.get("user_name")
+            or raw_data.get("customer_name")
+            or raw_data.get("caller_name")
+            or raw_data.get("caller")
+            or metadata.get("customer_name")
+            or metadata.get("user_name")
+            or metadata.get("caller_name")
+            or output_vars.get("candidate_name")
+            or output_vars.get("user_name")
+            or output_vars.get("customer_name")
+            or output_vars.get("caller_name")
+            or "Customer"
+        )
+
         # ✅ Detect which SarvamAgent this CDR belongs to using app_id, agent_phone, deployment_id, or keyword matching
         cdr_app_id = str(raw_data.get("app_id") or raw_data.get("agent_id") or raw_data.get("appId") or metadata.get("app_id") or "").strip()
         cdr_agent_phone = str(
@@ -1619,26 +1639,8 @@ def sarvam_cdr_webhook(request):
             or call_obj.get("status")
             or "COMPLETED"
         )
-        output_vars = raw_data.get("output_agent_variables") or raw_data.get("final_agent_variables") or {}
         if isinstance(output_vars, dict) and output_vars.get("final_status"):
             final_status = output_vars["final_status"]
-
-        # ✅ Extract candidate_name early to assist in record matching
-        candidate_name = (
-            raw_data.get("candidate_name")
-            or raw_data.get("user_name")
-            or raw_data.get("customer_name")
-            or raw_data.get("caller_name")
-            or raw_data.get("caller")
-            or metadata.get("customer_name")
-            or metadata.get("user_name")
-            or metadata.get("caller_name")
-            or (output_vars.get("candidate_name") if isinstance(output_vars, dict) else None)
-            or (output_vars.get("user_name") if isinstance(output_vars, dict) else None)
-            or (output_vars.get("customer_name") if isinstance(output_vars, dict) else None)
-            or (output_vars.get("caller_name") if isinstance(output_vars, dict) else None)
-            or "Customer"
-        )
 
         rec = None
         if attempt_id:
@@ -1992,8 +1994,38 @@ def sarvam_cdr_webhook(request):
                 print(f"⚠️ [SARVAM CAMPAIGN LEAD SYNC ERROR]: {sync_err}")
 
         # =========================================================
-        # [KYLAS CRM INTEGRATION - ON HOLD / COMMENTED OUT FOR NOW]
+        # ✅ KYLAS CRM DISPATCH (ONLY for Third-Party Webhook Calls)
         # =========================================================
+        try:
+            if rec:
+                crm_lead_id = None
+                if isinstance(rec.summary, dict):
+                    crm_lead_id = (
+                        rec.summary.get("crm_lead_id")
+                        or (rec.summary.get("received_payload") or {}).get("entity", {}).get("id")
+                        or (rec.summary.get("received_payload") or {}).get("id")
+                        or (rec.summary.get("received_payload") or {}).get("lead_id")
+                    )
+
+                is_webhook_call = "Webhook" in str(rec.call_type or "") or bool(crm_lead_id)
+
+                if is_webhook_call and crm_lead_id:
+                    print(f"📡 [THIRD-PARTY CDR PUSH] Pushing call log to Kylas CRM for Lead #{crm_lead_id}...")
+                    from conversations.services.kylas_sarvam_bridge import KylasService
+                    kylas_res = KylasService.log_call_activity(
+                        lead_id=crm_lead_id,
+                        phone_number=rec.phone_number,
+                        cdr_data=raw_data,
+                        recording_url=recording_url
+                    )
+                    print(f"📡 [THIRD-PARTY CDR PUSH RESULT]: {kylas_res}")
+                    if isinstance(rec.summary, dict):
+                        rec.summary["kylas_sync"] = kylas_res
+                        rec.save(update_fields=["summary"])
+                else:
+                    print(f"ℹ️ [KYLAS CRM SKIPPED]: Call #{rec.id} is an internal/dashboard call (call_type: {rec.call_type}). Skipping third-party push.")
+        except Exception as k_err:
+            print(f"⚠️ [KYLAS CRM DISPATCH ERROR]: {k_err}")
 
         # ✅ POST-CALL AI CONVERSATION SUMMARY & ACCURATE TAG ALLOCATION
         if rec and (rec.transcript or (isinstance(rec.summary, dict) and rec.summary.get("conversation_log")) or rec.duration_seconds > 0):

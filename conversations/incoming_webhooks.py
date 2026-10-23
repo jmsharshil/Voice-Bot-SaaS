@@ -116,7 +116,17 @@ def _extract_lead_fields(raw_data):
                 if v is not None and str(v).strip() != "" and str(v).lower() not in ["null", "none", "nan"]:
                     extra_vars[k] = str(v)
 
-    return phone, candidate_name, language, applied_position, extra_vars
+    # 5. Extract CRM Lead ID (e.g. Kylas entity.id, lead_id, or root id)
+    crm_lead_id = (
+        entity.get("id")
+        or raw_data.get("id")
+        or raw_data.get("lead_id")
+        or entity.get("lead_id")
+        or entity.get("leadId")
+        or raw_data.get("leadId")
+    )
+
+    return phone, candidate_name, language, applied_position, extra_vars, crm_lead_id
 
 
 @csrf_exempt
@@ -162,7 +172,7 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
         print(f"Payload: {json.dumps(raw_data, indent=2)}")
         print("="*60 + "\n")
 
-        phone, candidate_name, language, applied_position, extra_variables = _extract_lead_fields(raw_data)
+        phone, candidate_name, language, applied_position, extra_variables, crm_lead_id = _extract_lead_fields(raw_data)
 
         if not phone:
             return Response({
@@ -217,7 +227,11 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
             applied_position=applied_position,
             call_type=f"Webhook: {event_name}",
             status="DIALING",
-            summary={"received_payload": raw_data, "extra_variables": extra_variables}
+            summary={
+                "received_payload": raw_data,
+                "extra_variables": extra_variables,
+                "crm_lead_id": crm_lead_id
+            }
         )
 
         logger.info(f"📱 [INCOMING WEBHOOK]: Initiating call for '{candidate_name}' ({clean_phone}) via Agent '{target_agent.name}' (Record #{call_record.id})")
