@@ -1,0 +1,1028 @@
+<!-- ============================================================ -->
+<!-- AI DASHBOARD INTELLIGENCE COPILOT MODAL & FLOATING LAUNCHER   -->
+<!-- ============================================================ -->
+
+<!-- Floating AI Copilot Trigger Button (Bottom Right above/beside support) -->
+<button type="button" id="aiCopilotLauncherBtn" class="ai-copilot-launcher" onclick="toggleDashboardAiCopilot(event)" title="Ask AI about your leads, calls & dashboard metrics">
+    <span class="ai-launcher-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+        </svg>
+    </span>
+    <span class="ai-launcher-text">Ask AI Copilot</span>
+    <span class="ai-launcher-sparkle">✨</span>
+</button>
+
+<!-- Backdrop Overlay -->
+<div id="aiCopilotBackdrop" class="ai-copilot-backdrop" onclick="closeDashboardAiCopilot()"></div>
+
+<!-- Copilot Window -->
+<div id="aiCopilotWindow" class="ai-copilot-window" role="dialog" aria-modal="true" aria-labelledby="aiCopilotTitle">
+    <!-- Top Accent Gradient Line -->
+    <div class="ai-copilot-top-accent"></div>
+
+    <!-- Header -->
+    <div class="ai-copilot-header">
+        <div class="ai-header-left">
+            <div class="ai-avatar-wrap">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                    <circle cx="12" cy="5" r="2"></circle>
+                    <path d="M12 7v4"></path>
+                    <line x1="8" y1="16" x2="8" y2="16"></line>
+                    <line x1="16" y1="16" x2="16" y2="16"></line>
+                </svg>
+                <span class="ai-status-dot">
+                    <span class="ai-status-ping"></span>
+                </span>
+            </div>
+            <div>
+                <div class="ai-header-title-row">
+                    <span class="ai-header-title" id="aiCopilotTitle">Dashboard AI Copilot</span>
+                    <span class="ai-header-badge">Live Intelligence</span>
+                </div>
+                <div class="ai-header-subtitle">
+                    <span class="ai-online-bullet">●</span> Ask anything about your leads, calls &amp; bookings
+                </div>
+            </div>
+        </div>
+        <div class="ai-header-actions">
+            <button type="button" class="ai-tool-btn" onclick="clearCopilotChat()" title="Clear conversation" aria-label="Clear chat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+            </button>
+            <button type="button" class="ai-close-btn" onclick="closeDashboardAiCopilot()" title="Close Copilot" aria-label="Close">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat Messages Stream Body -->
+    <div class="ai-copilot-body" id="aiCopilotBody">
+        <!-- Welcome Card -->
+        <div class="ai-welcome-card" id="aiCopilotWelcomeCard">
+            <div class="ai-welcome-badge">
+                <span>✨ Connected to Live Database</span>
+            </div>
+            <h3 class="ai-welcome-title">Hi <span id="aiCopilotUserName">there</span>! How can I assist your sales today?</h3>
+            <p class="ai-welcome-desc">
+                I am your live Dashboard AI Copilot. I analyze all incoming and outbound voice bot calls, extract hot leads, identify booked appointments, and summarize metrics on demand.
+            </p>
+
+            <!-- Quick Suggestion Action Chips -->
+            <div class="ai-quick-topics">
+                <span class="ai-quick-label">Try asking:</span>
+                <div class="ai-chips-list">
+                    <button type="button" class="ai-chip" onclick="askCopilotPrompt('How many leads did we get today?')">
+                        📊 Today's Lead Count
+                    </button>
+                    <button type="button" class="ai-chip" onclick="askCopilotPrompt('Show me the latest Hot and interested leads with their phone numbers')">
+                        🔥 Show Hot Leads
+                    </button>
+                    <button type="button" class="ai-chip" onclick="askCopilotPrompt('List all booked appointments and test drives')">
+                        📅 Booked Appointments
+                    </button>
+                    <button type="button" class="ai-chip" onclick="askCopilotPrompt('Show performance summary for this voice agent')">
+                        🎙️ Bot Performance
+                    </button>
+                    <button type="button" class="ai-chip" onclick="askCopilotPrompt('Why are customers saying no or declining?')">
+                        💡 Common Objections
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Chat Stream -->
+        <div id="aiCopilotMessagesStream" class="ai-messages-stream"></div>
+
+        <!-- Typing / Querying Live DB Indicator -->
+        <div id="aiCopilotTyping" class="ai-typing-indicator" style="display: none;">
+            <div class="ai-typing-avatar">🤖</div>
+            <div class="ai-typing-bubble">
+                <div class="ai-dots">
+                    <span></span><span></span><span></span>
+                </div>
+                <span class="ai-typing-text">Querying live database &amp; computing metrics...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Composer -->
+    <div class="ai-copilot-footer">
+        <div class="ai-composer-box">
+            <textarea 
+                id="aiCopilotQueryInput" 
+                class="ai-textarea" 
+                rows="1" 
+                placeholder="Ask about leads, calls, numbers, or appointments..." 
+                onkeydown="handleCopilotKey(event)" 
+                oninput="autoResizeCopilotInput(this)"
+            ></textarea>
+            <button type="button" id="aiCopilotSendBtn" class="ai-send-btn" onclick="sendCopilotMessage()" title="Send Question">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+        <div class="ai-composer-footer">
+            <span class="ai-footer-note">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Direct AI access to live dashboard records
+            </span>
+            <span class="ai-composer-hint"><strong>Enter</strong> to send &bull; <strong>Shift + Enter</strong> for newline</span>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ============================================================ */
+/* AI DASHBOARD COPILOT STYLING (MODERN LIGHT EXECUTIVE THEME)   */
+/* ============================================================ */
+
+/* Floating Launcher Button */
+.ai-copilot-launcher {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    left: auto;
+    z-index: 99990;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 30px;
+    padding: 11px 18px 11px 16px;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    cursor: pointer;
+    box-shadow: 0 10px 25px -4px rgba(37, 99, 235, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ai-copilot-launcher:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 14px 30px -4px rgba(37, 99, 235, 0.55), 0 0 0 2px rgba(255, 255, 255, 0.3) inset;
+    background: linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%);
+}
+.ai-launcher-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: aiSpinSlow 12s linear infinite;
+}
+@keyframes aiSpinSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.ai-launcher-sparkle {
+    font-size: 14px;
+    margin-left: 2px;
+}
+
+/* Auto-hide floating launcher when sidebar is open */
+body:has(#appSidebar.open) .ai-copilot-launcher,
+.app-sidebar.open ~ .ai-copilot-launcher,
+#appSidebar.open ~ .ai-copilot-launcher,
+body.sidebar-open .ai-copilot-launcher {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    transform: translateY(16px) scale(0.92) !important;
+}
+
+/* Backdrop */
+.ai-copilot-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.28);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 99998;
+    opacity: 0;
+    transition: opacity 0.22s ease;
+}
+.ai-copilot-backdrop.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Copilot Window */
+.ai-copilot-window {
+    display: none;
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    left: auto;
+    width: 440px;
+    max-width: calc(100vw - 32px);
+    height: 620px;
+    max-height: calc(100vh - 48px);
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(15, 23, 42, 0.08);
+    flex-direction: column;
+    z-index: 99999;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transform: translateY(20px) scale(0.97);
+    opacity: 0;
+    transition: all 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ai-copilot-window.active {
+    display: flex;
+    transform: translateY(0) scale(1);
+    opacity: 1;
+}
+
+.ai-copilot-top-accent {
+    height: 4px;
+    width: 100%;
+    background: linear-gradient(90deg, #2563eb 0%, #6366f1 50%, #06b6d4 100%);
+    flex-shrink: 0;
+}
+
+/* Header */
+.ai-copilot-header {
+    background: #ffffff;
+    padding: 13px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+.ai-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.ai-avatar-wrap {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+    border: 1.5px solid #bfdbfe;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    color: #2563eb;
+    flex-shrink: 0;
+}
+.ai-status-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 11px;
+    height: 11px;
+    background: #10b981;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.6);
+}
+.ai-status-ping {
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: rgba(16, 185, 129, 0.4);
+    animation: aiPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes aiPulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    70% { transform: scale(2.2); opacity: 0; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+.ai-header-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ai-header-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: -0.2px;
+    line-height: 1.25;
+}
+.ai-header-badge {
+    font-size: 10px;
+    font-weight: 700;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    padding: 1px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+}
+.ai-header-subtitle {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.ai-online-bullet {
+    color: #10b981;
+    font-size: 8px;
+}
+.ai-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.ai-tool-btn, .ai-close-btn {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.16s ease;
+}
+.ai-tool-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+.ai-close-btn:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+/* Chat Body */
+.ai-copilot-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-behavior: smooth;
+}
+
+/* Welcome Card */
+.ai-welcome-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+.ai-welcome-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    padding: 2px 9px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+}
+.ai-welcome-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+    line-height: 1.35;
+}
+.ai-welcome-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #475569;
+    margin: 0 0 14px 0;
+}
+.ai-quick-topics {
+    border-top: 1px dashed #e2e8f0;
+    padding-top: 12px;
+}
+.ai-quick-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 8px;
+}
+.ai-chips-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.ai-chip {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 5px 11px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.16s ease;
+    font-family: inherit;
+    text-align: left;
+}
+.ai-chip:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+/* Chat Messages */
+.ai-messages-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+.ai-msg-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    width: 100%;
+}
+.ai-msg-row.ai-msg-user {
+    justify-content: flex-end;
+}
+
+.ai-msg-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #2563eb;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.ai-msg-bubble {
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 86%;
+    word-break: break-word;
+}
+
+/* User Bubble */
+.ai-user-bubble {
+    background: #eff6ff;
+    color: #0f172a;
+    border: 1px solid #bfdbfe;
+    border-top-right-radius: 4px;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.06);
+    width: fit-content;
+}
+.ai-user-bubble .ai-bubble-text {
+    white-space: pre-wrap;
+}
+
+/* AI Copilot Response Card */
+.ai-bot-bubble {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 3.5px solid #2563eb;
+    border-top-left-radius: 4px;
+    color: #1e293b;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+.ai-bot-bubble p {
+    margin: 0 0 8px 0;
+}
+.ai-bot-bubble p:last-child {
+    margin-bottom: 0;
+}
+.ai-bot-bubble ul, .ai-bot-bubble ol {
+    margin: 6px 0 8px 18px;
+    padding: 0;
+}
+.ai-bot-bubble li {
+    margin-bottom: 4px;
+    line-height: 1.45;
+}
+.ai-bot-bubble strong {
+    color: #0f172a;
+}
+.ai-bot-bubble table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 11.5px;
+}
+.ai-bot-bubble th, .ai-bot-bubble td {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+}
+.ai-bot-bubble th {
+    background: #f8fafc;
+    font-weight: 700;
+}
+
+.ai-bubble-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 10.5px;
+    color: #64748b;
+    white-space: nowrap;
+}
+.ai-msg-user .ai-bubble-meta {
+    justify-content: flex-end;
+}
+
+/* Typing Indicator */
+.ai-typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+}
+.ai-typing-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+.ai-typing-bubble {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+.ai-dots {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.ai-dots span {
+    width: 6px;
+    height: 6px;
+    background: #2563eb;
+    border-radius: 50%;
+    animation: aiDotBounce 1.4s infinite ease-in-out both;
+}
+.ai-dots span:nth-child(1) { animation-delay: -0.32s; }
+.ai-dots span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes aiDotBounce {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+}
+.ai-typing-text {
+    font-size: 11.5px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* Composer Area */
+.ai-copilot-footer {
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 14px 10px;
+    flex-shrink: 0;
+}
+.ai-composer-box {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 6px 8px 6px 12px;
+    transition: all 0.2s ease;
+}
+.ai-composer-box:focus-within {
+    border-color: #2563eb;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+.ai-textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #0f172a;
+    max-height: 84px;
+    min-height: 22px;
+    padding: 4px 0;
+    box-sizing: border-box;
+}
+.ai-textarea::placeholder {
+    color: #94a3b8;
+}
+.ai-send-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #2563eb;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.18s ease;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+.ai-send-btn:hover:not(:disabled) {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+}
+.ai-send-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+.ai-composer-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 10.5px;
+    color: #94a3b8;
+}
+.ai-footer-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #64748b;
+    font-weight: 500;
+}
+.ai-composer-hint {
+    text-align: right;
+    color: #94a3b8;
+}
+
+@media (max-width: 480px) {
+    .ai-copilot-window {
+        bottom: 0;
+        left: 0;
+        width: 100vw;
+        max-width: 100vw;
+        height: 92vh;
+        max-height: 92vh;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    .ai-copilot-launcher {
+        bottom: 16px;
+        right: 16px;
+        left: auto;
+        padding: 9px 14px;
+        font-size: 12.5px;
+    }
+}
+</style>
+
+<script>
+/* ============================================================ */
+/* AI DASHBOARD COPILOT CLIENT LOGIC                            */
+/* ============================================================ */
+
+const aiCopilotHistory = [];
+let aiCopilotIsSending = false;
+
+// Auto-sync launcher visibility with sidebar state
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebar = document.getElementById('appSidebar');
+    const launcher = document.getElementById('aiCopilotLauncherBtn');
+    if (sidebar && launcher) {
+        const syncVisibility = () => {
+            if (sidebar.classList.contains('open')) {
+                launcher.style.display = 'none';
+            } else {
+                launcher.style.display = 'inline-flex';
+            }
+        };
+        const obs = new MutationObserver(syncVisibility);
+        obs.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+        syncVisibility();
+    }
+});
+
+function escapeHtmlCopilot(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function parseMarkdownToHtml(md) {
+    if (!md) return '';
+    let html = escapeHtmlCopilot(md);
+    
+    // Bold
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Italic
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    // Simple bullet points
+    const lines = html.split('\n');
+    let inList = false;
+    let result = [];
+    
+    for (let line of lines) {
+        let trimmed = line.trim();
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+            if (!inList) {
+                result.push('<ul>');
+                inList = true;
+            }
+            result.push(`<li>${trimmed.substring(2)}</li>`);
+        } else {
+            if (inList) {
+                result.push('</ul>');
+                inList = false;
+            }
+            if (trimmed.length > 0) {
+                result.push(`<p>${line}</p>`);
+            }
+        }
+    }
+    if (inList) result.push('</ul>');
+    return result.join('');
+}
+
+function autoResizeCopilotInput(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 84) + 'px';
+}
+
+function handleCopilotKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendCopilotMessage();
+    }
+}
+
+function toggleDashboardAiCopilot(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const win = document.getElementById('aiCopilotWindow');
+    if (!win) return;
+    if (win.classList.contains('active')) {
+        closeDashboardAiCopilot();
+    } else {
+        openDashboardAiCopilot();
+    }
+}
+
+function openDashboardAiCopilot() {
+    // If sidebar is open, close it so Copilot is clear
+    if (typeof toggleSidebar === 'function') {
+        toggleSidebar(false);
+    }
+    const win = document.getElementById('aiCopilotWindow');
+    const backdrop = document.getElementById('aiCopilotBackdrop');
+    if (!win) return;
+    win.classList.add('active');
+    if (backdrop) backdrop.classList.add('active');
+
+    // Populate username
+    const un = localStorage.getItem('username') || 'there';
+    const uEl = document.getElementById('aiCopilotUserName');
+    if (uEl) uEl.textContent = un;
+
+    // Focus textarea
+    setTimeout(() => {
+        const inp = document.getElementById('aiCopilotQueryInput');
+        if (inp) inp.focus();
+        scrollCopilotToBottom();
+    }, 180);
+}
+
+function closeDashboardAiCopilot() {
+    const win = document.getElementById('aiCopilotWindow');
+    const backdrop = document.getElementById('aiCopilotBackdrop');
+    if (win) win.classList.remove('active');
+    if (backdrop) backdrop.classList.remove('active');
+
+    // Re-sync launcher visibility with sidebar
+    const sidebar = document.getElementById('appSidebar');
+    const launcher = document.getElementById('aiCopilotLauncherBtn');
+    if (launcher) {
+        if (sidebar && sidebar.classList.contains('open')) {
+            launcher.style.display = 'none';
+        } else {
+            launcher.style.display = 'inline-flex';
+        }
+    }
+}
+
+function clearCopilotChat() {
+    aiCopilotHistory.length = 0;
+    const stream = document.getElementById('aiCopilotMessagesStream');
+    if (stream) stream.innerHTML = '';
+    const welcome = document.getElementById('aiCopilotWelcomeCard');
+    if (welcome) welcome.style.display = 'block';
+}
+
+function scrollCopilotToBottom() {
+    const body = document.getElementById('aiCopilotBody');
+    if (body) {
+        setTimeout(() => {
+            body.scrollTop = body.scrollHeight;
+        }, 60);
+    }
+}
+
+function askCopilotPrompt(text) {
+    const inp = document.getElementById('aiCopilotQueryInput');
+    if (inp) {
+        inp.value = text;
+        autoResizeCopilotInput(inp);
+        sendCopilotMessage();
+    }
+}
+
+async function sendCopilotMessage() {
+    if (aiCopilotIsSending) return;
+    const inp = document.getElementById('aiCopilotQueryInput');
+    const sendBtn = document.getElementById('aiCopilotSendBtn');
+    const typingIndicator = document.getElementById('aiCopilotTyping');
+    const stream = document.getElementById('aiCopilotMessagesStream');
+    const welcome = document.getElementById('aiCopilotWelcomeCard');
+
+    const query = inp ? inp.value.trim() : '';
+    if (!query) return;
+
+    // Clear input
+    inp.value = '';
+    inp.style.height = 'auto';
+
+    // Hide welcome card once chat starts
+    if (welcome) welcome.style.display = 'none';
+
+    // 1. Render User Message Bubble
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const userRow = document.createElement('div');
+    userRow.className = 'ai-msg-row ai-msg-user';
+    userRow.innerHTML = `
+        <div class="ai-msg-bubble ai-user-bubble">
+            <div class="ai-bubble-text">${escapeHtmlCopilot(query)}</div>
+            <div class="ai-bubble-meta">
+                <span>${timeStr}</span>
+            </div>
+        </div>
+    `;
+    stream.appendChild(userRow);
+    scrollCopilotToBottom();
+
+    // Store in history
+    aiCopilotHistory.push({ role: 'user', content: query });
+
+    // 2. Show Typing Indicator
+    aiCopilotIsSending = true;
+    if (sendBtn) sendBtn.disabled = true;
+    if (typingIndicator) typingIndicator.style.display = 'flex';
+    scrollCopilotToBottom();
+
+    // 3. Dispatch to API
+    const token = localStorage.getItem('access_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+    }
+    const csrfMatch = document.cookie.match(/(^|;)\s*csrftoken\s*=\s*([^;]+)/);
+    if (csrfMatch) {
+        headers['X-CSRFToken'] = csrfMatch[2];
+    }
+
+    // Detect currently viewed agent slug from Django context or URL pathname (e.g. /api/sarvam/<slug>/leads/)
+    let currentAgentSlug = "{{ agent_slug|default:'' }}";
+    let currentAgentName = "{{ agent_name|default:'' }}";
+    if (!currentAgentSlug) {
+        const parts = window.location.pathname.split('/').filter(Boolean);
+        const sarvamIdx = parts.indexOf('sarvam');
+        if (sarvamIdx !== -1 && parts[sarvamIdx + 1] && parts[sarvamIdx + 1] !== 'leads') {
+            currentAgentSlug = parts[sarvamIdx + 1];
+        }
+    }
+    if (!currentAgentName) {
+        currentAgentName = document.querySelector('.brand-text, .agent-title, h1, h2')?.textContent?.trim() || '';
+    }
+
+    // Capture exact on-screen stat card metrics & active calendar selection
+    const screenStats = {
+        total: document.getElementById('stat-total')?.textContent?.trim() || null,
+        high_intent: document.getElementById('stat-interviews')?.textContent?.trim() || null,
+        callback: document.getElementById('stat-callback')?.textContent?.trim() || null,
+        not_interested: document.getElementById('stat-not-interested')?.textContent?.trim() || null,
+        selected_date: (typeof selectedCalendarDate !== 'undefined' && selectedCalendarDate)
+            ? selectedCalendarDate
+            : (document.getElementById('calSelectedDateText')?.textContent?.trim() || null)
+    };
+
+    const currentUsername = "{{ request.user.username|default:'' }}" || localStorage.getItem('username') || '';
+
+    try {
+        const res = await fetch('/api/dashboard/ai-copilot/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: headers,
+            body: JSON.stringify({
+                message: query,
+                agent_slug: currentAgentSlug,
+                agent_name: currentAgentName,
+                username: currentUsername,
+                screen_stats: screenStats,
+                history: aiCopilotHistory.slice(-6)
+            })
+        });
+
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (e) {
+            data = { reply: 'Server returned status ' + res.status };
+        }
+
+        const replyMarkdown = data.reply || 'No response returned from AI Copilot.';
+
+        // Store reply in history
+        aiCopilotHistory.push({ role: 'assistant', content: replyMarkdown });
+
+        // 4. Render AI Response Bubble
+        const botRow = document.createElement('div');
+        botRow.className = 'ai-msg-row ai-msg-bot';
+        botRow.innerHTML = `
+            <div class="ai-msg-avatar" title="Dashboard AI Copilot">🤖</div>
+            <div class="ai-msg-bubble ai-bot-bubble">
+                <div class="ai-bubble-content">${parseMarkdownToHtml(replyMarkdown)}</div>
+                <div class="ai-bubble-meta">
+                    <span>${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+                    <span>&bull;</span>
+                    <span style="color: #2563eb; font-weight: 600;">Live Analytics</span>
+                </div>
+            </div>
+        `;
+        stream.appendChild(botRow);
+
+    } catch (err) {
+        const errorRow = document.createElement('div');
+        errorRow.className = 'ai-msg-row ai-msg-bot';
+        errorRow.innerHTML = `
+            <div class="ai-msg-avatar">⚠️</div>
+            <div class="ai-msg-bubble ai-bot-bubble" style="border-left-color: #dc2626;">
+                <p style="color: #dc2626; margin: 0;">Sorry, an error occurred while connecting to the analytics engine: ${escapeHtmlCopilot(err.message)}</p>
+            </div>
+        `;
+        stream.appendChild(errorRow);
+    } finally {
+        aiCopilotIsSending = false;
+        if (sendBtn) sendBtn.disabled = false;
+        if (typingIndicator) typingIndicator.style.display = 'none';
+        scrollCopilotToBottom();
+        if (inp) inp.focus();
+    }
+}
+</script>

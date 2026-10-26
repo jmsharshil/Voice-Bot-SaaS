@@ -226,7 +226,8 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 "strategy_key": STRATEGY_KEY,
                 "mode": mode,
                 "session": session,
-                "state": state
+                "state": state,
+                "language_locked": state.get("language_locked", False)
             }
         else:
             unsupported_keywords = [
@@ -377,10 +378,12 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                     "strategy_key": STRATEGY_KEY,
                     "mode": mode,
                     "session": session,
-                    "state": state
+                    "state": state,
+                    "language_locked": state.get("language_locked", False)
                 }
             
             state["selected_language"] = lang
+            state["language_locked"] = True
             
             # Check pre-filled customer details if available
             cust_name = state.get("customer_name", "")
@@ -445,7 +448,8 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 "strategy_key": STRATEGY_KEY,
                 "mode": mode,
                 "session": session,
-                "state": state
+                "state": state,
+                "language_locked": state.get("language_locked", False)
             }
 
     prev_step = current_step
@@ -562,7 +566,8 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 "strategy_key": STRATEGY_KEY,
                 "mode": mode,
                 "session": session,
-                "state": state
+                "state": state,
+                "language_locked": state.get("language_locked", False)
             }
 
         state["city_name"] = raw_message
@@ -600,7 +605,8 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                     "strategy_key": STRATEGY_KEY,
                     "mode": mode,
                     "session": session,
-                    "state": state
+                    "state": state,
+                    "language_locked": state.get("language_locked", False)
                 }
             if lang == "hi":
                 reply = "आपका नंबर अमान्य लग रहा है। कृपया अपना 10 अंकों का मोबाइल नंबर फिर से बताइए।"
@@ -634,7 +640,8 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
                 "strategy_key": STRATEGY_KEY,
                 "mode": mode,
                 "session": session,
-                "state": state
+                "state": state,
+                "language_locked": state.get("language_locked", False)
             }
         else:
             phone_num = valid_phone
@@ -830,7 +837,8 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
             "session": session,
             "state": state,
             "auto_disconnect": True,
-            "skip_name_collection": True
+            "skip_name_collection": True,
+            "language_locked": state.get("language_locked", False)
         }
 
     state["conversation_history"].append(f"Agent: {reply}")
@@ -844,7 +852,8 @@ def icemake_prepare(agent, message, session, detected_language=None, mode="telep
         "strategy_key": STRATEGY_KEY,
         "mode": mode,
         "session": session,
-        "state": state
+        "state": state,
+        "language_locked": state.get("language_locked", False)
     }
 
 def icemake_finalize(response, prep_result):
@@ -1260,17 +1269,28 @@ def _check_and_handle_out_of_flow(raw_message: str, lang: str, current_step: int
     if len(digits) == 10:
         return None
 
+    # Guard 2: If in Step 3 and input contains a 6-digit pincode, it is address data — NEVER intercept!
+    if current_step == 3:
+        if _extract_pincode_ai(raw_message, lang):
+            return None
+
     msg_lower = raw_message.lower()
     query_triggers = [
         "kaha", "kidhar", "where", "kahan", "kaunsa", "kya", "what", "kaise", "how",
-        "office", "head office", "company", "location", "factory", "gandhinagar", "ahmedabad",
-        "rate", "price", "cost", "kharidna", "buy", "purchase", "new cold room", "new chiller",
-        "warranty", "guarantee", "timing", "open", "time", "contact",
-        "repeat", "रिपीट", "फिर से", "દુબારા", "ફરીથી", "કહ્યું", "બોલ્યા", "ક્યાં", "ક્યાં છે", "ઓફિસ", "સરનામું", "ભાવ", "કિંમત"
+        "head office", "rate", "price", "cost", "kharidna", "buy", "purchase", "new cold room", "new chiller",
+        "warranty", "guarantee", "timing", "repeat", "रिपीट", "फिर से", "દુબારા", "ફરીથી", "કહ્યું", "બોલ્યા", "ક્યાં", "ક્યાં છે", "ભાવ", "કિંમત"
     ]
     
-    # Require explicit question trigger words (do not trigger on Azure STT's trailing '?' alone on phone/answers)
-    has_trigger_word = any(t in msg_lower for t in query_triggers)
+    # In step 3 (address collection), do not trigger on common address words like office, factory, location
+    if current_step != 3:
+        query_triggers.extend(["office", "location", "factory"])
+
+    # Require explicit whole-word question trigger words (avoid false positives on substrings like 'ભાવ' in 'ભાવેશ')
+    def _matches_trigger(trigger: str, text: str) -> bool:
+        pattern = r'(?:^|\s|[.,!?।॥])' + re.escape(trigger) + r'(?:$|\s|[.,!?।॥])'
+        return bool(re.search(pattern, text, re.IGNORECASE))
+
+    has_trigger_word = any(_matches_trigger(t, raw_message) for t in query_triggers)
     if not has_trigger_word:
         return None
 
@@ -1349,7 +1369,8 @@ Response:"""
             "strategy_key": STRATEGY_KEY,
             "mode": mode,
             "session": session,
-            "state": state
+            "state": state,
+            "language_locked": state.get("language_locked", False)
         }
     except Exception as e:
         logger.warning("Out-of-flow query intercept notice: %s", e)

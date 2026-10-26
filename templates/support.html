@@ -6,14 +6,13 @@
     <link rel="icon" type="image/x-icon" href="{% static 'favicon.png' %}">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Help & Support | AI Sales Bot</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <title>JMS Tech Support Desk | AI VoiceBot Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #4f46e5;
-            --primary-hover: #4338ca;
-            --primary-light: #ede9fe;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
             --bg: #f8fafc;
             --card-bg: #ffffff;
             --text: #0f172a;
@@ -21,56 +20,53 @@
             --input-bg: #f8fafc;
             --input-focus: #ffffff;
             --border: #e2e8f0;
-            --border-focus: #a5b4fc;
+            --border-focus: #93c5fd;
             --success: #16a34a;
             --danger: #dc2626;
-            --shadow: 0 20px 60px rgba(15, 23, 42, 0.08), 0 4px 16px rgba(15, 23, 42, 0.04);
+            --shadow: 0 16px 40px -10px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(15, 23, 42, 0.06);
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
         body {
             background: var(--bg);
             background-image:
-                radial-gradient(ellipse at 20% 0%, rgba(99, 102, 241, 0.06) 0px, transparent 60%),
-                radial-gradient(ellipse at 80% 100%, rgba(79, 70, 229, 0.05) 0px, transparent 60%);
+                radial-gradient(ellipse at 20% 0%, rgba(37, 99, 235, 0.05) 0px, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(59, 130, 246, 0.04) 0px, transparent 60%);
             color: var(--text);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 2rem;
+            padding: 2.5rem 1.5rem;
         }
 
         .support-card {
             width: 100%;
-            max-width: 580px;
+            max-width: 620px;
             background: var(--card-bg);
-            border-radius: 24px;
+            border-radius: 20px;
             padding: 2.5rem;
             box-shadow: var(--shadow);
             position: relative;
             overflow: hidden;
+            border: 1px solid var(--border);
         }
 
+        /* Top Accent Line */
         .support-card::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
-            height: 6px;
-            background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
-        }
-
-        .card-header {
-            margin-bottom: 2rem;
-            text-align: center;
+            height: 5px;
+            background: linear-gradient(90deg, #2563eb 0%, #3b82f6 50%, #06b6d4 100%);
         }
 
         .back-btn {
@@ -79,23 +75,59 @@
             gap: 8px;
             color: var(--text-muted);
             text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
+            font-size: 0.88rem;
+            font-weight: 600;
             margin-bottom: 1.5rem;
-            transition: color 0.2s;
-            align-self: flex-start;
+            padding: 6px 12px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition: all 0.2s ease;
         }
 
         .back-btn:hover {
             color: var(--primary);
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            transform: translateX(-2px);
+        }
+
+        .card-header {
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+
+        .brand-badge-dot {
+            width: 7px;
+            height: 7px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 4px #10b981;
         }
 
         .brand-title {
-            font-size: 1.8rem;
+            font-size: 1.85rem;
             font-weight: 800;
             color: var(--text);
             letter-spacing: -0.03em;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
+            line-height: 1.25;
         }
 
         .brand-title span {
@@ -105,50 +137,73 @@
         .brand-subtitle {
             font-size: 0.95rem;
             color: var(--text-muted);
-            line-height: 1.5;
+            line-height: 1.55;
+        }
+
+        .user-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        @media (max-width: 580px) {
+            .user-info-grid {
+                grid-template-columns: 1fr;
+            }
+            .support-card {
+                padding: 1.75rem 1.25rem;
+            }
         }
 
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.25rem;
         }
 
         .form-label {
             display: block;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.82rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
+            letter-spacing: 0.04em;
+            color: #475569;
+            margin-bottom: 0.45rem;
         }
 
         .form-control {
             width: 100%;
-            padding: 0.75rem 1rem;
-            border-radius: 12px;
-            border: 1px solid var(--border);
+            padding: 0.75rem 0.95rem;
+            border-radius: 11px;
+            border: 1.5px solid var(--border);
             background: var(--input-bg);
             color: var(--text);
-            font-size: 0.95rem;
+            font-size: 0.92rem;
+            font-family: inherit;
             transition: all 0.2s;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: var(--border-focus);
+            border-color: var(--primary);
             background: var(--input-focus);
-            box-shadow: 0 0 0 4px var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        select.form-control {
+            cursor: pointer;
         }
 
         textarea.form-control {
             resize: vertical;
-            min-height: 120px;
+            min-height: 115px;
+            line-height: 1.5;
         }
 
         .form-control:disabled {
             background: #f1f5f9;
-            color: #94a3b8;
+            color: #64748b;
             cursor: not-allowed;
+            border-color: #e2e8f0;
         }
 
         /* ── File Uploader Styling ── */
@@ -158,9 +213,9 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            border: 2px dashed var(--border);
-            border-radius: 16px;
-            padding: 1.5rem;
+            border: 2px dashed #cbd5e1;
+            border-radius: 14px;
+            padding: 1.25rem 1rem;
             background: var(--input-bg);
             cursor: pointer;
             transition: all 0.2s;
@@ -168,7 +223,7 @@
 
         .file-upload-wrapper:hover {
             border-color: var(--primary);
-            background: #f5f3ff;
+            background: #eff6ff;
         }
 
         .file-upload-input {
@@ -182,22 +237,22 @@
         }
 
         .upload-icon {
-            font-size: 2rem;
+            font-size: 1.6rem;
             color: var(--primary);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.35rem;
         }
 
         .upload-text {
-            font-size: 0.9rem;
-            font-weight: 500;
+            font-size: 0.88rem;
+            font-weight: 600;
             color: var(--text);
             text-align: center;
         }
 
         .upload-hint {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             color: var(--text-muted);
-            margin-top: 0.25rem;
+            margin-top: 0.2rem;
             text-align: center;
         }
 
@@ -205,13 +260,14 @@
             display: none;
             align-items: center;
             gap: 8px;
-            background: var(--primary-light);
+            background: #eff6ff;
             color: var(--primary);
-            padding: 6px 12px;
+            border: 1px solid #bfdbfe;
+            padding: 5px 12px;
             border-radius: 20px;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 600;
-            margin-top: 0.75rem;
+            margin-top: 0.65rem;
         }
 
         /* ── Submit Button ── */
@@ -220,36 +276,60 @@
             padding: 0.85rem;
             border: none;
             border-radius: 12px;
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            background: var(--primary);
             color: #ffffff;
-            font-size: 1rem;
-            font-weight: 600;
+            font-size: 0.98rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+            margin-top: 1rem;
         }
 
-        .btn-submit:hover {
+        .btn-submit:hover:not(:disabled) {
+            background: var(--primary-hover);
             transform: translateY(-1px);
-            box-shadow: 0 12px 20px -3px rgba(79, 70, 229, 0.4);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
         }
 
         .btn-submit:active {
-            transform: translateY(1px);
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        .trust-footer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 1.25rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .trust-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
 
         /* ── Loader ── */
         .spinner {
-            width: 18px;
-            height: 18px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+            width: 17px;
+            height: 17px;
+            border: 2px solid rgba(255, 255, 255, 0.35);
             border-radius: 50%;
             border-top-color: white;
-            animation: spin 0.8s linear infinite;
+            animation: spin 0.7s linear infinite;
             display: none;
         }
 
@@ -260,25 +340,25 @@
         /* ── Alert boxes ── */
         .alert {
             display: none;
-            padding: 1rem;
-            border-radius: 12px;
-            font-size: 0.9rem;
+            padding: 0.85rem 1rem;
+            border-radius: 11px;
+            font-size: 0.88rem;
             font-weight: 500;
-            margin-bottom: 1.5rem;
-            text-align: center;
-            line-height: 1.4;
+            margin-bottom: 1.25rem;
+            text-align: left;
+            line-height: 1.45;
         }
 
         .alert-success {
-            background: #d1fae5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
         }
 
         .alert-danger {
-            background: #fee2e2;
+            background: #fef2f2;
             color: #991b1b;
-            border: 1px solid #fca5a5;
+            border: 1px solid #fecaca;
         }
     </style>
 </head>
@@ -289,8 +369,15 @@
             ← Back to Dashboard
         </a>
         <div class="card-header">
-            <h1 class="brand-title" id="pageTitle">🛠️ Help & <span>Support</span></h1>
-            <p class="brand-subtitle">Fill in the details below. Our team will review your ticket and reach out via email.</p>
+            <div class="brand-badge">
+                <span class="brand-badge-dot"></span>
+                JMS Tech Support Desk
+            </div>
+            <h1 class="brand-title" id="pageTitle">Submit Your <span>Query</span></h1>
+            <p class="brand-subtitle">
+                Submit technical questions, bot issues, or feature requests directly to our support engineers. 
+                We will follow up with you directly via email.
+            </p>
         </div>
 
         <div id="alertSuccess" class="alert alert-success"></div>
@@ -298,29 +385,43 @@
 
         <form id="supportForm" onsubmit="submitSupportRequest(event)">
             <!-- User details display -->
-            <div class="form-group">
-                <label class="form-label" id="usernameLabel">Your Username</label>
-                <input type="text" id="usernameDisplay" class="form-control" disabled value="Loading...">
+            <div class="user-info-grid">
+                <div class="form-group">
+                    <label class="form-label" id="usernameLabel">Your Username</label>
+                    <input type="text" id="usernameDisplay" class="form-control" disabled value="Loading...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" id="emailLabel">Contact Email (Reply to)</label>
+                    <input type="text" id="emailDisplay" class="form-control" disabled value="Loading...">
+                </div>
             </div>
 
+            <!-- Query Category -->
             <div class="form-group">
-                <label class="form-label" id="emailLabel">Your Email</label>
-                <input type="text" id="emailDisplay" class="form-control" disabled value="Loading...">
+                <label for="issueCategory" class="form-label">Category</label>
+                <select id="issueCategory" class="form-control">
+                    <option value="General Support">General Support & Question</option>
+                    <option value="Voice Bot Behavior">Voice Bot Behavior & Prompts</option>
+                    <option value="Campaign & Calling">Campaign & Calling Operations</option>
+                    <option value="Account & Login">Account & Login Access</option>
+                    <option value="Feature Request">Feature Request / Feedback</option>
+                </select>
             </div>
 
             <!-- Issue Description -->
             <div class="form-group">
-                <label for="issueDescription" class="form-label" id="issueLabel">Describe the Issue *</label>
-                <textarea id="issueDescription" class="form-control" placeholder="Describe what went wrong, steps to reproduce, or any questions..." required></textarea>
+                <label for="issueDescription" class="form-label" id="issueLabel">Query / Issue Description *</label>
+                <textarea id="issueDescription" class="form-control" placeholder="Describe your query or issue in detail (e.g. what happened, campaign name, or expected outcome)..." required></textarea>
             </div>
 
             <!-- Image upload (optional) -->
             <div class="form-group">
-                <label class="form-label" id="uploadLabel">Attach Image (Optional)</label>
+                <label class="form-label" id="uploadLabel">Attach Screenshot (Optional)</label>
                 <div class="file-upload-wrapper">
                     <span class="upload-icon">📷</span>
                     <span class="upload-text" id="uploadText">Click or drag image file here</span>
-                    <span class="upload-hint">PNG, JPG, or JPEG</span>
+                    <span class="upload-hint">PNG, JPG, or JPEG up to 10MB</span>
                     <input type="file" id="issueImage" accept="image/*" class="file-upload-input" onchange="handleFileSelected(event)">
                     
                     <div id="fileBadge" class="selected-file-badge">
@@ -333,8 +434,27 @@
             <!-- Submit Button -->
             <button type="submit" id="submitBtn" class="btn-submit">
                 <span class="spinner" id="btnSpinner"></span>
-                <span id="btnText">Submit Request</span>
+                <span id="btnText">Submit Ticket to JMS Tech Support</span>
             </button>
+
+            <!-- Trust Footer -->
+            <div class="trust-footer">
+                <span class="trust-item">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    Direct Technical Team Routing
+                </span>
+                <span>&bull;</span>
+                <span class="trust-item">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Priority Email Response
+                </span>
+            </div>
         </form>
     </div>
 
@@ -393,36 +513,41 @@
         }
 
         function showAlert(id, msg) {
-            // Clear existing alerts
             document.getElementById('alertSuccess').style.display = 'none';
             document.getElementById('alertError').style.display = 'none';
 
             const alertBox = document.getElementById(id);
-            alertBox.innerText = msg;
+            alertBox.innerHTML = msg;
             alertBox.style.display = 'block';
         }
 
         function submitSupportRequest(event) {
             event.preventDefault();
 
-            const description = document.getElementById('issueDescription').value.trim();
+            const descriptionRaw = document.getElementById('issueDescription').value.trim();
+            const category = document.getElementById('issueCategory').value;
             const imageInput = document.getElementById('issueImage');
             const submitBtn = document.getElementById('submitBtn');
             const spinner = document.getElementById('btnSpinner');
             const btnText = document.getElementById('btnText');
+            const userEmail = document.getElementById('emailDisplay').value;
 
-            if (!description) {
-                showAlert('alertError', "Please write an issue description.");
+            if (!descriptionRaw) {
+                showAlert('alertError', "Please enter your query or issue description.");
                 return;
             }
+
+            const formattedDescription = `[${category}] ${descriptionRaw}`;
 
             // Show Loading UI State
             submitBtn.disabled = true;
             spinner.style.display = 'inline-block';
-            btnText.innerText = "Submitting...";
+            btnText.innerText = "Submitting Ticket...";
 
             const formData = new FormData();
-            formData.append('description', description);
+            formData.append('description', formattedDescription);
+            formData.append('email', userEmail);
+            formData.append('username', document.getElementById('usernameDisplay').value);
             if (imageInput.files.length > 0) {
                 formData.append('image', imageInput.files[0]);
             }
@@ -437,27 +562,25 @@
             .then(res => res.json().then(data => ({ status: res.status, body: data })))
             .then(res => {
                 if (res.status === 200) {
-                    showAlert('alertSuccess', res.body.message || "Support request submitted successfully!");
+                    showAlert('alertSuccess', '<strong>✓ Ticket Submitted Successfully!</strong><br>Our technical support team has received your ticket and will follow up with you at <strong>' + userEmail + '</strong>.');
                     document.getElementById('supportForm').reset();
                     document.getElementById('fileBadge').style.display = 'none';
                     
                     setTimeout(() => {
                         window.location.replace('/dashboard/');
-                    }, 3000);
+                    }, 3500);
                 } else {
                     throw new Error(res.body.error || "Failed to submit request.");
                 }
             })
             .catch(err => {
                 showAlert('alertError', err.message);
-                // Reset submit button state
                 submitBtn.disabled = false;
                 spinner.style.display = 'none';
-                btnText.innerText = "Submit Request";
+                btnText.innerText = "Submit Ticket to JMS Tech Support";
             });
         }
     </script>
 </body>
 
 </html>
-

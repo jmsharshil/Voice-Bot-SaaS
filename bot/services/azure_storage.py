@@ -66,11 +66,12 @@ class AzureBlobService:
             logger.error(f"Failed to upload to Azure: {e}")
             return None
 
-    def upload_image(self, file_content, filename):
+    def upload_image(self, file_content, filename, content_type=None):
         """
         Uploads static image to Azure Blob Storage.
         file_content: bytes or file-like object
         filename: string for the filename (including folder/prefix)
+        content_type: MIME type of the image (e.g. 'image/png', 'image/jpeg')
         Returns: Public URL of the uploaded blob
         """
         if not settings.USE_AZURE_MEDIA:
@@ -83,17 +84,44 @@ class AzureBlobService:
                 self.container_client.get_container_properties()
             except Exception:
                 logger.info(f"Creating container '{self.container_name}'...")
-                self.container_client.create_container()
+                try:
+                    from azure.storage.blob import PublicAccess
+                    self.container_client.create_container(public_access=PublicAccess.Blob)
+                except Exception:
+                    self.container_client.create_container()
+
+            # Determine appropriate image MIME type
+            resolved_content_type = content_type
+            if not resolved_content_type:
+                ext = filename.lower().split('.')[-1]
+                if ext in ['jpg', 'jpeg']:
+                    resolved_content_type = 'image/jpeg'
+                elif ext == 'png':
+                    resolved_content_type = 'image/png'
+                elif ext == 'webp':
+                    resolved_content_type = 'image/webp'
+                elif ext == 'gif':
+                    resolved_content_type = 'image/gif'
+                elif ext == 'svg':
+                    resolved_content_type = 'image/svg+xml'
+                else:
+                    resolved_content_type = 'image/jpeg'
+
+            from azure.storage.blob import ContentSettings
+            content_settings = ContentSettings(
+                content_type=resolved_content_type,
+                content_disposition="inline"
+            )
 
             blob_client = self.container_client.get_blob_client(filename)
-            blob_client.upload_blob(file_content, overwrite=True)
+            blob_client.upload_blob(file_content, overwrite=True, content_settings=content_settings)
             
             # Construct Public URL
             if self.custom_domain:
                 media_url = f"https://{self.custom_domain}/{self.container_name}/{filename}"
             else:
                 media_url = f"https://{self.account_name}.blob.core.windows.net/{self.container_name}/{filename}"
-            logger.info(f"Uploaded image to Azure: {media_url}")
+            logger.info(f"Uploaded image to Azure Blob Storage: {media_url}")
             return media_url
 
         except Exception as e:

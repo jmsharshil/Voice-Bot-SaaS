@@ -64,6 +64,9 @@ CSRF_TRUSTED_ORIGINS = [
     "https://jolly-flower-0c1382600.2.azurestaticapps.net",
     "https://jmstechnova.com",
     "https://www.jmstechnova.com",
+    "https://nonesthetically-affectional-janel.ngrok-free.dev",
+    "https://*.ngrok-free.dev",
+    "https://*.ngrok-free.app",
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -85,6 +88,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://jolly-flower-0c1382600.2.azurestaticapps.net",
     "https://jmstechnova.com",
     "https://www.jmstechnova.com",
+    "https://nonesthetically-affectional-janel.ngrok-free.dev",
 ]
 # Application definition
 
@@ -93,6 +97,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 INSTALLED_APPS = [
     'icemake_bot',
+    'icemake_v2_bot',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -138,8 +143,11 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [BASE_DIR / "templates"],
-        'APP_DIRS': True,
         'OPTIONS': {
+            'loaders': [
+                'django.template.loaders.filesystem.Loader',
+                'django.template.loaders.app_directories.Loader',
+            ],
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
@@ -357,16 +365,17 @@ if not DEBUG:
     }
 
 # =========================
-# EMAIL CONFIGURATION (Gmail SMTP)
+# EMAIL CONFIGURATION (Microsoft 365 SMTP)
 # =========================
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.office365.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'testing251299@gmail.com')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'hbcs dutl sitq hgta')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', f'AI VoiceBot <{EMAIL_HOST_USER}>')
-SUPPORT_RECIPIENT_EMAIL = os.getenv('SUPPORT_RECIPIENT_EMAIL', 'testing251299@gmail.com')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'voiceagents@jmstech.co')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'zcvbjvslwdfdpbbp')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'JMS Tech Solution <voiceagents@jmstech.co>').strip('"\'')
+SUPPORT_RECIPIENT_EMAIL = os.getenv('SUPPORT_RECIPIENT_EMAIL', 'voiceagents@jmstech.co')
+TWO_FACTOR_ENABLED = os.getenv('TWO_FACTOR_ENABLED', 'True').lower() in ('true', '1', 't')
 
 # =========================
 # AUTO-CAMPAIGN RETRY SETTINGS

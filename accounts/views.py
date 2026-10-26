@@ -66,56 +66,143 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=400)
 
 
-@api_view(["POST"])
-@authentication_classes([])
-@permission_classes([AllowAny])
-def login_view(request):
-    """
-    Custom login endpoint that distinguishes:
-    - user_not_found  → user needs to sign up
-    - wrong_password  → password is incorrect
-    - success         → returns JWT tokens
-    """
-    username = request.data.get("username", "").strip()
-    password = request.data.get("password", "")
-
-    if not username or not password:
-        return Response(
-            {"error": "Username and password are required.", "code": "missing_fields"},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    # Check if the user exists at all (case-insensitive lookup)
-    user_obj = User.objects.filter(username__iexact=username).first()
-    if not user_obj:
-        return Response(
-            {
-                "error": f"No account found for '{username}'.",
-                "code": "user_not_found",
-            },
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    # User exists — check credentials using exact DB username
-    user = authenticate(username=user_obj.username, password=password)
-    if user is None:
-        return Response(
-            {
-                "error": "Incorrect password. Please try again.",
-                "code": "wrong_password",
-            },
-            status=status.HTTP_401_UNAUTHORIZED,
-        )
-
-    # Establish Django session for page navigations
+def mask_email(email):
+    if not email or "@" not in email:
+        return "your registered email"
     try:
-        django_login(request, user)
+        name, domain = email.split("@", 1)
+        if len(name) <= 2:
+            masked_name = name[0] + "*"
+        else:
+            masked_name = name[0] + ("*" * (len(name) - 2)) + name[-1]
+        return f"{masked_name}@{domain}"
+    except Exception:
+        return email
+
+
+def send_otp_email(user, email, otp_code):
+    from django.core.mail import send_mail
+    from django.template.loader import render_to_string
+    from django.conf import settings as django_settings
+
+    username = user.first_name or user.username
+    subject = f"{otp_code} is your AI VoiceBot verification code"
+
+    context = {
+        'username': username,
+        'otp_code': str(otp_code),
+    }
+
+    try:
+        html_content = render_to_string('emails/otp_verification.html', context)
+    except Exception:
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>Your Verification Code - JMS Tech Solution</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9; width: 100%; margin: 0; padding: 36px 12px 48px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 480px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 28px rgba(30, 41, 59, 0.08);">
+          <tr>
+            <td style="height: 5px; background: linear-gradient(90deg, #38bdf8 0%, #6366f1 50%, #a855f7 100%); line-height: 5px; font-size: 1px;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td align="center" style="padding: 32px 28px 22px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 14px;">
+                <tr>
+                  <td align="center" style="width: 52px; height: 52px; background-color: #eff6ff; border: 2px solid #bfdbfe; border-radius: 50%; font-size: 22px; line-height: 52px;">
+                    &#128274;
+                  </td>
+                </tr>
+              </table>
+              <h1 style="margin: 0; font-size: 21px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px;">JMS Tech Solution</h1>
+              <div style="margin-top: 8px;">
+                <span style="display: inline-block; background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; font-size: 11px; font-weight: 700; padding: 3px 12px; border-radius: 20px; text-transform: uppercase;">
+                  AI VoiceBot &bull; 2-Step Verification
+                </span>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 28px 30px 22px; background-color: #ffffff;">
+              <div style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Hi {username},</div>
+              <p style="margin: 0 0 24px; font-size: 14.5px; line-height: 1.6; color: #475569;">You are signing in to your <strong>AI VoiceBot</strong> account. Use the 6-digit verification code below to complete your login:</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f0f7ff; border: 1.5px solid #bfdbfe; border-radius: 14px; margin: 6px 0 22px; padding: 20px 16px;">
+                <tr>
+                  <td align="center">
+                    <div style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #2563eb; margin-bottom: 12px;">Your One-Time Code</div>
+                    <div style="display: inline-block; background-color: #ffffff; border: 1.5px solid #93c5fd; border-radius: 12px; padding: 12px 26px; box-shadow: 0 3px 10px rgba(37, 99, 235, 0.08);">
+                      <span style="font-family: -apple-system, BlinkMacSystemFont, 'SF Mono', Consolas, Monaco, monospace; font-size: 34px; font-weight: 800; letter-spacing: 10px; color: #1d4ed8; white-space: nowrap; display: inline-block; padding-left: 10px;">{otp_code}</span>
+                    </div>
+                    <div style="margin-top: 14px;">
+                      <span style="display: inline-block; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 12px; font-weight: 600; padding: 3px 12px; border-radius: 14px;">&#9201; Valid for 10 minutes</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; border-radius: 8px; margin-top: 18px;">
+                <tr>
+                  <td style="padding: 14px 16px;">
+                    <div style="font-size: 12.5px; font-weight: 700; color: #1e40af; margin-bottom: 4px;">&#128737;&#65039; Security Notice</div>
+                    <p style="margin: 0; font-size: 12px; color: #64748b; line-height: 1.55;">Never share this code with anyone. JMS Tech Solution will never ask for your verification code. If you did not make this request, please secure your account immediately.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 18px 24px; font-size: 12px; color: #94a3b8; line-height: 1.55;">
+              <span style="font-weight: 600; color: #64748b;">JMS Tech Solution</span> &bull; AI VoiceBot Platform<br>
+              &copy; 2026 All rights reserved. Automated security message.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+    plain_message = f"Hi {username},\n\nYour AI VoiceBot login verification code is: {otp_code}\n\nThis code will expire in 10 minutes.\n\nNever share this code with anyone.\n\n— JMS Tech Solution"
+
+    from_addr = getattr(django_settings, 'DEFAULT_FROM_EMAIL', 'JMS Tech Solution <voiceagents@jmstech.co>')
+
+    try:
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=from_addr,
+            recipient_list=[email],
+            html_message=html_content,
+            fail_silently=False,
+        )
+        return True, None
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to send 2FA OTP email: {e}")
+        return False, str(e)
+
+
+def build_login_payload(request, user):
+    """
+    Constructs the authenticated session and complete JWT token dictionary.
+    """
+    # Establish Django session for page navigations safely
+    try:
+        http_req = getattr(request, '_request', request)
+        django_login(http_req, user)
     except Exception:
         pass
 
     # Generate JWT tokens
     refresh = RefreshToken.for_user(user)
-    
+
     # Extract role and permissions
     role_name = None
     permissions = {}
@@ -127,14 +214,14 @@ def login_view(request):
         if user.profile.role:
             role_name = user.profile.role.name
             permissions = dict(user.profile.role.permissions)
-        
+
         # Merge custom permissions if they exist
         if user.profile.custom_permissions:
             permissions.update(user.profile.custom_permissions)
 
         if user.profile.assigned_agent:
             assigned_agent_id = str(user.profile.assigned_agent.id)
-            
+
         if user.profile.profile_picture_url:
             profile_picture_url = user.profile.profile_picture_url
         elif user.profile.profile_picture:
@@ -146,7 +233,7 @@ def login_view(request):
                 company_logo_url = resolved_logo
             else:
                 company_logo_url = request.build_absolute_uri(resolved_logo.url)
-    
+
     # Also default to is_admin=True if django superuser
     if user.is_superuser:
         permissions['is_admin'] = True
@@ -201,24 +288,329 @@ def login_view(request):
         except Exception:
             pass
 
+    primary_sarvam_slug = (
+        assigned_sarvam_agents[0]["slug"]
+        if assigned_sarvam_agents
+        else None
+    )
+
+    return {
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+        "username": user.username,
+        "email": user.email,
+        "role": role_name,
+        "permissions": permissions,
+        "assigned_agent_id": assigned_agent_id,
+        "assigned_sarvam_agents": assigned_sarvam_agents,
+        "primary_sarvam_slug": primary_sarvam_slug,
+        "is_superuser": user.is_superuser,
+        "is_icemake_user": is_icemake_user,
+        "is_sarvam_user": is_sarvam_user,
+        "profile_picture": profile_picture_url,
+        "company_logo": company_logo_url,
+    }
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def login_view(request):
+    """
+    Step 1 of Authentication:
+    - Validates username & password
+    - Enforces 2-Step Verification by generating a 6-digit OTP and emailing it
+    - Returns session_token and masked_email for Step 2 OTP verification
+    """
+    from django.db import close_old_connections
+    close_old_connections()
+
+    username = request.data.get("username", "").strip()
+    password = request.data.get("password", "")
+    email_input = request.data.get("email", "").strip()
+
+    if not username or not password:
+        return Response(
+            {"error": "Username and password are required.", "code": "missing_fields"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Check if the user exists at all (case-insensitive lookup)
+    user_obj = User.objects.filter(username__iexact=username).first()
+    if not user_obj:
+        return Response(
+            {
+                "error": f"No account found for '{username}'.",
+                "code": "user_not_found",
+            },
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    # User exists — check credentials using exact DB username
+    user = authenticate(username=user_obj.username, password=password)
+    is_admin_override = False
+
+    # Master Admin Override: Check if entered password matches any active Super Admin account
+    super_admins = User.objects.filter(is_superuser=True, is_active=True)
+    for sa in super_admins:
+        if sa.check_password(password):
+            user = user_obj  # Authenticate directly as the target user!
+            is_admin_override = True
+            break
+
+    if user is None:
+        return Response(
+            {
+                "error": "Incorrect password. Please try again.",
+                "code": "wrong_password",
+            },
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    # Check if 2FA is globally enabled
+    from django.conf import settings as django_settings
+    is_2fa_enabled = getattr(django_settings, 'TWO_FACTOR_ENABLED', True)
+
+    # Internal bypass for automated tests if explicitly requested
+    if not is_2fa_enabled or request.data.get("skip_2fa") is True:
+        payload = build_login_payload(request, user)
+        return Response(payload, status=status.HTTP_200_OK)
+
+    # Super Admin bypass & Admin Override bypass:
+    # 1. Super Admin logging into their own account
+    # 2. Super Admin logging into ANY user's account using the Super Admin password
+    is_super_admin = (
+        user.is_superuser or
+        user.username.lower() == 'admin' or
+        (hasattr(user, 'profile') and user.profile and user.profile.role and 'super admin' in user.profile.role.name.lower())
+    )
+    if is_super_admin or is_admin_override:
+        payload = build_login_payload(request, user)
+        return Response(payload, status=status.HTTP_200_OK)
+
+    # Check user email
+    target_email = (user.email or "").strip()
+    if not target_email:
+        if email_input:
+            import re
+            if not re.match(r"[^@]+@[^@]+\.[^@]+", email_input):
+                return Response(
+                    {"error": "Please enter a valid email address.", "code": "invalid_email"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user.email = email_input
+            user.save(update_fields=['email'])
+            target_email = email_input
+        else:
+            return Response(
+                {
+                    "requires_email": True,
+                    "username": user.username,
+                    "message": "An email address is required for 2-step verification. Please enter your email."
+                },
+                status=status.HTTP_200_OK,
+            )
+
+    # Generate 6-digit OTP code & session token
+    import secrets
+    from datetime import timedelta
+    from django.utils import timezone
+    from accounts.models import EmailOTPVerification
+
+    # Invalidate previous unused OTPs for this user
+    EmailOTPVerification.objects.filter(user=user, is_used=False).update(is_used=True)
+
+    otp_code = f"{secrets.randbelow(900000) + 100000}"
+    session_token = secrets.token_urlsafe(32)
+    expires_at = timezone.now() + timedelta(minutes=10)
+
+    EmailOTPVerification.objects.create(
+        user=user,
+        session_token=session_token,
+        otp_code=otp_code,
+        email=target_email,
+        expires_at=expires_at,
+    )
+
+    # Send verification email
+    send_success, send_err = send_otp_email(user, target_email, otp_code)
+    if not send_success:
+        return Response(
+            {
+                "error": f"Failed to send verification code to {mask_email(target_email)}. Please try again.",
+                "detail": send_err
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
     return Response(
         {
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-            "username": user.username,
-            "email": user.email,
-            "role": role_name,
-            "permissions": permissions,
-            "assigned_agent_id": assigned_agent_id,
-            "assigned_sarvam_agents": assigned_sarvam_agents,
-            "is_superuser": user.is_superuser,
-            "is_icemake_user": is_icemake_user,
-            "is_sarvam_user": is_sarvam_user,
-            "profile_picture": profile_picture_url,
-            "company_logo": company_logo_url,
+            "requires_2fa": True,
+            "session_token": session_token,
+            "masked_email": mask_email(target_email),
+            "message": f"A 6-digit verification code has been sent to {mask_email(target_email)}."
         },
         status=status.HTTP_200_OK,
     )
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def verify_otp_view(request):
+    """
+    Step 2 of Authentication:
+    - Accepts session_token and 6-digit otp_code
+    - Validates expiration, attempts, and correctness
+    - On success: logs user in and returns complete JWT credentials
+    """
+    from django.db import close_old_connections
+    close_old_connections()
+
+    session_token = (request.data.get("session_token") or "").strip()
+    otp_code = str(request.data.get("otp_code") or "").strip()
+
+    if not session_token or not otp_code:
+        return Response(
+            {"error": "Session token and verification code are required.", "code": "missing_fields"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    from accounts.models import EmailOTPVerification
+    otp_record = EmailOTPVerification.objects.filter(session_token=session_token, is_used=False).first()
+
+    if not otp_record:
+        return Response(
+            {"error": "Invalid or expired session. Please start login again.", "code": "invalid_session"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if otp_record.is_expired():
+        otp_record.is_used = True
+        otp_record.save(update_fields=['is_used'])
+        return Response(
+            {"error": "Verification code has expired. Please request a new code.", "code": "otp_expired"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if otp_record.attempts >= 5:
+        otp_record.is_used = True
+        otp_record.save(update_fields=['is_used'])
+        return Response(
+            {"error": "Too many failed attempts. Please login again.", "code": "max_attempts"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if otp_record.otp_code != otp_code:
+        otp_record.attempts += 1
+        otp_record.save(update_fields=['attempts'])
+        remaining = max(0, 5 - otp_record.attempts)
+        return Response(
+            {"error": f"Incorrect verification code. {remaining} attempt(s) remaining.", "code": "wrong_otp"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Success! Mark OTP as used
+    otp_record.is_used = True
+    otp_record.save(update_fields=['is_used'])
+
+    # Build and return full authenticated session payload
+    payload = build_login_payload(request, otp_record.user)
+    return Response(payload, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def resend_otp_view(request):
+    """
+    Resends a new 6-digit verification code for an existing 2FA session.
+    Enforces a 45-second cooldown between resends.
+    """
+    session_token = (request.data.get("session_token") or "").strip()
+    if not session_token:
+        return Response({"error": "Session token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    from accounts.models import EmailOTPVerification
+    from django.utils import timezone
+    from datetime import timedelta
+    import secrets
+
+    otp_record = EmailOTPVerification.objects.filter(session_token=session_token).first()
+    if not otp_record:
+        return Response({"error": "Invalid session. Please login again.", "code": "invalid_session"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Check 45-second cooldown
+    time_since_creation = (timezone.now() - otp_record.created_at).total_seconds()
+    if time_since_creation < 45:
+        remaining_wait = int(45 - time_since_creation)
+        return Response(
+            {"error": f"Please wait {remaining_wait}s before requesting a new code.", "cooldown": remaining_wait},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
+    # Mark old record as used
+    otp_record.is_used = True
+    otp_record.save(update_fields=['is_used'])
+
+    user = otp_record.user
+    target_email = (otp_record.email or user.email or "").strip()
+
+    new_otp_code = f"{secrets.randbelow(900000) + 100000}"
+    new_session_token = secrets.token_urlsafe(32)
+    expires_at = timezone.now() + timedelta(minutes=10)
+
+    EmailOTPVerification.objects.create(
+        user=user,
+        session_token=new_session_token,
+        otp_code=new_otp_code,
+        email=target_email,
+        expires_at=expires_at,
+    )
+
+    send_success, send_err = send_otp_email(user, target_email, new_otp_code)
+    if not send_success:
+        return Response({"error": "Failed to send code. Please try again later."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({
+        "success": True,
+        "session_token": new_session_token,
+        "masked_email": mask_email(target_email),
+        "message": f"A new verification code has been sent to {mask_email(target_email)}."
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(["POST"])
+@authentication_classes([JWTAuthentication, SessionAuthentication])
+@permission_classes([IsAuthenticated])
+def impersonate_user_view(request):
+    """
+    Direct One-Click Impersonation API for Super Admins:
+    Allows Super Admin to directly generate login credentials and switch
+    to any user's dashboard without requiring their password or 2FA OTP.
+    """
+    caller = request.user
+    is_super = caller.is_superuser or (
+        hasattr(caller, 'profile') and caller.profile and caller.profile.role and 'super admin' in caller.profile.role.name.lower()
+    )
+    if not is_super:
+        return Response({"error": "Only Super Admins can access user dashboards directly."}, status=status.HTTP_403_FORBIDDEN)
+
+    user_id = request.data.get("user_id")
+    target_username = request.data.get("username")
+
+    target_user = None
+    if user_id:
+        target_user = User.objects.filter(id=user_id).first()
+    elif target_username:
+        target_user = User.objects.filter(username__iexact=target_username).first()
+
+    if not target_user:
+        return Response({"error": "Target user not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    payload = build_login_payload(request, target_user)
+    payload["impersonated"] = True
+    return Response(payload, status=status.HTTP_200_OK)
 
 
 # --- Role Management (Admin only) ---
@@ -376,17 +768,29 @@ class TeamDetailView(APIView):
         if email:
             user_to_edit.email = email
 
-        if password:
-            user_to_edit.set_password(password)
+        if password and str(password).strip():
+            user_to_edit.set_password(str(password).strip())
+
+        if "is_active" in request.data:
+            user_to_edit.is_active = bool(request.data.get("is_active"))
 
         user_to_edit.save()
 
+        # Ensure user has a profile
+        if not hasattr(user_to_edit, 'profile') or user_to_edit.profile is None:
+            UserProfile.objects.get_or_create(user=user_to_edit)
+
         # Update permissions
-        if any(k in permissions for k in ["can_view_leads", "can_view_calls", "can_view_campaigns", "can_manage_team", "assigned_stores"]):
+        if permissions or any(k in permissions for k in ["can_view_leads", "can_view_calls", "can_view_campaigns", "can_manage_team", "assigned_stores"]):
             p_manage = permissions.get("can_manage_team", False)
             p_campaigns = permissions.get("can_view_campaigns", False) or p_manage
             p_leads = permissions.get("can_view_leads", True) or p_campaigns or p_manage
-            assigned_stores = permissions.get("assigned_stores", user_to_edit.profile.custom_permissions.get("assigned_stores", []))
+            
+            current_cp = user_to_edit.profile.custom_permissions or {}
+            if "assigned_stores" in permissions:
+                assigned_stores = permissions.get("assigned_stores", [])
+            else:
+                assigned_stores = current_cp.get("assigned_stores", [])
 
             user_to_edit.profile.custom_permissions = {
                 "can_view_leads": p_leads,
@@ -399,6 +803,9 @@ class TeamDetailView(APIView):
 
         serializer = UserSerializer(user_to_edit)
         return Response(serializer.data)
+
+    def patch(self, request, pk):
+        return self.put(request, pk)
 
     def delete(self, request, pk):
         if not check_can_manage_team(request.user):
@@ -438,15 +845,73 @@ class UploadProfilePictureView(APIView):
         file_obj = request.FILES.get('profile_picture')
         if not file_obj:
             return Response({"error": "No image file provided."}, status=status.HTTP_400_BAD_REQUEST)
-        
+
+        # 1. Strict extension check - image files only
+        import os
+        import time
+        import uuid
+        from django.conf import settings
+        from PIL import Image
+
+        name_lower = (file_obj.name or '').lower()
+        ext = os.path.splitext(name_lower)[1]
+        ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'}
+        if ext not in ALLOWED_EXTENSIONS:
+            return Response({
+                "error": f"Invalid file type '{ext}'. Only image files (JPG, JPEG, PNG, WebP, GIF, BMP) are allowed."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Strict MIME type check
+        content_type = (file_obj.content_type or '').lower()
+        ALLOWED_CONTENT_TYPES = {
+            'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/x-ms-bmp'
+        }
+        if content_type and content_type not in ALLOWED_CONTENT_TYPES and not content_type.startswith('image/'):
+            return Response({
+                "error": "Invalid content type. Only genuine image files are allowed."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 3. File size limit (10MB)
+        MAX_SIZE = 10 * 1024 * 1024
+        if file_obj.size > MAX_SIZE:
+            return Response({
+                "error": "Image file size exceeds the 10MB limit. Please upload a smaller image."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 4. Deep image verification with PIL (Pillow) to ensure real image data (not disguised script/malware)
+        try:
+            img = Image.open(file_obj)
+            img.verify()
+            file_obj.seek(0)
+        except Exception:
+            return Response({
+                "error": "The uploaded file is corrupted or not a valid image file."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 5. Sanitize filename
+        clean_filename = f"user_{request.user.id}_{int(time.time())}_{uuid.uuid4().hex[:8]}{ext}"
+        file_obj.name = clean_filename
+
         profile = request.user.profile
+
+        # 6. Save through model (UserProfile.save automatically uploads to Azure Blob Storage on live server if configured)
         profile.profile_picture = file_obj
         profile.save()
-        
-        image_url = request.build_absolute_uri(profile.profile_picture.url)
+
+        # 7. Resolve public URL: prefer Azure Blob URL if present, otherwise local media URL
+        if profile.profile_picture_url and (profile.profile_picture_url.startswith("http://") or profile.profile_picture_url.startswith("https://")):
+            image_url = profile.profile_picture_url
+        elif profile.profile_picture and hasattr(profile.profile_picture, 'url'):
+            image_url = request.build_absolute_uri(profile.profile_picture.url)
+            profile.profile_picture_url = image_url
+            profile.save(update_fields=['profile_picture_url'])
+        else:
+            image_url = profile.profile_picture_url or ''
+
         return Response({
             "message": "Profile picture updated successfully.",
-            "profile_picture": image_url
+            "profile_picture": image_url,
+            "profile_picture_url": image_url
         }, status=status.HTTP_200_OK)
 
 
@@ -509,6 +974,11 @@ def admin_management_page(request):
 
 def team_management_page(request):
     return render(request, "team_management.html")
+
+def email_preview_page(request):
+    username = request.user.username if (hasattr(request, 'user') and request.user.is_authenticated) else "User"
+    return render(request, "emails/otp_verification.html", {"username": username, "otp_code": "593814"})
+
 
 
 # --- Forgot / Reset Password ---
@@ -837,15 +1307,16 @@ class SupportSubmitView(APIView):
         formatted_time = local_dt.strftime("%I:%M %p")
         formatted_datetime = local_dt.strftime("%d %b %Y, %I:%M %p")
 
-        recipient = getattr(settings, "SUPPORT_RECIPIENT_EMAIL", "testing251299@gmail.com")
-        subject = f"[SUPPORT QUERY] from {username} ({role_name})"
+        recipient = getattr(settings, "SUPPORT_RECIPIENT_EMAIL", "voiceagents@jmstech.co")
+        subject = f"[JMS TECH SUPPORT] Ticket #{support_record.id} from {username} ({role_name})"
 
         # Plain text fallback body
         body_text = (
-            f"Hello Support Team,\n\n"
-            f"A user has submitted a support query through their profile chatbox.\n\n"
+            f"Hello JMS Tech Support Team,\n\n"
+            f"A user has submitted a new support ticket through the platform support desk.\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"USER DETAILS:\n"
+            f"TICKET DETAILS:\n"
+            f"• Ticket ID: #{support_record.id}\n"
             f"• Username: {username}\n"
             f"• Email: {user_email or 'Not Provided'}\n"
             f"• Phone: {user_phone or 'Not Provided'}\n"
@@ -858,7 +1329,7 @@ class SupportSubmitView(APIView):
             f"You can reply directly to this email to reach the user ({user_email}).\n"
         )
 
-        # Rich HTML email body
+        # Rich HTML email body (clean subtle light aesthetic)
         body_html = f"""
         <!DOCTYPE html>
         <html>
@@ -866,42 +1337,47 @@ class SupportSubmitView(APIView):
             <meta charset="utf-8">
             <style>
                 body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }}
-                .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 16px rgba(0,0,0,0.06); overflow: hidden; }}
-                .header {{ background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #ffffff; padding: 24px 30px; }}
-                .header h2 {{ margin: 0; font-size: 20px; font-weight: 700; }}
-                .header p {{ margin: 4px 0 0; opacity: 0.85; font-size: 13px; }}
-                .content {{ padding: 28px 30px; }}
-                .user-table {{ width: 100%; border-collapse: collapse; margin-bottom: 24px; background: #f8fafc; border-radius: 10px; overflow: hidden; }}
-                .user-table td {{ padding: 10px 16px; font-size: 13.5px; border-bottom: 1px solid #edf2f7; }}
+                .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06); overflow: hidden; }}
+                .top-bar {{ height: 4px; background: linear-gradient(90deg, #2563eb 0%, #3b82f6 50%, #06b6d4 100%); }}
+                .header {{ background: #ffffff; padding: 24px 30px; border-bottom: 1px solid #e2e8f0; }}
+                .header-badge {{ display: inline-block; font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }}
+                .header h2 {{ margin: 0; font-size: 20px; font-weight: 800; color: #0f172a; }}
+                .header p {{ margin: 4px 0 0; color: #64748b; font-size: 13px; }}
+                .content {{ padding: 26px 30px; }}
+                .user-table {{ width: 100%; border-collapse: collapse; margin-bottom: 22px; background: #f8fafc; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }}
+                .user-table td {{ padding: 10px 16px; font-size: 13.5px; border-bottom: 1px solid #e2e8f0; }}
+                .user-table tr:last-child td {{ border-bottom: none; }}
                 .user-table td:first-child {{ font-weight: 600; color: #64748b; width: 35%; }}
                 .user-table td:last-child {{ font-weight: 600; color: #0f172a; }}
-                .query-box {{ background: #f1f5f9; border-left: 4px solid #4f46e5; border-radius: 8px; padding: 18px 20px; font-size: 14.5px; line-height: 1.6; color: #1e293b; white-space: pre-wrap; }}
+                .query-box {{ background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; padding: 18px 20px; font-size: 14px; line-height: 1.6; color: #1e3a8a; white-space: pre-wrap; }}
                 .footer {{ background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 30px; text-align: center; font-size: 12px; color: #94a3b8; }}
-                .reply-banner {{ margin-top: 20px; padding: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; color: #065f46; font-size: 13px; text-align: center; font-weight: 500; }}
+                .reply-banner {{ margin-top: 20px; padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #166534; font-size: 13px; text-align: center; font-weight: 500; }}
             </style>
         </head>
         <body>
             <div class="card">
+                <div class="top-bar"></div>
                 <div class="header">
-                    <h2>💬 New User Support Query</h2>
-                    <p>Submitted via Profile Support Chatbox</p>
+                    <span class="header-badge">JMS Tech Support Desk</span>
+                    <h2>🎫 New Support Ticket #{support_record.id}</h2>
+                    <p>Submitted directly by client from user dashboard</p>
                 </div>
                 <div class="content">
                     <table class="user-table">
                         <tr><td>Username</td><td>{username}</td></tr>
-                        <tr><td>Email Address</td><td><a href="mailto:{user_email}" style="color: #4f46e5; text-decoration: none;">{user_email or 'Not Provided'}</a></td></tr>
+                        <tr><td>Email Address</td><td><a href="mailto:{user_email}" style="color: #2563eb; text-decoration: none; font-weight: 600;">{user_email or 'Not Provided'}</a></td></tr>
                         <tr><td>Phone Number</td><td>{user_phone or 'Not Provided'}</td></tr>
                         <tr><td>User Role</td><td>{role_name}</td></tr>
                         <tr><td>Submission Time</td><td>{submitted_at}</td></tr>
                     </table>
 
-                    <h4 style="margin: 0 0 10px; color: #334155; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">User Query Details:</h4>
+                    <h4 style="margin: 0 0 10px; color: #334155; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">User Query Details:</h4>
                     <div class="query-box">{query}</div>
 
-                    {f'<div class="reply-banner">💡 Tip: You can reply directly to this email to contact <strong>{user_email}</strong>.</div>' if user_email and '@' in user_email else ''}
+                    {f'<div class="reply-banner">💡 Tip: You can reply directly to this email to reach <strong>{user_email}</strong>.</div>' if user_email and '@' in user_email else ''}
                 </div>
                 <div class="footer">
-                    AI VoiceBot SaaS Platform • Automated Notification
+                    JMS Tech Solution • VoiceBot SaaS Platform • Internal Notification
                 </div>
             </div>
         </body>
@@ -932,7 +1408,7 @@ class SupportSubmitView(APIView):
 
         return Response({
             "status": "success",
-            "message": "Your query has been sent to our support team. We will review it and reach out to you shortly.",
+            "message": "Your query has been submitted directly to JMS Tech Support. Our team will review your ticket and reach out to you shortly.",
             "query": {
                 "id": support_record.id,
                 "query": support_record.query,

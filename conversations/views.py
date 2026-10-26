@@ -1482,6 +1482,26 @@ def sarvam_cdr_webhook(request):
         from conversations.services.kylas_sarvam_bridge import SarvamAgentService
         from conversations.models import SarvamCallRecord, SarvamAgent
 
+        output_vars = raw_data.get("output_agent_variables") or raw_data.get("final_agent_variables") or {}
+        if not isinstance(output_vars, dict):
+            output_vars = {}
+
+        candidate_name = (
+            raw_data.get("candidate_name")
+            or raw_data.get("user_name")
+            or raw_data.get("customer_name")
+            or raw_data.get("caller_name")
+            or raw_data.get("caller")
+            or metadata.get("customer_name")
+            or metadata.get("user_name")
+            or metadata.get("caller_name")
+            or output_vars.get("candidate_name")
+            or output_vars.get("user_name")
+            or output_vars.get("customer_name")
+            or output_vars.get("caller_name")
+            or "Customer"
+        )
+
         # ✅ Detect which SarvamAgent this CDR belongs to using app_id, agent_phone, deployment_id, or keyword matching
         cdr_app_id = str(raw_data.get("app_id") or raw_data.get("agent_id") or raw_data.get("appId") or metadata.get("app_id") or "").strip()
         cdr_agent_phone = str(
@@ -1619,26 +1639,8 @@ def sarvam_cdr_webhook(request):
             or call_obj.get("status")
             or "COMPLETED"
         )
-        output_vars = raw_data.get("output_agent_variables") or raw_data.get("final_agent_variables") or {}
         if isinstance(output_vars, dict) and output_vars.get("final_status"):
             final_status = output_vars["final_status"]
-
-        # ✅ Extract candidate_name early to assist in record matching
-        candidate_name = (
-            raw_data.get("candidate_name")
-            or raw_data.get("user_name")
-            or raw_data.get("customer_name")
-            or raw_data.get("caller_name")
-            or raw_data.get("caller")
-            or metadata.get("customer_name")
-            or metadata.get("user_name")
-            or metadata.get("caller_name")
-            or (output_vars.get("candidate_name") if isinstance(output_vars, dict) else None)
-            or (output_vars.get("user_name") if isinstance(output_vars, dict) else None)
-            or (output_vars.get("customer_name") if isinstance(output_vars, dict) else None)
-            or (output_vars.get("caller_name") if isinstance(output_vars, dict) else None)
-            or "Customer"
-        )
 
         rec = None
         if attempt_id:
@@ -1992,8 +1994,38 @@ def sarvam_cdr_webhook(request):
                 print(f"⚠️ [SARVAM CAMPAIGN LEAD SYNC ERROR]: {sync_err}")
 
         # =========================================================
-        # [KYLAS CRM INTEGRATION - ON HOLD / COMMENTED OUT FOR NOW]
+        # ✅ KYLAS CRM DISPATCH (ONLY for Third-Party Webhook Calls)
         # =========================================================
+        try:
+            if rec:
+                crm_lead_id = None
+                if isinstance(rec.summary, dict):
+                    crm_lead_id = (
+                        rec.summary.get("crm_lead_id")
+                        or (rec.summary.get("received_payload") or {}).get("entity", {}).get("id")
+                        or (rec.summary.get("received_payload") or {}).get("id")
+                        or (rec.summary.get("received_payload") or {}).get("lead_id")
+                    )
+
+                is_webhook_call = "Webhook" in str(rec.call_type or "") or bool(crm_lead_id)
+
+                if is_webhook_call and crm_lead_id:
+                    print(f"📡 [THIRD-PARTY CDR PUSH] Pushing call log to Kylas CRM for Lead #{crm_lead_id}...")
+                    from conversations.services.kylas_sarvam_bridge import KylasService
+                    kylas_res = KylasService.log_call_activity(
+                        lead_id=crm_lead_id,
+                        phone_number=rec.phone_number,
+                        cdr_data=raw_data,
+                        recording_url=recording_url
+                    )
+                    print(f"📡 [THIRD-PARTY CDR PUSH RESULT]: {kylas_res}")
+                    if isinstance(rec.summary, dict):
+                        rec.summary["kylas_sync"] = kylas_res
+                        rec.save(update_fields=["summary"])
+                else:
+                    print(f"ℹ️ [KYLAS CRM SKIPPED]: Call #{rec.id} is an internal/dashboard call (call_type: {rec.call_type}). Skipping third-party push.")
+        except Exception as k_err:
+            print(f"⚠️ [KYLAS CRM DISPATCH ERROR]: {k_err}")
 
         # ✅ POST-CALL AI CONVERSATION SUMMARY & ACCURATE TAG ALLOCATION
         if rec and (rec.transcript or (isinstance(rec.summary, dict) and rec.summary.get("conversation_log")) or rec.duration_seconds > 0):
@@ -3309,6 +3341,107 @@ def classify_sarvam_lead_status(status=None, summary=None, transcript=None, dura
     return "COMPLETED"
 
 
+def _get_requirement_str(summary_dict, raw_pos=None):
+    """
+    Helper function for universal requirement resolution from summary dict or raw position.
+    """
+    if isinstance(summary_dict, dict):
+        for key in ["car_model", "product_interest", "product_name", "flat_type", "loan_type", "course_name", "requirement", "interest"]:
+            v = summary_dict.get(key)
+            if v and str(v).strip() and str(v).strip().lower() not in ["none", "null", "unknown", "n/a", "candidate", "customer"]:
+                return str(v).strip()
+    if raw_pos and str(raw_pos).strip() and str(raw_pos).strip().lower() not in ["none", "null", "unknown", "n/a", "candidate", "customer", "admission counselor"]:
+        return str(raw_pos).strip()
+    return "General Inquiry"
+
+
+def _persist_remote_items(items_to_save, agent):
+    """Background thread: safely upsert each remote Sarvam item into SarvamCallRecord."""
+    from django.db import close_old_connections
+    from conversations.models import SarvamCallRecord
+    close_old_connections()
+    try:
+        for item, call_summary, candidate_name, final_status, clean_phone in items_to_save:
+            iid = item.get("interaction_id")
+            if not iid:
+                continue
+            try:
+                # Build transcript from conversation_log if present
+                conv_log = item.get("conversation_log") or []
+                transcript_text = ""
+                if conv_log and isinstance(conv_log, list):
+                    transcript_text = "\n\n".join([
+                        f"{m.get('role', 'speaker').upper()}: {m.get('en_text') or m.get('text') or ''}"
+                        for m in conv_log
+                    ])
+
+                # Parse start_time
+                start_time_raw = item.get("attempted_at") or item.get("start_datetime")
+                start_time_val = None
+                if start_time_raw:
+                    try:
+                        from django.utils.dateparse import parse_datetime
+                        start_time_val = parse_datetime(str(start_time_raw))
+                    except Exception:
+                        pass
+
+                defaults = {
+                    "sarvam_agent": agent,
+                    "candidate_name": candidate_name or "Customer",
+                    "applied_position": _get_requirement_str(call_summary if isinstance(call_summary, dict) else {}, item.get("applied_position")),
+                    "language": item.get("language_name", "hi-IN"),
+                    "status": final_status or "COMPLETED",
+                    "duration_seconds": round(float(item.get("duration_in_seconds", 0)), 1),
+                    "audio_url": item.get("audio_url") or "",
+                    "summary": call_summary if isinstance(call_summary, dict) else {},
+                    "call_type": "Sarvam API",
+                }
+                if start_time_val:
+                    defaults["start_time"] = start_time_val
+                if transcript_text:
+                    defaults["transcript"] = transcript_text
+                if clean_phone:
+                    defaults["phone_number"] = clean_phone
+
+                # Safe upsert by interaction_id avoiding MultipleObjectsReturned
+                existing_records = SarvamCallRecord.objects.filter(interaction_id=iid)
+                obj = existing_records.first()
+                if obj:
+                    created = False
+                    if existing_records.count() > 1:
+                        existing_records.exclude(id=obj.id).delete()
+                    needs_save = False
+                    if not obj.audio_url and item.get("audio_url"):
+                        obj.audio_url = item.get("audio_url")
+                        needs_save = True
+                    if not obj.transcript and transcript_text:
+                        obj.transcript = transcript_text
+                        needs_save = True
+                    if not obj.sarvam_agent and agent:
+                        obj.sarvam_agent = agent
+                        needs_save = True
+                    if needs_save:
+                        obj.save()
+                else:
+                    obj = SarvamCallRecord.objects.create(
+                        interaction_id=iid,
+                        **defaults
+                    )
+                    created = True
+                    print(f"✅ [AUTO-PERSIST] Saved new call to DB: {iid} | {candidate_name} | {clean_phone}")
+
+                if obj.transcript and (not obj.summary or not isinstance(obj.summary, dict) or not obj.summary.get("call_summary")):
+                    try:
+                        from conversations.services.call_summarizer import process_and_save_call_record_summary
+                        process_and_save_call_record_summary(obj.id, async_mode=False)
+                    except Exception:
+                        pass
+            except Exception as ex:
+                print(f"⚠️ [AUTO-PERSIST] Failed for {iid}: {ex}")
+    finally:
+        close_old_connections()
+
+
 @api_view(["GET"])
 def sarvam_leads_data(request, agent_slug=None):
     """
@@ -3360,17 +3493,19 @@ def sarvam_leads_data(request, agent_slug=None):
 
     from django.core.cache import cache
     cache_key = f"sarvam_analytics_{app_id}_{days_back}"
-    remote_items = cache.get(cache_key)
+    force_sync = request.GET.get("sync") == "1"
+    remote_items = None if force_sync else cache.get(cache_key)
 
     if remote_items is None:
         remote_items = []
         try:
-            res = http_requests.get(sarvam_url, headers=headers, params=params, timeout=10)
+            res = http_requests.get(sarvam_url, headers=headers, params=params, timeout=8)
             if res.status_code == 200 and res.content:
                 remote_items = res.json().get("items", [])
-                cache.set(cache_key, remote_items, timeout=5)
+                cache.set(cache_key, remote_items, timeout=45)
         except Exception as e:
             print(f"⚠️ [SARVAM ANALYTICS API FETCH WARNING]: {e}")
+            remote_items = cache.get(cache_key) or []
 
     processed_leads = []
     seen_ids = set()
@@ -3435,6 +3570,7 @@ def sarvam_leads_data(request, agent_slug=None):
 
     search_q = (request.GET.get("search") or "").strip()
     status_q = (request.GET.get("status") or "").strip().upper()
+    date_q = (request.GET.get("date") or "").strip()
 
     if search_q:
         from django.db.models import Q
@@ -3445,11 +3581,27 @@ def sarvam_leads_data(request, agent_slug=None):
             Q(call_type__icontains=search_q)
         )
 
-    # stats_qs is the base queryset used for summary card metrics (keeps stat cards fixed on tab click)
-    stats_qs = agent_qs
+    # Parse optional date filter
+    date_q = (request.GET.get("date") or "").strip()
+    target_date = None
+    if date_q:
+        try:
+            from datetime import datetime
+            target_date = datetime.strptime(date_q, "%Y-%m-%d").date()
+        except Exception:
+            target_date = None
 
-    # base_qs is filtered by status_q for table rows and table pagination
+    # stats_qs is the base queryset used for summary card metrics
+    # When user selects a date, card metrics calculate ONLY that day's leads!
+    stats_qs = agent_qs
+    if target_date:
+        stats_qs = stats_qs.filter(created_at__date=target_date)
+
+    # base_qs is filtered by target_date and status_q for table rows and table pagination
     base_qs = agent_qs
+    if target_date:
+        base_qs = base_qs.filter(created_at__date=target_date)
+
     if status_q and status_q != "ALL":
         if status_q == "INTERVIEW":
             base_qs = base_qs.filter(status__in=["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED"])
@@ -3463,30 +3615,32 @@ def sarvam_leads_data(request, agent_slug=None):
     total_count = base_qs.count()
 
     raw_page = request.GET.get("page")
-    raw_page_size = request.GET.get("page_size") or request.GET.get("limit")
-    try:
-        page = max(int(raw_page or 1), 1)
-    except (ValueError, TypeError):
+    raw_page_size = str(request.GET.get("page_size") or request.GET.get("limit") or "").strip()
+    is_kanban_or_all = raw_page_size.upper() in ["ALL", "1000"] or request.GET.get("view_mode") == "kanban" or request.GET.get("kanban") in ["1", "true", "True"]
+
+    if is_kanban_or_all:
         page = 1
+        page_size = 1000
+        total_pages = 1
+        local_records = base_qs.order_by("-created_at")[:1000]
+    else:
+        try:
+            page = max(int(raw_page or 1), 1)
+        except (ValueError, TypeError):
+            page = 1
 
-    try:
-        page_size = int(raw_page_size or 10)
-    except (ValueError, TypeError):
-        page_size = 10
+        try:
+            page_size = int(raw_page_size or 10)
+        except (ValueError, TypeError):
+            page_size = 10
 
-    import math
-    if page_size > 0 and page_size != 1000:
+        import math
         total_pages = math.ceil(total_count / page_size) if total_count > 0 else 1
         if page > total_pages:
             page = total_pages
         start_idx = (page - 1) * page_size
         end_idx = start_idx + page_size
         local_records = base_qs.order_by("-created_at")[start_idx:end_idx]
-    else:
-        local_records = base_qs.order_by("-created_at")[:100]
-        total_pages = 1
-        page = 1
-        page_size = total_count
 
     for r in local_records:
         # 🟥 FIX: Skip and merge orphaned dummy webhook records with unknown phone number into valid sibling records
@@ -3581,17 +3735,11 @@ def sarvam_leads_data(request, agent_slug=None):
                     if not r.summary or len(str(r.summary)) < len(str(call_sum)):
                         r.summary = call_sum
 
-                # Auto fetch transcript if missing
+                # Extract transcript from matched_item without blocking HTTP call
                 if r.interaction_id and not r.transcript:
-                    t_res = SarvamAgentService.fetch_interaction_transcript(interaction_id=r.interaction_id)
-                    if isinstance(t_res, list):
-                        r.transcript = "\n\n".join([f"{t.get('role', 'Speaker').upper()}: {t.get('text', '') or t.get('content', '')}" for t in t_res])
-                    elif isinstance(t_res, dict):
-                        if "messages" in t_res:
-                            msgs = t_res.get("messages") or []
-                            r.transcript = "\n\n".join([f"{m.get('role', 'Speaker').upper()}: {m.get('content', '') or m.get('text', '')}" for m in msgs])
-                        else:
-                            r.transcript = t_res.get("transcript") or t_res.get("text") or t_res.get("raw_text") or ""
+                    conv_log = matched_item.get("conversation_log") or []
+                    if conv_log and isinstance(conv_log, list):
+                        r.transcript = "\n\n".join([f"{m.get('role', 'Speaker').upper()}: {m.get('en_text') or m.get('text') or ''}" for m in conv_log])
                         
                 r.save()
                 print(f"✅ [AUTO-SYNC]: Mapped {r.interaction_id} to call #{r.id} ({r.candidate_name})")
@@ -3631,17 +3779,6 @@ def sarvam_leads_data(request, agent_slug=None):
             direction = "outbound"
             call_dir_display = "Outbound Call"
 
-        # Helper function for universal requirement resolution
-        def _get_requirement_str(summary_dict, raw_pos=None):
-            if isinstance(summary_dict, dict):
-                for key in ["car_model", "product_interest", "product_name", "flat_type", "loan_type", "course_name", "requirement", "interest"]:
-                    v = summary_dict.get(key)
-                    if v and str(v).strip() and str(v).strip().lower() not in ["none", "null", "unknown", "n/a", "candidate", "customer"]:
-                        return str(v).strip()
-            if raw_pos and str(raw_pos).strip() and str(raw_pos).strip().lower() not in ["none", "null", "unknown", "n/a", "candidate", "customer", "admission counselor"]:
-                return str(raw_pos).strip()
-            return "General Inquiry"
-
         lead_cand_name = r.candidate_name
         if not lead_cand_name or lead_cand_name.lower() in ["candidate", "unknown candidate", "unknown", "none", "null", ""]:
             lead_cand_name = "Customer"
@@ -3668,7 +3805,9 @@ def sarvam_leads_data(request, agent_slug=None):
             attempted_at_iso = ""
             attempted_at_display = "N/A"
 
+        local_cb = timezone.localtime(r.callback_datetime) if r.callback_datetime else None
         processed_leads.append({
+            "id": r.id,
             "interaction_id": rec_id,
             "contact": r.phone_number,
             "candidate_name": lead_cand_name,
@@ -3683,6 +3822,12 @@ def sarvam_leads_data(request, agent_slug=None):
             "attempted_at_display": attempted_at_display,
             "audio_url": rec_audio_url,
             "final_status": r.status,
+            "pipeline_stage": r.effective_pipeline_stage,
+            "effective_pipeline_stage": r.effective_pipeline_stage,
+            "callback_datetime": r.callback_datetime.isoformat() if r.callback_datetime else None,
+            "callback_display": local_cb.strftime("%d %b, %I:%M %p") if local_cb else None,
+            "callback_notes": r.callback_notes or "",
+            "is_callback_completed": bool(r.is_callback_completed),
             "summary": r.summary or {},
             "transcript": r.transcript or "",
             "campaign_created_by_id": getattr(getattr(r, "campaign", None), "created_by_id", None) or getattr(r, "created_by_id", None),
@@ -3711,6 +3856,15 @@ def sarvam_leads_data(request, agent_slug=None):
     # Collect remote items that pass the anti-leak filter
     new_remote_to_persist = []
 
+    # Pre-fetch to eliminate N+1 queries in remote items loop
+    remote_iids = [it.get("interaction_id") for it in remote_items if it.get("interaction_id")]
+    agent_existing_iids = set(
+        SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent, interaction_id__in=remote_iids)
+        .values_list("interaction_id", flat=True)
+    ) if sarvam_agent and remote_iids else set()
+
+    other_agents_list = list(SarvamAgent.objects.exclude(id=sarvam_agent.id).filter(is_active=True)) if sarvam_agent else []
+
     for item in remote_items:
         iid = item.get("interaction_id")
         if not iid:
@@ -3728,7 +3882,7 @@ def sarvam_leads_data(request, agent_slug=None):
                 is_owner = True
             elif sarvam_agent.app_id and item.get("app_id") and sarvam_agent.app_id == item.get("app_id"):
                 is_owner = True
-            elif iid and SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent, interaction_id=iid).exists():
+            elif iid and iid in agent_existing_iids:
                 is_owner = True
             elif clean_item_p and clean_item_p in local_contacts:
                 is_owner = True
@@ -3737,8 +3891,7 @@ def sarvam_leads_data(request, agent_slug=None):
 
         # Reject item if it explicitly belongs to another active agent
         if is_owner and sarvam_agent:
-            other_agents = SarvamAgent.objects.exclude(id=sarvam_agent.id).filter(is_active=True)
-            for oa in other_agents:
+            for oa in other_agents_list:
                 if oa.agent_phone and item_agent_p and _normalize_phone(oa.agent_phone) == _normalize_phone(item_agent_p):
                     is_owner = False
                     break
@@ -3778,89 +3931,7 @@ def sarvam_leads_data(request, agent_slug=None):
         # Queue for DB persistence
         new_remote_to_persist.append((item, call_summary, candidate_name, final_status, clean_item_p))
 
-    # ✅ AUTO-PERSIST: Save all remote API items to local DB in a background thread
-    # This ensures every call shown on the dashboard is also permanently stored.
-    def _persist_remote_items(items_to_save, agent):
-        """Background thread: upsert each remote Sarvam item into SarvamCallRecord."""
-        from django.db import close_old_connections
-        close_old_connections()
-        try:
-            for item, call_summary, candidate_name, final_status, clean_phone in items_to_save:
-                iid = item.get("interaction_id")
-                if not iid:
-                    continue
-                try:
-                    # Build transcript from conversation_log if present
-                    conv_log = item.get("conversation_log") or []
-                    transcript_text = ""
-                    if conv_log and isinstance(conv_log, list):
-                        transcript_text = "\n\n".join([
-                            f"{m.get('role', 'speaker').upper()}: {m.get('en_text') or m.get('text') or ''}"
-                            for m in conv_log
-                        ])
-
-                    # Parse start_time
-                    from datetime import datetime as dt
-                    start_time_raw = item.get("attempted_at") or item.get("start_datetime")
-                    start_time_val = None
-                    if start_time_raw:
-                        try:
-                            from django.utils.dateparse import parse_datetime
-                            start_time_val = parse_datetime(str(start_time_raw))
-                        except Exception:
-                            pass
-
-                    defaults = {
-                        "sarvam_agent": agent,
-                        "candidate_name": candidate_name or "Customer",
-                        "applied_position": _get_requirement_str(call_summary if isinstance(call_summary, dict) else {}, item.get("applied_position")),
-                        "language": item.get("language_name", "hi-IN"),
-                        "status": final_status or "COMPLETED",
-                        "duration_seconds": round(float(item.get("duration_in_seconds", 0)), 1),
-                        "audio_url": item.get("audio_url") or "",
-                        "summary": call_summary if isinstance(call_summary, dict) else {},
-                        "call_type": "Sarvam API",
-                    }
-                    if start_time_val:
-                        defaults["start_time"] = start_time_val
-                    if transcript_text:
-                        defaults["transcript"] = transcript_text
-                    if clean_phone:
-                        defaults["phone_number"] = clean_phone
-
-                    # Upsert by interaction_id
-                    obj, created = SarvamCallRecord.objects.update_or_create(
-                        interaction_id=iid,
-                        defaults=defaults
-                    )
-                    if created:
-                        print(f"✅ [AUTO-PERSIST] Saved new call to DB: {iid} | {candidate_name} | {clean_phone}")
-                    else:
-                        # Patch any missing fields on existing record
-                        needs_save = False
-                        if not obj.audio_url and item.get("audio_url"):
-                            obj.audio_url = item.get("audio_url")
-                            needs_save = True
-                        if not obj.transcript and transcript_text:
-                            obj.transcript = transcript_text
-                            needs_save = True
-                        if not obj.sarvam_agent and agent:
-                            obj.sarvam_agent = agent
-                            needs_save = True
-                        if needs_save:
-                            obj.save()
-
-                    if obj.transcript and (not obj.summary or not isinstance(obj.summary, dict) or not obj.summary.get("call_summary")):
-                        try:
-                            from conversations.services.call_summarizer import process_and_save_call_record_summary
-                            process_and_save_call_record_summary(obj.id, async_mode=False)
-                        except Exception:
-                            pass
-                except Exception as ex:
-                    print(f"⚠️ [AUTO-PERSIST] Failed for {iid}: {ex}")
-        finally:
-            close_old_connections()
-
+    # Trigger background auto-persist (uses module-level _persist_remote_items)
     if new_remote_to_persist:
         import threading
         t = threading.Thread(
@@ -3871,9 +3942,10 @@ def sarvam_leads_data(request, agent_slug=None):
         t.start()
 
     from django.db.models import Count
-    status_counts = stats_qs.values("status").annotate(cnt=Count("id"))
+    status_counts = list(stats_qs.values("status").annotate(cnt=Count("id")))
+    total_stat_calls = sum(sc["cnt"] for sc in status_counts)
     stats = {
-        "total_calls": stats_qs.count(),
+        "total_calls": total_stat_calls,
         "interview_scheduled": 0,
         "high_intent": 0,
         "callback_required": 0,
@@ -3915,6 +3987,79 @@ def sarvam_leads_data(request, agent_slug=None):
         "usage_percentage": sarvam_agent.usage_percentage if sarvam_agent else 0.0,
     }
 
+    from django.utils import timezone
+    now_dt = timezone.now()
+    today_start = now_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = now_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    callbacks_base = stats_qs.filter(callback_datetime__isnull=False)
+    callback_stats = {
+        "pending": callbacks_base.filter(is_callback_completed=False).count(),
+        "today": callbacks_base.filter(is_callback_completed=False, callback_datetime__range=(today_start, today_end)).count(),
+        "overdue": callbacks_base.filter(is_callback_completed=False, callback_datetime__lt=now_dt).count(),
+        "completed": callbacks_base.filter(is_callback_completed=True).count(),
+    }
+
+    pipeline_counts = {
+        "ALL": stats_qs.count(),
+        "NEW": 0,
+        "INTERESTED": 0,
+        "CALLBACK": 0,
+        "CONVERTED": 0,
+        "LOST": 0,
+    }
+    for rec_row in stats_qs.values("pipeline_stage", "status"):
+        stg = (rec_row.get("pipeline_stage") or "").upper().strip()
+        st_call = (rec_row.get("status") or "").upper().strip()
+        if stg in pipeline_counts and stg != "NEW":
+            pipeline_counts[stg] += 1
+        elif st_call in ["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED", "BOOKING_CONFIRMED"]:
+            pipeline_counts["INTERESTED"] += 1
+        elif st_call in ["CALLBACK", "FOLLOW_UP", "WHATSAPP"]:
+            pipeline_counts["CALLBACK"] += 1
+        elif st_call in ["CONVERTED", "WON", "ENROLLED"]:
+            pipeline_counts["CONVERTED"] += 1
+        elif st_call in ["NOT_INTERESTED", "DECLINED", "REJECTED", "MISMATCH", "ROLE_MISMATCH"]:
+            pipeline_counts["LOST"] += 1
+        else:
+            pipeline_counts["NEW"] += 1
+
+    # Daily activity trend & active calendar dates (always calculated across the agent's full timeline)
+    from django.db.models.functions import TruncDate
+    from django.db.models import Count
+    daily_recs = agent_qs.annotate(day=TruncDate('created_at')).values('day', 'status').annotate(total=Count('id')).order_by('day')
+    day_map = {}
+    for item in daily_recs:
+        day_val = item.get('day')
+        if not day_val:
+            continue
+        d_str = day_val.strftime('%Y-%m-%d')
+        if d_str not in day_map:
+            day_map[d_str] = {
+                "date": d_str,
+                "display_date": day_val.strftime('%d %b'),
+                "total": 0,
+                "interested": 0,
+                "callback": 0,
+                "not_interested": 0
+            }
+        cnt = item.get('total') or 0
+        day_map[d_str]["total"] += cnt
+        st = (item.get('status') or "").upper()
+        if st in ["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED", "BOOKING_CONFIRMED"]:
+            day_map[d_str]["interested"] += cnt
+        elif st in ["CALLBACK", "FOLLOW_UP", "WHATSAPP"]:
+            day_map[d_str]["callback"] += cnt
+        elif st in ["NOT_INTERESTED", "NO_ANSWER", "MISSED", "MISMATCH", "BUSY", "FAILED", "DECLINED", "REJECTED"]:
+            day_map[d_str]["not_interested"] += cnt
+        else:
+            day_map[d_str]["not_interested"] += cnt
+
+    daily_trend = list(day_map.values())
+    active_dates = list(day_map.keys())
+    daily_counts = {k: v.get("total", 0) for k, v in day_map.items()}
+    daily_inquiries = daily_counts
+
     return Response({
         "total": total_count,
         "total_unfiltered": total_count,
@@ -3922,7 +4067,14 @@ def sarvam_leads_data(request, agent_slug=None):
         "page_size": page_size,
         "total_pages": total_pages,
         "stats": stats,
+        "daily_inquiries": daily_inquiries,
+        "pipeline_counts": pipeline_counts,
+        "callback_stats": callback_stats,
         "agent_minutes": agent_minutes_info,
+        "daily_trend": daily_trend,
+        "active_dates": active_dates,
+        "daily_counts": daily_counts,
+        "selected_date": date_q,
         "leads": processed_leads,
         "agent_name": sarvam_agent.name if sarvam_agent else "Sarvam AI Agent",
         "agent_slug": sarvam_agent.slug if sarvam_agent else "default",
@@ -4066,6 +4218,209 @@ def sarvam_transcript_detail(request, interaction_id, agent_slug=None):
             return Response(t_res, status=200)
 
     return Response({"transcript": "Transcript not available for this session yet.", "messages": []}, status=200)
+
+
+@api_view(["POST"])
+def sarvam_update_lead_stage_api(request, interaction_id=None, agent_slug=None):
+    """
+    Updates the pipeline stage of a lead (Kanban drag-and-drop / stage selector).
+    Stages: NEW, INTERESTED, CALLBACK, CONVERTED, LOST
+    """
+    from urllib.parse import unquote
+    from conversations.models import SarvamCallRecord
+    stage = (request.data.get("stage") or "").upper().strip()
+    if stage == "CLOSED":
+        stage = "LOST"
+    valid_stages = ["NEW", "INTERESTED", "CALLBACK", "CONVERTED", "LOST"]
+    if stage not in valid_stages:
+        return Response({"error": f"Invalid stage. Allowed: {valid_stages}"}, status=400)
+
+    raw_id = interaction_id or request.data.get("interaction_id") or request.data.get("id")
+    if not raw_id:
+        return Response({"error": "interaction_id or id is required"}, status=400)
+
+    clean_id = unquote(str(raw_id)).strip()
+    record = None
+    if clean_id.isdigit():
+        record = SarvamCallRecord.objects.filter(id=int(clean_id)).first()
+    if not record:
+        record = SarvamCallRecord.objects.filter(interaction_id=clean_id).first()
+    if not record and clean_id.startswith("local_"):
+        try:
+            record = SarvamCallRecord.objects.filter(id=int(clean_id.replace("local_", ""))).first()
+        except ValueError:
+            pass
+    if not record:
+        record = SarvamCallRecord.objects.filter(attempt_id=clean_id).first()
+
+    if not record:
+        return Response({"error": "Lead record not found in database"}, status=404)
+
+    record.pipeline_stage = stage
+    record.save(update_fields=["pipeline_stage", "updated_at"])
+
+    return Response({
+        "status": "success",
+        "message": f"Lead moved to {stage}",
+        "stage": stage,
+        "effective_pipeline_stage": record.effective_pipeline_stage,
+        "record_id": record.id
+    }, status=200)
+
+
+@api_view(["POST"])
+def sarvam_schedule_callback_api(request, interaction_id=None, agent_slug=None):
+    """
+    Schedules or updates a callback and follow-up notes for a lead.
+    Accepts:
+      - callback_datetime: ISO string or None/empty
+      - callback_notes: string
+      - is_callback_completed: bool
+      - stage: optional (e.g. 'CALLBACK' or 'CONVERTED')
+    """
+    from urllib.parse import unquote
+    from django.utils.dateparse import parse_datetime
+    from django.utils import timezone
+    from conversations.models import SarvamCallRecord
+
+    raw_id = interaction_id or request.data.get("interaction_id") or request.data.get("id")
+    if not raw_id:
+        return Response({"error": "interaction_id or id is required"}, status=400)
+
+    clean_id = unquote(str(raw_id)).strip()
+    record = None
+    if clean_id.isdigit():
+        record = SarvamCallRecord.objects.filter(id=int(clean_id)).first()
+    if not record:
+        record = SarvamCallRecord.objects.filter(interaction_id=clean_id).first()
+    if not record and clean_id.startswith("local_"):
+        try:
+            record = SarvamCallRecord.objects.filter(id=int(clean_id.replace("local_", ""))).first()
+        except ValueError:
+            pass
+    if not record:
+        record = SarvamCallRecord.objects.filter(attempt_id=clean_id).first()
+
+    if not record:
+        return Response({"error": "Lead record not found in database"}, status=404)
+
+    raw_dt = request.data.get("callback_datetime")
+    notes = request.data.get("callback_notes")
+    is_completed = request.data.get("is_callback_completed")
+    stage = (request.data.get("stage") or "").upper().strip()
+
+    update_fields = ["updated_at"]
+
+    if raw_dt is not None:
+        if str(raw_dt).strip():
+            dt_obj = parse_datetime(str(raw_dt).strip())
+            record.callback_datetime = dt_obj
+            record.is_callback_completed = False
+            if not stage:
+                record.pipeline_stage = "CALLBACK"
+                update_fields.append("pipeline_stage")
+        else:
+            record.callback_datetime = None
+        update_fields.append("callback_datetime")
+
+    if notes is not None:
+        record.callback_notes = str(notes).strip()
+        update_fields.append("callback_notes")
+
+    if is_completed is not None:
+        record.is_callback_completed = bool(is_completed)
+        update_fields.append("is_callback_completed")
+
+    if stage and stage in ["NEW", "INTERESTED", "CALLBACK", "CONVERTED", "LOST"]:
+        record.pipeline_stage = stage
+        if "pipeline_stage" not in update_fields:
+            update_fields.append("pipeline_stage")
+
+    record.save(update_fields=list(set(update_fields)))
+    local_cb = timezone.localtime(record.callback_datetime) if record.callback_datetime else None
+
+    return Response({
+        "status": "success",
+        "message": "Callback details saved successfully",
+        "record_id": record.id,
+        "callback_datetime": record.callback_datetime.isoformat() if record.callback_datetime else None,
+        "callback_display": local_cb.strftime("%d %b, %I:%M %p") if local_cb else None,
+        "callback_notes": record.callback_notes,
+        "is_callback_completed": record.is_callback_completed,
+        "pipeline_stage": record.pipeline_stage,
+        "effective_pipeline_stage": record.effective_pipeline_stage,
+    }, status=200)
+
+
+@api_view(["GET"])
+def sarvam_callbacks_list_api(request, agent_slug=None):
+    """
+    Returns filtered callbacks for the follow-up management drawer / modal.
+    Filters: today, upcoming, overdue, completed, all
+    """
+    from django.utils import timezone
+    from conversations.models import SarvamCallRecord
+
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
+    slug = agent_slug or request.GET.get("agent")
+    sarvam_agent = None
+    if slug:
+        sarvam_agent = allowed_agent_objs.filter(slug=slug).first()
+    if not sarvam_agent and not is_superuser:
+        sarvam_agent = allowed_agent_objs.first()
+
+    qs = SarvamCallRecord.objects.filter(callback_datetime__isnull=False)
+    if sarvam_agent:
+        qs = qs.filter(sarvam_agent=sarvam_agent)
+    elif not is_superuser:
+        qs = qs.filter(sarvam_agent__in=allowed_agent_objs)
+
+    filter_type = (request.GET.get("filter") or "pending").lower().strip()
+    now_dt = timezone.now()
+    today_start = now_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = now_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+    if filter_type == "today":
+        qs = qs.filter(is_callback_completed=False, callback_datetime__range=(today_start, today_end)).order_by("callback_datetime")
+    elif filter_type == "overdue":
+        qs = qs.filter(is_callback_completed=False, callback_datetime__lt=now_dt).order_by("callback_datetime")
+    elif filter_type == "upcoming":
+        qs = qs.filter(is_callback_completed=False, callback_datetime__gt=now_dt).order_by("callback_datetime")
+    elif filter_type == "completed":
+        qs = qs.filter(is_callback_completed=True).order_by("-updated_at")
+    else: # all pending
+        qs = qs.filter(is_callback_completed=False).order_by("callback_datetime")
+
+    items = []
+    for r in qs[:100]:
+        local_cb = timezone.localtime(r.callback_datetime)
+        is_overdue = (not r.is_callback_completed) and (r.callback_datetime < now_dt)
+        is_today = today_start <= local_cb <= today_end
+        items.append({
+            "id": r.id,
+            "interaction_id": r.interaction_id or f"local_{r.id}",
+            "candidate_name": r.candidate_name,
+            "phone_number": r.phone_number,
+            "applied_position": r.applied_position,
+            "status": r.status,
+            "pipeline_stage": r.pipeline_stage or "CALLBACK",
+            "effective_pipeline_stage": r.effective_pipeline_stage,
+            "callback_datetime": r.callback_datetime.isoformat(),
+            "callback_display": local_cb.strftime("%d %b %Y, %I:%M %p"),
+            "callback_notes": r.callback_notes,
+            "is_callback_completed": r.is_callback_completed,
+            "is_overdue": is_overdue,
+            "is_today": is_today,
+            "audio_url": r.audio_url or "",
+            "summary": r.summary or {},
+        })
+
+    return Response({
+        "status": "success",
+        "filter": filter_type,
+        "count": len(items),
+        "callbacks": items
+    }, status=200)
 
 
 @api_view(["POST"])
@@ -6377,4 +6732,329 @@ def system_maintenance_status_api(request):
     }, status=200)
 
 
+# ======================================================
+# PUBLIC PER-AGENT CLIENT DEMO PORTAL & CALL APIS
+# ======================================================
 
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.permissions import AllowAny
+
+def sarvam_agent_demo_page(request, agent_slug):
+    """
+    Renders an isolated, client-facing public demo landing page for a specific Sarvam Voice AI Agent.
+    Allows prospective clients to experience a live AI voice call without login or access to internal CRM data.
+    """
+    from conversations.models import SarvamAgent, SystemMaintenanceConfig
+    from django.shortcuts import render
+
+    slug = (agent_slug or "").strip()
+    agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
+    if not agent:
+        agent = SarvamAgent.objects.filter(slug__iexact=slug, is_active=True).first()
+
+    if not agent:
+        return render(request, "sarvam_agent_demo.html", {
+            "error_mode": "not_found",
+            "requested_slug": slug,
+        }, status=404)
+
+    m_config = SystemMaintenanceConfig.get_config()
+    is_maintenance = bool(m_config.is_active)
+
+    # Determine languages supported
+    slug_lower = agent.slug.lower()
+    languages = [
+        {"code": "hi-IN", "label": "Hindi (हिंदी)", "default": True},
+        {"code": "en-IN", "label": "English", "default": False},
+    ]
+    if "gujarati" in slug_lower or "guj" in slug_lower:
+        languages.insert(0, {"code": "gu-IN", "label": "Gujarati (ગુજરાતી)", "default": True})
+        languages[1]["default"] = False
+
+    context = {
+        "agent": agent,
+        "agent_slug": agent.slug,
+        "agent_name": agent.name,
+        "demo_title": agent.display_demo_title,
+        "demo_subtitle": agent.display_demo_subtitle,
+        "demo_company": agent.display_demo_company,
+        "demo_color": agent.demo_accent_color or "#0284c7",
+        "agent_phone": agent.agent_phone or "+917965853278",
+        "is_demo_active": agent.is_demo_active,
+        "is_minutes_exhausted": getattr(agent, "is_minutes_exhausted", False),
+        "is_maintenance": is_maintenance,
+        "maintenance_message": m_config.message if is_maintenance else "",
+        "languages": languages,
+        "max_daily_calls": agent.demo_max_daily_calls_per_number or 3,
+        "allow_playback": agent.demo_allow_recording_playback,
+    }
+    return render(request, "sarvam_agent_demo.html", context)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def sarvam_agent_demo_trigger_call_api(request, agent_slug):
+    """
+    Public API: Triggers a live demo call from the Sarvam voice agent to the prospect's mobile phone.
+    Includes rate-limiting (cooldown + max calls per day) and minute-exhaustion protection.
+    """
+    import re
+    from datetime import timedelta
+    from django.utils import timezone
+    from conversations.models import SarvamAgent, SarvamCallRecord, SystemMaintenanceConfig
+    from conversations.services.kylas_sarvam_bridge import SarvamAgentService
+
+    # 1. Maintenance Mode Check
+    m_config = SystemMaintenanceConfig.get_config()
+    if m_config.is_active:
+        return Response({
+            "status": "error",
+            "error": m_config.message or "System is temporarily undergoing maintenance. Please try again in a few minutes.",
+            "code": "MAINTENANCE"
+        }, status=503)
+
+    # 2. Agent Resolution
+    slug = (agent_slug or "").strip()
+    agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
+    if not agent:
+        agent = SarvamAgent.objects.filter(slug__iexact=slug, is_active=True).first()
+
+    if not agent:
+        return Response({"status": "error", "error": "AI Voice Agent not found or inactive."}, status=404)
+
+    if not agent.is_demo_active:
+        return Response({
+            "status": "error",
+            "error": f"Public demo calls for {agent.name} are currently paused by the administrator."
+        }, status=403)
+
+    # 3. Minute Allocation Check
+    if getattr(agent, "is_minutes_exhausted", False):
+        return Response({
+            "status": "error",
+            "code": "MINUTES_EXHAUSTED",
+            "error": f"The demo capacity for {agent.name} is currently full for today. Please contact our team for a live walkthrough."
+        }, status=400)
+
+    # 4. Input Parsing & Validation
+    data = request.data or {}
+    raw_phone = str(data.get("phone_number") or data.get("phone") or "").strip()
+    candidate_name = str(data.get("name") or data.get("candidate_name") or "Demo Guest").strip()
+    slug_lower = agent.slug.lower()
+    default_lang = "gu-IN" if ("gujarati" in slug_lower or "guj" in slug_lower) else "hi-IN"
+    language = str(data.get("language") or default_lang).strip()
+
+    # Sanitize phone number (strip spaces, dashes, parentheses)
+    clean_digits = re.sub(r"[^\d]", "", raw_phone)
+    if not clean_digits:
+        return Response({"status": "error", "error": "Phone number is required."}, status=400)
+
+    # Validate phone length (10 digits for India mobile, or 10-15 digits international)
+    if len(clean_digits) == 10:
+        phone_e164 = f"+91{clean_digits}"
+        phone_suffix = clean_digits
+    elif len(clean_digits) == 11 and clean_digits.startswith("0"):
+        phone_e164 = f"+91{clean_digits[1:]}"
+        phone_suffix = clean_digits[1:]
+    elif len(clean_digits) == 12 and clean_digits.startswith("91"):
+        phone_e164 = f"+{clean_digits}"
+        phone_suffix = clean_digits[2:]
+    elif len(clean_digits) >= 10 and len(clean_digits) <= 15:
+        phone_e164 = f"+{clean_digits}" if not raw_phone.startswith("+") else raw_phone
+        phone_suffix = clean_digits[-10:]
+    else:
+        return Response({
+            "status": "error",
+            "error": "Please enter a valid 10-digit mobile number."
+        }, status=400)
+
+    # 5. Rate Limiting Protection (Anti-Spam & Cost Control)
+    now = timezone.now()
+    cooldown_window = now - timedelta(seconds=30)
+    recent_call = SarvamCallRecord.objects.filter(
+        sarvam_agent=agent,
+        phone_number__endswith=phone_suffix,
+        created_at__gte=cooldown_window
+    ).first()
+
+    if recent_call:
+        return Response({
+            "status": "error",
+            "code": "COOLDOWN",
+            "error": "A demo call was just initiated to this number. Please check your phone or wait 30 seconds before requesting another call."
+        }, status=429)
+
+    # Daily limit per phone number
+    daily_window = now - timedelta(hours=24)
+    daily_count = SarvamCallRecord.objects.filter(
+        sarvam_agent=agent,
+        phone_number__endswith=phone_suffix,
+        created_at__gte=daily_window,
+        is_demo_call=True
+    ).count()
+
+    max_calls = agent.demo_max_daily_calls_per_number or 3
+    if daily_count >= max_calls:
+        return Response({
+            "status": "error",
+            "code": "DAILY_LIMIT_REACHED",
+            "error": f"You have reached the maximum daily demo calls ({max_calls}/{max_calls}) for this number. Contact our sales team for an extended consultation!"
+        }, status=429)
+
+    # 6. Extra variables for the bot prompt
+    extra_vars = {
+        "user_name": candidate_name,
+    }
+
+    # 7. Trigger the Outbound Call via Sarvam
+    result = SarvamAgentService.trigger_outbound_call(
+        phone_number=phone_e164,
+        lead_id=0,
+        customer_name=candidate_name,
+        language=language,
+        sarvam_agent=agent,
+        extra_variables=extra_vars,
+    )
+
+    if isinstance(result, dict) and (result.get("code") == "MINUTES_EXHAUSTED" or result.get("status") == "error"):
+        return Response({
+            "status": "error",
+            "code": "MINUTES_EXHAUSTED",
+            "error": result.get("error") or "Demo capacity limit reached. Please contact support."
+        }, status=400)
+
+    attempt_id = result.get("attempt_id") if isinstance(result, dict) else None
+
+    # 8. Record Demo Call
+    rec = SarvamCallRecord.objects.create(
+        sarvam_agent=agent,
+        attempt_id=attempt_id,
+        phone_number=phone_e164,
+        candidate_name=candidate_name,
+        language=language,
+        status="DIALING",
+        call_type="Demo Call",
+        is_demo_call=True,
+        applied_position=f"{agent.name} Demo",
+        summary={"source": "Public Demo Link", "demo_slug": agent.slug},
+    )
+
+    caller_id = agent.agent_phone or "+917965853278"
+
+    return Response({
+        "status": "success",
+        "call_id": rec.id,
+        "attempt_id": attempt_id,
+        "phone_number": phone_e164,
+        "agent_phone": caller_id,
+        "message": f"Calling {phone_e164} from our AI agent ({caller_id}). Please answer your phone!",
+    }, status=200)
+
+
+@api_view(["GET"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def sarvam_agent_demo_call_status_api(request, agent_slug, call_id):
+    """
+    Public API: Polls real-time status of a demo call.
+    Returns status ('DIALING', 'RINGING', 'IN_PROGRESS', 'COMPLETED'), duration, and summary.
+    """
+    from conversations.models import SarvamAgent, SarvamCallRecord
+
+    slug = (agent_slug or "").strip()
+    agent = SarvamAgent.objects.filter(slug=slug, is_active=True).first()
+    if not agent:
+        agent = SarvamAgent.objects.filter(slug__iexact=slug, is_active=True).first()
+
+    if not agent:
+        return Response({"status": "error", "error": "Agent not found."}, status=404)
+
+    rec = SarvamCallRecord.objects.filter(
+        id=call_id,
+        sarvam_agent=agent,
+        is_demo_call=True
+    ).first()
+
+    if not rec:
+        return Response({"status": "error", "error": "Demo call record not found."}, status=404)
+
+    is_completed = rec.status in ["COMPLETED", "INTERVIEW", "INTERESTED", "CALLBACK", "NOT_INTERESTED", "LOST", "BUSY", "NO_ANSWER", "FAILED"]
+
+    response_data = {
+        "status": "success",
+        "call_status": rec.status,
+        "is_completed": is_completed,
+        "duration_seconds": rec.duration_seconds,
+        "phone_number": rec.phone_number,
+        "candidate_name": rec.candidate_name,
+    }
+
+    if is_completed and agent.demo_allow_recording_playback:
+        response_data["audio_url"] = rec.audio_url or None
+        response_data["summary"] = rec.summary or {}
+        if rec.transcript:
+            response_data["has_transcript"] = True
+
+    return Response(response_data, status=200)
+
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def dashboard_ai_copilot_api(request):
+    """
+    Dashboard AI Intelligence Copilot API.
+    Resolves natural language queries regarding dashboard leads,
+    appointments, bot metrics, and call performance.
+    """
+    user = request.user if (request.user and request.user.is_authenticated) else None
+    
+    # Try resolving user from JWT Authorization header if not authenticated in session
+    auth_header = request.headers.get("Authorization", "")
+    if not user and auth_header.startswith("Bearer "):
+        token_str = auth_header.split(" ", 1)[1]
+        try:
+            from rest_framework_simplejwt.tokens import AccessToken
+            from django.contrib.auth.models import User
+            token = AccessToken(token_str)
+            user_id = token.get("user_id")
+            if user_id:
+                user = User.objects.filter(id=user_id).first()
+        except Exception:
+            pass
+
+    # Fallback: resolve user from username parameter if provided in request
+    if not user:
+        client_username = request.data.get("username")
+        if client_username:
+            from django.contrib.auth.models import User
+            user = User.objects.filter(username=client_username).first()
+
+    user_query = request.data.get("message") or request.data.get("query") or ""
+    user_query = str(user_query).strip()
+
+    if not user_query:
+        return Response({"error": "Please provide a query message."}, status=400)
+
+    history = request.data.get("history") or []
+    agent_slug = request.data.get("agent_slug") or ""
+    agent_name = request.data.get("agent_name") or ""
+    screen_stats = request.data.get("screen_stats") or None
+
+    from conversations.services.dashboard_ai_copilot import process_copilot_query
+    result = process_copilot_query(
+        user_query=user_query,
+        user=user,
+        history=history,
+        current_agent_slug=agent_slug,
+        current_agent_name=agent_name,
+        screen_stats=screen_stats
+    )
+
+    return Response({
+        "status": "success",
+        "reply": result.get("reply", ""),
+        "tools_used": result.get("tools_used", []),
+        "username": user.username if user else "Executive"
+    }, status=200)

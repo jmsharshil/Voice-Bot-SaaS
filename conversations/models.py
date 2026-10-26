@@ -182,6 +182,7 @@ def calculate_billed_seconds(duration_seconds):
     return int(billed_mins * 60)
 
 
+
 class SarvamAgent(models.Model):
     """
     Stores Sarvam AI Agent platform credentials for each configured voice agent.
@@ -215,16 +216,86 @@ class SarvamAgent(models.Model):
         help_text="Additional manual seconds used adjustment by Superadmin"
     )
 
+    # Public Demo Link Configuration
+    is_demo_active = models.BooleanField(
+        default=True,
+        help_text="Allow public client demo testing via unique demo link"
+    )
+    demo_title = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+        help_text="Custom title for demo page, e.g. 'Royal Enfield AI Voice Consultant'"
+    )
+    demo_subtitle = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Custom description for demo page, e.g. 'Experience real-time motorcycle test drive inquiries'"
+    )
+    demo_company_name = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Company/Brand name shown on demo page"
+    )
+    demo_accent_color = models.CharField(
+        max_length=30,
+        blank=True,
+        default="#0284c7",
+        help_text="Brand accent color hex for demo page (e.g. #0284c7, #e11d48, #d97706)"
+    )
+    demo_max_daily_calls_per_number = models.PositiveIntegerField(
+        default=3,
+        help_text="Maximum demo calls allowed per phone number in 24 hours"
+    )
+    demo_allow_recording_playback = models.BooleanField(
+        default=True,
+        help_text="Show audio recording and AI call summary on demo page after call ends"
+    )
+
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     @property
+    def demo_url(self):
+        """Relative public demo link for this agent."""
+        return f"/demo/{self.slug}/"
+
+    @property
+    def display_demo_title(self):
+        return self.demo_title.strip() if self.demo_title else f"{self.name} — AI Voice Bot"
+
+    @property
+    def display_demo_subtitle(self):
+        if self.demo_subtitle:
+            return self.demo_subtitle.strip()
+        if self.description:
+            return self.description.strip()
+        return "Experience real-time interactive voice AI conversations"
+
+    @property
+    def display_demo_company(self):
+        return self.demo_company_name.strip() if self.demo_company_name else self.name
+
+    @property
     def total_used_seconds(self):
         """Calculates total billed seconds from all call records using 60s (1 min) pulse."""
+        if hasattr(self, '_cached_used_seconds'):
+            return self._cached_used_seconds
+        from django.core.cache import cache
+        c_key = f"sarvam_agent_used_sec_{self.id}"
+        cached_val = cache.get(c_key)
+        if cached_val is not None:
+            self._cached_used_seconds = cached_val
+            return cached_val
         from django.db.models import Sum
         billed_sum = self.call_records.aggregate(total=Sum('billed_seconds'))['total'] or 0
-        return float(billed_sum) + float(self.extra_used_seconds)
+        used = float(billed_sum) + float(self.extra_used_seconds)
+        cache.set(c_key, used, timeout=30)
+        self._cached_used_seconds = used
+        return self._cached_used_seconds
 
     @property
     def total_used_minutes(self):
@@ -335,7 +406,12 @@ class SarvamCallRecord(models.Model):
     language = models.CharField(max_length=50, default="hi-IN")
     applied_position = models.CharField(max_length=255, default="Admission Counselor")
     status = models.CharField(max_length=100, default="DIALING")
-    call_type = models.CharField(max_length=50, default="Live Call")   # e.g. "Live Call", "Test Call", "Excel: Campaign"
+    call_type = models.CharField(max_length=50, default="Live Call")   # e.g. "Live Call", "Test Call", "Excel: Campaign", "Demo Call"
+    is_demo_call = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True if this call was triggered via the public agent demo link"
+    )
     duration_seconds = models.FloatField(default=0.0)
     billed_seconds = models.IntegerField(
         default=0,
@@ -345,10 +421,45 @@ class SarvamCallRecord(models.Model):
     audio_url = models.TextField(blank=True, null=True)
     summary = models.JSONField(default=dict, blank=True)
     transcript = models.TextField(blank=True, null=True)
+    
+    # CRM Lead Pipeline & Callback Management
+    pipeline_stage = models.CharField(
+        max_length=50,
+        default="NEW",
+        blank=True,
+        db_index=True,
+        help_text="CRM Stage: NEW, INTERESTED, CALLBACK, CONVERTED, LOST"
+    )
+    callback_datetime = models.DateTimeField(null=True, blank=True, db_index=True)
+    callback_notes = models.TextField(blank=True, default="")
+    is_callback_completed = models.BooleanField(default=False, db_index=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def effective_pipeline_stage(self):
+        """Returns manual pipeline_stage if set and not default, otherwise infers from call outcome."""
+        if self.pipeline_stage and self.pipeline_stage != "NEW":
+            return self.pipeline_stage
+        st = (self.status or "").upper().strip()
+        if st in ["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED", "BOOKING_CONFIRMED"]:
+            return "INTERESTED"
+        elif st in ["CALLBACK", "FOLLOW_UP", "WHATSAPP"] or (self.callback_datetime and not self.is_callback_completed):
+            return "CALLBACK"
+        elif st in ["CONVERTED", "WON", "ENROLLED"]:
+            return "CONVERTED"
+        elif st in ["NOT_INTERESTED", "DECLINED", "REJECTED", "MISMATCH", "ROLE_MISMATCH"]:
+            return "LOST"
+        return self.pipeline_stage or "NEW"
+
     def save(self, *args, **kwargs):
+        if not self.language:
+            self.language = "hi-IN"
+        if not self.candidate_name:
+            self.candidate_name = "Candidate"
+        if not self.applied_position:
+            self.applied_position = "Admission Counselor"
         self.billed_seconds = calculate_billed_seconds(self.duration_seconds)
         super().save(*args, **kwargs)
 
@@ -535,4 +646,4 @@ class SystemMaintenanceConfig(models.Model):
         return config
 
 
-
+

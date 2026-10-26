@@ -44,7 +44,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
-from conversations.views import demo_page, icemake_dashboard_page, sarvam_leads_page
+from conversations.views import demo_page, icemake_dashboard_page, sarvam_leads_page, sarvam_agent_demo_page, sarvam_agent_demo_trigger_call_api, sarvam_agent_demo_call_status_api
 from conversations.views import call_analytics_page, lead_analysis_page, lead_analysis_data, lead_analysis_detail
 from accounts.views import team_management_page, admin_management_page
 
@@ -52,6 +52,9 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", RedirectView.as_view(url="/accounts/login/", permanent=False), name="home"),
     path("voicebot/", demo_page, name="voicebot"),
+    path("demo/<slug:agent_slug>/", sarvam_agent_demo_page, name="sarvam-agent-demo-direct"),
+    path("demo/<slug:agent_slug>/call/", sarvam_agent_demo_trigger_call_api, name="sarvam-agent-demo-call-direct"),
+    path("demo/<slug:agent_slug>/status/<int:call_id>/", sarvam_agent_demo_call_status_api, name="sarvam-agent-demo-status-direct"),
     path("analytics/", call_analytics_page, name="navya-analytics"),
     path("dashboard/", lead_analysis_page, name="lead-analysis"),
     path("sarvam-leads/", sarvam_leads_page, name="sarvam-leads-root"),

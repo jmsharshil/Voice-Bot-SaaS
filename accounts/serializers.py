@@ -98,7 +98,7 @@ class UserSerializer(serializers.ModelSerializer):
         queryset=VoiceAgent.objects.all(), source="profile.assigned_agent", required=False, allow_null=True
     )
 
-    custom_permissions = serializers.JSONField(source="profile.custom_permissions", write_only=True, required=False, allow_null=True)
+    custom_permissions = serializers.JSONField(source="profile.custom_permissions", required=False, allow_null=True)
 
     # Add write-only fields for user update details
     password = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
@@ -114,7 +114,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            "id", "username", "email", "profile", "role_id", "assigned_agent_id", 
+            "id", "username", "email", "is_active", "profile", "role_id", "assigned_agent_id", 
             "custom_permissions", "password", "role_name", "permissions", "company_logo",
             "assigned_sarvam_agent_ids", "is_superuser"
         ]

@@ -198,10 +198,10 @@ def create_speech_recognizer(language="en", strategy_key=None):
     )
 
     is_auto = (language == "auto")
-    is_icemake = (strategy_key in ["icemake", "icemake_strategy"])
+    is_icemake = (strategy_key in ["icemake", "icemake_strategy", "icemake_v2", "icemake_v2_strategy"])
     if is_auto:
         auto_detect_config = speechsdk.languageconfig.AutoDetectSourceLanguageConfig(
-           languages=["en-IN", "hi-IN"]
+           languages=["en-IN", "hi-IN", "gu-IN"]
         )
     else:
         stt_lang = STT_LANGUAGE_MAP.get(language, "hi-IN")

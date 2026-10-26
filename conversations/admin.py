@@ -49,10 +49,10 @@ class SarvamAgentMinuteAdjustmentAdmin(admin.ModelAdmin):
 
 @admin.register(SarvamAgent)
 class SarvamAgentAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug", "allocated_minutes_display", "used_minutes_display", "remaining_minutes_display", "status_badge", "agent_phone", "is_active")
-    search_fields = ("name", "slug", "app_id", "agent_phone")
-    list_filter = ("is_active",)
-    readonly_fields = ("used_minutes_display", "remaining_minutes_display", "created_at", "updated_at")
+    list_display = ("name", "slug", "demo_link_display", "allocated_minutes_display", "used_minutes_display", "remaining_minutes_display", "status_badge", "agent_phone", "is_active")
+    search_fields = ("name", "slug", "app_id", "agent_phone", "demo_title", "demo_company_name")
+    list_filter = ("is_active", "is_demo_active")
+    readonly_fields = ("used_minutes_display", "remaining_minutes_display", "demo_preview_url", "created_at", "updated_at")
     actions = ["add_500_minutes", "add_1000_minutes", "add_5000_minutes", "deduct_500_minutes", "reset_5000_minutes"]
 
     def save_model(self, request, obj, form, change):
@@ -76,6 +76,19 @@ class SarvamAgentAdmin(admin.ModelAdmin):
         ("Identity", {
             "fields": ("name", "slug", "description", "is_active")
         }),
+        ("Client Demo Link Configuration", {
+            "fields": (
+                "is_demo_active",
+                "demo_preview_url",
+                "demo_title",
+                "demo_subtitle",
+                "demo_company_name",
+                "demo_accent_color",
+                "demo_max_daily_calls_per_number",
+                "demo_allow_recording_playback",
+            ),
+            "description": "Configure the standalone, public client pitch link for this bot (e.g. /demo/<slug>/)."
+        }),
         ("Call Minutes & Quota (SuperAdmin)", {
             "fields": ("allocated_minutes", "extra_used_seconds", "used_minutes_display", "remaining_minutes_display"),
             "description": "Exclusively configured by SuperAdmin. Controls outbound call & campaign limits."
@@ -88,6 +101,30 @@ class SarvamAgentAdmin(admin.ModelAdmin):
             "fields": ("created_at", "updated_at"),
         }),
     )
+
+    def demo_link_display(self, obj):
+        if not obj.is_demo_active:
+            return format_html('<span style="color:#94a3b8; font-size:11px;">Disabled</span>')
+        url = obj.demo_url
+        return format_html(
+            '<a href="{}" target="_blank" style="display:inline-flex; align-items:center; gap:4px; background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-weight:700; text-decoration:none; font-size:11px;">'
+            '🔗 /demo/{}/'
+            '</a>',
+            url, obj.slug
+        )
+    demo_link_display.short_description = "Demo Link"
+
+    def demo_preview_url(self, obj):
+        if not obj or not obj.id:
+            return "Save first to generate URL"
+        url = obj.demo_url
+        return format_html(
+            '<a href="{}" target="_blank" style="font-weight:700; color:#0284c7; text-decoration:underline; font-size:13px;">'
+            'Open Public Demo: {}'
+            '</a>',
+            url, url
+        )
+    demo_preview_url.short_description = "Public Demo URL"
 
     def allocated_minutes_display(self, obj):
         return f"{obj.allocated_minutes:,.1f} mins"
@@ -220,10 +257,10 @@ class SarvamCampaignLeadAdmin(admin.ModelAdmin):
 @admin.register(SarvamCallRecord)
 class SarvamCallRecordAdmin(admin.ModelAdmin):
     list_display = (
-        "candidate_name", "phone_number", "sarvam_agent", "campaign", "campaign_stage", "status",
+        "candidate_name", "phone_number", "sarvam_agent", "is_demo_call", "campaign", "campaign_stage", "status",
         "duration_seconds", "billed_seconds", "call_type", "created_at",
     )
-    list_filter = ("status", "call_type", "language", "sarvam_agent", "campaign_stage")
+    list_filter = ("is_demo_call", "status", "call_type", "language", "sarvam_agent", "campaign_stage")
     search_fields = ("candidate_name", "phone_number", "attempt_id", "interaction_id")
     readonly_fields = ("billed_seconds", "created_at", "updated_at")
     ordering = ("-created_at",)

@@ -9,6 +9,7 @@ from .views import (
     icemake_dashboard_page, icemake_dashboard_data,
     proxy_audio,
     sarvam_leads_page, sarvam_leads_data, sarvam_transcript_detail, sarvam_trigger_call_api, sarvam_sync_from_api,
+    sarvam_update_lead_stage_api, sarvam_schedule_callback_api, sarvam_callbacks_list_api,
     public_trigger_sarvam_call_api, public_list_sarvam_agents_api,
     sarvam_upload_campaign_api, sarvam_sample_template_api,
     sarvam_user_agents_api, sarvam_campaigns_list_api, sarvam_campaign_detail_api,
@@ -16,6 +17,8 @@ from .views import (
     sarvam_agent_minutes_status_api, sarvam_adjust_agent_minutes_api, sarvam_toggle_agent_active_api,
     sarvam_admin_all_campaigns_api, sarvam_admin_campaign_action_api,
     system_maintenance_enable_api, system_maintenance_disable_api, system_maintenance_status_api,
+    sarvam_agent_demo_page, sarvam_agent_demo_trigger_call_api, sarvam_agent_demo_call_status_api,
+    dashboard_ai_copilot_api,
 )
 from .incoming_webhooks import incoming_trigger_webhook
 from django.urls import path, re_path
@@ -62,6 +65,9 @@ urlpatterns = [
     path("sarvam/leads/data/", sarvam_leads_data),
     path("sarvam/leads/call/", sarvam_trigger_call_api),
     path("sarvam/leads/sync/", sarvam_sync_from_api),
+    path("sarvam/leads/callbacks/", sarvam_callbacks_list_api, name="sarvam-callbacks-list"),
+    path("sarvam/leads/<path:interaction_id>/update-stage/", sarvam_update_lead_stage_api, name="sarvam-lead-update-stage"),
+    path("sarvam/leads/<path:interaction_id>/callback/", sarvam_schedule_callback_api, name="sarvam-lead-callback"),
     path("sarvam/leads/upload-campaign/", sarvam_upload_campaign_api, name="sarvam-upload-campaign"),
     path("sarvam/leads/sample-template/", sarvam_sample_template_api, name="sarvam-sample-template"),
     path("sarvam/leads/transcript/<path:interaction_id>/", sarvam_transcript_detail),
@@ -86,8 +92,18 @@ urlpatterns = [
     path("sarvam/<slug:agent_slug>/leads/data/", sarvam_leads_data, name="sarvam-agent-leads-data"),
     path("sarvam/<slug:agent_slug>/leads/call/", sarvam_trigger_call_api, name="sarvam-agent-trigger-call"),
     path("sarvam/<slug:agent_slug>/leads/sync/", sarvam_sync_from_api, name="sarvam-agent-sync"),
+    path("sarvam/<slug:agent_slug>/leads/callbacks/", sarvam_callbacks_list_api, name="sarvam-agent-callbacks-list"),
+    path("sarvam/<slug:agent_slug>/leads/<path:interaction_id>/update-stage/", sarvam_update_lead_stage_api, name="sarvam-agent-lead-update-stage"),
+    path("sarvam/<slug:agent_slug>/leads/<path:interaction_id>/callback/", sarvam_schedule_callback_api, name="sarvam-agent-lead-callback"),
     path("sarvam/<slug:agent_slug>/leads/upload-campaign/", sarvam_upload_campaign_api, name="sarvam-agent-upload-campaign"),
     path("sarvam/<slug:agent_slug>/leads/transcript/<path:interaction_id>/", sarvam_transcript_detail, name="sarvam-agent-transcript"),
+
+    # Dedicated Public Client Demo Link & Public Call Trigger API (Per Agent)
+    path("demo/<slug:agent_slug>/", sarvam_agent_demo_page, name="sarvam-agent-demo"),
+    path("demo/<slug:agent_slug>/call/", sarvam_agent_demo_trigger_call_api, name="sarvam-agent-demo-call"),
+    path("demo/<slug:agent_slug>/status/<int:call_id>/", sarvam_agent_demo_call_status_api, name="sarvam-agent-demo-status"),
+    path("api/demo/<slug:agent_slug>/call/", sarvam_agent_demo_trigger_call_api, name="api-sarvam-agent-demo-call"),
+    path("api/demo/<slug:agent_slug>/status/<int:call_id>/", sarvam_agent_demo_call_status_api, name="api-sarvam-agent-demo-status"),
 
 
     # Ice Make Support Dashboard
@@ -121,4 +137,8 @@ urlpatterns = [
     path("api/system/maintenance/enable/", system_maintenance_enable_api),
     path("api/system/maintenance/disable/", system_maintenance_disable_api),
     path("api/system/maintenance/status/", system_maintenance_status_api),
-]
+
+    # Dashboard AI Intelligence Copilot
+    path("api/dashboard/ai-copilot/", dashboard_ai_copilot_api, name="dashboard-ai-copilot"),
+    path("dashboard/ai-copilot/", dashboard_ai_copilot_api),
+]
