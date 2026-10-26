@@ -6839,7 +6839,7 @@ def sarvam_agent_demo_trigger_call_api(request, agent_slug):
 
     # 5. Rate Limiting Protection (Anti-Spam & Cost Control)
     now = timezone.now()
-    cooldown_window = now - timedelta(seconds=90)
+    cooldown_window = now - timedelta(seconds=30)
     recent_call = SarvamCallRecord.objects.filter(
         sarvam_agent=agent,
         phone_number__endswith=phone_suffix,
@@ -6850,7 +6850,7 @@ def sarvam_agent_demo_trigger_call_api(request, agent_slug):
         return Response({
             "status": "error",
             "code": "COOLDOWN",
-            "error": "A demo call was just initiated to this number. Please check your phone or wait 90 seconds before requesting another call."
+            "error": "A demo call was just initiated to this number. Please check your phone or wait 30 seconds before requesting another call."
         }, status=429)
 
     # Daily limit per phone number

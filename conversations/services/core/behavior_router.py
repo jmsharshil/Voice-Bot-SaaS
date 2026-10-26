@@ -41,6 +41,8 @@ ROLE_STRATEGY_MAP = {
     "Raahi Triple iEM Advisor": "raahi_iiiem_strategy",
     "Ice Make Cold Room Support": "icemake",
     "Ice Make Support Advisor": "icemake",
+    "Ice Make Cold Room Support V2": "icemake_v2",
+    "Ice Make Support Agent V2": "icemake_v2",
     "Priya Naavya AI Advisor": "priya_naavya_strategy",
     "Priya Naavya Advisor": "priya_naavya_strategy",
     "Naavya.ai MSME Advisor": "priya_naavya_strategy",
@@ -50,9 +52,12 @@ ROLE_STRATEGY_MAP = {
 def get_role_strategy(role_name: str):
     if not role_name:
         return "automobile"
-    if "icemake" in role_name.lower() or "ice make" in role_name.lower():
+    role_lower = role_name.lower()
+    if ("icemake" in role_lower or "ice make" in role_lower) and ("v2" in role_lower or "2" in role_lower):
+        return "icemake_v2"
+    if "icemake" in role_lower or "ice make" in role_lower:
         return "icemake"
-    if "raahi" in role_name.lower():
+    if "raahi" in role_lower:
         return "raahi_iiiem_strategy"
     if "priya" in role_name.lower():
         return "priya_naavya_strategy"

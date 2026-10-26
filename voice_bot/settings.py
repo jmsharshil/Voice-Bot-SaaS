@@ -64,6 +64,9 @@ CSRF_TRUSTED_ORIGINS = [
     "https://jolly-flower-0c1382600.2.azurestaticapps.net",
     "https://jmstechnova.com",
     "https://www.jmstechnova.com",
+    "https://nonesthetically-affectional-janel.ngrok-free.dev",
+    "https://*.ngrok-free.dev",
+    "https://*.ngrok-free.app",
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -85,6 +88,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://jolly-flower-0c1382600.2.azurestaticapps.net",
     "https://jmstechnova.com",
     "https://www.jmstechnova.com",
+    "https://nonesthetically-affectional-janel.ngrok-free.dev",
 ]
 # Application definition
 
@@ -93,6 +97,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 INSTALLED_APPS = [
     'icemake_bot',
+    'icemake_v2_bot',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
