@@ -9,7 +9,6 @@ django.setup()
 
 from conversations.services.core.behavior_router import get_role_strategy
 from icemake_v2_bot.strategy import icemake_v2_prepare
-from icemake_v2_bot.pincode_service import lookup_pincode
 from icemake_bot.models import IcemakeTicket
 from conversations.models import Conversation, ConversationSession
 from agents.models import VoiceAgent
@@ -17,7 +16,7 @@ import uuid
 
 def test_icemake_v2():
     print("=" * 60)
-    print("🧪 TESTING ICEMAKE VOICE AGENT V2 (SCRIPT VERIFICATION)")
+    print("🧪 TESTING ICEMAKE V2 (UNIFIED V1 SCRIPT & MULTI-LANGUAGE)")
     print("=" * 60)
 
     # 1. Test Behavior Router Mapping
@@ -25,162 +24,110 @@ def test_icemake_v2():
     print(f"\n1. Role strategy mapping: {strategy_key}")
     assert strategy_key == "icemake_v2", f"Expected icemake_v2, got {strategy_key}"
 
-    # 2. Test Postal Pincode Lookup
-    print("\n2. Testing Pincode Lookup...")
-    pin_res = lookup_pincode("516355")
-    print(f"   Lookup 516355: {pin_res}")
-    assert pin_res.get("state") != "", "Pincode state lookup should not be empty"
+    agent = VoiceAgent.objects.filter(name__icontains="Ice Make").first()
+    assert agent is not None, "VoiceAgent for Ice Make must exist"
 
-    # 3. Simulate Full English Call Flow
-    print("\n3. Simulating Full English Call Flow (Steps 1 to 11)...")
-    agent = VoiceAgent.objects.filter(name="Ice Make Support Agent V2").first()
-    session_id = f"test_session_{uuid.uuid4().hex[:8]}"
-    
-    # Create DB Conversation for testing ticket saving
-    conv = Conversation.objects.create(
+    # 2. Simulate Full English Call Flow
+    print("\n2. Simulating Full English Call Flow (Steps 0 to 8)...")
+    session_id_en = f"test_session_en_{uuid.uuid4().hex[:8]}"
+    conv_en = Conversation.objects.create(
         agent=agent,
-        session_id=session_id,
+        session_id=session_id_en,
         user_number="8985755019"
     )
-    session = ConversationSession.objects.create(
+    session_en = ConversationSession.objects.create(
         agent=agent,
-        session_id=session_id
+        session_id=session_id_en
     )
 
-    # Step 1: Greeting (asks language preference without naming languages)
-    r0 = icemake_v2_prepare(agent, "", session, detected_language="en")
-    print(f"Bot (Step 1): {r0['static_reply']}")
-    assert "Welcome to Ice Make Refrigeration Limited" in r0['static_reply']
-    assert "Which language would you prefer to speak in?" in r0['static_reply']
-    assert "English or Hindi" not in r0['static_reply']
+    # Step 0: Greeting
+    r0 = icemake_v2_prepare(agent, "", session_en)
+    print(f"Bot (Step 0 Greeting): {r0['static_reply']}")
+    assert "Welcome to Ice Make twenty four by seven service support" in r0['static_reply']
+    assert r0['strategy_key'] == "icemake_v2"
 
-    # Step 2: Customer Response - Language Preference
-    r1 = icemake_v2_prepare(agent, "English", session, detected_language="en")
+    # Step 0 Response: Customer chooses English
+    r1 = icemake_v2_prepare(agent, "English", session_en)
     print(f"Customer: English")
-    print(f"Bot (Step 2): {r1['static_reply']}")
+    print(f"Bot (Step 1 Ask Name): {r1['static_reply']}")
     assert "name" in r1['static_reply'].lower()
+    assert session_en.state.get("selected_language") == "en"
+    assert session_en.state.get("language_locked") is True
+    assert r1.get("language_locked") is True
 
-    # Step 2: Customer Name
-    r2 = icemake_v2_prepare(agent, "Ram", session, detected_language="en")
-    print(f"Customer: Ram")
-    print(f"Bot (Step 3): {r2['static_reply']}")
-    assert "address with pincode" in r2['static_reply'].lower()
-    assert session.state.get("customer_name") == "Ram"
+    # Step 1: Customer Name
+    r2 = icemake_v2_prepare(agent, "Ram Sharma", session_en)
+    print(f"Customer: Ram Sharma")
+    print(f"Bot (Step 2 Ask State): {r2['static_reply']}")
+    assert "state" in r2['static_reply'].lower()
+    assert session_en.state.get("customer_name") == "Ram Sharma"
+
+    # Step 2: Customer State
+    r3 = icemake_v2_prepare(agent, "Gujarat", session_en)
+    print(f"Customer: Gujarat")
+    print(f"Bot (Step 3 Ask Address/Pincode): {r3['static_reply']}")
+    assert "address" in r3['static_reply'].lower() or "city" in r3['static_reply'].lower()
 
     # Step 3 Test: Invalid Pincode (e.g. 5 digits)
-    r_inv = icemake_v2_prepare(agent, "My address is Kallur pincode 51635", session, detected_language="en")
-    print(f"Customer (invalid pin): My address is Kallur pincode 51635")
-    print(f"Bot: {r_inv['static_reply']}")
-    assert "must be exactly 6 digits" in r_inv['static_reply'].lower()
+    r_inv = icemake_v2_prepare(agent, "My address is Vatva pincode 38244", session_en)
+    print(f"Customer (invalid pin): My address is Vatva pincode 38244")
+    print(f"Bot (Pincode error): {r_inv['static_reply']}")
+    assert "pincode must be 6 digits" in r_inv['static_reply'].lower() or "invalid" in r_inv['static_reply'].lower()
 
-    # Step 3: Address (e.g. "Plot 102, GIDC Vatva" without pincode)
-    r3 = icemake_v2_prepare(agent, "Plot 102, GIDC Vatva", session, detected_language="en")
-    print(f"Customer: Plot 102, GIDC Vatva")
-    print(f"Bot (State Prompt): {r3['static_reply']}")
-    assert "state" in r3['static_reply'].lower(), f"Expected state prompt, got: {r3['static_reply']}"
-    assert "dantali" not in r3['static_reply'].lower(), "Should NOT trigger office location FAQ!"
+    # Step 3: Valid Address with Pincode
+    r4 = icemake_v2_prepare(agent, "Plot 102 GIDC Vatva, Ahmedabad 382445", session_en)
+    print(f"Customer: Plot 102 GIDC Vatva, Ahmedabad 382445")
+    print(f"Bot (Step 4 Ask Phone): {r4['static_reply']}")
+    assert "phone number" in r4['static_reply'].lower()
 
-    # Step 4: State (e.g. "Gujarat")
-    r4 = icemake_v2_prepare(agent, "Gujarat", session, detected_language="en")
-    print(f"Customer: Gujarat")
-    print(f"Bot (Serial Number Prompt): {r4['static_reply']}")
-    assert "serial number" in r4['static_reply'].lower(), f"Expected serial number prompt, got: {r4['static_reply']}"
-    assert "Mr." not in r4['static_reply'], "Should NOT use 'Mr.'"
-    assert "Sir" not in r4['static_reply'], "Should NOT use 'Sir'"
-    assert session.state.get("state_name") == "Gujarat"
-
-    # Step 7: Machine Serial Number
-    r6 = icemake_v2_prepare(agent, "xxxkk11234", session, detected_language="en")
-    print(f"Customer: xxxkk11234")
-    print(f"Bot (Step 7 Confirm): {r6['static_reply']}")
-    assert "XXXKK11234" in r6['static_reply']
-
-    # Step 7 Confirmation: Customer says Yes
-    r7 = icemake_v2_prepare(agent, "Yes", session, detected_language="en")
-    print(f"Customer: Yes")
-    print(f"Bot (Step 8): {r7['static_reply']}")
-    assert "mobile number" in r7['static_reply'].lower()
-    assert session.state.get("machine_sr_no") == "XXXKK11234"
-
-    # Step 8: Mobile Number - Turn 1 (User speaks first 5 digits and pauses to think)
-    r8_part = icemake_v2_prepare(agent, "89857", session, detected_language="en")
+    # Step 4: Phone partial silent wait test
+    r5_part = icemake_v2_prepare(agent, "89857", session_en)
     print(f"Customer (Turn 1 partial): 89857")
-    print(f"Bot (Silent Wait): '{r8_part['static_reply']}'")
-    assert r8_part['static_reply'] == "", "Bot must wait silently without interrupting for partial phone number!"
-    assert session.state.get("partial_phone_digits") == "89857"
+    print(f"Bot (Silent wait): '{r5_part['static_reply']}'")
+    assert r5_part['static_reply'] == "", "Bot must wait silently for partial phone digits"
 
-    # Step 8: Mobile Number - Turn 2 (User speaks remaining 5 digits)
-    r8 = icemake_v2_prepare(agent, "55019", session, detected_language="en")
+    # Step 4: Phone remaining digits
+    r5 = icemake_v2_prepare(agent, "55019", session_en)
     print(f"Customer (Turn 2 remaining): 55019")
-    print(f"Bot (Step 9 Confirm): {r8['static_reply']}")
-    assert "Eight Nine Eight Five" in r8['static_reply']
-    assert session.state.get("registered_mobile") == "8985755019"
+    print(f"Bot (Step 5 Confirm Number): {r5['static_reply']}")
+    assert "eight, nine, eight, five, seven, five, five, zero, one, nine" in r5['static_reply'].lower() or "8985755019" in r5['static_reply']
 
-    # Step 9 Confirmation: Customer says Yes or OK
-    r9 = icemake_v2_prepare(agent, "Yes", session, detected_language="en")
-    print(f"Customer: Yes")
-    print(f"Bot (Step 10): {r9['static_reply']}")
-    assert "describe the issue" in r9['static_reply'].lower()
+    # Step 5: Confirm registered number
+    r6 = icemake_v2_prepare(agent, "Yes, it is my registered number", session_en)
+    print(f"Customer: Yes, it is my registered number")
+    print(f"Bot (Step 6 Ask Serial Number): {r6['static_reply']}")
+    assert "serial number" in r6['static_reply'].lower()
 
-    # Step 10: Complaint Recording
-    r10 = icemake_v2_prepare(agent, "The freezer compressor is not cooling and temperature is rising.", session, detected_language="en")
-    print(f"Customer: The freezer compressor is not cooling and temperature is rising.")
-    print(f"Bot (Step 11): {r10['static_reply']}")
-    assert "SR S" in r10['static_reply']
-    assert "[FLOW_COMPLETE]" in r10['static_reply']
-    assert "Mr." not in r10['static_reply'], "Should NOT use 'Mr.'"
-    assert "Sir" not in r10['static_reply'], "Should NOT use 'Sir'"
-    assert r10.get("auto_disconnect") is True
+    # Step 6: Customer speaks partial serial number and pauses to think
+    r7_part = icemake_v2_prepare(agent, "84", session_en)
+    print(f"Customer (Turn 1 partial serial): 84")
+    print(f"Bot (Silent wait): '{r7_part['static_reply']}'")
+    assert r7_part['static_reply'] == "", "Expected silent wait for partial serial number"
 
-    # 4. Verify Ticket Creation in Database
-    ticket = IcemakeTicket.objects.filter(conversation=conv).first()
-    assert ticket is not None, "IcemakeTicket must be created in DB"
-    print(f"\n4. Verified DB Ticket Created:")
-    print(f"   Ticket Number: {ticket.ticket_number}")
-    print(f"   Customer Name: {ticket.customer_name}")
-    print(f"   Pincode: {ticket.pin_code}")
-    print(f"   City/State: {ticket.city_state}")
-    print(f"   Machine Serial No: {ticket.machine_sr_no}")
-    print(f"   Registered Mobile: {ticket.registered_mobile}")
-    print(f"   Issue Description: {ticket.issue_description}")
-    assert ticket.ticket_number.startswith("SR S")
-    assert ticket.machine_sr_no == "XXXKK11234"
+    # Step 6: Customer speaks remaining serial number
+    r7 = icemake_v2_prepare(agent, "920", session_en)
+    print(f"Customer (Turn 2 remaining serial): 920")
+    print(f"Bot (Step 7 Ask Issue): {r7['static_reply']}")
+    assert "freezer" in r7['static_reply'].lower()
+    assert "describe the issue you are facing with freezer" in r7['static_reply'].lower()
 
-    # 5. Hindi Test: Greeting & Flow
-    print("\n5. Testing Hindi Bilingual Support...")
-    session_id_hi = f"test_session_hi_{uuid.uuid4().hex[:8]}"
-    session_hi = ConversationSession.objects.create(agent=agent, session_id=session_id_hi)
-    r_hi_0 = icemake_v2_prepare(agent, "", session_hi, detected_language="hi")
-    print(f"Bot Hindi (Step 1): {r_hi_0['static_reply']}")
-    assert "आइस मेक" in r_hi_0['static_reply']
-    assert "किस भाषा में बात करना पसंद करेंगे?" in r_hi_0['static_reply']
-    assert "हिंदी या अंग्रेज़ी" not in r_hi_0['static_reply']
+    # Step 7: Issue description
+    r8 = icemake_v2_prepare(agent, "The compressor is vibrating and cooling is not effective.", session_en)
+    print(f"Customer: The compressor is vibrating and cooling is not effective.")
+    print(f"Bot (Step 8 Closing & Ticket): {r8['static_reply']}")
+    assert "V, C" in r8['static_reply'] or "VC" in r8['static_reply']
+    assert "[FLOW_COMPLETE]" in r8['static_reply']
+    assert r8.get("auto_disconnect") is True
+    assert r8['strategy_key'] == "icemake_v2"
 
-    r_hi_1 = icemake_v2_prepare(agent, "हिंदी", session_hi, detected_language="hi")
-    print(f"Customer: हिंदी")
-    print(f"Bot Hindi (Step 2): {r_hi_1['static_reply']}")
-    assert "नाम" in r_hi_1['static_reply']
-    assert "शुभ नाम" in r_hi_1['static_reply']
-    assert "सकती हूँ" in r_hi_1['static_reply'], "Name prompt must use female inflection 'सकती हूँ'"
+    # Verify DB Ticket
+    ticket_en = IcemakeTicket.objects.filter(conversation=conv_en).first()
+    assert ticket_en is not None, "IcemakeTicket must be created in DB"
+    assert ticket_en.ticket_number.startswith("VC")
+    print(f"   ✅ Verified English DB Ticket: {ticket_en.ticket_number}, Product: {ticket_en.machine_model_no}")
 
-    r_hi_2 = icemake_v2_prepare(agent, "सुरेश", session_hi, detected_language="hi")
-    print(f"Customer: सुरेश")
-    print(f"Bot Hindi (Step 3): {r_hi_2['static_reply']}")
-    assert "सुरेश जी" in r_hi_2['static_reply']
-    assert "पिनकोड" in r_hi_2['static_reply']
-
-    r_hi_3 = icemake_v2_prepare(agent, "अहमदाबाद 382445", session_hi, detected_language="hi")
-    print(f"Customer: अहमदाबाद 382445")
-    print(f"Bot Hindi (State Prompt): {r_hi_3['static_reply']}")
-    assert "राज्य" in r_hi_3['static_reply']
-
-    r_hi_4 = icemake_v2_prepare(agent, "गुजरात", session_hi, detected_language="hi")
-    print(f"Customer: गुजरात")
-    print(f"Bot Hindi (Serial Prompt): {r_hi_4['static_reply']}")
-    assert "सीरियल नंबर" in r_hi_4['static_reply']
-
-    # 6. Gujarati Test: Complete Trilingual Flow
-    print("\n6. Testing Gujarati Full Call Flow...")
+    # 3. Simulate Full Gujarati Call Flow (10 Languages Support)
+    print("\n3. Simulating Full Gujarati Call Flow (Steps 0 to 8)...")
     session_id_gu = f"test_session_gu_{uuid.uuid4().hex[:8]}"
     conv_gu = Conversation.objects.create(
         agent=agent,
@@ -190,181 +137,102 @@ def test_icemake_v2():
     session_gu = ConversationSession.objects.create(agent=agent, session_id=session_id_gu)
 
     # Step 0: Greeting
-    r_gu_0 = icemake_v2_prepare(agent, "", session_gu, detected_language="gu")
-    print(f"Bot Gujarati (Step 0): {r_gu_0['static_reply']}")
-    assert "આઈસ મેક" in r_gu_0['static_reply']
-    assert "તમે કઈ ભાષામાં વાત કરવાનું પસંદ કરશો?" in r_gu_0['static_reply']
+    r_gu_0 = icemake_v2_prepare(agent, "", session_gu)
+    assert "Welcome to Ice Make twenty four by seven service support" in r_gu_0['static_reply']
 
-    # Step 1: Language selection
-    r_gu_1 = icemake_v2_prepare(agent, "ગુજરાતી", session_gu, detected_language="gu")
+    # Step 0: Customer selects Gujarati
+    r_gu_1 = icemake_v2_prepare(agent, "ગુજરાતી", session_gu)
     print(f"Customer: ગુજરાતી")
-    print(f"Bot Gujarati (Step 1): {r_gu_1['static_reply']}")
+    print(f"Bot (Step 1): {r_gu_1['static_reply']}")
     assert "નામ" in r_gu_1['static_reply']
-    assert "શુભ નામ" in r_gu_1['static_reply']
+    assert r_gu_1['tts_language'] == "gu"
+    assert session_gu.state.get("selected_language") == "gu"
 
-    # Step 2: Name
-    r_gu_2 = icemake_v2_prepare(agent, "ભાવેશ", session_gu, detected_language="gu")
-    print(f"Customer: ભાવેશ")
-    print(f"Bot Gujarati (Step 2): {r_gu_2['static_reply']}")
-    assert "ભાવેશ જી" in r_gu_2['static_reply']
-    assert "સરનામું" in r_gu_2['static_reply']
+    # Step 1: Customer Name
+    r_gu_2 = icemake_v2_prepare(agent, "ભાવેશ પટેલ", session_gu)
+    print(f"Customer: ભાવેશ પટેલ")
+    print(f"Bot (Step 2): {r_gu_2['static_reply']}")
+    assert "રાજ્ય" in r_gu_2['static_reply']
+    assert r_gu_2['tts_language'] == "gu"
 
-    # Step 3: Address with pincode
-    r_gu_3 = icemake_v2_prepare(agent, "પ્લોટ ૪૫, જીઆઇડીસી વટવા 382445", session_gu, detected_language="gu")
-    print(f"Customer: પ્લોટ ૪૫, જીઆઇડીસી વટવા 382445")
-    print(f"Bot Gujarati (State Prompt): {r_gu_3['static_reply']}")
-    assert "રાજ્ય" in r_gu_3['static_reply']
-
-    # Step 4: State
-    r_gu_4 = icemake_v2_prepare(agent, "ગુજરાત", session_gu, detected_language="gu")
+    # Step 2: State
+    r_gu_3 = icemake_v2_prepare(agent, "ગુજરાત", session_gu)
     print(f"Customer: ગુજરાત")
-    print(f"Bot Gujarati (Serial Prompt): {r_gu_4['static_reply']}")
-    assert "સિરીયલ નંબર" in r_gu_4['static_reply']
+    print(f"Bot (Step 3): {r_gu_3['static_reply']}")
+    assert "સરનામું" in r_gu_3['static_reply']
+    assert r_gu_3['tts_language'] == "gu"
 
-    # Step 7: Machine Serial Number
-    r_gu_5 = icemake_v2_prepare(agent, "IK992233", session_gu, detected_language="gu")
-    print(f"Customer: IK992233")
-    print(f"Bot Gujarati (Step 7 Confirm): {r_gu_5['static_reply']}")
-    assert "IK992233" in r_gu_5['static_reply']
-    assert "સાચો" in r_gu_5['static_reply']
+    # Step 3: Address & Pincode
+    r_gu_4 = icemake_v2_prepare(agent, "વટવા જીઆઈડીસી અમદાવાદ 382445", session_gu)
+    print(f"Customer: વટવા જીઆઈડીસી અમદાવાદ 382445")
+    print(f"Bot (Step 4): {r_gu_4['static_reply']}")
+    assert "નંબર" in r_gu_4['static_reply']
+    assert r_gu_4['tts_language'] == "gu"
 
-    # Step 8: Confirm Serial
-    r_gu_6 = icemake_v2_prepare(agent, "હા", session_gu, detected_language="gu")
-    print(f"Customer: હા")
-    print(f"Bot Gujarati (Step 8): {r_gu_6['static_reply']}")
-    assert "મોબાઈલ નંબર" in r_gu_6['static_reply']
+    # Step 4: Phone number
+    r_gu_5 = icemake_v2_prepare(agent, "9104142402", session_gu)
+    print(f"Customer: 9104142402")
+    print(f"Bot (Step 5): {r_gu_5['static_reply']}")
+    assert "નવ, એક, ઝીરો, ચાર, એક, ચાર, બે, ચાર, ઝીરો, બે" in r_gu_5['static_reply']
+    assert "રજિસ્ટર્ડ નંબર" in r_gu_5['static_reply']
+    assert r_gu_5['tts_language'] == "gu"
 
-    # Step 9: Partial phone accumulation in Gujarati
-    r_gu_7a = icemake_v2_prepare(agent, "91041", session_gu, detected_language="gu")
-    print(f"Customer (Turn 1 partial): 91041")
-    assert r_gu_7a['static_reply'] == "", "Bot must wait silently for partial number"
+    # Step 5: Confirm registered number
+    r_gu_6 = icemake_v2_prepare(agent, "હા, સાચો છે", session_gu)
+    print(f"Customer: હા, સાચો છે")
+    print(f"Bot (Step 6): {r_gu_6['static_reply']}")
+    assert "સીરીયલ નંબર" in r_gu_6['static_reply']
+    assert r_gu_6['tts_language'] == "gu"
 
-    r_gu_7b = icemake_v2_prepare(agent, "42402", session_gu, detected_language="gu")
-    print(f"Customer (Turn 2 remaining): 42402")
-    print(f"Bot Gujarati (Step 9 Confirm): {r_gu_7b['static_reply']}")
-    assert "નવ એક ઝીરો ચાર એક ચાર બે ચાર ઝીરો બે" in r_gu_7b['static_reply']
+    # Step 6: Customer is unsure and does NOT know the Serial Number
+    r_gu_7 = icemake_v2_prepare(agent, "મને ખબર નથી, સીરીયલ નંબર ક્યાં હોય?", session_gu)
+    print(f"Customer: મને ખબર નથી, સીરીયલ નંબર ક્યાં હોય?")
+    print(f"Bot (Step 7 Guidance + Freezer Issue): {r_gu_7['static_reply']}")
+    assert "ઇનવોઇસ" in r_gu_7['static_reply']
+    assert "ફ્રીઝર" in r_gu_7['static_reply']
+    assert "સમસ્યા" in r_gu_7['static_reply']
+    assert r_gu_7['tts_language'] == "gu"
 
-    # Step 10: Confirm phone
-    r_gu_8 = icemake_v2_prepare(agent, "હા, બરાબર છે", session_gu, detected_language="gu")
-    print(f"Customer: હા, બરાબર છે")
-    print(f"Bot Gujarati (Step 10): {r_gu_8['static_reply']}")
-    assert "સમસ્યા" in r_gu_8['static_reply']
+    # Step 7: Issue description
+    r_gu_8 = icemake_v2_prepare(agent, "મશીનમાં તાપમાન ઘટી રહ્યું નથી અને બરફ જામતો નથી.", session_gu)
+    print(f"Customer: મશીનમાં તાપમાન ઘટી રહ્યું નથી અને બરફ જામતો નથી.")
+    print(f"Bot (Step 8 Closing): {r_gu_8['static_reply']}")
+    assert "ફરિયાદ નોંધાઈ ગઈ છે" in r_gu_8['static_reply']
+    assert "[FLOW_COMPLETE]" in r_gu_8['static_reply']
+    assert r_gu_8['tts_language'] == "gu"
+    assert r_gu_8['strategy_key'] == "icemake_v2"
 
-    # Step 11: Issue description
-    r_gu_9 = icemake_v2_prepare(agent, "ડીપ ફ્રીઝરમાં બરફ જામતો નથી અને કૂલિંગ બંધ થઈ ગયું છે.", session_gu, detected_language="gu")
-    print(f"Customer: ડીપ ફ્રીઝરમાં બરફ જામતો નથી અને કૂલિંગ બંધ થઈ ગયું છે.")
-    print(f"Bot Gujarati (Step 11): {r_gu_9['static_reply']}")
-    assert "SR S" in r_gu_9['static_reply']
-    assert "ફરિયાદ નોંધાઈ ગઈ છે" in r_gu_9['static_reply']
-    assert "[FLOW_COMPLETE]" in r_gu_9['static_reply']
-    assert r_gu_9.get("auto_disconnect") is True
-
-    # Verify Gujarati Ticket in Database
+    # Verify Gujarati DB Ticket
     ticket_gu = IcemakeTicket.objects.filter(conversation=conv_gu).first()
     assert ticket_gu is not None, "Gujarati IcemakeTicket must be created in DB"
-    print(f"\n   Verified Gujarati DB Ticket: {ticket_gu.ticket_number}, Lang: {ticket_gu.language}, Mobile: {ticket_gu.registered_mobile}")
     assert ticket_gu.language == "gu"
-    assert ticket_gu.registered_mobile == "9104142402"
+    print(f"   ✅ Verified Gujarati DB Ticket: {ticket_gu.ticket_number}, Lang: {ticket_gu.language}")
 
-    # 7. Verify Telephony Connection: Zero Duplicate Greeting
-    print("\n7. Verifying Telephony Connection (Zero Duplicate Greeting)...")
-    session_id_tele = f"test_session_tele_{uuid.uuid4().hex[:8]}"
-    session_tele = ConversationSession.objects.create(
-        agent=agent,
-        session_id=session_id_tele,
-        state={"intro_shown": True, "current_step": 1, "selected_language": "en"}
-    )
-    # Caller speaks for the first time after hearing the greeting played by the telephony consumer:
-    r_tele = icemake_v2_prepare(agent, "I have a complaint.", session_tele, detected_language="en")
-    print(f"Customer: I have a complaint.")
-    print(f"Bot Reply: {r_tele['static_reply']}")
-    assert "Welcome to Ice Make" not in r_tele['static_reply'], "Greeting must NOT repeat!"
-    assert "Which language" not in r_tele['static_reply'], "Language prompt must NOT repeat!"
-    assert "name" in r_tele['static_reply'].lower(), "Bot must directly ask for customer name!"
-    # 8. Verifying Strict Language Locking (NO Auto-Switching Even If Caller Uses English Words / Azure Detects 'en')
-    print("\n8. Verifying Strict Language Locking (NO Auto-Switching)...")
+    # 4. Verifying Strict Language Locking (NO Auto-Switching Even If User Speaks English Loanwords/Digits)
+    print("\n4. Verifying Strict Language Locking across all turns...")
     session_id_lock = f"test_session_lock_{uuid.uuid4().hex[:8]}"
-    conv_lock = Conversation.objects.create(
-        agent=agent,
-        session_id=session_id_lock,
-        user_number="9876543210"
-    )
     session_lock = ConversationSession.objects.create(agent=agent, session_id=session_id_lock)
 
-    # Step 0: Greeting
-    r_lock_0 = icemake_v2_prepare(agent, "", session_lock, detected_language="en")
-    assert r_lock_0.get("language_locked") is False, "Language should NOT be locked at Step 0"
+    # Step 0: User selects Hindi
+    r_hi_0 = icemake_v2_prepare(agent, "", session_lock)
+    r_hi_1 = icemake_v2_prepare(agent, "हिंदी", session_lock)
+    assert r_hi_1['tts_language'] == "hi"
+    assert session_lock.state.get("selected_language") == "hi"
+    assert r_hi_1.get("language_locked") is True
 
-    # Step 1: Customer explicitly chooses Gujarati
-    r_lock_1 = icemake_v2_prepare(agent, "ગુજરાતી", session_lock, detected_language="gu")
-    print(f"Customer selects: ગુજરાતી")
-    print(f"Bot (Step 1): {r_lock_1['static_reply']}")
-    assert r_lock_1["tts_language"] == "gu"
-    assert r_lock_1.get("language_locked") is True, "Language MUST be locked after user selects Gujarati"
-    assert session_lock.state.get("selected_language") == "gu"
+    # Step 1: User says name in English, Azure detects 'en'
+    r_hi_2 = icemake_v2_prepare(agent, "My name is Rajesh", session_lock, detected_language="en")
+    print(f"Customer (Step 1 with 'en'): My name is Rajesh")
+    print(f"Bot Reply: {r_hi_2['static_reply']}")
+    assert r_hi_2['tts_language'] == "hi", f"Expected 'hi', got {r_hi_2['tts_language']}"
+    assert "राज्य" in r_hi_2['static_reply']
 
-    # Step 2: Customer speaks name in English, Azure STT falsely tags detected_language='en'
-    r_lock_2 = icemake_v2_prepare(agent, "My name is Hitesh Patel", session_lock, detected_language="en")
-    print(f"Customer (Step 2, Azure tag 'en'): My name is Hitesh Patel")
-    print(f"Bot (Step 2): {r_lock_2['static_reply']}")
-    assert r_lock_2["tts_language"] == "gu", f"Expected 'gu', got {r_lock_2['tts_language']}"
-    assert "સરનામું" in r_lock_2["static_reply"], "Bot must reply in Gujarati, NOT switch to English!"
+    # Step 2: User says state in English, Azure detects 'en'
+    r_hi_3 = icemake_v2_prepare(agent, "Gujarat", session_lock, detected_language="en")
+    assert r_hi_3['tts_language'] == "hi"
+    assert "शहर" in r_hi_3['static_reply'] or "पता" in r_hi_3['static_reply']
 
-    # Step 3: Customer speaks address with English street name, Azure STT tags 'en'
-    r_lock_3 = icemake_v2_prepare(agent, "Plot 102 GIDC Vatva Ahmedabad 382445", session_lock, detected_language="en")
-    print(f"Customer (Step 3, Azure tag 'en'): Plot 102 GIDC Vatva Ahmedabad 382445")
-    print(f"Bot (Step 3 State Prompt): {r_lock_3['static_reply']}")
-    assert r_lock_3["tts_language"] == "gu"
-    assert "રાજ્ય" in r_lock_3["static_reply"], "State prompt must remain in Gujarati!"
-
-    # Step 4: Customer answers state in English, Azure STT tags 'en'
-    r_lock_4 = icemake_v2_prepare(agent, "Gujarat", session_lock, detected_language="en")
-    print(f"Customer (Step 4, Azure tag 'en'): Gujarat")
-    print(f"Bot (Step 4 Serial Prompt): {r_lock_4['static_reply']}")
-    assert r_lock_4["tts_language"] == "gu"
-    assert "સિરીયલ નંબર" in r_lock_4["static_reply"], "Serial prompt must remain in Gujarati!"
-
-    # Step 7: Customer gives alphanumeric serial, Azure STT tags 'en'
-    r_lock_5 = icemake_v2_prepare(agent, "IK998877", session_lock, detected_language="en")
-    print(f"Customer (Step 7, Azure tag 'en'): IK998877")
-    print(f"Bot (Step 7 Confirm): {r_lock_5['static_reply']}")
-    assert r_lock_5["tts_language"] == "gu"
-    assert "સાચો" in r_lock_5["static_reply"], "Serial confirmation must remain in Gujarati!"
-
-    # Step 8: Customer confirms in English, Azure STT tags 'en'
-    r_lock_6 = icemake_v2_prepare(agent, "Yes", session_lock, detected_language="en")
-    print(f"Customer (Step 8, Azure tag 'en'): Yes")
-    print(f"Bot (Step 8): {r_lock_6['static_reply']}")
-    assert r_lock_6["tts_language"] == "gu"
-    assert "મોબાઈલ નંબર" in r_lock_6["static_reply"], "Mobile number prompt must remain in Gujarati!"
-
-    # Step 9: Customer speaks phone number, Azure STT tags 'en'
-    r_lock_7 = icemake_v2_prepare(agent, "9876543210", session_lock, detected_language="en")
-    print(f"Customer (Step 9, Azure tag 'en'): 9876543210")
-    print(f"Bot (Step 9 Confirm): {r_lock_7['static_reply']}")
-    assert r_lock_7["tts_language"] == "gu"
-    assert "નવ આઠ સાત" in r_lock_7["static_reply"], "Spoken phone number must be in Gujarati words!"
-
-    # Step 10: Customer confirms phone in English, Azure STT tags 'en'
-    r_lock_8 = icemake_v2_prepare(agent, "Yes, absolutely correct", session_lock, detected_language="en")
-    print(f"Customer (Step 10, Azure tag 'en'): Yes, absolutely correct")
-    print(f"Bot (Step 10): {r_lock_8['static_reply']}")
-    assert r_lock_8["tts_language"] == "gu"
-    assert "સમસ્યા" in r_lock_8["static_reply"], "Complaint detail prompt must remain in Gujarati!"
-
-    # Step 11: Customer describes issue in English, Azure STT tags 'en'
-    r_lock_9 = icemake_v2_prepare(agent, "Compressor is making loud noise and not cooling at all.", session_lock, detected_language="en")
-    print(f"Customer (Step 11, Azure tag 'en'): Compressor is making loud noise and not cooling at all.")
-    print(f"Bot (Step 11 Closing): {r_lock_9['static_reply']}")
-    assert r_lock_9["tts_language"] == "gu"
-    assert "ફરિયાદ નોંધાઈ ગઈ છે" in r_lock_9["static_reply"], "Closing reply must remain in Gujarati!"
-    assert "[FLOW_COMPLETE]" in r_lock_9["static_reply"]
-
-    # Verify Final Ticket in DB
-    ticket_lock = IcemakeTicket.objects.filter(conversation=conv_lock).first()
-    assert ticket_lock is not None, "Ticket must be created in DB"
-    assert ticket_lock.language == "gu", f"Ticket language must be 'gu', got '{ticket_lock.language}'"
-    print(f"   ✅ Verified: All 11 steps strictly remained in Gujarati with zero auto-switch!")
+    print("   ✅ Verified: Agent strictly locked to selected language across turns!")
 
     print("\n" + "=" * 60)
     print("🎉 ALL TESTS PASSED SUCCESSFULLY!")

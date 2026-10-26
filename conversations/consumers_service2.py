@@ -794,17 +794,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     greeting = f"Namaste {name_part} ji! Triple i E M mein aapka swagat hai. Main aapki kaise madad kar sakti hoon?"
                 else:
                     greeting = "Hi, I am Raahi calling from Triple i E M, how can I help you today?"
-            elif strategy_key == "icemake":
+            elif strategy_key in ["icemake", "icemake_v2"]:
                 greeting = "Welcome to Ice Make twenty four by seven service support. આપ किस भाषा में बात करना पसंद करेंगे?"
-            elif strategy_key == "icemake_v2":
-                from icemake_v2_bot.strategy import _get_time_greeting
-                time_greeting = _get_time_greeting(language)
-                if language == "gu":
-                    greeting = f"{time_greeting}! આઈસ મેક રેફ્રિજરેશનમાં આપનું ખૂબ ખૂબ સ્વાગત છે. તમે કઈ ભાષામાં વાત કરવાનું પસંદ કરશો?"
-                elif language == "hi":
-                    greeting = f"{time_greeting}! आइस मेक रेफ्रिजरेशन में आपका बहुत-बहुत स्वागत है। आप किस भाषा में बात करना पसंद करेंगे?"
-                else:
-                    greeting = f"{time_greeting}. Welcome to Ice Make Refrigeration Limited. Which language would you prefer to speak in?"
             elif strategy_key == "priya_naavya_strategy":
                 greeting = "Namaste sir, main Priya bol rahi hoon Naavya.ai se... aapka do minute mil sakta hai kya? Ek zaroori baat karni thi aapke property leads ke baare mein."
             else:
@@ -822,12 +813,6 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 state["step"] = "confirm_interest"
             elif strategy_key == "kia_syros_strategy":
                 state["step"] = "greeting"
-            elif strategy_key == "icemake_v2":
-                state["current_step"] = 1
-                state["selected_language"] = language
-                if "conversation_history" not in state:
-                    state["conversation_history"] = []
-                state["conversation_history"].append(f"Agent: {greeting}")
             elif strategy_key in ["loan_strategy", "reminder_strategy", "temp_real_estate_strategy", "samsung_store_strategy", "samsung_llm_strategy", "enogic_strategy", "fold8_prereserve_strategy", "carekay_strategy", "carekay_insurance_strategy"]:
                 if strategy_key == "temp_real_estate_strategy":
                     state["call_phase"] = "collect_flat_type"
@@ -885,15 +870,15 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
             greeting_file = f"Naavya/{self.language}_step1_greeting.raw"
         elif self.strategy_key == "kia_syros_strategy":
             greeting_file = "kia_syros_bot/kia_syros_greeting.raw"
-        elif self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy", "icemake_v2"]:
+        elif self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy"]:
             greeting_file = None
-        elif self.strategy_key == "icemake":
+        elif self.strategy_key in ["icemake", "icemake_v2"]:
             greeting_file = "icemake_bot/icemake_greeting.raw"
         else:
             greeting_file = f"{self.language}_step1_greeting.raw"
             
         is_dynamic_greeting = (
-            (self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy", "icemake_v2"])
+            (self.strategy_key in ["raahi_iiiem_strategy", "priya_naavya_strategy"])
             or (self.strategy_key == "samsung_store_strategy" and customer_name is not None)
             or (self.strategy_key == "kia_syros_strategy")
             or (self.strategy_key in ["samsung_llm_strategy", "fold8_prereserve_strategy"])
@@ -902,7 +887,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                 "hospital_minimal", "loan_strategy", "reminder_strategy",
                 "temp_real_estate_strategy", "samsung_store_strategy",
                 "enogic_strategy", "automobile_Naavya", "fold8_prereserve_strategy",
-                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy", "icemake"
+                "carekay_strategy", "carekay_insurance_strategy", "shreyas_strategy", "shreyas_gu_strategy", "kia_syros_strategy", "raahi_iiiem_strategy", "priya_naavya_strategy", "icemake", "icemake_v2"
             ])
         )
         
@@ -1225,8 +1210,7 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         lambda: ConversationSession.objects.filter(session_id=self.session_id).first()
                     )()
                     active_step = session.state.get("current_step") if (session and session.state) else None
-                    is_v2 = getattr(self, "strategy_key", None) in ["icemake_v2", "icemake_v2_strategy"]
-                    target_steps = (3, 7, 9) if is_v2 else (3, 4)
+                    target_steps = (3, 4, 6) if strategy_key == "icemake_v2" else (3, 4)
                     if active_step in target_steps:
                         self.recognizer.properties.set_property(speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2500")
                         self.recognizer.properties.set_property(speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "1800")
