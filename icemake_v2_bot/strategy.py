@@ -167,6 +167,344 @@ def _log_translator(user_msg, agent_reply, lang):
     import threading
     threading.Thread(target=_do_log, daemon=True).start()
 
+ICEMAKE_V2_SERIAL_GUIDANCE = {
+    "en": "No worries at all! A machine serial number is required to register a complaint. You can easily find it on the machine's nameplate or on your invoice bill. Take your time and let me know.",
+    "hi": "कोई बात नहीं! शिकायत दर्ज करने के लिए सीरियल नंबर ज़रूरी है। यह आपको मशीन की नेमप्लेट पर या बिल पर आसानी से मिल जाएगा। आप आराम से देखकर बता सकते हैं।",
+    "gu": "કોઈ વાંધો નહીં! સીરીયલ નંબર તમને મશીનની નેમપ્લેટ પર અથવા તમારા બિલ પર સરળતાથી મળી જશે. તમે આરામથી જોઈને જણાવી શકો છો.",
+    "te": "పర్వాలేదండి! సీరియల్ నంబర్ మెషిన్ నేమ్‌ప్లేట్ లేదా మీ కొనుగోలు బిల్లుపై సులభంగా దొరుకుతుంది. మీరు నిదానంగా చూసి చెప్పవచ్చు.",
+    "pa": "ਕੋਈ ਗੱਲ ਨਹੀਂ ਜੀ! ਸੀਰੀਅਲ ਨੰਬਰ ਤੁਹਾਨੂੰ ਮਸ਼ੀਨ ਦੀ ਨੇਮਪਲੇਟ ਜਾਂ ਆਪਣੇ ਬਿੱਲ ਤੇ ਆਸਾਨੀ ਨਾਲ ਮਿਲ ਜਾਵੇਗਾ। ਤੁਸੀਂ ਆਰਾਮ ਨਾਲ ਦੇਖ ਕੇ ਦੱਸ ਸਕਦੇ ਹੋ।",
+    "bn": "কোনো অসুবিধা নেই! সিরিয়াল নম্বরটি মেশিনের নেমপ্লেটে অথবা আপনার বিলে সহজেই পেয়ে যাবেন। আপনি একটু দেখে নিয়ে বলতে পারেন।",
+    "mr": "काही काळजी करू नका! सिरीयल नंबर तुम्हाला मशीनच्या नेमप्लेटवर किंवा बिलावर सहज मिळून जाईल. तुम्ही निवांत बघून सांगू शकता.",
+    "ta": "பரவாயில்லைங்க! சீரியல் எண் மெஷினின் பெயர் பலகையிலோ அல்லது உங்கள் பில்லிலோ எளிதாகக் கிடைக்கும். நீங்கள் நிதானமாக பார்த்துவிட்டு சொல்லலாம்.",
+    "kn": "ಪರವಾಗಿಲ್ಲ! ಸೀರಿಯಲ್ ಸಂಖ್ಯೆ ಯಂತ್ರದ ನೇಮ್‌ಪ್ಲೇಟ್ ಮೇಲೆ ಅಥವಾ ನಿಮ್ಮ ಬಿಲ್‌ನಲ್ಲಿ ಸುಲಭವಾಗಿ ಸಿಗುತ್ತದೆ. ನೀವು ನಿಧಾನವಾಗಿ ನೋಡಿ ತಿಳಿಸಬಹುದು.",
+    "ml": "സാരമില്ല! മെഷീനിലെ നെയിംപ്ലേറ്റിലോ നിങ്ങളുടെ ബില്ലിലോ സീരിയൽ നമ്പർ എളുപ്പത്തിൽ കാണാം. സാവಧാനം നോക്കിയിട്ട് പറഞ്ഞാൽ മതി."
+}
+
+ICEMAKE_V2_SERIAL_WAIT_REPLY = {
+    "en": "Sure, please take your time, I am right here on the line.",
+    "hi": "जी बिल्कुल, आप आराम से देख लीजिए, मैं लाइन पर ही हूँ।",
+    "gu": "ચોક્કસ, તમે આરામથી જોઈ લો, હું લાઇન પર જ છું.",
+    "te": "తప్పకుండా, మీరు నిదానంగా చూసుకోండి, నేను లైన్లోనే ఉంటాను.",
+    "pa": "ਜੀ ਬਿਲਕੁਲ, ਤੁਸੀਂ ਆਰਾਮ ਨਾਲ ਦੇਖ ਲਵੋ, ਮੈਂ ਲਾਈਨ ਤੇ ਹੀ ਹਾਂ।",
+    "bn": "নিশ্চয়ই, আপনি নিশ্চিন্তে দেখে নিন, আমি লাইনেই আছি।",
+    "mr": "हो नक्की, तुम्ही निवांत बघून घ्या, मी लाइनवरच आहे.",
+    "ta": "நிச்சயமாக, நீங்கள் நிதானமாக பார்த்துக் கொள்ளுங்கள், நான் லைனிலேயே இருக்கிறேன்.",
+    "kn": "ಖಂಡಿತ, ನೀವು ನಿಧಾನವಾಗಿ ನೋಡಿಕೊಳ್ಳಿ, ನಾನು ಲೈನ್‌ನಲ್ಲೇ ಇರುತ್ತೇನೆ.",
+    "ml": "തീർച്ചയായും, സാവധാനം നോക്കിക്കോളൂ, ഞാൻ ലൈനിലുണ്ട്."
+}
+
+ICEMAKE_V2_SERIAL_FAREWELL = {
+    "en": "I'm sorry, without the machine serial number we are not able to register a complaint. Please check the serial number on the machine nameplate or your invoice and call us again. Thank you for calling Ice Make 24 by 7 service support. [FLOW_COMPLETE]",
+    "hi": "माफ़ कीजिए, बिना मशीन का सीरियल नंबर हम शिकायत दर्ज नहीं कर सकते। कृपया मशीन की नेमप्लेट या बिल पर सीरियल नंबर देखकर दोबारा कॉल करें। आइस मेक 24 बाय 7 सर्विस सपोर्ट में कॉल करने के लिए धन्यवाद। [FLOW_COMPLETE]",
+    "gu": "માફ કરશો, મશીનના સીરીયલ નંબર વગર અમે ફરિયાદ નોંધી શકતા નથી. કૃપા કરીને મશીનની નેમપ્લેટ અથવા બિલ પર સીરીયલ નંબર જોઈને ફરીથી કૉલ કરો. આઈસ મેક 24 બાય 7 સર્વિસ સપોર્ટમાં કૉલ કરવા બદલ આભાર. [FLOW_COMPLETE]",
+    "te": "క్షమించండి, మెషిన్ సీరియల్ నంబర్ లేకుండా మేము ఫిర్యాదు నమోదు చేయలేము. దయచేసి మెషిన్ నేమ్‌ప్లేట్ లేదా బిల్లుపై సీరియల్ నంబర్ చూసి మళ్లీ కాల్ చేయండి. ఐస్ మేక్ 24 బై 7 సర్వీస్ సపోర్ట్‌కు కాల్ చేసినందుకు ధన్యవాదాలు. [FLOW_COMPLETE]",
+    "pa": "ਮਾਫ਼ ਕਰਨਾ, ਮਸ਼ੀਨ ਦੇ ਸੀਰੀਅਲ ਨੰਬਰ ਤੋਂ ਬਿਨਾਂ ਅਸੀਂ ਸ਼ਿਕਾਇਤ ਦਰਜ ਨਹੀਂ ਕਰ ਸਕਦੇ। ਕਿਰਪਾ ਕਰਕੇ ਮਸ਼ੀਨ ਦੀ ਨੇਮਪਲੇਟ ਜਾਂ ਬਿੱਲ ਤੋਂ ਸੀਰੀਅਲ ਨੰਬਰ ਦੇਖ ਕੇ ਦੁਬਾਰਾ ਕਾਲ ਕਰੋ। ਆਈਸ ਮੇਕ 24 ਬਾਈ 7 ਸਰਵਿਸ ਸਪੋਰਟ ਨੂੰ ਕਾਲ ਕਰਨ ਲਈ ਧੰਨਵਾਦ। [FLOW_COMPLETE]",
+    "bn": "দুঃখিত, মেশিনের সিরিয়াল নম্বর ছাড়া আমরা অভিযোগ নথিভুক্ত করতে পারি না। দয়া করে মেশিনের নেমপ্লেট বা বিলে সিরিয়াল নম্বর দেখে আবার কল করুন। আইস মেক ২৪ বাই ৭ সার্ভিস সাপোর্টে কল করার জন্য ধন্যবাদ। [FLOW_COMPLETE]",
+    "mr": "क्षमस्व, मशीनच्या सिरीयल नंबरशिवाय आम्ही तक्रार नोंदवू शकत नाही. कृपया मशीनच्या नेमप्लेटवर किंवा बिलावर सिरीयल नंबर बघून पुन्हा कॉल करा. आइस मेक २४ बाय ७ सर्व्हिस सपोर्टला कॉल केल्याबद्दल धन्यवाद. [FLOW_COMPLETE]",
+    "ta": "மன்னிக்கவும், மெஷினின் சீரியல் எண் இல்லாமல் எங்களால் புகாரைப் பதிவு செய்ய முடியாது. தயவுசெய்து மெஷின் நேம்பிளேட் அல்லது பில்லில் சீரியல் எண்ணைப் பார்த்து மீண்டும் அழைக்கவும். ஐஸ் மேக் இருபத்தி நான்கு மணி நேர சேவை ஆதரவை அழைத்ததற்கு நன்றி. [FLOW_COMPLETE]",
+    "kn": "ಕ್ಷಮಿಸಿ, ಯಂತ್ರದ ಸೀರಿಯಲ್ ಸಂಖ್ಯೆ ಇಲ್ಲದೆ ನಾವು ದೂರು ದಾಖಲಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ದಯವಿಟ್ಟು ಯಂತ್ರದ ನೇಮ್‌ಪ್ಲೇಟ್ ಅಥವಾ ಬಿಲ್‌ನಲ್ಲಿ ಸೀರಿಯಲ್ ಸಂಖ್ಯೆ ನೋಡಿ ಮತ್ತೆ ಕರೆ ಮಾಡಿ. ಐಸ್ ಮೇಕ್ 24 ಬೈ 7 ಸೇವಾ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು. [FLOW_COMPLETE]",
+    "ml": "ക്ഷമിക്കണം, മെഷീന്റെ സീരിയൽ നമ്പർ ഇല്ലാതെ ഞങ്ങൾക്ക് പരാതി രജിസ്റ്റർ ചെയ്യാൻ കഴിയില്ല. ദയവായി മെഷീൻ നെയിംപ്ലേറ്റിലോ ബില്ലിലോ സീരിയൽ നമ്പർ നോക്കി വീണ്ടും വിളിക്കൂ. ഐസ് മേക്ക് 24 ബൈ 7 സർവീസ് സപ്പോർട്ടിലേക്ക് വിളിച്ചതിന് നന്ദി. [FLOW_COMPLETE]"
+}
+
+ICEMAKE_V2_SERIAL_CONFIRM = {
+    "en": "Thank you, I recorded your machine serial number as {serial}. Is that correct?",
+    "hi": "धन्यवाद, मैंने आपकी मशीन का सीरियल नंबर {serial} दर्ज किया है। क्या यह सही है?",
+    "gu": "આભાર, મેં તમારા મશીનનો સીરીયલ નંબર {serial} નોંધ્યો છે. શું આ સાચો છે?",
+    "te": "ధన్యవాదాలు, నేను మీ మెషిన్ సీరియల్ నంబర్‌ను {serial} గా నమోదు చేశాను. ఇది సరైనదేనా?",
+    "pa": "ਧੰਨਵਾਦ, ਮੈਂ ਤੁਹਾਡੀ ਮਸ਼ੀਨ ਦਾ ਸੀਰੀਅਲ ਨੰਬਰ {serial} ਦਰਜ ਕੀਤਾ ਹੈ। ਕੀ ਇਹ ਸਹੀ ਹੈ?",
+    "bn": "ধন্যবাদ, আমি আপনার মেশিনের সিরিয়াল নম্বরটি {serial} হিসেবে নোট করেছি। এটি কি সঠিক?",
+    "mr": "धन्यवाद, मी तुमच्या मशीनचा सिरीयल नंबर {serial} म्हणून नोंदवला आहे. हा बरोबर आहे का?",
+    "ta": "நன்றி, நான் உங்கள் மெஷின் சீரியல் எண்ணை {serial} என்று பதிவு செய்துள்ளேன். ఇది சரியானதா?",
+    "kn": "ಧನ್ಯವಾದಗಳು, ನಾನು ನಿಮ್ಮ ಯಂತ್ರದ ಸೀರಿಯಲ್ ಸಂಖ್ಯೆಯನ್ನು {serial} ಎಂದು ದಾಖಲಿಸಿದ್ದೇನೆ. ಇದು ಸರಿಯೇ?",
+    "ml": "നന്ദി, ഞാൻ നിങ്ങളുടെ മെഷീന്റെ സീരിയൽ നമ്പർ {serial} എന്ന് രേഖപ്പെടുത്തിയിട്ടുണ്ട്. ഇത് ശരിയാണോ?"
+}
+
+ICEMAKE_V2_SERIAL_REASK = {
+    "en": "My apologies! Could you please share your correct machine serial number again?",
+    "hi": "माफ़ कीजिए! कृपया अपनी मशीन का सही सीरियल नंबर दोबारा बताइए।",
+    "gu": "માફ કરશો! કૃપા કરીને તમારો સાચો મશીન સીરીયલ નંબર ફરીથી જણાવો.",
+    "te": "క్షమించండి! దయచేసి మీ సరైన మెషిన్ సీరియల్ నంబర్‌ను మళ్లీ చెప్పండి.",
+    "pa": "ਮਾਫ਼ ਕਰਨਾ ਜੀ! ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਮਸ਼ੀਨ ਦਾ ਸਹੀ ਸੀਰੀਅਲ ਨੰਬਰ ਦੁਬਾਰਾ ਦੱਸੋ।",
+    "bn": "দুঃখিত! দয়া করে আপনার মেশিনের সঠিক সিরিয়াল নম্বরটি আবার বলুন।",
+    "mr": "क्षमस्व! कृपया तुमच्या मशीनचा अचूक सिरीयल नंबर पुन्हा सांगा.",
+    "ta": "மன்னிக்கவும்! தயவுசெய்து உங்கள் சரியான மெஷின் சீரியல் எண்ணை மீண்டும் சொல்லுங்கள்.",
+    "kn": "ಕ್ಷಮಿಸಿ! ದಯವಿಟ್ಟು ನಿಮ್ಮ ಸರಿಯಾದ ಯಂತ್ರದ ಸೀರಿಯಲ್ ಸಂಖ್ಯೆಯನ್ನು ಮತ್ತೆ ತಿಳಿಸಿ.",
+    "ml": "ക്ഷമിക്കണം! ദയവായി നിങ്ങളുടെ മെഷീന്റെ ശരിയായ സീരിയൽ നമ്പർ വീണ്ടും പറയൂ."
+}
+
+STEP7_PROMPTS = {
+    "hi": "ठीक है। फ्रीजर में आपको क्या समस्या आ रही है, कृपया विस्तार से बताइए। आप दो मिनट तक अपनी समस्या बता सकते हैं। यह कॉल रिकॉर्ड की जा रही है और तुरंत कार्रवाई के लिए इंजीनियर को भेजी जाएगी।",
+    "gu": "સારું. ફ્રીઝરમાં તમને શું સમસ્યા આવી રહી છે, કૃપા કરીને વિગતવાર જણાવો. તમે બે મિનિટ સુધી તમારી સમસ્યા જણાવી શકો છો. આ કૉલ રેકોર્ડ કરવામાં આવી રહ્યો છે અને ત્વરિત કાર્યવાહી માટે એન્જિનિયરને મોકલવામાં આવશે.",
+    "te": "సరే. ఫ్రీజర్‌తో మీరు ఎదుర్కొంటున్న సమస్యను దయచేసి వివరించండి. మీరు రెండు నిమిషాల వరకు మీ సమస్యను చెప్పవచ్చు. ఈ కాల్ రికార్డ్ చేయబడుతోంది మరియు వెంటనే చర్య కోసం ఇంజనీర్‌కు పంపబడుతుంది.",
+    "pa": "ਠੀਕ ਹੈ। ਫ੍ਰੀਜ਼ਰ ਵਿੱਚ ਤੁਹਾਨੂੰ ਕੀ ਸਮੱਸਿਆ ਆ ਰਹੀ ਹੈ, ਕਿਰਪਾ ਕਰਕੇ ਵਿਸਥਾਰ ਨਾਲ ਦੱਸੋ। ਤੁਸੀਂ ਦੋ ਮਿੰਟ ਤੱਕ ਆਪਣੀ ਸਮੱਸਿਆ ਦੱਸ ਸਕਦੇ ਹੋ। ਇਹ ਕਾਲ ਰਿਕਾਰਡ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ ਅਤੇ ਤੁਰੰਤ ਕਾਰਵਾਈ ਲਈ ਇੰਜੀਨੀਅਰ ਨੂੰ ਭੇਜੀ ਜਾਵੇਗੀ।",
+    "bn": "ঠিক আছে। ফ্রিজারে আপনি কী সমস্যার সম্মুখীন হচ্ছেন দয়া করে বিস্তারিত বলুন। আপনি দুই মিনিট পর্যন্ত আপনার समस्या বলতে পারেন। এই কলটি রেকর্ড করা হচ্ছে এবং দ্রুত ব্যবস্থার জন্য ইঞ্জিনিয়ারের কাছে পাঠানো হবে।",
+    "mr": "ठीक आहे. फ्रीझरमध्ये तुम्हाला काय अडचण येत आहे, कृपया सविस्तर सांगा. तुम्ही दोन मिनिटांपर्यंत तुमची समस्या सांगू शकता. हा कॉल रेकॉर्ड केला जात आहे आणि त्वरित कारवाईसाठी इंजिनिअरकडे पाठवला जाईल.",
+    "ta": "சரி. ஃப்ரீஸரில் நீங்கள் எதிர்கொள்ளும் பிரச்சனையை தயவுசெய்து விரிவாக சொல்லுங்கள். நீங்கள் இரண்டு நிமிடங்கள் வரை உங்கள் பிரச்சனையை சொல்லலாம். இந்த அழைப்பு பதிவு செய்யப்படுகிறது மற்றும் உடனடி நடவடிக்கைக்காக பொறியாளரிடம் அனுப்பப்படும்.",
+    "kn": "ಸರಿ. ಫ್ರೀಜರ್‌ನಲ್ಲಿ ನೀವು ಎದುರಿಸುತ್ತಿರುವ ಸಮಸ್ಯೆಯನ್ನು ದಯವಿಟ್ಟು ವಿವರವಾಗಿ ಹೇಳಿ. ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ನೀವು ಎರಡು ನಿಮಿಷಗಳವರೆಗೆ ಹೇಳಬಹುದು. ಈ ಕರೆಯನ್ನು ರೆಕಾರ್ಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ ಮತ್ತು ತಕ್ಷಣದ ಕ್ರಮಕ್ಕಾಗಿ ಇಂಜಿನಿಯರ್‌ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ.",
+    "ml": "ശരി. ഫ്രീസറിൽ നിങ്ങൾ നേരിടുന്ന പ്രശ്നം ദയവായി വിശദമായി പറയൂ. രണ്ട് മിനിറ്റ് വരെ നിങ്ങളുടെ പ്രശ്നം വിവരിക്കാം. ഈ കോൾ റെക്കോർഡ് ചെയ്യപ്പെടുന്നുണ്ട്, ഉടൻ നടപടിക്കായി എഞ്ചിനീയർക്ക് കൈമാറുന്നതാണ്.",
+    "en": "Got it. Could you please describe the issue you are facing with freezer? You can describe your issue for up to two minutes. This call is recorded and sent to an engineer for immediate action."
+}
+
+SERIAL_PLAIN_QUESTIONS = {
+    "en": "Could you please share your machine serial number?",
+    "hi": "क्या आप अपनी मशीन का सीरियल नंबर बता सकते हैं?",
+    "gu": "શું તમે તમારો મશીન સીરીયલ નંબર જણાવી શકો છો?",
+    "te": "దయచేసి మీ మెషిన్ సీరియల్ నంబర్ చెప్పగలరా?",
+    "pa": "ਕੀ ਤੁਸੀਂ ਆਪਣੀ ਮਸ਼ੀਨ ਦਾ ਸੀਰੀਅਲ ਨੰਬਰ ਦੱਸ ਸਕਦੇ ਹੋ?",
+    "bn": "আপনি কি আপনার মেশিনের সিরিয়াল নম্বরটি বলতে পারেন?",
+    "mr": "कृपया तुमच्या मशीनचा सिरीयल नंबर सांगू शकाल का?",
+    "ta": "உங்கள் மெஷின் சீரியல் எண்ணைச் சொல்ல முடியுமா?",
+    "kn": "ದಯವಿಟ್ಟು ನಿಮ್ಮ ಯಂತ್ರದ ಸೀರಿಯಲ್ ಸಂಖ್ಯೆಯನ್ನು ತಿಳಿಸಬಹುದೇ?",
+    "ml": "നിങ്ങളുടെ മെഷീന്റെ സീരിയൽ നമ്പർ പറയാമോ?"
+}
+
+def _format_spoken_serial(serial_str: str, lang: str) -> str:
+    """Formats serial number character-by-character for clear, distinct speech."""
+    if not serial_str:
+        return ""
+    clean = re.sub(r'[^a-zA-Z0-9]', ' ', str(serial_str)).strip()
+    words = []
+    for char in clean:
+        if char.isdigit():
+            words.append(_format_spoken_number(char, lang))
+        elif char.isalnum():
+            words.append(char.upper())
+    return ", ".join(w for w in words if w)
+
+def _is_negative(text: str) -> bool:
+    if not text:
+        return False
+    t = text.lower().strip()
+    t_clean = re.sub(r'[^\w\s]', '', t)
+    words = t_clean.split()
+    no_exact = {
+        "no", "nope", "nah", "wrong", "incorrect", "false", "not",
+        "nahi", "nahin", "na", "galat", "khotu", "khoto", "nathi",
+        "नहीं", "नही", "ना", "गलत",
+        "ના", "નહીં", "ખોટો", "ખોટું", "નથી",
+        "नाही", "चूक", "না", "ভুল", "இல்லை", "தவறு", "కాదు", "తప్పు", "ಇಲ್ಲ", "ಅಲ್ಲ", "ਨਹੀਂ"
+    }
+    if any(w in no_exact for w in words):
+        return True
+    no_phrases = [
+        "galat hai", "khotu che", "khoto che", "ye nahi", "aa nathi",
+        "गलत है", "ખોટું છે", "ખોટો છે", "नाही आहे", "चुकीचे आहे"
+    ]
+    return any(p in t for p in no_phrases)
+
+def _is_affirmative(text: str) -> bool:
+    if not text:
+        return False
+    if _is_negative(text):
+        return False
+    t = text.lower().strip()
+    t_clean = re.sub(r'[^\w\s]', '', t)
+    words = t_clean.split()
+    yes_exact = {
+        "yes", "yeah", "yep", "ok", "okay", "correct", "right", "sure", "true",
+        "ha", "haa", "haan", "haji", "haaji", "sahi", "theek", "thik", "bilkul",
+        "barabar", "sachu", "sacho", "hoy",
+        "हाँ", "हा", "हाँजी", "हां", "हांजी", "सही", "ठीक", "बिल्कुल",
+        "હા", "હાજી", "બરાબર", "સાચું", "સાચો",
+        "हो", "होय", "बरोबर", "হ্যাঁ", "সঠিক", "ஆம்", "சரி", "అవును", "సరే", "ಹೌದು", "ಅതെ", "ਹਾਂ", "ਹਾਂਜੀ"
+    }
+    if any(w in yes_exact for w in words):
+        return True
+    yes_phrases = [
+        "sahi hai", "theek hai", "thik hai", "barabar che", "sacho che", "sachu che",
+        "ha ji", "haan ji", "ji haan", "ji ha",
+        "सही है", "ठीक है", "બરાબર છે", "સાચો છે", "સાચું છે", "बरोबर आहे"
+    ]
+    return any(p in t for p in yes_phrases)
+
+def _handle_smart_serial_step(raw_message: str, lang: str, state: dict, session, mode: str = "telephony") -> dict:
+    """
+    Intelligent AI-powered Step 6 Machine Serial Number Handler:
+    - Smartly understands natural speech across all languages (Gujarati, Hindi, English, etc.).
+    - Evaluates caller intent without getting stuck in loops.
+    - Strictly enforces policy: WITHOUT a machine serial number, NO complaint is registered.
+    """
+    from conversations.services.azure_openai_service import client
+    from django.conf import settings
+    import json
+
+    guidance_given = state.get("serial_guidance_given", False)
+    awaiting_confirm = state.get("serial_needs_confirmation", False)
+    pending_serial = state.get("pending_serial_number", "")
+
+    # Quick deterministic fast-path if user is confirming an already read-back serial number
+    if awaiting_confirm and _is_affirmative(raw_message):
+        confirmed_serial = state.get("pending_serial_number") or state.get("serial_number") or "Freezer"
+        state["serial_number"] = confirmed_serial
+        state["machine_sr_no"] = confirmed_serial
+        state["machine_model_no"] = f"Freezer ({confirmed_serial})"
+        state["product_name"] = "Freezer"
+        state["issue_type"] = "Freezer"
+        state["serial_needs_confirmation"] = False
+        state["serial_confirmed"] = True
+        state.pop("pending_serial_number", None)
+        state.pop("partial_serial_digits", None)
+        state.pop("serial_wait_requested", None)
+        next_step = 7
+        reply = STEP7_PROMPTS.get(lang, STEP7_PROMPTS["en"])
+        state["current_step"] = 7
+        state["conversation_history"].append(f"Agent: {reply}")
+        save_session(session, state)
+        _log_translator(None, reply, lang)
+        return {
+            "static_reply": reply,
+            "tts_language": lang,
+            "skip_output_translation": True,
+            "strategy_key": STRATEGY_KEY,
+            "mode": mode,
+            "session": session,
+            "state": state,
+            "language_locked": state.get("language_locked", False)
+        }
+
+    # Call AI Intent Classifier
+    data = None
+    try:
+        system_prompt = f"""You are the expert, empathetic customer support voice agent for Ice Make Refrigeration Ltd.
+You are assisting callers across India in their preferred language ({lang}).
+
+STRICT COMPANY POLICIES & CONVERSATIONAL RULES:
+1. MANDATORY SERIAL NUMBER REQUIREMENT:
+   A service complaint/ticket CANNOT be registered without a machine serial number under any circumstances. No exceptions.
+2. HANDLING CALLER CONFUSION OR MISSING SERIAL NUMBER:
+   - If caller does not remember ("yaad nahi", "याद ना थी", "ખબર નથી", "don't know"), lost their bill, is away from the machine, or asks if complaint can be filed without it:
+     a) FIRST TURN (guidance not given yet): Warmly reassure the caller. Guide them clearly where to find the serial number (on the metal nameplate near the compressor or on their invoice/bill) and invite them to check.
+     b) SECOND TURN (guidance already given, or caller explicitly cannot provide it): Politely and firmly explain that without the machine serial number we cannot register any complaint, invite them to call back once located, and you MUST end your reply with [FLOW_COMPLETE].
+3. NO REPETITION / NEVER LOOP:
+   Never repeat the exact same sentence or ask repeatedly without answering the user. If they ask a side question (warranty, visit fee, engineer timing), answer it directly in 1 short sentence, then smoothly bring the conversation back to the serial number.
+4. TONE & LENGTH:
+   Warm, polite, natural spoken Indian conversational tone. Exactly 1-2 concise sentences in {lang}. Do not sound robotic. Never use bullet points in reply."""
+
+        user_prompt = f"""Caller Utterance: "{raw_message}"
+Context:
+- Guidance on where to find serial number already given: {guidance_given}
+- System currently waiting for customer to confirm serial number '{pending_serial}': {awaiting_confirm}
+
+Classify caller's intent into ONE of:
+- PROVIDE_SERIAL: customer stated a serial number or model code.
+- CONFIRM_YES: customer confirms readback serial is correct (yes/haan/sahi hai/barabar).
+- CONFIRM_NO: customer says readback serial is incorrect (no/nahi/galat).
+- WAIT: customer asks to hold/wait/give time.
+- WHERE_IS_SERIAL: customer asks where serial is, what it is, or is confused where to look.
+- CANNOT_PROVIDE: customer cannot provide serial, does not have it, don't remember, lost bill, away from machine, or wants complaint without it.
+- QUESTION: customer asked a specific question about warranty, visit charges, engineer, etc.
+
+Return JSON only:
+{{
+  "intent": "PROVIDE_SERIAL" | "CONFIRM_YES" | "CONFIRM_NO" | "WAIT" | "WHERE_IS_SERIAL" | "CANNOT_PROVIDE" | "QUESTION",
+  "extracted_serial": "cleaned serial number if intent is PROVIDE_SERIAL else empty",
+  "reply": "Warm, natural 1-sentence reply in {lang}."
+}}"""
+
+        res = client.chat.completions.create(
+            model=settings.AZURE_OPENAI_DEPLOYMENT,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.0
+        )
+        data = json.loads(res.choices[0].message.content)
+    except Exception as e:
+        logger.warning("Smart Step 6 AI Classifier fallback due to error: %s", e)
+
+    intent = data.get("intent", "").upper() if data else ""
+    extracted = data.get("extracted_serial", "").strip() if data else ""
+    ai_reply = data.get("reply", "").strip() if data else ""
+
+    next_step = 6
+
+    if intent == "CONFIRM_YES" or (awaiting_confirm and _is_affirmative(raw_message)):
+        confirmed_serial = state.get("pending_serial_number") or state.get("serial_number") or "Freezer"
+        state["serial_number"] = confirmed_serial
+        state["machine_sr_no"] = confirmed_serial
+        state["machine_model_no"] = f"Freezer ({confirmed_serial})"
+        state["product_name"] = "Freezer"
+        state["issue_type"] = "Freezer"
+        state["serial_needs_confirmation"] = False
+        state["serial_confirmed"] = True
+        state.pop("pending_serial_number", None)
+        state.pop("partial_serial_digits", None)
+        state.pop("serial_wait_requested", None)
+        next_step = 7
+        reply = STEP7_PROMPTS.get(lang, STEP7_PROMPTS["en"])
+
+    elif intent == "CONFIRM_NO" or (awaiting_confirm and _is_negative(raw_message)):
+        state["pending_serial_number"] = ""
+        state["serial_needs_confirmation"] = False
+        next_step = 6
+        reply = ICEMAKE_V2_SERIAL_REASK.get(lang, ICEMAKE_V2_SERIAL_REASK["en"])
+
+    elif intent == "PROVIDE_SERIAL" or (len(re.findall(r'\d+', raw_message)) > 0 and len("".join(re.findall(r'\d+', raw_message))) >= 3):
+        serial_val = extracted if extracted else _clean_model_or_serial(raw_message)
+        state["pending_serial_number"] = serial_val
+        state["serial_needs_confirmation"] = True
+        next_step = 6
+        spoken_serial = _format_spoken_serial(serial_val, lang)
+        template = ICEMAKE_V2_SERIAL_CONFIRM.get(lang, ICEMAKE_V2_SERIAL_CONFIRM["en"])
+        reply = template.format(serial=spoken_serial)
+
+    elif intent == "WAIT":
+        state["serial_wait_requested"] = True
+        next_step = 6
+        reply = ai_reply if ai_reply else ICEMAKE_V2_SERIAL_WAIT_REPLY.get(lang, ICEMAKE_V2_SERIAL_WAIT_REPLY["en"])
+
+    elif intent == "WHERE_IS_SERIAL":
+        state["serial_guidance_given"] = True
+        state["serial_wait_requested"] = True
+        next_step = 6
+        reply = ai_reply if ai_reply else ICEMAKE_V2_SERIAL_GUIDANCE.get(lang, ICEMAKE_V2_SERIAL_GUIDANCE["en"])
+
+    elif intent == "CANNOT_PROVIDE":
+        next_step = 6
+        if not guidance_given and "વગર" not in raw_message and "without" not in raw_message.lower() and "ખો" not in raw_message:
+            state["serial_guidance_given"] = True
+            state["serial_wait_requested"] = True
+            reply = ai_reply if ai_reply else ICEMAKE_V2_SERIAL_GUIDANCE.get(lang, ICEMAKE_V2_SERIAL_GUIDANCE["en"])
+            if "[FLOW_COMPLETE]" in reply and not guidance_given:
+                # First time guidance should allow user a moment to check
+                reply = ICEMAKE_V2_SERIAL_GUIDANCE.get(lang, ICEMAKE_V2_SERIAL_GUIDANCE["en"])
+        else:
+            state["serial_wait_requested"] = False
+            # Fixed, policy-accurate farewell (explains why + thanks caller for calling Ice Make 24x7 support)
+            reply = ICEMAKE_V2_SERIAL_FAREWELL.get(lang, ICEMAKE_V2_SERIAL_FAREWELL["en"])
+
+    else:
+        # Question or conversational query
+        next_step = 6
+        if ai_reply:
+            reply = ai_reply
+        else:
+            cust_name = state.get("customer_name", "")
+            name_val = cust_name if cust_name and cust_name != "Not Provided" else ""
+            raw_q = QUESTIONS.get(lang, QUESTIONS["en"]).get(6, "Could you please share your machine serial number?")
+            if "{name}" in raw_q and name_val:
+                reply = raw_q.format(name=name_val).strip()
+            else:
+                reply = SERIAL_PLAIN_QUESTIONS.get(lang, SERIAL_PLAIN_QUESTIONS["en"])
+
+    state["current_step"] = next_step
+    state["conversation_history"].append(f"Agent: {reply}")
+    save_session(session, state)
+    _log_translator(None, reply, lang)
+    return {
+        "static_reply": reply,
+        "tts_language": lang,
+        "skip_output_translation": True,
+        "strategy_key": STRATEGY_KEY,
+        "mode": mode,
+        "session": session,
+        "state": state,
+        "language_locked": state.get("language_locked", False)
+    }
+
+
 def icemake_v2_strategy(agent, message, session, mode="telephony", **kwargs):
     """
     Standard entry point for non-streaming / fallback.
@@ -706,113 +1044,7 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
 
     # ── STEP 6: Process Machine Serial Number ──
     elif prev_step == 6:
-        accumulated = state.get("partial_serial_digits", "")
-        raw_digits = "".join(filter(str.isdigit, raw_message))
-        
-        not_avail_keywords = [
-            # English
-            "none", "no", "nahi", "not available", "dont know", "don't know", "dont have", "don't have",
-            "not have", "unsure", "not sure", "no idea", "where is it", "where can i find", "where to find",
-            "cant find", "can't find", "not finding", "no serial", "no number", "skip", "invoice", "bill",
-            # Hindi / Devanagari
-            "नहीं", "नहीं है", "नाही", "नाही है", "पता नहीं", "मालूम नहीं", "नही पता", "नहीं पता", "नही है",
-            "कहा है", "कहाँ है", "किधर है", "कहा मिलेगा", "कहाँ मिलेगा", "कहा लिखा", "कहाँ लिखा", "कहा देखना", "कहाँ देखना",
-            # Gujarati
-            "નથી", "નથી ખબર", "ખબર નથી", "નથી મળતું", "ક્યાં છે", "ક્યાં હોય", "ક્યાં મળશે", "મારી પાસે નથી", "નથી મારી પાસે",
-            # Marathi
-            "नाही", "माहित नाही", "माहिती नाही", "कुठे आहे", "माझ्याकडे नाही",
-            # Bengali
-            "নেই", "জানা নেই", "জানি না", "কোথায় আছে",
-            # Punjabi
-            "ਨਹੀਂ", "ਨਹੀਂ ਪਤਾ", "ਪਤਾ ਨਹੀਂ", "ਕਿੱਥੇ ਹੈ",
-            # Telugu
-            "లేదు", "తెలియదు", "ఎక్కడ ఉంది",
-            # Tamil
-            "இல்லை", "தெரியாது", "எங்கே இருக்கிறது",
-            # Kannada
-            "ಇಲ್ಲ", "ಗೊತ್ತಿಲ್ಲ", "ಎಲ್ಲಿದೆ",
-            # Malayalam
-            "ഇല്ല", "അറിയില്ല", "എവിടെയാണ്"
-        ]
-        is_not_available = any(k in raw_message.lower() for k in not_avail_keywords)
-
-        combined_text = (accumulated + " " + raw_message).strip() if accumulated else raw_message
-        clean_serial = _clean_model_or_serial(combined_text)
-        clean_digits = "".join(filter(str.isdigit, clean_serial))
-
-        # If user speaks only 1 to 3 isolated digits and takes a pause for thinking, wait silently for them
-        if not is_not_available and 0 < len(clean_digits) <= 3 and len(clean_serial.split()) <= 2:
-            state["partial_serial_digits"] = clean_serial
-            state["current_step"] = 6
-            save_session(session, state)
-            return {
-                "static_reply": "",
-                "tts_language": lang,
-                "skip_output_translation": True,
-                "strategy_key": STRATEGY_KEY,
-                "mode": mode,
-                "session": session,
-                "state": state,
-                "language_locked": state.get("language_locked", False)
-            }
-
-        state.pop("partial_serial_digits", None)
-        state["product_name"] = "Freezer"
-        state["issue_type"] = "Freezer"
-        next_step = 7
-
-        if is_not_available:
-            state["serial_number"] = "Not Provided"
-            state["machine_model_no"] = "Freezer"
-            # Guidance: serial number is on invoice and machine, but okay to proceed without it
-            if lang == "hi":
-                reply = "सीरियल नंबर आपके इनवॉइस और मशीन पर लिखा होता है। लेकिन अगर अभी आपके पास नहीं है तो कोई बात नहीं, हम इसके बिना भी आगे बढ़ सकते हैं। ठीक है, फ्रीजर में आपको क्या समस्या आ रही है, कृपया विस्तार से बताइए। आप दो मिनट तक अपनी समस्या बता सकते हैं। यह कॉल रिकॉर्ड की जा रही है और तुरंत कार्रवाई के लिए इंजीनियर को भेजी जाएगी।"
-            elif lang == "gu":
-                reply = "સીરીયલ નંબર તમારા ઇનવોઇસ અને મશીન પર લખેલો હોય છે. પરંતુ જો અત્યારે તમારી પાસે ન હોય તો કોઈ વાંધો નહીં, આપણે તેના વિના આગળ વધી શકીએ છીએ. સારું, ફ્રીઝરમાં તમને શું સમસ્યા આવી રહી છે, કૃપા કરીને વિગતવાર જણાવો. તમે બે મિનિટ સુધી તમારી સમસ્યા જણાવી શકો છો. આ કૉલ રેકોર્ડ કરવામાં આવી રહ્યો છે અને ત્વરિત કાર્યવાહી માટે એન્જિનિયરને મોકલવામાં આવશે."
-            elif lang == "te":
-                reply = "సీరియల్ నంబర్ మీ ఇన్‌వాయిస్ మరియు మెషిన్‌పై ఉంటుంది. కానీ ప్రస్తుతానికి మీ వద్ద లేకపోతే పర్వాలేదు, మనం దీని లేకుండా ముందుకు కొనసాగవచ్చు. సరే, ఫ్రీజర్‌తో మీరు ఎదుర్కొంటున్న సమస్యను దయచేసి వివరించండి. మీరు రెండు నిమిషాల వరకు మీ సమస్యను చెప్పవచ్చు. ఈ కాల్ రికార్డ్ చేయబడుతోంది మరియు వెంటనే చర్య కోసం ఇంజనీర్‌కు పంపబడుతుంది."
-            elif lang == "pa":
-                reply = "ਸੀਰੀਅਲ ਨੰਬਰ ਤੁਹਾਡੇ ਇਨਵੌਇਸ ਅਤੇ ਮਸ਼ੀਨ 'ਤੇ ਲਿਖਿਆ ਹੁੰਦਾ ਹੈ। ਪਰ ਜੇਕਰ ਹੁਣ ਤੁਹਾਡੇ ਕੋਲ ਨਹੀਂ ਹੈ ਤਾਂ ਕੋਈ ਗੱਲ ਨਹੀਂ, ਅਸੀਂ ਇਸਦੇ ਬਿਨਾਂ ਅੱਗੇ ਵਧ ਸਕਦੇ ਹਾਂ। ਠੀਕ ਹੈ, ਫ੍ਰੀਜ਼ਰ ਵਿੱਚ ਤੁਹਾਨੂੰ ਕੀ ਸਮੱਸਿਆ ਆ ਰਹੀ ਹੈ, ਕਿਰਪਾ ਕਰਕੇ ਵਿਸਥਾਰ ਨਾਲ ਦੱਸੋ। ਤੁਸੀਂ ਦੋ ਮਿੰਟ ਤੱਕ ਆਪਣੀ ਸਮੱਸਿਆ ਦੱਸ ਸਕਦੇ ਹੋ। ਇਹ ਕਾਲ ਰਿਕਾਰਡ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ ਅਤੇ ਤੁਰੰਤ ਕਾਰਵਾਈ ਲਈ ਇੰਜੀਨੀਅਰ ਨੂੰ ਭੇਜੀ ਜਾਵੇਗੀ।"
-            elif lang == "bn":
-                reply = "সিরিয়াল নম্বরটি আপনার ইনভয়েস এবং মেশিনের গায়ে উল্লেখ থাকে। তবে আপনার কাছে না থাকলেও কোনো অসুবিধা নেই, আমরা এটি ছাড়াই এগিয়ে যেতে পারি। ঠিক আছে, ফ্রিজারে আপনি কী সমস্যার সম্মুখীন হচ্ছেন দয়া করে বিস্তারিত বলুন। আপনি দুই মিনিট পর্যন্ত আপনার समस्या বলতে পারেন। এই কলটি রেকর্ড করা হচ্ছে এবং দ্রুত ব্যবস্থার জন্য ইঞ্জিনিয়ারের কাছে পাঠানো হবে।"
-            elif lang == "mr":
-                reply = "सिरीयल नंबर तुमच्या इनव्हॉइसवर आणि मशीनवर दिलेला असतो. पण सध्या तुमच्याकडे नसल्यास हरकत नाही, आपण याशिवाय पुढे जाऊ शकतो. ठीक आहे, फ्रीझरमध्ये तुम्हाला काय अडचण येत आहे, कृपया सविस्तर सांगा. तुम्ही दोन मिनिटांपर्यंत तुमची समस्या सांगू शकता. हा कॉल रेकॉर्ड केला जात आहे आणि त्वरित कारवाईसाठी इंजिनिअरकडे पाठवला जाईल."
-            elif lang == "ta":
-                reply = "வரிசை எண் (சீரியல் நம்பர்) உங்கள் இன்வாய்ஸ் மற்றும் மெஷினில் குறிப்பிடப்பட்டிருக்கும். ஆனால் இப்போது உங்களிடம் இல்லை என்றால் பரவாயில்லை, நாம் இதன்படியே தொடரலாம். சரி, ஃப்ரீஸரில் நீங்கள் எதிர்கொள்ளும் பிரச்சனையை தயவுசெய்து விரிவாக சொல்லுங்கள். நீங்கள் இரண்டு நிமிடங்கள் வரை உங்கள் பிரச்சனையை சொல்லலாம். இந்த அழைப்பு பதிவு செய்யப்படுகிறது மற்றும் உடனடி நடவடிக்கைக்காக பொறியாளரிடம் அனுப்பப்படும்."
-            elif lang == "kn":
-                reply = "ಸೀರಿಯಲ್ ಸಂಖ್ಯೆಯು ನಿಮ್ಮ ಇನ್‌ವಾಯ್ಸ್ ಮತ್ತು ಯಂತ್ರದ ಮೇಲೆ ಇರುತ್ತದೆ. ಆದರೆ ಸದ್ಯಕ್ಕೆ ನಿಮ್ಮ ಬಳಿ ಇಲ್ಲದಿದ್ದರೂ ಪರವಾಗಿಲ್ಲ, ನಾವು ಇದರ ಹೊರತಾಗಿ ಮುಂದುವರಿಯಬಹುದು. ಸರಿ, ಫ್ರೀಜರ್‌ನಲ್ಲಿ ನೀವು ಎದುರಿಸುತ್ತಿರುವ ಸಮಸ್ಯೆಯನ್ನು ದಯವಿಟ್ಟು ವಿವರವಾಗಿ ಹೇಳಿ. ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ನೀವು ಎರಡು ನಿಮಿಷಗಳವರೆಗೆ ಹೇಳಬಹುದು. ಈ ಕರೆಯನ್ನು ರೆಕಾರ್ಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ ಮತ್ತು ತಕ್ಷಣದ ಕ್ರಮಕ್ಕಾಗಿ ಇಂಜಿನಿಯರ್‌ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ."
-            elif lang == "ml":
-                reply = "സീരിയൽ നമ്പർ നിങ്ങളുടെ ഇൻവോയ്സിലും മെഷീനിലും രേഖപ്പെടുത്തിയിട്ടുണ്ടാകും. എന്നാൽ ഇപ്പോൾ നിങ്ങളുടെ പക്കൽ ഇല്ലെങ്കിലും കുഴപ്പമില്ല, നമുക്ക് ഇതില്ലാതെ മുന്നോട്ട് പോകാം. ശരി, ഫ്രീസറിൽ നിങ്ങൾ നേരിടുന്ന പ്രശ്നം ദയവായി വിശദമായി പറയൂ. രണ്ട് മിനിറ്റ് വരെ നിങ്ങളുടെ പ്രശ്നം വിവരിക്കാം. ഈ കോൾ റെക്കോർഡ് ചെയ്യപ്പെടുന്നുണ്ട്, ഉടൻ നടപടിക്കായി എഞ്ചിനീയർക്ക് കൈമാറുന്നതാണ്."
-            else:
-                reply = "The serial number is mentioned on your invoice and on the machine nameplate. But if you don't have it right now, that's completely okay, we can proceed without it. Got it. Could you please describe the issue you are facing with freezer? You can describe your issue for up to two minutes. This call is recorded and sent to an engineer for immediate action."
-        else:
-            state["serial_number"] = clean_serial if clean_serial else raw_message
-            if clean_serial:
-                state["machine_model_no"] = f"Freezer ({clean_serial})"
-            else:
-                state["machine_model_no"] = "Freezer"
-
-            if lang == "hi":
-                reply = "ठीक है। फ्रीजर में आपको क्या समस्या आ रही है, कृपया विस्तार से बताइए। आप दो मिनट तक अपनी समस्या बता सकते हैं। यह कॉल रिकॉर्ड की जा रही है और तुरंत कार्रवाई के लिए इंजीनियर को भेजी जाएगी।"
-            elif lang == "gu":
-                reply = "સારું. ફ્રીઝરમાં તમને શું સમસ્યા આવી રહી છે, કૃપા કરીને વિગતવાર જણાવો. તમે બે મિનિટ સુધી તમારી સમસ્યા જણાવી શકો છો. આ કૉલ રેકોર્ડ કરવામાં આવી રહ્યો છે અને ત્વરિત કાર્યવાહી માટે એન્જિનિયરને મોકલવામાં આવશે."
-            elif lang == "te":
-                reply = "సరే. ఫ్రీజర్‌తో మీరు ఎదుర్కొంటున్న సమస్యను దయచేసి వివరించండి. మీరు రెండు నిమిషాల వరకు మీ సమస్యను చెప్పవచ్చు. ఈ కాల్ రికార్డ్ చేయబడుతోంది మరియు వెంటనే చర్య కోసం ఇంజనీర్‌కు పంపబడుతుంది."
-            elif lang == "pa":
-                reply = "ਠੀਕ ਹੈ। ਫ੍ਰੀਜ਼ਰ ਵਿੱਚ ਤੁਹਾਨੂੰ ਕੀ ਸਮੱਸਿਆ ਆ ਰਹੀ ਹੈ, ਕਿਰਪਾ ਕਰਕੇ ਵਿਸਥਾਰ ਨਾਲ ਦੱਸੋ। ਤੁਸੀਂ ਦੋ ਮਿੰਟ ਤੱਕ ਆਪਣੀ ਸਮੱਸਿਆ ਦੱਸ ਸਕਦੇ ਹੋ। ਇਹ ਕਾਲ ਰਿਕਾਰਡ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ ਅਤੇ ਤੁਰੰਤ ਕਾਰਵਾਈ ਲਈ ਇੰਜੀਨੀਅਰ ਨੂੰ ਭੇਜੀ ਜਾਵੇਗੀ।"
-            elif lang == "bn":
-                reply = "ঠিক আছে। ফ্রিজারে আপনি কী সমস্যার সম্মুখীন হচ্ছেন দয়া করে বিস্তারিত বলুন। আপনি দুই মিনিট পর্যন্ত আপনার समस्या বলতে পারেন। এই কলটি রেকর্ড করা হচ্ছে এবং দ্রুত ব্যবস্থার জন্য ইঞ্জিনিয়ারের কাছে পাঠানো হবে।"
-            elif lang == "mr":
-                reply = "ठीक आहे. फ्रीझरमध्ये तुम्हाला काय अडचण येत आहे, कृपया सविस्तर सांगा. तुम्ही दोन मिनिटांपर्यंत तुमची समस्या सांगू शकता. हा कॉल रेकॉर्ड केला जात आहे आणि त्वरित कारवाईसाठी इंजिनिअरकडे पाठवला जाईल."
-            elif lang == "ta":
-                reply = "சரி. ஃப்ரீஸரில் நீங்கள் எதிர்கொள்ளும் பிரச்சனையை தயவுசெய்து விரிவாக சொல்லுங்கள். நீங்கள் இரண்டு நிமிடங்கள் வரை உங்கள் பிரச்சனையை சொல்லலாம். இந்த அழைப்பு பதிவு செய்யப்படுகிறது மற்றும் உடனடி நடவடிக்கைக்காக பொறியாளரிடம் அனுப்பப்படும்."
-            elif lang == "kn":
-                reply = "ಸರಿ. ಫ್ರೀಜರ್‌ನಲ್ಲಿ ನೀವು ಎದುರಿಸುತ್ತಿರುವ ಸಮಸ್ಯೆಯನ್ನು ದಯವಿಟ್ಟು ವಿವರವಾಗಿ ಹೇಳಿ. ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ನೀವು ಎರಡು ನಿಮಿಷಗಳವರೆಗೆ ಹೇಳಬಹುದು. ಈ ಕರೆಯನ್ನು ರೆಕಾರ್ಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ ಮತ್ತು ತಕ್ಷಣದ ಕ್ರಮಕ್ಕಾಗಿ ಇಂಜಿನಿಯರ್‌ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತದೆ."
-            elif lang == "ml":
-                reply = "ശരി. ഫ്രീസറിൽ നിങ്ങൾ നേരിടുന്ന പ്രശ്നം ദയവായി വിശദമായി പറയൂ. രണ്ട് മിനിറ്റ് വരെ നിങ്ങളുടെ പ്രശ്നം വിവരിക്കാം. ഈ കോൾ റെക്കോർഡ് ചെയ്യപ്പെടുന്നുണ്ട്, ഉടൻ നടപടിക്കായി എഞ്ചിനീയർക്ക് കൈമാറുന്നതാണ്."
-            else:
-                reply = "Got it. Could you please describe the issue you are facing with freezer? You can describe your issue for up to two minutes. This call is recorded and sent to an engineer for immediate action."
-
+        return _handle_smart_serial_step(raw_message, lang, state, session, mode=mode)
     elif prev_step == 7:
         state["issue_description"] = raw_message
         next_step = 8
@@ -1341,7 +1573,7 @@ def _check_and_handle_out_of_flow(raw_message: str, lang: str, current_step: int
       Generates ONE single, natural, cohesive response in the user's language that answers their question directly
       and smoothly transitions back to the required step detail.
     """
-    if not raw_message or len(raw_message.strip()) < 3 or current_step in (0, 7, 8):
+    if not raw_message or len(raw_message.strip()) < 3 or current_step in (0, 6, 7, 8):
         return None
 
     # Guard 1: If input contains a 10-digit phone number, it's phone data for Step 4 — NEVER intercept!

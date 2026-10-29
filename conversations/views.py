@@ -2726,7 +2726,7 @@ def icemake_dashboard_data(request):
     tickets = IcemakeTicket.objects.select_related("conversation").order_by("-created_at")
     
     data = []
-    for t in tickets[:200]:
+    for t in tickets:
         cdr = None
         # 1. Direct match on conversation CDR
         if t.conversation:

@@ -986,7 +986,9 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         self.last_activity_time = time.time()
 
                         from raahi_iiiem_bot.strategy import get_raahi_reprompt
-                        session_state = getattr(self.session, "state", {}) or {}
+                        from conversations.models import ConversationSession
+                        session_obj = await sync_to_async(lambda: ConversationSession.objects.filter(session_id=self.session_id).first())()
+                        session_state = session_obj.state if (session_obj and session_obj.state) else {}
                         reprompt_text = get_raahi_reprompt(session_state, language=self.language)
 
                         if self.tts_task and not self.tts_task.done():
@@ -1013,6 +1015,48 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         self.is_connected = False
                         await self.close()
                         break
+                is_icemake_v2 = (getattr(self, "strategy_key", None) == "icemake_v2")
+                if is_icemake_v2:
+                    from conversations.models import ConversationSession
+                    session_obj = await sync_to_async(lambda: ConversationSession.objects.filter(session_id=self.session_id).first())()
+                    session_state = session_obj.state if (session_obj and session_obj.state) else {}
+                    if session_state.get("current_step") == 6 and session_state.get("serial_wait_requested"):
+                        if elapsed >= 10.0:
+                            print(f"📴 [ICEMAKE V2 10S TIMEOUT]: User silent for {elapsed:.1f}s after serial guidance/wait. Saying farewell and ending call.")
+                            session_state["serial_wait_requested"] = False
+                            if session_obj:
+                                session_obj.state = session_state
+                                await sync_to_async(session_obj.save)()
+                            from icemake_v2_bot.strategy import get_icemake_v2_serial_farewell
+                            farewell = get_icemake_v2_serial_farewell(session_state, language=self.language)
+                            farewell_clean = re.sub(r'\[.*?\]', '', farewell).strip()
+                            if self.tts_task and not self.tts_task.done():
+                                self.tts_task.cancel()
+                            await save_message(self.conversation, "bot", farewell_clean)
+                            self.tts_task = asyncio.create_task(self.send_tts(farewell_clean, tts_language=self.language))
+                            await self.tts_task
+                            await asyncio.sleep(2.0)
+                            await close_conversation(self.conversation)
+                            await self.send(text_data=json.dumps({
+                                "event": "stop",
+                                "format": "a-law 8-bit, 8kHz, Mono",
+                                "encoding": "base64"
+                            }))
+                            self.is_connected = False
+                            await self.close()
+                            break
+                    elif elapsed >= 30.0:
+                        print(f"📴 [ICEMAKE V2 TIMEOUT-DISCONNECT]: No recognized user activity for {elapsed:.1f}s. Automatically cutting call.")
+                        await close_conversation(self.conversation)
+                        await self.send(text_data=json.dumps({
+                            "event": "stop",
+                            "format": "a-law 8-bit, 8kHz, Mono",
+                            "encoding": "base64"
+                        }))
+                        self.is_connected = False
+                        await self.close()
+                        break
+
                 elif not is_raahi and elapsed >= 30.0:
                     print(f"📴 [TIMEOUT-DISCONNECT]: No recognized user activity for {elapsed:.1f}s. Automatically cutting call.")
                     await close_conversation(self.conversation)
@@ -1210,7 +1254,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                         lambda: ConversationSession.objects.filter(session_id=self.session_id).first()
                     )()
                     active_step = session.state.get("current_step") if (session and session.state) else None
-                    target_steps = (3, 4, 6) if strategy_key == "icemake_v2" else (3, 4)
+                    strat_key = getattr(self, "strategy_key", None)
+                    target_steps = (3, 4, 6) if strat_key in ["icemake_v2", "icemake_v2_strategy"] else (3, 4)
                     if active_step in target_steps:
                         self.recognizer.properties.set_property(speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "2500")
                         self.recognizer.properties.set_property(speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "1800")
