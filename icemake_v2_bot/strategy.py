@@ -258,17 +258,224 @@ SERIAL_PLAIN_QUESTIONS = {
     "ml": "നിങ്ങളുടെ മെഷീന്റെ സീരിയൽ നമ്പർ പറയാമോ?"
 }
 
-def _format_spoken_serial(serial_str: str, lang: str) -> str:
-    """Formats serial number character-by-character for clear, distinct speech."""
+SPOKEN_ALPHABET_MAP = {
+    "hi": {
+        'A': 'ए', 'B': 'बी', 'C': 'सी', 'D': 'डी', 'E': 'ई', 'F': 'एफ', 'G': 'जी',
+        'H': 'एच', 'I': 'आई', 'J': 'जे', 'K': 'के', 'L': 'एल', 'M': 'एम', 'N': 'एन',
+        'O': 'ओ', 'P': 'पी', 'Q': 'क्यू', 'R': 'आर', 'S': 'एस', 'T': 'टी', 'U': 'यू',
+        'V': 'वी', 'W': 'डब्लू', 'X': 'एक्स', 'Y': 'वाई', 'Z': 'ज़ेड', '-': 'डैश'
+    },
+    "gu": {
+        'A': 'એ', 'B': 'બી', 'C': 'સી', 'D': 'ડી', 'E': 'ઈ', 'F': 'એફ', 'G': 'જી',
+        'H': 'એચ', 'I': 'આઈ', 'J': 'જે', 'K': 'કે', 'L': 'એલ', 'M': 'એમ', 'N': 'એન',
+        'O': 'ઓ', 'P': 'પી', 'Q': 'ક્યૂ', 'R': 'આર', 'S': 'એસ', 'T': 'ટી', 'U': 'યુ',
+        'V': 'વી', 'W': 'ડબલ્યુ', 'X': 'એક્સ', 'Y': 'વાય', 'Z': 'ઝેડ', '-': 'ડેશ'
+    },
+    "mr": {
+        'A': 'ए', 'B': 'बी', 'C': 'सी', 'D': 'डी', 'E': 'ई', 'F': 'एफ', 'G': 'जी',
+        'H': 'एच', 'I': 'आय', 'J': 'जे', 'K': 'के', 'L': 'एल', 'M': 'एम', 'N': 'एन',
+        'O': 'ओ', 'P': 'पी', 'Q': 'क्यू', 'R': 'आर', 'S': 'एस', 'T': 'टी', 'U': 'यू',
+        'V': 'वी', 'W': 'डब्ल्यू', 'X': 'एक्स', 'Y': 'वाय', 'Z': 'झेड', '-': 'डॅश'
+    },
+    "pa": {
+        'A': 'ਏ', 'B': 'ਬੀ', 'C': 'ਸੀ', 'D': 'ਡੀ', 'E': 'ਈ', 'F': 'ਐੱਫ', 'G': 'ਜੀ',
+        'H': 'ਐੱਚ', 'I': 'ਆਈ', 'J': 'ਜੇ', 'K': 'ਕੇ', 'L': 'ਐੱਲ', 'M': 'ਐੱਮ', 'N': 'ਐੱਨ',
+        'O': 'ਓ', 'P': 'ਪੀ', 'Q': 'ਕਿਊ', 'R': 'ਆਰ', 'S': 'ਐੱਸ', 'T': 'ਟੀ', 'U': 'ਯੂ',
+        'V': 'ਵੀ', 'W': 'ਡਬਲਯੂ', 'X': 'ਐਕਸ', 'Y': 'ਵਾਈ', 'Z': 'ਜ਼ੈੱਡ', '-': 'ਡੈਸ਼'
+    },
+    "bn": {
+        'A': 'এ', 'B': 'বি', 'C': 'সি', 'D': 'ডি', 'E': 'ই', 'F': 'এফ', 'G': 'জি',
+        'H': 'এইচ', 'I': 'আই', 'J': 'জে', 'K': 'কে', 'L': 'এল', 'M': 'এম', 'N': 'এন',
+        'O': 'ও', 'P': 'পি', 'Q': 'কিউ', 'R': 'আর', 'S': 'এস', 'T': 'টি', 'U': 'ইউ',
+        'V': 'ভি', 'W': 'ডাব্লু', 'X': 'এক্স', 'Y': 'ওয়াই', 'Z': 'জেড', '-': 'ড্যাশ'
+    },
+    "te": {
+        'A': 'ఎ', 'B': 'బి', 'C': 'సి', 'D': 'డి', 'E': 'ఈ', 'F': 'ఎఫ్', 'G': 'జి',
+        'H': 'హెచ్', 'I': 'ఐ', 'J': 'జె', 'K': 'కె', 'L': 'ఎల్', 'M': 'ఎమ్', 'N': 'ఎన్',
+        'O': 'ఓ', 'P': 'పి', 'Q': 'క్యూ', 'R': 'ఆర్', 'S': 'ఎస్', 'T': 'టి', 'U': 'యు',
+        'V': 'వి', 'W': 'డబ్ల్యూ', 'X': 'ఎక్స్', 'Y': 'వై', 'Z': 'జెడ్', '-': 'డాష్'
+    },
+    "ta": {
+        'A': 'ஏ', 'B': 'பி', 'C': 'சி', 'D': 'டி', 'E': 'இ', 'F': 'எஃப்', 'G': 'ஜி',
+        'H': 'எச்', 'I': 'ஐ', 'J': 'ஜே', 'K': 'கே', 'L': 'எல்', 'M': 'எம்', 'N': 'என்',
+        'O': 'ஓ', 'P': 'பி', 'Q': 'கியூ', 'R': 'ஆர்', 'S': 'எஸ்', 'T': 'டி', 'U': 'யு',
+        'V': 'வி', 'W': 'டபிள்யூ', 'X': 'எக்ஸ்', 'Y': 'ஒய்', 'Z': 'இசட்', '-': 'டேஷ்'
+    },
+    "kn": {
+        'A': 'ಎ', 'B': 'ಬಿ', 'C': 'ಸಿ', 'D': 'ಡಿ', 'E': 'ಈ', 'F': 'ಎಫ್', 'G': 'ಜಿ',
+        'H': 'ಹೆಚ್', 'I': 'ಐ', 'J': 'ಜೆ', 'K': 'ಕೆ', 'L': 'ಎಲ್', 'M': 'ಎಮ್', 'N': 'ಎನ್',
+        'O': 'ಓ', 'P': 'ಪಿ', 'Q': 'ಕ್ಯೂ', 'R': 'ಆರ್', 'S': 'ಎಸ್', 'T': 'ಟಿ', 'U': 'ಯು',
+        'V': 'ವಿ', 'W': 'ಡಬ್ಲ್ಯೂ', 'X': 'ಎಕ್ಸ್', 'Y': 'ವೈ', 'Z': 'ಝೆಡ್', '-': 'ಡ್ಯಾಶ್'
+    },
+    "ml": {
+        'A': 'എ', 'B': 'ബി', 'C': 'സി', 'D': 'ഡി', 'E': 'ഇ', 'F': 'എഫ്', 'G': 'ജി',
+        'H': 'എച്ച്', 'I': 'ഐ', 'J': 'ജെ', 'K': 'കെ', 'L': 'എൽ', 'M': 'എം', 'N': 'എൻ',
+        'O': 'ഒ', 'P': 'പി', 'Q': 'ക്യൂ', 'R': 'ആർ', 'S': 'എസ്', 'T': 'ടി', 'U': 'യു',
+        'V': 'വി', 'W': 'ഡബ്ല്യു', 'X': 'എക്സ്', 'Y': 'വൈ', 'Z': 'സെഡ്', '-': 'ഡാഷ്'
+    },
+    "en": {
+        'A': 'A', 'B': 'B', 'C': 'C', 'D': 'D', 'E': 'E', 'F': 'F', 'G': 'G',
+        'H': 'H', 'I': 'I', 'J': 'J', 'K': 'K', 'L': 'L', 'M': 'M', 'N': 'N',
+        'O': 'O', 'P': 'P', 'Q': 'Q', 'R': 'R', 'S': 'S', 'T': 'T', 'U': 'U',
+        'V': 'V', 'W': 'W', 'X': 'X', 'Y': 'Y', 'Z': 'Z', '-': 'dash'
+    }
+}
+
+def _normalize_alphanumeric_serial(serial_str: str) -> str:
+    """
+    Intelligently extracts and normalizes machine serial numbers / model codes across languages.
+    - NO CHARACTER LIMIT: Handles serials of any length (e.g. 5, 8, 10, 18, 19, 25+ chars).
+    - IN-BETWEEN SENTENCE ISOLATION: Accurately isolates serial numbers even when callers speak
+      long conversational sentences (e.g. "हाँ भैया मेरा फ्रीजर चालू नहीं हो रहा और सीरियल नंबर VCB2502116 है तो कब आओगे?").
+    - Supports official Ice Make equipment series formats:
+      * VCB Series (Visi Cooler): e.g. VCB2502116
+      * DF Series (Deep Freezer): e.g. DF25008959
+      * CIM Series (Cube Ice Maker): e.g. CIM305B501-25030653
+      * DIM Series (Dairy/Direct Ice Machine): e.g. DIM405BX01-260500067
+      * GIM Series (Glass Ice Machine): e.g. GIM268E404-261000012
+      * Numeric / General series: e.g. 25030653, 9428512345, BF84920, ICE4402.
+    - Preserves hyphens ('-') between model and serial components.
+    """
     if not serial_str:
         return ""
-    clean = re.sub(r'[^a-zA-Z0-9]', ' ', str(serial_str)).strip()
+    text = str(serial_str).strip()
+
+    # 1. Translate Indic digits to ASCII digits
+    indic_to_ascii = str.maketrans(
+        '०१२३४५६७८९૦૧૨૩૪૫૬૭૮૯੦੧੨੩੪੫੬੭੮੯০১২৩৪৫৬৭৮৯௦౧౨౩౪౫౬౭౮౯௧௨௩௪௫௬௭௮௯౦౧౨౩౪౫౬౭౮౯൦൧൨൩൪൫൬൭൮൯೦೧೨೩೪೫೬೭೮೯',
+        '01234567890123456789012345678901234567890123456789123456789012345678901234567890123456789'
+    )
+    text = text.translate(indic_to_ascii)
+
+    # 2. Normalize spoken hyphen / dash words to '-'
+    dash_words = ["डैश", "ડેશ", "डॅश", "ਡੈਸ਼", "ড্যাশ", "డాష్", "டேஷ்", "ಡ್ಯಾಶ್", "ഡാഷ്",
+                  "dash", "hyphen", "माइनस", "માઇનસ", "માઈનસ", "minus"]
+    for dw in dash_words:
+        pattern = r'(^|[\s.,!?।\-_])' + re.escape(dw) + r'(?=[\s.,!?।\-_0-9]|$)'
+        text = re.sub(pattern, r'\g<1>-', text, flags=re.IGNORECASE)
+
+    # 3. Multi-letter regional compound prefix words first
+    compound_words = [
+        ("વીસીબી", "VCB"), ("वीसीबी", "VCB"),
+        ("સીઆઈએમ", "CIM"), ("सीआईएम", "CIM"),
+        ("ડીઆઈએમ", "DIM"), ("डीआईएम", "DIM"),
+        ("જીઆઈએમ", "GIM"), ("जीआईएम", "GIM"),
+        ("બીએક્સ", "BX"), ("बीएक्स", "BX"),
+        ("ડીએફ", "DF"), ("डीएफ", "DF")
+    ]
+    for cw, l in compound_words:
+        pattern = r'(^|[\s.,!?।\-_])' + re.escape(cw) + r'(?=[\s.,!?।\-_0-9]|$)'
+        text = re.sub(pattern, r'\g<1>' + l, text, flags=re.IGNORECASE)
+
+    # 4. Single-letter phonetic words
+    regional_letters = [
+        ("ડબલ્યુ", "W"), ("डब्लू", "W"), ("डब्ल्यू", "W"), ("डबल्यू", "W"),
+        ("ઝેડ", "Z"), ("ज़ेड", "Z"), ("जेड", "Z"), ("ঝেদ", "Z"),
+        ("એક્સ", "X"), ("एक्स", "X"),
+        ("વાય", "Y"), ("वाई", "Y"),
+        ("આઈ", "I"), ("આઇ", "I"), ("आई", "I"), ("आइ", "I"),
+        ("ક્યૂ", "Q"), ("क्यू", "Q"),
+        ("એચ", "H"), ("एच", "H"),
+        ("એફ", "F"), ("एफ", "F"), ("ऐफ़", "F"), ("ऐफ", "F"),
+        ("એલ", "L"), ("एल", "L"),
+        ("એમ", "M"), ("एम", "M"),
+        ("એન", "N"), ("एन", "N"),
+        ("એસ", "S"), ("एस", "S"),
+        ("આર", "R"), ("आर", "R"),
+        ("ડી", "D"), ("डी", "D"),
+        ("બી", "B"), ("बी", "B"),
+        ("સી", "C"), ("सी", "C"),
+        ("ટી", "T"), ("टी", "T"),
+        ("વી", "V"), ("वी", "V"),
+        ("પી", "P"), ("पी", "P"),
+        ("જી", "G"), ("जी", "G"),
+        ("જે", "J"), ("जे", "J"),
+        ("કે", "K"), ("के", "K"),
+        ("યુ", "U"), ("यू", "U"),
+        ("ઈ", "E"), ("ई", "E"),
+        ("ઓ", "O"), ("ओ", "O"),
+        ("એ", "A"), ("ए", "A")
+    ]
+    for pw, l in regional_letters:
+        pattern = r'(^|[\s.,!?।\-_])' + re.escape(pw) + r'(?=[\s.,!?।\-_0-9]|$)'
+        text = re.sub(pattern, r'\g<1>' + l, text, flags=re.IGNORECASE)
+
+    # 5. Word-level isolation to pinpoint serial token from conversational sentence
+    words = [w.strip('.,!?।;:()\"\'') for w in text.split()]
+    stop_words = {
+        'hai', 'hain', 'is', 'the', 'of', 'my', 'and', 'to', 'for', 'in', 'on', 'at', 'che', 'chhe',
+        'ne', 'ka', 'ki', 'ke', 'ko', 'se', 'me', 'mai', 'hum', 'ye', 'wo', 'sir', 'bhai', 'bhaiya',
+        'please', 'register', 'complaint', 'engineer', 'technician', 'call', 'machine', 'freezer', 'serial',
+        'number', 'model', 'not', 'nahi', 'nathi', 'cold', 'cooling', 'bill', 'invoice', 'likha', 'likho',
+        'lakhyu', 'bolu', 'chhu', 'joine', 'kahu', 'check', 'hello', 'hi', 'batao', 'bataiye', 'janavo'
+    }
+
+    known_prefixes = {'VCB', 'DF', 'CIM', 'DIM', 'GIM', 'ICE', 'BF'}
+    serial_tokens = []
+    current_chunk = []
+
+    for w in words:
+        w_clean = re.sub(r'[^A-Za-z0-9\-]', '', w).upper()
+        if not w_clean or w.lower() in stop_words:
+            if current_chunk:
+                serial_tokens.append(''.join(current_chunk))
+                current_chunk = []
+            continue
+
+        has_digit = any(c.isdigit() for c in w_clean)
+        is_known_pref = w_clean in known_prefixes
+        is_single_letter = len(w_clean) == 1 and w_clean.isalpha()
+        is_hyphen = w_clean == '-'
+
+        if has_digit or is_known_pref or is_single_letter or is_hyphen or (current_chunk and len(w_clean) <= 4):
+            current_chunk.append(w_clean)
+        else:
+            if current_chunk:
+                serial_tokens.append(''.join(current_chunk))
+                current_chunk = []
+
+    if current_chunk:
+        serial_tokens.append(''.join(current_chunk))
+
+    valid = []
+    for s in serial_tokens:
+        s_clean = re.sub(r'[^a-zA-Z0-9\-]', '', s).upper()
+        s_clean = re.sub(r'\-+', '-', s_clean).strip('-')
+        if any(c.isdigit() for c in s_clean) and len(s_clean) >= 3:
+            valid.append(s_clean)
+
+    if valid:
+        valid.sort(key=lambda x: (any(x.startswith(p) for p in known_prefixes), len(x)), reverse=True)
+        return valid[0]
+
+    # Fallback if no space-separated chunk was found
+    clean = re.sub(r'[^a-zA-Z0-9\-]', '', text).upper()
+    clean = re.sub(r'\-+', '-', clean).strip('-')
+    return clean
+
+def _format_spoken_serial(serial_str: str, lang: str) -> str:
+    """
+    Formats machine serial number character-by-character for clear, distinct speech.
+    Speaks BOTH letters (alphabets in native phonetics), digits, and hyphens/dashes separated by commas.
+    E.g. 'VCB2502116' in Hindi -> 'वी, सी, बी, दो, पांच, शून्य, दो, एक, एक, छह'
+         'DF25008959' in Gujarati -> 'ડી, એફ, બે, પાંચ, ઝીરો, ઝીરો, આઠ, નવ, પાંચ, નવ'
+         'CIM305B501-25030653' in Hindi -> 'सी, आई, एम, तीन, शून्य, पांच, बी, पांच, शून्य, एक, डैश, दो, पांच, शून्य, तीन, शून्य, छह, पांच, तीन'
+         'DIM405BX01-260500067' in English -> 'D, I, M, four, zero, five, B, X, zero, one, dash, two, six, zero, five, zero, zero, zero, six, seven'
+    """
+    if not serial_str:
+        return ""
+    clean = _normalize_alphanumeric_serial(serial_str)
+    if not clean:
+        clean = re.sub(r'[^a-zA-Z0-9\-]', '', str(serial_str)).upper().strip('-')
+    
+    lang_key = lang if lang in SPOKEN_ALPHABET_MAP else "en"
+    alpha_map = SPOKEN_ALPHABET_MAP[lang_key]
     words = []
     for char in clean:
         if char.isdigit():
             words.append(_format_spoken_number(char, lang))
-        elif char.isalnum():
-            words.append(char.upper())
+        elif char.isalpha() or char == '-':
+            words.append(alpha_map.get(char.upper() if char.isalpha() else char, char))
     return ", ".join(w for w in words if w)
 
 def _is_negative(text: str) -> bool:
@@ -334,12 +541,22 @@ def _handle_smart_serial_step(raw_message: str, lang: str, state: dict, session,
 
     # Quick deterministic fast-path if user is confirming an already read-back serial number
     if awaiting_confirm and _is_affirmative(raw_message):
-        confirmed_serial = state.get("pending_serial_number") or state.get("serial_number") or "Freezer"
+        confirmed_serial = state.get("pending_serial_number") or state.get("serial_number") or "Machine"
+        ser_up = confirmed_serial.upper()
+        if ser_up.startswith("VCB"):
+            prod = "Visi Cooler"
+        elif ser_up.startswith("DF"):
+            prod = "Deep Freezer"
+        elif ser_up.startswith(("CIM", "DIM", "GIM")):
+            prod = "Ice Machine"
+        else:
+            prod = "Freezer"
+
         state["serial_number"] = confirmed_serial
         state["machine_sr_no"] = confirmed_serial
-        state["machine_model_no"] = f"Freezer ({confirmed_serial})"
-        state["product_name"] = "Freezer"
-        state["issue_type"] = "Freezer"
+        state["machine_model_no"] = f"{prod} ({confirmed_serial})"
+        state["product_name"] = prod
+        state["issue_type"] = prod
         state["serial_needs_confirmation"] = False
         state["serial_confirmed"] = True
         state.pop("pending_serial_number", None)
@@ -375,9 +592,23 @@ STRICT COMPANY POLICIES & CONVERSATIONAL RULES:
    - If caller does not remember ("yaad nahi", "याद ना थी", "ખબર નથી", "don't know"), lost their bill, is away from the machine, or asks if complaint can be filed without it:
      a) FIRST TURN (guidance not given yet): Warmly reassure the caller. Guide them clearly where to find the serial number (on the metal nameplate near the compressor or on their invoice/bill) and invite them to check.
      b) SECOND TURN (guidance already given, or caller explicitly cannot provide it): Politely and firmly explain that without the machine serial number we cannot register any complaint, invite them to call back once located, and you MUST end your reply with [FLOW_COMPLETE].
-3. NO REPETITION / NEVER LOOP:
+3. PINPOINT SERIAL EXTRACTION FROM LONG SENTENCES (NO CHARACTER LIMIT):
+   - NO CHARACTER LIMIT: Machine serial numbers can be of ANY LENGTH (short, medium, or very long, e.g. 5, 8, 10, 18, 19, 25+ characters). NEVER truncate, drop characters, or refuse due to length!
+   - EMBEDDED IN SENTENCES: Callers almost never state just the serial number. They give long explanations, complaints, or sentences with the serial number embedded anywhere (in the beginning, middle, or end).
+   - EXAMPLES OF PINPOINT EXTRACTION:
+     * "हाँ भैया मेरा फ्रीजर चालू नहीं हो रहा है और उसका सीरियल नंबर VCB2502116 है तो कब तक इंजीनियर आएगा?" -> extracted_serial: "VCB2502116"
+     * "હું દુકાન પરથી બોલું છું, અમારું ડીપ ફ્રીઝર બગડી ગયું છે અને મશીન પર DF25008959 લખેલું છે જલ્દી માણસ મોકલો" -> extracted_serial: "DF25008959"
+     * "Sir we bought this unit last year and I checked the invoice it is CIM305B501-25030653 please register complaint" -> extracted_serial: "CIM305B501-25030653"
+     * "अरे भाई वो मशीन पे लिखा है सी आई एम 305 बी 501 डैश 25030653 यही नंबर है ना?" -> extracted_serial: "CIM305B501-25030653"
+     * "હા ભાઈ અમારે આઈસ ફેક્ટરી છે અને મશીન પર ડીઆઈએમ 405 બીએક્સ 01 - 260500067 લખ્યું છે તો જલ્દીથી કમ્પ્લેન નોંધી લો" -> extracted_serial: "DIM405BX01-260500067"
+     * "मेरा फ्रीजर ठंडा नहीं कर रहा सीरियल नंबर है 94285123456789 जल्दी इंजीनियर भेजो" -> extracted_serial: "94285123456789"
+     * "हमारा मशीन का नंबर है जी आई एम 268 ई 404 - 261000012 इसको नोट कर लो" -> extracted_serial: "GIM268E404-261000012"
+   - ALWAYS capture the complete alphanumeric sequence including prefix letters ("VCB", "DF", "CIM", "DIM", "GIM"), internal letters ('B', 'BX', 'E'), digits, and hyphens ('-').
+   - Convert all spoken regional phonetics to uppercase Latin characters.
+   - Discard all conversational dialogue, complaints, and filler words. Return ONLY the clean uppercase machine serial string in "extracted_serial".
+4. NO REPETITION / NEVER LOOP:
    Never repeat the exact same sentence or ask repeatedly without answering the user. If they ask a side question (warranty, visit fee, engineer timing), answer it directly in 1 short sentence, then smoothly bring the conversation back to the serial number.
-4. TONE & LENGTH:
+5. TONE & LENGTH:
    Warm, polite, natural spoken Indian conversational tone. Exactly 1-2 concise sentences in {lang}. Do not sound robotic. Never use bullet points in reply."""
 
         user_prompt = f"""Caller Utterance: "{raw_message}"
@@ -386,7 +617,7 @@ Context:
 - System currently waiting for customer to confirm serial number '{pending_serial}': {awaiting_confirm}
 
 Classify caller's intent into ONE of:
-- PROVIDE_SERIAL: customer stated a serial number or model code.
+- PROVIDE_SERIAL: customer stated an alphanumeric serial number (contains letters and/or numbers) or model code.
 - CONFIRM_YES: customer confirms readback serial is correct (yes/haan/sahi hai/barabar).
 - CONFIRM_NO: customer says readback serial is incorrect (no/nahi/galat).
 - WAIT: customer asks to hold/wait/give time.
@@ -397,7 +628,7 @@ Classify caller's intent into ONE of:
 Return JSON only:
 {{
   "intent": "PROVIDE_SERIAL" | "CONFIRM_YES" | "CONFIRM_NO" | "WAIT" | "WHERE_IS_SERIAL" | "CANNOT_PROVIDE" | "QUESTION",
-  "extracted_serial": "cleaned serial number if intent is PROVIDE_SERIAL else empty",
+  "extracted_serial": "Clean UPPERCASE alphanumeric serial number (e.g. \'VCB2502116\', \'DF25008959\', \'CIM305B501-25030653\', \'DIM405BX01-260500067\', \'GIM268E404-261000012\', \'94285\') if intent is PROVIDE_SERIAL else empty",
   "reply": "Warm, natural 1-sentence reply in {lang}."
 }}"""
 
@@ -421,12 +652,22 @@ Return JSON only:
     next_step = 6
 
     if intent == "CONFIRM_YES" or (awaiting_confirm and _is_affirmative(raw_message)):
-        confirmed_serial = state.get("pending_serial_number") or state.get("serial_number") or "Freezer"
+        confirmed_serial = state.get("pending_serial_number") or state.get("serial_number") or "Machine"
+        ser_up = confirmed_serial.upper()
+        if ser_up.startswith("VCB"):
+            prod = "Visi Cooler"
+        elif ser_up.startswith("DF"):
+            prod = "Deep Freezer"
+        elif ser_up.startswith(("CIM", "DIM", "GIM")):
+            prod = "Ice Machine"
+        else:
+            prod = "Freezer"
+
         state["serial_number"] = confirmed_serial
         state["machine_sr_no"] = confirmed_serial
-        state["machine_model_no"] = f"Freezer ({confirmed_serial})"
-        state["product_name"] = "Freezer"
-        state["issue_type"] = "Freezer"
+        state["machine_model_no"] = f"{prod} ({confirmed_serial})"
+        state["product_name"] = prod
+        state["issue_type"] = prod
         state["serial_needs_confirmation"] = False
         state["serial_confirmed"] = True
         state.pop("pending_serial_number", None)
@@ -435,20 +676,23 @@ Return JSON only:
         next_step = 7
         reply = STEP7_PROMPTS.get(lang, STEP7_PROMPTS["en"])
 
-    elif intent == "CONFIRM_NO" or (awaiting_confirm and _is_negative(raw_message)):
-        state["pending_serial_number"] = ""
-        state["serial_needs_confirmation"] = False
-        next_step = 6
-        reply = ICEMAKE_V2_SERIAL_REASK.get(lang, ICEMAKE_V2_SERIAL_REASK["en"])
-
-    elif intent == "PROVIDE_SERIAL" or (len(re.findall(r'\d+', raw_message)) > 0 and len("".join(re.findall(r'\d+', raw_message))) >= 3):
-        serial_val = extracted if extracted else _clean_model_or_serial(raw_message)
+    elif intent == "PROVIDE_SERIAL" or (extracted and len(extracted) >= 3) or (len(re.findall(r'\d+', raw_message)) > 0 and len("".join(re.findall(r'\d+', raw_message))) >= 3):
+        raw_val = extracted if extracted else _clean_model_or_serial(raw_message)
+        serial_val = _normalize_alphanumeric_serial(raw_val)
+        if not serial_val:
+            serial_val = raw_val
         state["pending_serial_number"] = serial_val
         state["serial_needs_confirmation"] = True
         next_step = 6
         spoken_serial = _format_spoken_serial(serial_val, lang)
         template = ICEMAKE_V2_SERIAL_CONFIRM.get(lang, ICEMAKE_V2_SERIAL_CONFIRM["en"])
         reply = template.format(serial=spoken_serial)
+
+    elif intent == "CONFIRM_NO" or (awaiting_confirm and _is_negative(raw_message)):
+        state["pending_serial_number"] = ""
+        state["serial_needs_confirmation"] = False
+        next_step = 6
+        reply = ICEMAKE_V2_SERIAL_REASK.get(lang, ICEMAKE_V2_SERIAL_REASK["en"])
 
     elif intent == "WAIT":
         state["serial_wait_requested"] = True

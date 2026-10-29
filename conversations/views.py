@@ -1502,8 +1502,16 @@ def sarvam_cdr_webhook(request):
             or "Customer"
         )
 
-        # ✅ Detect which SarvamAgent this CDR belongs to using app_id, agent_phone, deployment_id, or keyword matching
-        cdr_app_id = str(raw_data.get("app_id") or raw_data.get("agent_id") or raw_data.get("appId") or metadata.get("app_id") or "").strip()
+        # ✅ Detect which SarvamAgent this CDR belongs to using app_id, agent_id, slug, agent_phone, deployment_id, or keyword matching
+        cdr_app_id = str(
+            raw_data.get("app_id")
+            or raw_data.get("agent_id")
+            or raw_data.get("appId")
+            or raw_data.get("agentId")
+            or metadata.get("app_id")
+            or metadata.get("agent_id")
+            or ""
+        ).strip()
         cdr_agent_phone = str(
             raw_data.get("agent_phone_number")
             or raw_data.get("agent_phone")
@@ -1518,8 +1526,15 @@ def sarvam_cdr_webhook(request):
         deployment_id = str(raw_data.get("deployment_id") or metadata.get("deployment_id") or "").strip()
         webhook_sarvam_agent = None
 
-        if cdr_app_id:
+        if cdr_app_id and cdr_app_id.lower() not in ("none", "null", ""):
+            # 1. Direct app_id match
             webhook_sarvam_agent = SarvamAgent.objects.filter(app_id=cdr_app_id, is_active=True).first()
+            # 2. Direct slug match
+            if not webhook_sarvam_agent:
+                webhook_sarvam_agent = SarvamAgent.objects.filter(slug__iexact=cdr_app_id, is_active=True).first()
+            # 3. Direct ID match if numeric
+            if not webhook_sarvam_agent and cdr_app_id.isdigit():
+                webhook_sarvam_agent = SarvamAgent.objects.filter(id=int(cdr_app_id), is_active=True).first()
         if not webhook_sarvam_agent and cdr_agent_phone:
             clean_agent_phone = "".join(filter(str.isdigit, str(cdr_agent_phone)))
             if len(clean_agent_phone) >= 10:
@@ -1590,7 +1605,11 @@ def sarvam_cdr_webhook(request):
                             break
 
         if not webhook_sarvam_agent:
-            webhook_sarvam_agent = SarvamAgent.objects.filter(is_active=True).first()
+            # Fallback ONLY if no app_id or phone was specified at all (single-tenant legacy fallback)
+            if not cdr_app_id and not cdr_agent_phone:
+                webhook_sarvam_agent = SarvamAgent.objects.filter(is_active=True).first()
+            else:
+                print(f"⚠️ [CDR SECURITY]: Webhook for unknown app_id '{cdr_app_id}' / phone '{cdr_agent_phone}' - not bound to any agent to prevent cross-tenant leakage.")
 
         print(f"🔍 [SARVAM CDR] Resolved agent: {webhook_sarvam_agent.name if webhook_sarvam_agent else 'DEFAULT (env)'} | app_id={cdr_app_id} | deployment_id={deployment_id}")
 
@@ -1785,13 +1804,24 @@ def sarvam_cdr_webhook(request):
             if duration < 10 and transcript_dur >= 15:
                 duration = max(duration, transcript_dur)
 
-        # Build summary from all rich fields in the root payload
-        if not output_vars and raw_data:
-            ignored_keys = {"call", "metadata", "interaction_id", "interactionId", "call_id", "callId", "attempt_id", "attemptId",
-                            "user_phone_number", "phone_number", "user_identifier", "status", "duration",
-                            "transcript", "call_transcript", "conversation_log", "call_start_time", "call_end_time", "call_length",
-                            "agent_phone", "agent_phone_number", "provider_reference_id", "campaign_id"}
-            output_vars = {k: v for k, v in raw_data.items() if k not in ignored_keys and v}
+        # Build summary from all rich fields in the root payload (including custom booking/sales variables)
+        top_level_vars = {}
+        ignored_keys = {
+            "call", "metadata", "interaction_id", "interactionId", "call_id", "callId", "attempt_id", "attemptId",
+            "user_phone_number", "phone_number", "user_identifier", "status", "duration",
+            "transcript", "call_transcript", "conversation_log", "call_start_time", "call_end_time", "call_length",
+            "agent_phone", "agent_phone_number", "provider_reference_id", "campaign_id"
+        }
+        for k, v in raw_data.items():
+            if k not in ignored_keys and v is not None and str(v).strip() != "":
+                top_level_vars[k] = v
+
+        if not output_vars:
+            output_vars = top_level_vars
+        else:
+            merged = dict(top_level_vars)
+            merged.update(output_vars)
+            output_vars = merged
 
         # Clean empty string attempt_id to None to avoid unique constraint issues
         clean_attempt_id = attempt_id if attempt_id else None
@@ -2116,6 +2146,14 @@ def sarvam_cdr_webhook(request):
             t = threading.Thread(target=_retry_fetch_recording, args=(record_id, iid), daemon=True)
             t.start()
             print(f"⏳ [RECORDING RETRY] Scheduled background retry for record #{rec.id} (interaction: {iid})")
+
+        # ── SAFE TRIGGER: WHATSAPP AUTOMATION (Per-Agent Multi-Tenant) ──
+        if rec:
+            try:
+                from whatsapp_automation.services.dispatcher import trigger_whatsapp_for_call
+                trigger_whatsapp_for_call(rec, async_mode=True)
+            except Exception as _wa_err:
+                print(f"⚠️ [WHATSAPP HOOK FROM CDR NOTICE]: {_wa_err}")
 
         return Response({
             "status": "success",

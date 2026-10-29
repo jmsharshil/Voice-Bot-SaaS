@@ -116,6 +116,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "bot",
+    "whatsapp_automation",
 ]
 
 REST_FRAMEWORK = {
@@ -335,6 +336,8 @@ SIMPLE_JWT = {
 # =========================
 
 if not DEBUG:
+    _azure_log_dir = '/home/site/wwwroot'
+    _error_log_path = '/home/site/wwwroot/django_errors.log' if (os.name != 'nt' and os.path.exists('/home/site/wwwroot')) else str(BASE_DIR / 'django_errors.log')
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
@@ -350,7 +353,7 @@ if not DEBUG:
             'file': {
                 'level': 'ERROR',
                 'class': 'logging.FileHandler',
-                'filename': '/home/site/wwwroot/django_errors.log',
+                'filename': _error_log_path,
                 'formatter': 'verbose',
             },
         },
