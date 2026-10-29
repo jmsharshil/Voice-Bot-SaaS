@@ -5658,6 +5658,9 @@
                     renderLeads(allLeadsData);
                 }
             }
+            if (typeof syncAiCopilotDocking === 'function') {
+                setTimeout(syncAiCopilotDocking, 60);
+            }
         }
 
         function renderKanbanBoard(leads, pipelineCounts) {
@@ -7499,10 +7502,19 @@
 
             if (!infoEl || !controlsEl) return;
 
+            // Safely stash AI Copilot launcher in host before updating pagination DOM
+            const launcher = document.getElementById('aiCopilotLauncherBtn');
+            const host = document.getElementById('aiCopilotLauncherHost') || document.body;
+            if (launcher && launcher.parentElement && launcher.parentElement !== host) {
+                host.appendChild(launcher);
+                launcher.classList.remove('docked');
+            }
+
             if (total === 0) {
                 infoEl.innerHTML = `Showing <strong>0</strong> inquiries`;
                 controlsEl.innerHTML = '';
                 if (paginationBar) paginationBar.style.display = 'none';
+                if (typeof syncAiCopilotDocking === 'function') syncAiCopilotDocking();
                 return;
             }
 
@@ -7515,7 +7527,9 @@
             if (totalPages <= 1) {
                 controlsEl.innerHTML = `
                     <button class="page-btn active" aria-current="page">1</button>
+                    <span id="aiCopilotDockSlot" class="ai-copilot-dock-slot"></span>
                 `;
+                if (typeof syncAiCopilotDocking === 'function') syncAiCopilotDocking();
                 return;
             }
 
@@ -7568,7 +7582,11 @@
                 </button>
             `;
 
+            // Smart Dock Slot beside the Next (>) Button
+            buttonsHtml += `<span id="aiCopilotDockSlot" class="ai-copilot-dock-slot"></span>`;
+
             controlsEl.innerHTML = buttonsHtml;
+            if (typeof syncAiCopilotDocking === 'function') syncAiCopilotDocking();
         }
 
         function formatLanguage(lang) {
