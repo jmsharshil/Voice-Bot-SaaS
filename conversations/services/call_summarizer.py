@@ -298,6 +298,13 @@ def process_and_save_call_record_summary(call_record_id, async_mode=True):
                 f"-> Status: {rec.status} | Tags: {analysis['tags']} | Summary: {analysis['call_summary'][:60]}..."
             )
 
+            # ── SAFE TRIGGER: WHATSAPP AUTOMATION WITH REFINED SUMMARY ──
+            try:
+                from whatsapp_automation.services.dispatcher import trigger_whatsapp_for_call
+                trigger_whatsapp_for_call(rec, async_mode=True)
+            except Exception as _wa_err:
+                logger.warning(f"⚠️ [WHATSAPP HOOK FROM SUMMARIZER]: {_wa_err}")
+
         except Exception as e:
             logger.error(f"❌ [CALL AI SUMMARY ERROR]: Record #{rec_id} - {e}", exc_info=True)
         finally:

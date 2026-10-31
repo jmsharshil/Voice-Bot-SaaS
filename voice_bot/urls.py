@@ -71,6 +71,8 @@ urlpatterns = [
     # path("webhook/whatsapp/", whatsapp_webhook),
     path('', include('assistant.urls')),
     path('bot/', include('bot.urls')),
+    path('whatsapp/', include('whatsapp_automation.urls')),
+    path('api/whatsapp/', include('whatsapp_automation.urls')),
 ]
 
 from django.conf import settings

@@ -3,6 +3,7 @@
 <!-- ============================================================ -->
 
 <!-- Floating AI Copilot Trigger Button (Bottom Right above/beside support) -->
+<div id="aiCopilotLauncherHost" class="ai-copilot-launcher-host">
 <button type="button" id="aiCopilotLauncherBtn" class="ai-copilot-launcher" onclick="toggleDashboardAiCopilot(event)" title="Ask AI about your leads, calls & dashboard metrics">
     <span class="ai-launcher-icon">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -12,6 +13,7 @@
     <span class="ai-launcher-text">Ask AI Copilot</span>
     <span class="ai-launcher-sparkle">✨</span>
 </button>
+</div>
 
 <!-- Backdrop Overlay -->
 <div id="aiCopilotBackdrop" class="ai-copilot-backdrop" onclick="closeDashboardAiCopilot()"></div>
@@ -151,28 +153,27 @@
 /* Floating Launcher Button */
 .ai-copilot-launcher {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: 16px;
+    right: 16px;
     left: auto;
     z-index: 99990;
     display: inline-flex;
     align-items: center;
-    gap: 9px;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
     color: #ffffff;
     border: none;
-    border-radius: 30px;
-    padding: 11px 18px 11px 16px;
-    font-size: 13.5px;
-    font-weight: 700;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 10px 25px -4px rgba(37, 99, 235, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    box-shadow: 0 6px 16px -3px rgba(37, 99, 235, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
     transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .ai-copilot-launcher:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 14px 30px -4px rgba(37, 99, 235, 0.55), 0 0 0 2px rgba(255, 255, 255, 0.3) inset;
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 10px 22px -4px rgba(37, 99, 235, 0.55), 0 0 0 2px rgba(255, 255, 255, 0.3) inset;
     background: linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%);
 }
 .ai-launcher-icon {
@@ -181,13 +182,61 @@
     justify-content: center;
     animation: aiSpinSlow 12s linear infinite;
 }
+.ai-launcher-icon svg { width: 20px; height: 20px; }
 @keyframes aiSpinSlow {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+
+.ai-copilot-launcher-host {
+    display: contents;
+}
+
+/* Docked State: smoothly placed beside the (>) arrow in the pagination controls */
+.ai-copilot-dock-slot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+
+.ai-copilot-launcher.docked {
+    position: static !important;
+    bottom: auto !important;
+    right: auto !important;
+    left: auto !important;
+    top: auto !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 50% !important;
+    margin: 0 !important;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35) !important;
+    flex-shrink: 0 !important;
+    vertical-align: middle !important;
+}
+.ai-copilot-launcher.docked:hover {
+    transform: translateY(-1px) scale(1.06) !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5) !important;
+}
+.ai-copilot-launcher.docked .ai-launcher-icon svg {
+    width: 17px !important;
+    height: 17px !important;
+}
+
+/* Compact mode: label lives in the tooltip (title attr) */
+.ai-launcher-text,
 .ai-launcher-sparkle {
-    font-size: 14px;
-    margin-left: 2px;
+    display: none;
+}
+
+
+.col-foot-pagination {
+    margin-right: 0;
+}
+body {
+    scroll-padding-bottom: 80px;
 }
 
 /* Auto-hide floating launcher when sidebar is open */
@@ -222,13 +271,13 @@ body.sidebar-open .ai-copilot-launcher {
 .ai-copilot-window {
     display: none;
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: 68px;
+    right: 16px;
     left: auto;
-    width: 440px;
+    width: 380px;
     max-width: calc(100vw - 32px);
-    height: 620px;
-    max-height: calc(100vh - 48px);
+    height: 520px;
+    max-height: calc(100vh - 96px);
     background: #ffffff;
     border-radius: 18px;
     box-shadow: 0 20px 50px -10px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(15, 23, 42, 0.08);
@@ -710,12 +759,13 @@ body.sidebar-open .ai-copilot-launcher {
         border-bottom-right-radius: 0;
     }
     .ai-copilot-launcher {
-        bottom: 16px;
-        right: 16px;
+        bottom: 12px;
+        right: 12px;
         left: auto;
-        padding: 9px 14px;
-        font-size: 12.5px;
+        width: 40px;
+        height: 40px;
     }
+    
 }
 </style>
 
@@ -723,6 +773,77 @@ body.sidebar-open .ai-copilot-launcher {
 /* ============================================================ */
 /* AI DASHBOARD COPILOT CLIENT LOGIC                            */
 /* ============================================================ */
+
+
+/* ============================================================ */
+/* AI COPILOT SMART DOCKING LOGIC                               */
+/* ============================================================ */
+
+function isPaginationInViewport() {
+    const bar = document.getElementById('leadsPaginationBar');
+    if (!bar) return false;
+    if (bar.offsetParent === null && window.getComputedStyle(bar).display === 'none') {
+        return false;
+    }
+    const rect = bar.getBoundingClientRect();
+    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+    // Considered in viewport if its top has entered screen and bottom is above top
+    return rect.top < windowHeight && rect.bottom > 0;
+}
+
+function syncAiCopilotDocking() {
+    const launcher = document.getElementById('aiCopilotLauncherBtn');
+    const slot = document.getElementById('aiCopilotDockSlot');
+    const host = document.getElementById('aiCopilotLauncherHost') || document.body;
+    if (!launcher) return;
+
+    const inView = isPaginationInViewport();
+    const slotAttached = slot && document.body.contains(slot);
+    const shouldDock = inView && slotAttached;
+
+    if (shouldDock) {
+        if (launcher.parentElement !== slot) {
+            slot.appendChild(launcher);
+        }
+        launcher.classList.add('docked');
+    } else {
+        if (launcher.parentElement !== host) {
+            host.appendChild(launcher);
+        }
+        launcher.classList.remove('docked');
+    }
+}
+
+window.syncAiCopilotDocking = syncAiCopilotDocking;
+
+let aiDockTicking = false;
+function onAiCopilotScrollOrResize() {
+    if (!aiDockTicking) {
+        window.requestAnimationFrame(() => {
+            syncAiCopilotDocking();
+            aiDockTicking = false;
+        });
+        aiDockTicking = true;
+    }
+}
+
+window.addEventListener('scroll', onAiCopilotScrollOrResize, { passive: true });
+window.addEventListener('resize', onAiCopilotScrollOrResize, { passive: true });
+
+document.addEventListener('DOMContentLoaded', function() {
+    syncAiCopilotDocking();
+
+    // Use IntersectionObserver when available for instant reactive docking
+    const bar = document.getElementById('leadsPaginationBar');
+    if (bar && window.IntersectionObserver) {
+        const obs = new IntersectionObserver(() => {
+            syncAiCopilotDocking();
+        }, {
+            threshold: [0, 0.1, 0.5, 1.0]
+        });
+        obs.observe(bar);
+    }
+});
 
 const aiCopilotHistory = [];
 let aiCopilotIsSending = false;
