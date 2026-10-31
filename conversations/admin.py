@@ -354,3 +354,14 @@ class CallDetailRecordAdmin(admin.ModelAdmin):
     search_fields = ("phone_number", "uniqueid", "recording_file_name")
     readonly_fields = ("received_at",)
     ordering = ("-received_at",)
+
+
+from .models import KylasCityAgentMapping
+
+@admin.register(KylasCityAgentMapping)
+class KylasCityAgentMappingAdmin(admin.ModelAdmin):
+    list_display = ("city_name", "sarvam_agent", "is_active", "notes", "updated_at")
+    list_filter = ("is_active", "sarvam_agent")
+    search_fields = ("city_name", "notes", "sarvam_agent__name")
+    list_editable = ("is_active",)
+    ordering = ("city_name",)
