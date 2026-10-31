@@ -1707,6 +1707,24 @@ def sarvam_cdr_webhook(request):
             if rec:
                 print(f"🎯 [CDR MATCH]: Matched incoming webhook for candidate '{candidate_name}' to existing call record #{rec.id} (Phone: {rec.phone_number}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'})")
 
+        # ✅ MATCH TATA SMARTFLO INBOUND CALLS:
+        # If rec not found yet and this call belongs to webhook_sarvam_agent (or caller number was unknown in Sarvam CDR),
+        # match against recent IN_PROGRESS / DIALING inbound call record created by Tata Smartflo in the last 45 minutes:
+        if not rec and webhook_sarvam_agent:
+            from datetime import timedelta
+            from django.utils import timezone
+            tata_threshold = timezone.now() - timedelta(minutes=45)
+            tata_inbound_qs = SarvamCallRecord.objects.filter(
+                sarvam_agent=webhook_sarvam_agent,
+                status__in=["IN_PROGRESS", "DIALING", "ringing", "answered"],
+                call_type__icontains="Inbound",
+                created_at__gte=tata_threshold
+            )
+            # Prioritize matching an inbound record that doesn't have an interaction_id yet
+            rec = tata_inbound_qs.filter(interaction_id__isnull=True).order_by("-created_at").first() or tata_inbound_qs.order_by("-created_at").first()
+            if rec:
+                print(f"🎯 [TATA SMARTFLO CDR MATCH]: Linked Sarvam CDR (interaction_id: {interaction_id}) to Tata inbound record #{rec.id} (Phone: {rec.phone_number}, Agent: {webhook_sarvam_agent.name})")
+
         language_val = (
             raw_data.get("detected_language")
             or raw_data.get("language")
@@ -1866,7 +1884,8 @@ def sarvam_cdr_webhook(request):
 
             # Ensure call_type consistency for outbound calls
             url_call_type = request.GET.get("call_type")
-            if (url_call_type == "outbound" or attempt_id or raw_data.get("direction") == "outbound" or call_obj.get("direction") == "outbound") and rec.call_type != "Outbound Call":
+            is_tata_inbound = (rec.call_type == "Inbound Call") or (rec.attempt_id and str(rec.attempt_id).startswith("tata_"))
+            if not is_tata_inbound and (url_call_type == "outbound" or attempt_id or raw_data.get("direction") == "outbound" or call_obj.get("direction") == "outbound") and rec.call_type != "Outbound Call":
                 rec.call_type = "Outbound Call"
 
             # Backfill sarvam_agent if missing
