@@ -2580,7 +2580,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
         lang = tts_language or self.language
         
         if not skip_local_cache:
-            if getattr(self, "strategy_key", None) in ["icemake", "icemake_strategy"]:
+            if getattr(self, "strategy_key", None) in ["icemake", "icemake_strategy", "icemake_v2", "icemake_v2_strategy"]:
                 greeting_file = "icemake_bot/icemake_greeting.raw"
             elif getattr(self, "strategy_key", None) == "hospital_minimal":
                 greeting_file = "hosp_step1_greeting.raw"
@@ -2829,6 +2829,63 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                     print(f"⚠️ Auto-dialer fallback error: {e}")
 
             threading.Thread(target=_run_lead_analysis, daemon=True).start()
+
+            is_icemake_sync = getattr(self, "strategy_key", None) in ["icemake", "icemake_strategy", "icemake_v2", "icemake_v2_strategy"]
+            if is_icemake_sync:
+                def _sync_icemake_google_sheet():
+                    import time
+                    from django.utils import timezone
+                    from conversations.models import CallDetailRecord
+                    try:
+                        cdr, created = CallDetailRecord.objects.get_or_create(
+                            conversation_id=conv_id,
+                            defaults={
+                                "telecom_call_id": conv_id,
+                                "phone_number": "unknown",
+                                "calldate": timezone.now(),
+                                "did": "919484959435",
+                                "disposition": "ANSWERED",
+                                "call_type": "INBOUND",
+                                "uniqueid": f"conv_{conv_id}",
+                                "matched": True,
+                            }
+                        )
+                        if created:
+                            print(f"📊 [AUTO DISCONNECT CDR CREATED]: CDR #{cdr.id} created for conversation {conv_id}")
+                    except Exception as e_cdr:
+                        print(f"⚠️ Auto CDR creation notice: {e_cdr}")
+
+                    time.sleep(3)
+                    try:
+                        from icemake_bot.models import IcemakeTicket
+                        is_v2 = getattr(self, "strategy_key", None) in ["icemake_v2", "icemake_v2_strategy"]
+                        if is_v2:
+                            from icemake_v2_bot.strategy import (
+                                _append_to_google_sheet,
+                                _send_whatsapp_ticket_confirmation,
+                                _send_whatsapp_engineer_notification
+                            )
+                        else:
+                            from icemake_bot.strategy import (
+                                _append_to_google_sheet,
+                                _send_whatsapp_ticket_confirmation,
+                                _send_whatsapp_engineer_notification
+                            )
+                        ticket = IcemakeTicket.objects.filter(conversation_id=conv_id).first()
+                        if ticket:
+                            print(f"[ICEMAKE POST-DISCONNECT SYNC]: Exporting Ticket #{ticket.ticket_number} to Google Sheet & sending WhatsApp to Customer & Engineer...")
+                            _append_to_google_sheet(ticket)
+                            _send_whatsapp_ticket_confirmation(ticket)
+                            # ⏳ Pause 5.5s to comply with Meta / WASender rate limits
+                            time.sleep(5.5)
+                            _send_whatsapp_engineer_notification(ticket)
+                        else:
+                            print(f"[ICEMAKE POST-DISCONNECT SYNC]: No ticket found for conversation {conv_id}")
+                    except Exception as e_sheet:
+                        print(f"❌ Post-call Icemake sheet/whatsapp sync error: {e_sheet}")
+
+                threading.Thread(target=_sync_icemake_google_sheet, daemon=True).start()
+
             print("📊 Lead analysis started in background...")
 
 # ── SERVER STARTUP PRE-WARMING FOR SAMSUNG LLM BOT ─────────────────────────

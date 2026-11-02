@@ -21,9 +21,15 @@ from .views import (
     dashboard_ai_copilot_api,
 )
 from .incoming_webhooks import incoming_trigger_webhook
+from .tata_webhooks import tata_smartflo_call_start_webhook
 from django.urls import path, re_path
 
 urlpatterns = [
+    # ── TATA SMARTFLO INBOUND CALL-START WEBHOOK ENDPOINTS ────────────
+    path("webhook/tata/call-start/", tata_smartflo_call_start_webhook, name="tata-call-start-default"),
+    path("webhook/tata/call-start/<slug:agent_slug>/", tata_smartflo_call_start_webhook, name="tata-call-start-slug"),
+    path("api/webhook/tata/call-start/", tata_smartflo_call_start_webhook),
+    path("api/webhook/tata/call-start/<slug:agent_slug>/", tata_smartflo_call_start_webhook),
     # ── INBOUND EXTERNAL WEBHOOK TRIGGER ENDPOINTS ────────────────────
     path("webhook/trigger-call/", incoming_trigger_webhook, name="incoming-trigger-webhook-default"),
     path("webhook/trigger-call/<slug:agent_slug>/", incoming_trigger_webhook, name="incoming-trigger-webhook-slug"),

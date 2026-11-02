@@ -223,18 +223,19 @@ def evaluate_rules_for_call(call_record) -> List[Tuple[Any, list, str]]:
 
     from whatsapp_automation.models import WhatsAppRule, WhatsAppMessageLog
 
-    # 2. Fetch all active rules for this agent
+    # 2. Fetch all active post-call rules for this agent
     active_rules = WhatsAppRule.objects.filter(
         agent_config=config,
         is_active=True,
-        template__is_active=True
+        template__is_active=True,
+        trigger_event__in=['POST_CALL', 'BOTH']
     ).select_related("template")
 
     matched_dispatches = []
 
     for rule in active_rules:
-        # Idempotency check: Don't process if already logged (Sent, Delivered, Queued)
-        if WhatsAppMessageLog.objects.filter(call_record=call_record, rule=rule).exists():
+        # Idempotency check: Don't process if already logged for POST_CALL (Sent, Delivered, Queued)
+        if WhatsAppMessageLog.objects.filter(call_record=call_record, rule=rule, trigger_type='POST_CALL').exists():
             continue
 
         if not match_rule_for_call(rule, call_record):

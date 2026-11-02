@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from conversations.models import SarvamAgent, SarvamCallRecord
 from conversations.services.kylas_sarvam_bridge import SarvamAgentService
+from conversations.services.kylas_city_router import resolve_agent_by_city
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +193,16 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
         if not target_agent:
             target_agent = SarvamAgent.objects.filter(is_active=True).first()
 
+        # Dynamic City-to-Agent routing for third-party CRM webhooks (e.g., Kylas CRM)
+        city_agent, detected_city = resolve_agent_by_city(raw_data, fallback_agent=target_agent)
+        if city_agent:
+            if target_agent and city_agent.id != target_agent.id:
+                logger.info(
+                    f"🎯 [KYLAS CITY ROUTER OVERRIDE]: Matched City '{detected_city}'. "
+                    f"Overriding URL Agent '{target_agent.name}' (ID {target_agent.id}) -> Routed to '{city_agent.name}' (ID {city_agent.id})"
+                )
+            target_agent = city_agent
+
         if not target_agent:
             return Response({
                 "status": "error",
@@ -230,11 +241,19 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
             summary={
                 "received_payload": raw_data,
                 "extra_variables": extra_variables,
-                "crm_lead_id": crm_lead_id
+                "crm_lead_id": crm_lead_id,
+                "detected_city": detected_city
             }
         )
 
         logger.info(f"📱 [INCOMING WEBHOOK]: Initiating call for '{candidate_name}' ({clean_phone}) via Agent '{target_agent.name}' (Record #{call_record.id})")
+        print("\n" + "─"*65)
+        print("🎯 [KYLAS CALL TRIGGERED BY CITY ROUTER]")
+        print(f"👤 User / Lead:  {candidate_name} ({clean_phone})")
+        print(f"📍 City Matched: {detected_city or 'None (Default Fallback)'}")
+        print(f"🎙️ Voice Agent:  {target_agent.name} (ID: {target_agent.id})")
+        print(f"📋 Record ID:    #{call_record.id} | Status: DIALING")
+        print("─"*65 + "\n")
 
         sarvam_response = SarvamAgentService.trigger_outbound_call(
             phone_number=clean_phone,

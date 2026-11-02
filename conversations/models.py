@@ -647,3 +647,48 @@ class SystemMaintenanceConfig(models.Model):
 
 
 
+
+
+class KylasCityAgentMapping(models.Model):
+    """
+    Dedicated City/Center-to-Agent Mapping table for Kylas CRM & third-party webhooks.
+    Matches campaign values (e.g. 'Rajkot', 'Vadodara', 'Ahmedabad', 'Delhi', etc.)
+    or city names to the assigned Sarvam Voice Agent.
+    Allows dynamic add/edit/delete in Django Admin without any code changes.
+    """
+    city_name = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="City or Center name as received in payload, e.g. 'Rajkot', 'Vadodara', 'Ahmedabad'"
+    )
+    sarvam_agent = models.ForeignKey(
+        SarvamAgent,
+        on_delete=models.CASCADE,
+        related_name="city_mappings",
+        help_text="Sarvam Voice Agent assigned to handle calls for this city/center"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Enable or disable call routing for this city"
+    )
+    notes = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Optional remarks (e.g. 'Handled by Rajkot local counselor team')"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        if self.city_name:
+            self.city_name = self.city_name.strip()
+
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"{self.city_name} -> {self.sarvam_agent.name} ({status})"
+
+    class Meta:
+        verbose_name = "Kylas City Agent Mapping"
+        verbose_name_plural = "Kylas City Agent Mappings"
+        ordering = ["city_name"]

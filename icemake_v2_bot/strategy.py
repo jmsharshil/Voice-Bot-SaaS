@@ -2015,8 +2015,10 @@ def _create_ticket_db_record(conversation, state):
             }
         )
         print(f"🎫 TICKET LOGGED SUCCESSFULLY: {state.get('ticket_number')}")
+        return ticket
     except Exception as e:
         logger.error("Failed to create IcemakeTicket: %s", e)
+        return None
 
 def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
     """
@@ -2229,8 +2231,12 @@ def _send_meta_whatsapp_template(to_phone: str, template_name: str, parameters: 
             res_data = response.json()
         except Exception:
             res_data = response.text
-        print(f"📲 [META WA SUCCESS]: Template '{template_name}' sent to {clean_phone}. Response: {res_data}")
-        return {"success": True, "response": res_data}
+        if response.status_code in [200, 201]:
+            print(f"📲 [META WA SUCCESS]: Template '{template_name}' sent to {clean_phone}. Response: {res_data}")
+            return {"success": True, "response": res_data}
+        else:
+            print(f"❌ [META WA ERROR]: HTTP {response.status_code} sending Meta template '{template_name}' to {clean_phone}: {res_data}")
+            return {"success": False, "error": res_data}
     except Exception as e:
         logger.error(f"[META WA ERROR] Failed to send Meta template '{template_name}' to {clean_phone}: {e}")
         return {"error": str(e)}
@@ -2253,6 +2259,8 @@ def _send_whatsapp_ticket_confirmation(ticket):
         clean_phone = "".join(filter(str.isdigit, str(target_phone)))
         if len(clean_phone) == 10:
             clean_phone = "91" + clean_phone
+        elif len(clean_phone) == 11 and clean_phone.startswith("0"):
+            clean_phone = "91" + clean_phone[1:]
 
         meta_phone_id = getattr(settings, "ICEMAKE_PHONE_NUMBER_ID", None) or os.getenv("ICEMAKE_PHONE_NUMBER_ID") or getattr(settings, "META_PHONE_NUMBER_ID", None) or os.getenv("META_PHONE_NUMBER_ID")
         meta_access_token = getattr(settings, "WHATSAPP_TOKEN", None) or os.getenv("WHATSAPP_TOKEN") or getattr(settings, "META_ACCESS_TOKEN", None) or os.getenv("META_ACCESS_TOKEN")
@@ -2292,71 +2300,71 @@ def _send_whatsapp_ticket_confirmation(ticket):
 # Exact Zone & State Wise Engineer Mapping Table for Ice Make
 STATE_ENGINEER_MAPPING = {
     # 1. Gujarat Zone - Mr Rutvik (9727721447)
-    "gujarat": {"phone": "919727721447", "name": "Mr Rutvik"},
-    "gujrat": {"phone": "919727721447", "name": "Mr Rutvik"},
-    "ahmedabad": {"phone": "919727721447", "name": "Mr Rutvik"},
-    "surat": {"phone": "919727721447", "name": "Mr Rutvik"},
-    "vadodara": {"phone": "919727721447", "name": "Mr Rutvik"},
-    "rajkot": {"phone": "919727721447", "name": "Mr Rutvik"},
-    "gandhinagar": {"phone": "919727721447", "name": "Mr Rutvik"},
+    "gujarat": {"phone": "919104142402", "name": "Mr Rutvik"},
+    "gujrat": {"phone": "919104142402", "name": "Mr Rutvik"},
+    "ahmedabad": {"phone": "919104142402", "name": "Mr Rutvik"},
+    "surat": {"phone": "919104142402", "name": "Mr Rutvik"},
+    "vadodara": {"phone": "919104142402", "name": "Mr Rutvik"},
+    "rajkot": {"phone": "919104142402", "name": "Mr Rutvik"},
+    "gandhinagar": {"phone": "919104142402", "name": "Mr Rutvik"},
 
     # 2. North Zone – Delhi, Haryana, Uttar Pradesh, Uttarakhand, HP, Punjab, J & K -> Mr Manjit (9998857391)
-    "delhi": {"phone": "919998857391", "name": "Mr Manjit"},
-    "haryana": {"phone": "919998857391", "name": "Mr Manjit"},
-    "uttar pradesh": {"phone": "919998857391", "name": "Mr Manjit"},
-    "up": {"phone": "919998857391", "name": "Mr Manjit"},
-    "uttarakhand": {"phone": "919998857391", "name": "Mr Manjit"},
-    "himachal pradesh": {"phone": "919998857391", "name": "Mr Manjit"},
-    "hp": {"phone": "919998857391", "name": "Mr Manjit"},
-    "punjab": {"phone": "919998857391", "name": "Mr Manjit"},
-    "jammu": {"phone": "919998857391", "name": "Mr Manjit"},
-    "kashmir": {"phone": "919998857391", "name": "Mr Manjit"},
-    "j&k": {"phone": "919998857391", "name": "Mr Manjit"},
-    "j & k": {"phone": "919998857391", "name": "Mr Manjit"},
+    "delhi": {"phone": "919104142402", "name": "Mr Manjit"},
+    "haryana": {"phone": "919104142402", "name": "Mr Manjit"},
+    "uttar pradesh": {"phone": "919104142402", "name": "Mr Manjit"},
+    "up": {"phone": "919104142402", "name": "Mr Manjit"},
+    "uttarakhand": {"phone": "919104142402", "name": "Mr Manjit"},
+    "himachal pradesh": {"phone": "919104142402", "name": "Mr Manjit"},
+    "hp": {"phone": "919104142402", "name": "Mr Manjit"},
+    "punjab": {"phone": "919104142402", "name": "Mr Manjit"},
+    "jammu": {"phone": "919104142402", "name": "Mr Manjit"},
+    "kashmir": {"phone": "919104142402", "name": "Mr Manjit"},
+    "j&k": {"phone": "919104142402", "name": "Mr Manjit"},
+    "j & k": {"phone": "919104142402", "name": "Mr Manjit"},
 
     # 3. East Zone – Kolkata, West Bengal, Assam, Bihar, Chhattisgarh, Orissa/Odisha, Jharkhand -> Mr Mahesh (9512037115)
-    "kolkata": {"phone": "919512037115", "name": "Mr Mahesh"},
-    "kolkatta": {"phone": "919512037115", "name": "Mr Mahesh"},
-    "west bengal": {"phone": "919512037115", "name": "Mr Mahesh"},
-    "bengal": {"phone": "919512037115", "name": "Mr Mahesh"},
-    "assam": {"phone": "919512037115", "name": "Mr Mahesh"},
-    "bihar": {"phone": "919512037115", "name": "Mr Mahesh"},
-    "chhattisgarh": {"phone": "919512037115", "name": "Mr Mahesh"},
-    "chattisgarh": {"phone": "919512037115", "name": "Mr Mahesh"},
-    "odisha": {"phone": "919512037115", "name": "Mr Mahesh"},
-    "orissa": {"phone": "919512037115", "name": "Mr Mahesh"},
-    "jharkhand": {"phone": "919512037115", "name": "Mr Mahesh"},
+    "kolkata": {"phone": "919913381306", "name": "Mr Mahesh"},
+    "kolkatta": {"phone": "919913381306", "name": "Mr Mahesh"},
+    "west bengal": {"phone": "919913381306", "name": "Mr Mahesh"},
+    "bengal": {"phone": "919913381306", "name": "Mr Mahesh"},
+    "assam": {"phone": "919913381306", "name": "Mr Mahesh"},
+    "bihar": {"phone": "919913381306", "name": "Mr Mahesh"},
+    "chhattisgarh": {"phone": "919913381306", "name": "Mr Mahesh"},
+    "chattisgarh": {"phone": "919913381306", "name": "Mr Mahesh"},
+    "odisha": {"phone": "919913381306", "name": "Mr Mahesh"},
+    "orissa": {"phone": "919913381306", "name": "Mr Mahesh"},
+    "jharkhand": {"phone": "919913381306", "name": "Mr Mahesh"},
 
     # 4. West Zone – Maharashtra, Rajasthan, Madhya Pradesh, Goa -> Mr Ashok (9998701129)
-    "maharashtra": {"phone": "919998701129", "name": "Mr Ashok"},
-    "maharastra": {"phone": "919998701129", "name": "Mr Ashok"},
-    "mumbai": {"phone": "919998701129", "name": "Mr Ashok"},
-    "pune": {"phone": "919998701129", "name": "Mr Ashok"},
-    "rajasthan": {"phone": "919998701129", "name": "Mr Ashok"},
-    "jaipur": {"phone": "919998701129", "name": "Mr Ashok"},
-    "madhya pradesh": {"phone": "919998701129", "name": "Mr Ashok"},
-    "madyapradesh": {"phone": "919998701129", "name": "Mr Ashok"},
-    "mp": {"phone": "919998701129", "name": "Mr Ashok"},
-    "indore": {"phone": "919998701129", "name": "Mr Ashok"},
-    "bhopal": {"phone": "919998701129", "name": "Mr Ashok"},
-    "goa": {"phone": "919998701129", "name": "Mr Ashok"},
+    "maharashtra": {"phone": "919913381306", "name": "Mr Ashok"},
+    "maharastra": {"phone": "919913381306", "name": "Mr Ashok"},
+    "mumbai": {"phone": "919913381306", "name": "Mr Ashok"},
+    "pune": {"phone": "919913381306", "name": "Mr Ashok"},
+    "rajasthan": {"phone": "919913381306", "name": "Mr Ashok"},
+    "jaipur": {"phone": "919913381306", "name": "Mr Ashok"},
+    "madhya pradesh": {"phone": "919913381306", "name": "Mr Ashok"},
+    "madyapradesh": {"phone": "919913381306", "name": "Mr Ashok"},
+    "mp": {"phone": "919913381306", "name": "Mr Ashok"},
+    "indore": {"phone": "919913381306", "name": "Mr Ashok"},
+    "bhopal": {"phone": "919913381306", "name": "Mr Ashok"},
+    "goa": {"phone": "919913381306", "name": "Mr Ashok"},
 
     # 5. South Zone – Kerala, Tamil Nadu, Telangana, Karnataka, Andhra Pradesh -> Ms Vaidehi (9512015593)
-    "kerala": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "tamil nadu": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "tamilnadu": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "chennai": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "telangana": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "telungana": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "hyderabad": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "karnataka": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "bangalore": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "bengaluru": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "andhra pradesh": {"phone": "919512015593", "name": "Ms Vaidehi"},
-    "andhra": {"phone": "919512015593", "name": "Ms Vaidehi"},
+    "kerala": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "tamil nadu": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "tamilnadu": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "chennai": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "telangana": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "telungana": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "hyderabad": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "karnataka": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "bangalore": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "bengaluru": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "andhra pradesh": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    "andhra": {"phone": "919427285653", "name": "Ms Vaidehi"},
 }
 
-DEFAULT_ENGINEER_PHONE = "919157885377"
+DEFAULT_ENGINEER_PHONE = "919427285653"
 DEFAULT_ENGINEER_NAME = "Mr Uchit"
 
 def get_engineer_for_state(location_str: str) -> tuple:
@@ -2406,6 +2414,8 @@ def _send_whatsapp_engineer_notification(ticket):
         clean_eng = "".join(filter(str.isdigit, str(engineer_number)))
         if len(clean_eng) == 10:
             clean_eng = "91" + clean_eng
+        elif len(clean_eng) == 11 and clean_eng.startswith("0"):
+            clean_eng = "91" + clean_eng[1:]
 
         meta_phone_id = getattr(settings, "ICEMAKE_PHONE_NUMBER_ID", None) or os.getenv("ICEMAKE_PHONE_NUMBER_ID") or getattr(settings, "META_PHONE_NUMBER_ID", None) or os.getenv("META_PHONE_NUMBER_ID")
         meta_access_token = getattr(settings, "META_ACCESS_TOKEN", None) or os.getenv("META_ACCESS_TOKEN") or getattr(settings, "WHATSAPP_TOKEN", None) or os.getenv("WHATSAPP_TOKEN")

@@ -7397,7 +7397,9 @@
 
         function getStatusBadge(status) {
             const s = (status || '').toUpperCase().trim();
-            if (s.includes('NOT_INTERESTED') || s.includes('NOT INTERESTED') || s.includes('REJECTED') || s.includes('DECLINED')) {
+            if (s.includes('PROGRESS') || s.includes('DIALING') || s.includes('RINGING') || s === 'IN_CALL') {
+                return `<span class="badge badge-yellow" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a;"><i class="fa-solid fa-spinner fa-spin"></i> In Call</span>`;
+            } else if (s.includes('NOT_INTERESTED') || s.includes('NOT INTERESTED') || s.includes('REJECTED') || s.includes('DECLINED')) {
                 return `<span class="badge badge-red"><i class="fa-solid fa-ban"></i> Not Interested</span>`;
             } else if (s.includes('CALLBACK') || s.includes('WHATSAPP') || s.includes('OFFER') || s.includes('FOLLOW_UP')) {
                 return `<span class="badge badge-yellow"><i class="fa-solid fa-phone"></i> Callback Requested</span>`;

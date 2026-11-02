@@ -81,13 +81,14 @@ class WhatsAppTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(WhatsAppRule)
 class WhatsAppRuleAdmin(admin.ModelAdmin):
-    list_display = ('rule_name', 'agent_name', 'template_display', 'trigger_statuses', 'min_duration_seconds', 'is_active_badge', 'created_at')
-    list_filter = ('is_active', 'agent_config__agent')
+    list_display = ('rule_name', 'agent_name', 'template_display', 'trigger_event', 'trigger_statuses', 'min_duration_seconds', 'is_active_badge', 'created_at')
+    list_filter = ('trigger_event', 'is_active', 'agent_config__agent')
     search_fields = ('rule_name', 'agent_config__agent__name', 'template__template_name', 'required_tag', 'required_keyword')
 
     fieldsets = (
         ("Rule Info & Target Agent", {
-            "fields": ("agent_config", "rule_name", "template", "is_active"),
+            "fields": ("agent_config", "rule_name", "template", "trigger_event", "is_active"),
+            "description": "Select trigger_event: 'Post-Call' (runs after call ends) or 'In-Call' (runs live mid-call via Sarvam tool) or 'Both'."
         }),
         ("Trigger Conditions (When to Send)", {
             "fields": ("trigger_statuses", "min_duration_seconds", "required_tag", "required_keyword"),
@@ -122,10 +123,10 @@ class WhatsAppRuleAdmin(admin.ModelAdmin):
 
 @admin.register(WhatsAppMessageLog)
 class WhatsAppMessageLogAdmin(admin.ModelAdmin):
-    list_display = ('recipient_phone', 'agent_name', 'template_name', 'status_badge', 'meta_message_id_short', 'call_record_link', 'created_at')
-    list_filter = ('status', 'agent', 'template_name', 'created_at')
+    list_display = ('recipient_phone', 'agent_name', 'template_name', 'trigger_type', 'status_badge', 'meta_message_id_short', 'call_record_link', 'created_at')
+    list_filter = ('trigger_type', 'status', 'agent', 'template_name', 'created_at')
     search_fields = ('recipient_phone', 'agent__name', 'meta_message_id', 'template_name', 'error_message')
-    readonly_fields = ('agent', 'call_record', 'rule', 'template_name', 'recipient_phone', 'status', 'meta_message_id', 'payload_sent', 'meta_response', 'error_message', 'created_at', 'updated_at')
+    readonly_fields = ('agent', 'call_record', 'rule', 'template_name', 'recipient_phone', 'trigger_type', 'status', 'meta_message_id', 'payload_sent', 'meta_response', 'error_message', 'created_at', 'updated_at')
 
     def agent_name(self, obj):
         return obj.agent.name if obj.agent else "—"

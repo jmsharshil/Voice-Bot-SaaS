@@ -62,6 +62,7 @@ def _dispatch_worker(call_record_id: int):
             log_entry, created = WhatsAppMessageLog.objects.get_or_create(
                 call_record=record,
                 rule=rule,
+                trigger_type="POST_CALL",
                 defaults={
                     "agent": agent,
                     "template_name": template.template_name,
