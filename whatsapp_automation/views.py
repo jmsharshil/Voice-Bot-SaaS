@@ -146,3 +146,55 @@ def test_send_whatsapp_api(request, agent_slug=None):
 
     return Response(res, status=200 if res.get("success") else 400)
 
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+def in_call_whatsapp_trigger_webhook(request, agent_slug=None):
+    """
+    Real-Time In-Call Webhook / Tool Action Endpoint.
+    Triggered mid-call by Sarvam Voice AI agent when a customer requests details on WhatsApp.
+    
+    1. Resolves agent via URL slug or payload.
+    2. Automatically retrieves caller's phone number from live Tata Smartflo IN_PROGRESS call record
+       (or payload if provided).
+    3. Sends WhatsApp template via Meta Cloud API using the agent's dedicated credentials.
+    4. Returns instantaneous JSON response back to Sarvam so the voice bot can speak confirmation in real time!
+    """
+    if request.method == "GET":
+        return Response({
+            "status": "active",
+            "message": "In-Call WhatsApp Trigger Webhook is operational.",
+            "agent_slug": agent_slug or "Auto-detect via payload",
+            "usage": "POST JSON with optional template_name and parameters"
+        }, status=200)
+
+    try:
+        raw_data = {}
+        if request.body:
+            try:
+                raw_data = json.loads(request.body.decode("utf-8"))
+            except Exception:
+                pass
+        if not raw_data:
+            try:
+                raw_data = getattr(request, "data", {}) or {}
+            except Exception:
+                raw_data = {}
+        if not raw_data and request.POST:
+            raw_data = dict(request.POST.items())
+
+        logger.info(f"🎙️ [IN-CALL WHATSAPP TRIGGER HIT]: Slug='{agent_slug}' | Payload={json.dumps(raw_data, default=str)}")
+
+        from .services.in_call_trigger import process_in_call_whatsapp_trigger
+        res = process_in_call_whatsapp_trigger(
+            agent_identifier=agent_slug,
+            payload=raw_data
+        )
+
+        http_status = 200 if res.get("status") == "success" else 400
+        return Response(res, status=http_status)
+
+    except Exception as e:
+        logger.error(f"❌ [IN-CALL WEBHOOK ERROR]: {e}", exc_info=True)
+        return Response({"status": "error", "message": str(e)}, status=500)
+

@@ -156,6 +156,18 @@ class WhatsAppRule(models.Model):
         help_text="Which Meta template to dispatch"
     )
 
+    TRIGGER_EVENT_CHOICES = [
+        ('POST_CALL', 'Post-Call (On Call Completion / CDR)'),
+        ('IN_CALL', 'In-Call (During Live Call via Sarvam Action/Tool)'),
+        ('BOTH', 'Both (In-Call & Post-Call)'),
+    ]
+    trigger_event = models.CharField(
+        max_length=20,
+        choices=TRIGGER_EVENT_CHOICES,
+        default='POST_CALL',
+        help_text="When should this rule trigger: Post-call (default) or In-call (live conversation)"
+    )
+
     # ── CONDITIONS ──
     trigger_statuses = models.CharField(
         max_length=255,
@@ -227,6 +239,17 @@ class WhatsAppMessageLog(models.Model):
         ('SKIPPED', 'Skipped (Did Not Match Conditions)'),
     ]
 
+    TRIGGER_TYPE_CHOICES = [
+        ('POST_CALL', 'Post-Call (CDR)'),
+        ('IN_CALL', 'In-Call (Live Conversation)'),
+    ]
+    trigger_type = models.CharField(
+        max_length=20,
+        choices=TRIGGER_TYPE_CHOICES,
+        default='POST_CALL',
+        db_index=True
+    )
+
     agent = models.ForeignKey(
         'conversations.SarvamAgent',
         on_delete=models.SET_NULL,
@@ -237,9 +260,11 @@ class WhatsAppMessageLog(models.Model):
     )
     call_record = models.ForeignKey(
         'conversations.SarvamCallRecord',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='whatsapp_logs',
-        help_text="The call record that triggered this message"
+        help_text="The call record that triggered this message (if available)"
     )
     rule = models.ForeignKey(
         WhatsAppRule,
@@ -287,7 +312,5 @@ class WhatsAppMessageLog(models.Model):
     class Meta:
         verbose_name = "WhatsApp Message Log"
         verbose_name_plural = "WhatsApp Message Logs"
-        # Anti-duplicate lock: A call record will never trigger the same rule twice!
-        unique_together = [('call_record', 'rule')]
         ordering = ["-created_at"]
 
