@@ -692,3 +692,69 @@ class KylasCityAgentMapping(models.Model):
         verbose_name = "Kylas City Agent Mapping"
         verbose_name_plural = "Kylas City Agent Mappings"
         ordering = ["city_name"]
+
+
+class KylasWebhookConfig(models.Model):
+    """
+    Global control settings for third-party / Kylas CRM webhook calling.
+    Completely isolated: controls only incoming Kylas webhook call triggers.
+    """
+    CALLING_MODE_CHOICES = [
+        ("MAPPED_ONLY", "Only Active Mapped Cities (Calls ONLY cities checked [✓] in City Mappings list)"),
+        ("ALL_CITIES", "All Cities (Mapped cities use assigned agent, unmapped use default agent)"),
+    ]
+
+
+    is_enabled = models.BooleanField(
+        default=True,
+        help_text="Master toggle for Kylas CRM outbound calls. If turned OFF, incoming leads are skipped without ringing."
+    )
+    calling_mode = models.CharField(
+        max_length=30,
+        choices=CALLING_MODE_CHOICES,
+        default="MAPPED_ONLY",
+        help_text="Choose whether to trigger calls for ONLY mapped cities (e.g. Ahmedabad only) or for ALL cities."
+    )
+    default_fallback_agent = models.ForeignKey(
+        SarvamAgent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="kylas_default_configs",
+        help_text="Default voice agent used when calling_mode is 'ALL_CITIES' and the city is not explicitly mapped."
+    )
+    log_skipped_calls = models.BooleanField(
+        default=True,
+        help_text="If enabled, leads that are skipped (e.g. from non-allowed cities) are recorded with status 'SKIPPED' for full audit visibility."
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def get_config(cls):
+        config = cls.objects.first()
+        if not config:
+            config = cls.objects.create(
+                is_enabled=True,
+                calling_mode="MAPPED_ONLY",
+                log_skipped_calls=True,
+            )
+        return config
+
+    def __str__(self):
+        status = "Active" if self.is_enabled else "Paused"
+        if self.calling_mode == "MAPPED_ONLY":
+            active_cities = list(
+                KylasCityAgentMapping.objects.filter(is_active=True).values_list("city_name", flat=True)
+            )
+            count = len(active_cities)
+            cities_preview = ", ".join(active_cities[:3])
+            if count > 3:
+                cities_preview += f" +{count - 3} more"
+            mode_label = f"Only Active Cities ({count} Enabled: {cities_preview if count > 0 else 'None'})"
+        else:
+            mode_label = "All Cities (All leads trigger calls)"
+        return f"Kylas Calling Config: {status} | Mode: {mode_label}"
+
+    class Meta:
+        verbose_name = "Kylas Webhook Calling Control"
+        verbose_name_plural = "Kylas Webhook Calling Control"

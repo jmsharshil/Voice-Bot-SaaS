@@ -365,3 +365,29 @@ class KylasCityAgentMappingAdmin(admin.ModelAdmin):
     search_fields = ("city_name", "notes", "sarvam_agent__name")
     list_editable = ("is_active",)
     ordering = ("city_name",)
+
+
+from .models import KylasWebhookConfig
+
+@admin.register(KylasWebhookConfig)
+class KylasWebhookConfigAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "is_enabled", "calling_mode", "default_fallback_agent", "log_skipped_calls", "updated_at")
+    list_editable = ("is_enabled", "calling_mode", "default_fallback_agent", "log_skipped_calls")
+
+    fieldsets = (
+        ("Kylas Webhook Calling Control", {
+            "fields": ("is_enabled", "calling_mode", "default_fallback_agent", "log_skipped_calls"),
+            "description": (
+                "<strong>Configure how incoming Kylas CRM leads trigger voice bot calls:</strong><br><br>"
+                "• <b>Only Mapped Cities (Strict Whitelist)</b>: ONLY cities with an active mapping in 'Kylas City Agent Mappings' (e.g. Ahmedabad) will receive calls. Leads from other cities/states will NOT receive any calls.<br>"
+                "• <b>All Cities</b>: Mapped cities call their designated agent; unmapped cities call using the Default Fallback Agent.<br>"
+                "• <b>Master Switch (is_enabled)</b>: Uncheck to pause all Kylas calls anytime without deleting anything."
+            )
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return not KylasWebhookConfig.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False

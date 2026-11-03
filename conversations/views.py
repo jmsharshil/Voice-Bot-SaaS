@@ -2062,6 +2062,16 @@ def sarvam_cdr_webhook(request):
                 print(f"⚠️ [SARVAM CAMPAIGN LEAD SYNC ERROR]: {sync_err}")
 
         # =========================================================
+        # ✅ SARVAM IVR FORWARDING BRIDGE CORRELATION (SAFE HOOK)
+        # =========================================================
+        try:
+            if rec and rec.sarvam_agent:
+                from sarvam_ivr_bridge.engine import try_resolve_ivr_forwarded_caller
+                try_resolve_ivr_forwarded_caller(rec)
+        except Exception as e_ivr_hook:
+            print(f"⚠️ [SARVAM IVR CORRELATION HOOK ERROR]: {e_ivr_hook}")
+
+        # =========================================================
         # ✅ KYLAS CRM DISPATCH (ONLY for Third-Party Webhook Calls)
         # =========================================================
         try:
