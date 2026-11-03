@@ -1400,7 +1400,16 @@ def sarvam_cdr_webhook(request):
             try:
                 from whatsapp_automation.services.in_call_trigger import process_in_call_whatsapp_trigger
                 trigger_res = process_in_call_whatsapp_trigger(
-                    agent_identifier=raw_data.get("agent_slug") or raw_data.get("slug") or raw_data.get("app_id"),
+                    agent_identifier=(
+                        request.GET.get("agent_slug")
+                        or request.GET.get("agent")
+                        or request.GET.get("slug")
+                        or raw_data.get("agent_slug")
+                        or raw_data.get("agent")
+                        or raw_data.get("slug")
+                        or raw_data.get("app_id")
+                        or raw_data.get("agent_id")
+                    ),
                     payload=raw_data
                 )
                 http_status = 200 if trigger_res.get("status") == "success" else 400

@@ -258,7 +258,11 @@ def evaluate_rules_for_call(call_record) -> List[Tuple[Any, list, str]]:
         # Resolve header media URL
         media_url = rule.header_media_url or template.header_media_url
         if media_url:
-            media_url = resolve_variable(media_url, call_record)
+            media_url_str = str(media_url).strip()
+            if media_url_str.lower().startswith("http://") or media_url_str.lower().startswith("https://"):
+                media_url = media_url_str
+            else:
+                media_url = resolve_variable(media_url_str, call_record) or media_url_str
 
         matched_dispatches.append((rule, resolved_params, media_url))
 

@@ -119,8 +119,13 @@ def process_in_call_whatsapp_trigger(
                 logger.info(f"🎯 [IN-CALL WHATSAPP]: Auto-resolved agent '{agent.name}' from active Tata Smartflo call #{recent_active.id}")
 
         if not agent:
-            # Fallback to single active agent if only one exists or default
-            agent = SarvamAgent.objects.filter(is_active=True).first()
+            # Fallback to agent that actually has an active WhatsApp configuration
+            active_config = AgentWhatsAppConfig.objects.filter(is_active=True).select_related('agent').first()
+            if active_config and active_config.agent:
+                agent = active_config.agent
+                logger.info(f"🎯 [IN-CALL WHATSAPP]: Fallback to active WhatsApp configured agent '{agent.name}'")
+            else:
+                agent = SarvamAgent.objects.filter(is_active=True).first()
 
         if not agent:
             logger.error(f"❌ [IN-CALL WHATSAPP]: Agent could not be resolved (slug='{candidate_slug}', app_id='{app_id_val}').")
@@ -353,7 +358,11 @@ def process_in_call_whatsapp_trigger(
         # Resolve header media URL if any
         media_url = (matched_rule.header_media_url if matched_rule else None) or template.header_media_url
         if media_url:
-            media_url = extracted_vars.get(media_url) or resolve_variable(media_url, live_rec)
+            media_url_str = str(media_url).strip()
+            if media_url_str.lower().startswith("http://") or media_url_str.lower().startswith("https://"):
+                media_url = media_url_str
+            else:
+                media_url = extracted_vars.get(media_url_str) or resolve_variable(media_url_str, live_rec) or media_url_str
 
         # ── 8. DISPATCH VIA META CLOUD API ──
         client = MetaWhatsAppClient(
