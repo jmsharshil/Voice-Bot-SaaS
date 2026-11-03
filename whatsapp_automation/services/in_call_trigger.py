@@ -173,45 +173,58 @@ def process_in_call_whatsapp_trigger(
         )
         clean_phone = normalize_whatsapp_phone(raw_phone)
 
+        # Detect dummy placeholder phone numbers (e.g. 9876543210, 1234567890, etc.)
+        DUMMY_PATTERNS = {
+            "9876543210", "1234567890", "0123456789", "9999999999",
+            "0000000000", "1111111111", "8888888888", "7777777777",
+            "1234512345"
+        }
+        raw_lower = str(raw_phone).lower()
+        is_dummy_phone = (
+            not clean_phone
+            or len(clean_phone) < 10
+            or clean_phone[-10:] in DUMMY_PATTERNS
+            or any(w in raw_lower for w in ["same", "user", "caller", "inbound", "unknown", "placeholder"])
+        )
+
         # B: Find the active IN_PROGRESS CallRecord created by Tata Smartflo
         recent_cutoff = timezone.now() - timedelta(minutes=20)
         live_rec = None
 
-        if clean_phone and len(clean_phone) >= 10:
-            phone_last_10 = clean_phone[-10:]
+        # 1. Priority: Find active IN_PROGRESS call for this agent in Tata Smartflo
+        live_rec = (
+            SarvamCallRecord.objects.filter(
+                sarvam_agent=agent,
+                status="IN_PROGRESS",
+                created_at__gte=recent_cutoff
+            ).exclude(phone_number__in=["unknown", "", "None", "same as call number"]).order_by("-created_at").first()
+        )
+
+        # 2. If no IN_PROGRESS, find recent call for this agent in last 15 mins
+        if not live_rec:
             live_rec = (
                 SarvamCallRecord.objects.filter(
                     sarvam_agent=agent,
-                    phone_number__icontains=phone_last_10,
                     created_at__gte=recent_cutoff
-                ).order_by("-created_at").first()
+                ).exclude(phone_number__in=["unknown", "", "None", "same as call number"]).order_by("-created_at").first()
             )
 
-        # If phone was not in payload, look up the active IN_PROGRESS Tata Smartflo call for this agent!
-        if not clean_phone or len(clean_phone) < 10:
-            live_rec = (
-                SarvamCallRecord.objects.filter(
-                    sarvam_agent=agent,
-                    status="IN_PROGRESS",
-                    created_at__gte=recent_cutoff
-                ).exclude(phone_number__in=["unknown", "", "None"]).order_by("-created_at").first()
-            )
-
-            # Fallback: any recent call for this agent in last 15 mins with valid phone
-            if not live_rec:
-                live_rec = (
-                    SarvamCallRecord.objects.filter(
-                        sarvam_agent=agent,
-                        created_at__gte=recent_cutoff
-                    ).exclude(phone_number__in=["unknown", "", "None"]).order_by("-created_at").first()
-                )
-
-            if live_rec:
-                clean_phone = normalize_whatsapp_phone(live_rec.phone_number)
+        # If a live Tata Smartflo call exists:
+        if live_rec and live_rec.phone_number:
+            rec_phone_clean = normalize_whatsapp_phone(live_rec.phone_number)
+            # If payload phone is dummy, placeholder (+91-9876543210), or empty: USE TELECOM CALLER NUMBER!
+            if is_dummy_phone or clean_phone[-10:] in DUMMY_PATTERNS:
+                clean_phone = rec_phone_clean
                 logger.info(
-                    f"🎯 [IN-CALL WHATSAPP]: Matched caller phone '{clean_phone}' from live Tata Smartflo "
-                    f"CallRecord #{live_rec.id} (Agent: {agent.name})"
+                    f"🎯 [IN-CALL WHATSAPP]: Overrode dummy/example phone '{raw_phone}' with verified Tata Smartflo caller '{clean_phone}' (Call #{live_rec.id})"
                 )
+            elif clean_phone and len(clean_phone) >= 10:
+                # If payload has a real number different from telecom, check if telecom matches
+                logger.info(f"🎯 [IN-CALL WHATSAPP]: Using payload phone '{clean_phone}' (Live Call #{live_rec.id}: {rec_phone_clean})")
+        else:
+            # No live call found, use payload phone if not dummy
+            if is_dummy_phone:
+                clean_phone = ""
 
         if not clean_phone or len(clean_phone) < 10:
             logger.warning(f"⚠️ [IN-CALL WHATSAPP]: Caller phone number not found. No active Tata Smartflo call found for agent '{agent.name}'.")
