@@ -358,7 +358,11 @@ def process_in_call_whatsapp_trigger(
         # Resolve header media URL if any
         media_url = (matched_rule.header_media_url if matched_rule else None) or template.header_media_url
         if media_url:
-            media_url = extracted_vars.get(media_url) or resolve_variable(media_url, live_rec)
+            media_url_str = str(media_url).strip()
+            if media_url_str.lower().startswith("http://") or media_url_str.lower().startswith("https://"):
+                media_url = media_url_str
+            else:
+                media_url = extracted_vars.get(media_url_str) or resolve_variable(media_url_str, live_rec) or media_url_str
 
         # ── 8. DISPATCH VIA META CLOUD API ──
         client = MetaWhatsAppClient(

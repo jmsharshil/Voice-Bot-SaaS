@@ -80,44 +80,49 @@ class MetaWhatsAppClient:
 
         # 1. Header Component (Media / Text)
         ht = str(header_type or "NONE").upper()
-        if ht != "NONE" and header_media_url:
-            if ht == "DOCUMENT":
+        if ht != "NONE":
+            media_link = str(header_media_url or "").strip()
+            if ht == "DOCUMENT" and media_link:
                 components.append({
                     "type": "header",
                     "parameters": [{
                         "type": "document",
                         "document": {
-                            "link": header_media_url,
+                            "link": media_link,
                             "filename": header_filename or "Brochure.pdf"
                         }
                     }]
                 })
             elif ht == "IMAGE":
+                if not media_link:
+                    # Safe fallback so Meta never throws (#132012 Format mismatch, expected IMAGE)
+                    media_link = "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80"
+                    logger.warning(f"⚠️ [META CLIENT]: Template '{template_name}' requires an IMAGE header, but no header_media_url was specified. Using default villa image fallback.")
                 components.append({
                     "type": "header",
                     "parameters": [{
                         "type": "image",
                         "image": {
-                            "link": header_media_url
+                            "link": media_link
                         }
                     }]
                 })
-            elif ht == "VIDEO":
+            elif ht == "VIDEO" and media_link:
                 components.append({
                     "type": "header",
                     "parameters": [{
                         "type": "video",
                         "video": {
-                            "link": header_media_url
+                            "link": media_link
                         }
                     }]
                 })
-            elif ht == "TEXT":
+            elif ht == "TEXT" and media_link:
                 components.append({
                     "type": "header",
                     "parameters": [{
                         "type": "text",
-                        "text": str(header_media_url)
+                        "text": str(media_link)
                     }]
                 })
 
