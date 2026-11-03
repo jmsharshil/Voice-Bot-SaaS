@@ -117,6 +117,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "bot",
     "whatsapp_automation",
+    "sarvam_ivr_bridge",
 ]
 
 REST_FRAMEWORK = {

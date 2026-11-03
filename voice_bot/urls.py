@@ -73,6 +73,7 @@ urlpatterns = [
     path('bot/', include('bot.urls')),
     path('whatsapp/', include('whatsapp_automation.urls')),
     path('api/whatsapp/', include('whatsapp_automation.urls')),
+    path('api/sarvam-ivr/', include('sarvam_ivr_bridge.urls')),
 ]
 
 from django.conf import settings

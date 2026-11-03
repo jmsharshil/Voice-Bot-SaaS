@@ -193,8 +193,49 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
         if not target_agent:
             target_agent = SarvamAgent.objects.filter(is_active=True).first()
 
-        # Dynamic City-to-Agent routing for third-party CRM webhooks (e.g., Kylas CRM)
-        city_agent, detected_city = resolve_agent_by_city(raw_data, fallback_agent=target_agent)
+        # Dynamic City-to-Agent routing & Whitelist restriction (e.g., Kylas CRM)
+        should_call, city_agent, detected_city, routing_reason = resolve_agent_by_city(raw_data, fallback_agent=target_agent)
+
+        if not should_call:
+            logger.info(f"⏭️ [KYLAS WEBHOOK SKIPPED]: {routing_reason} for phone {clean_phone}")
+            print("\n" + "─"*65)
+            print("⏭️ [KYLAS CALL SKIPPED - CITY CALLING RESTRICTION]")
+            print(f"👤 User / Lead:   {candidate_name} ({clean_phone})")
+            print(f"📍 City Detected: {detected_city}")
+            print(f"🚫 Reason:        {routing_reason}")
+            print("─"*65 + "\n")
+
+            from conversations.models import KylasWebhookConfig
+            cfg = KylasWebhookConfig.get_config()
+            if cfg.log_skipped_calls:
+                call_lang = str(language).strip() if language else "hi-IN"
+                if not call_lang or call_lang.lower() in ["none", "null"]:
+                    call_lang = "hi-IN"
+                SarvamCallRecord.objects.create(
+                    sarvam_agent=city_agent or target_agent,
+                    attempt_id=f"skip_{int(time.time())}_{uuid.uuid4().hex[:6]}",
+                    phone_number=clean_phone,
+                    candidate_name=candidate_name or "Candidate",
+                    language=call_lang,
+                    applied_position=applied_position or "Admission Counselor",
+                    call_type=f"Webhook (Skipped): {raw_data.get('event') or 'Kylas Lead'}",
+                    status="SKIPPED",
+                    summary={
+                        "received_payload": raw_data,
+                        "extra_variables": extra_variables,
+                        "crm_lead_id": crm_lead_id,
+                        "detected_city": detected_city,
+                        "skip_reason": routing_reason
+                    }
+                )
+
+            return Response({
+                "status": "skipped",
+                "message": routing_reason,
+                "city": detected_city,
+                "call_initiated": False
+            }, status=200)
+
         if city_agent:
             if target_agent and city_agent.id != target_agent.id:
                 logger.info(
