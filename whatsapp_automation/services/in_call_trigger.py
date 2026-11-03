@@ -119,8 +119,13 @@ def process_in_call_whatsapp_trigger(
                 logger.info(f"🎯 [IN-CALL WHATSAPP]: Auto-resolved agent '{agent.name}' from active Tata Smartflo call #{recent_active.id}")
 
         if not agent:
-            # Fallback to single active agent if only one exists or default
-            agent = SarvamAgent.objects.filter(is_active=True).first()
+            # Fallback to agent that actually has an active WhatsApp configuration
+            active_config = AgentWhatsAppConfig.objects.filter(is_active=True).select_related('agent').first()
+            if active_config and active_config.agent:
+                agent = active_config.agent
+                logger.info(f"🎯 [IN-CALL WHATSAPP]: Fallback to active WhatsApp configured agent '{agent.name}'")
+            else:
+                agent = SarvamAgent.objects.filter(is_active=True).first()
 
         if not agent:
             logger.error(f"❌ [IN-CALL WHATSAPP]: Agent could not be resolved (slug='{candidate_slug}', app_id='{app_id_val}').")

@@ -71,14 +71,17 @@ class KylasService:
             except Exception:
                 duration_int = 0
 
-            # 2. Determine outcome: "connected" vs "missed" / "busy"
+            # 2. Determine outcome for Kylas outgoing call: "connected", "no_answer", "busy", "rejected"
+            # NOTE: For outgoing calls, Kylas CRM rejects "missed" with HTTP 500. Outgoing unanswered calls must be "no_answer".
             raw_outcome = str(cdr_data.get("call_outcome") or cdr_data.get("status") or "").lower()
-            if duration_int > 0 and raw_outcome not in ["unreachable", "failed", "busy", "no_answer"]:
+            if duration_int > 0 and raw_outcome not in ["unreachable", "failed", "busy", "no_answer", "rejected"]:
                 outcome = "connected"
-            elif raw_outcome in ["busy"]:
+            elif "busy" in raw_outcome:
                 outcome = "busy"
+            elif "reject" in raw_outcome or "decline" in raw_outcome:
+                outcome = "rejected"
             else:
-                outcome = "missed"
+                outcome = "no_answer"
 
             # 3. Format start time in ISO 8601 (e.g., 2026-10-23T14:36:52.000Z)
             st = str(cdr_data.get("call_start_time") or cdr_data.get("start_time") or "").strip()
@@ -117,14 +120,6 @@ class KylasService:
             if not notes:
                 notes.append({"description": "AI Outbound Voice Call Completed."})
 
-            # 6. Audio recording object
-            interaction_id = str(cdr_data.get("interaction_id") or "call").replace("/", "_")
-            call_recording = {
-                "data": "",
-                "fileName": f"call_{interaction_id}.mp3",
-                "url": str(recording_url or cdr_data.get("recording_url") or cdr_data.get("audio_url") or "")
-            }
-
             payload = {
                 "outcome": outcome,
                 "startTime": st,
@@ -136,9 +131,17 @@ class KylasService:
                     "id": int(lead_id),
                     "entity": "lead",
                     "phoneNumber": clean_phone
-                },
-                "callRecording": call_recording
+                }
             }
+
+            # 6. Audio recording object (ONLY attach if valid remote URL exists, to avoid Kylas 500 error on empty string)
+            clean_rec_url = str(recording_url or cdr_data.get("recording_url") or cdr_data.get("audio_url") or "").strip()
+            if clean_rec_url and clean_rec_url.startswith("http"):
+                interaction_id = str(cdr_data.get("interaction_id") or "call").replace("/", "_")
+                payload["callRecording"] = {
+                    "fileName": f"call_{interaction_id}.mp3",
+                    "url": clean_rec_url
+                }
 
             url = f"{KYLAS_API_BASE_URL.rstrip('/')}/call-logs/"
             headers = {
