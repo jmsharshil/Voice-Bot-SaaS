@@ -51,7 +51,7 @@ class KylasService:
         }
 
     @classmethod
-    def log_call_activity(cls, lead_id, phone_number, cdr_data: dict, recording_url: str = None, api_key: str = None):
+    def log_call_activity(cls, lead_id, phone_number, cdr_data: dict, recording_url: str = None, api_key: str = None, duration_seconds: float = None, start_time: str = None):
         """
         Creates a Call Log in Kylas CRM under the specified Lead ID.
         Endpoint: POST https://api.kylas.io/v1/call-logs/
@@ -62,19 +62,49 @@ class KylasService:
             return {"status": "error", "message": "KYLAS_API_KEY not set in .env"}
 
         try:
-            # 1. Duration in seconds
-            dur = cdr_data.get("call_duration_seconds")
-            if dur is None:
-                dur = cdr_data.get("duration") or cdr_data.get("duration_seconds") or 0
+            # 1. Comprehensive Duration Extraction (from rec or all possible Sarvam CDR fields)
+            dur = duration_seconds
+            if dur is None or dur == 0:
+                dur = (
+                    cdr_data.get("call_duration_seconds")
+                    or cdr_data.get("duration")
+                    or cdr_data.get("duration_seconds")
+                    or cdr_data.get("call_duration")
+                    or cdr_data.get("call_length")
+                    or (cdr_data.get("call") or {}).get("duration")
+                    or (cdr_data.get("call") or {}).get("call_length")
+                    or (cdr_data.get("metadata") or {}).get("duration_in_seconds")
+                    or (cdr_data.get("analytics") or {}).get("duration_in_seconds")
+                )
+
+            # Check timestamp difference if duration not found directly
+            if not dur:
+                st_val = cdr_data.get("call_start_time") or cdr_data.get("start_time")
+                en_val = cdr_data.get("call_end_time") or cdr_data.get("end_time")
+                if st_val and en_val:
+                    try:
+                        from dateutil.parser import parse as parse_date
+                        t_diff = (parse_date(str(en_val)) - parse_date(str(st_val))).total_seconds()
+                        if t_diff > 0:
+                            dur = t_diff
+                    except Exception:
+                        pass
+
+            # Check conversational transcript as safety net
+            if not dur:
+                transcript_obj = cdr_data.get("call_transcript") or cdr_data.get("transcript") or cdr_data.get("conversation_log")
+                if isinstance(transcript_obj, list) and len(transcript_obj) >= 2:
+                    dur = len(transcript_obj) * 7.0
+
             try:
-                duration_int = int(float(dur))
+                duration_int = int(float(dur or 0))
             except Exception:
                 duration_int = 0
 
-            # 2. Determine outcome for Kylas outgoing call: "connected", "no_answer", "busy", "rejected"
-            # NOTE: For outgoing calls, Kylas CRM rejects "missed" with HTTP 500. Outgoing unanswered calls must be "no_answer".
+            # 2. Determine outcome for Kylas outgoing call:
+            # RULE: If duration > 0, it is ALWAYS mapped as an Answered call ("connected")!
             raw_outcome = str(cdr_data.get("call_outcome") or cdr_data.get("status") or "").lower()
-            if duration_int > 0 and raw_outcome not in ["unreachable", "failed", "busy", "no_answer", "rejected"]:
+            if duration_int > 0:
                 outcome = "connected"
             elif "busy" in raw_outcome:
                 outcome = "busy"
@@ -84,7 +114,7 @@ class KylasService:
                 outcome = "no_answer"
 
             # 3. Format start time in ISO 8601 (e.g., 2026-10-23T14:36:52.000Z)
-            st = str(cdr_data.get("call_start_time") or cdr_data.get("start_time") or "").strip()
+            st = str(start_time or cdr_data.get("call_start_time") or cdr_data.get("start_time") or "").strip()
             if st:
                 if not st.endswith("Z") and "+" not in st:
                     st += ".000Z"

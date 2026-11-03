@@ -2099,11 +2099,14 @@ def sarvam_cdr_webhook(request):
                 if is_webhook_call and crm_lead_id:
                     print(f"📡 [THIRD-PARTY CDR PUSH] Pushing call log to Kylas CRM for Lead #{crm_lead_id}...")
                     from conversations.services.kylas_sarvam_bridge import KylasService
+                    rec_start = rec.start_time.strftime("%Y-%m-%dT%H:%M:%S.000Z") if rec.start_time else None
                     kylas_res = KylasService.log_call_activity(
                         lead_id=crm_lead_id,
                         phone_number=rec.phone_number,
                         cdr_data=raw_data,
-                        recording_url=recording_url
+                        recording_url=recording_url,
+                        duration_seconds=rec.duration_seconds,
+                        start_time=rec_start
                     )
                     print(f"📡 [THIRD-PARTY CDR PUSH RESULT]: {kylas_res}")
                     if isinstance(rec.summary, dict):
