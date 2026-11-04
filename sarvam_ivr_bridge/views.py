@@ -71,6 +71,21 @@ def ivr_webhook_receiver(request, agent_slug=None):
     )
     real_caller = _clean_phone(caller_raw)
 
+    # Fallback 1: If phone_number is not set, check if call_id holds the caller's phone number (e.g. '+919104142402')
+    if not real_caller or real_caller.lower() in ["unknown", "none", "null"]:
+        cid_candidate = str(combined_lookup.get("call_id") or combined_lookup.get("calluniqueid") or "").strip()
+        cid_digits = "".join(filter(str.isdigit, cid_candidate))
+        if len(cid_digits) >= 10:
+            real_caller = cid_digits[-10:]
+
+    # Fallback 2: Check if resource_url / recording URL contains the phone number (e.g. '...-+919104142402.mp3')
+    if not real_caller or real_caller.lower() in ["unknown", "none", "null"]:
+        import re
+        rec_url = str(combined_lookup.get("resource_url") or combined_lookup.get("recordings_location") or "")
+        match_num = re.search(r'(\+?91)?[6-9]\d{9}', rec_url)
+        if match_num:
+            real_caller = "".join(filter(str.isdigit, match_num.group(0)))[-10:]
+
     did_raw = (
         combined_lookup.get("did")
         or combined_lookup.get("forwarded_did")
@@ -174,7 +189,11 @@ def ivr_webhook_receiver(request, agent_slug=None):
     # 4. Trigger correlation engine if config is active
     matched = False
     if target_config and target_config.is_active:
-        matched = correlate_ivr_log(ivr_log)
+        if disposition in ["LIVECALL", "RINGING"] or duration_sec <= 0 or real_caller in ["unknown", "none", "null", ""]:
+            ivr_log.match_status = "PENDING"
+            ivr_log.save(update_fields=["match_status"])
+        else:
+            matched = correlate_ivr_log(ivr_log)
 
     return Response({
         "status": "success",

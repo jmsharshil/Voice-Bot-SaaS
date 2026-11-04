@@ -49,16 +49,16 @@ ROLE_STRATEGY_MAP = {
 }
 
 
-def get_role_strategy(role_name: str):
-    if not role_name:
+def get_role_strategy(role_name: str, agent_name: str = ""):
+    combined = f"{role_name or ''} {agent_name or ''}".strip().lower()
+    if not combined:
         return "automobile"
-    role_lower = role_name.lower()
-    if ("icemake" in role_lower or "ice make" in role_lower) and ("v2" in role_lower or "2" in role_lower):
+    if ("icemake" in combined or "ice make" in combined) and ("v2" in combined or "2" in combined):
         return "icemake_v2"
-    if "icemake" in role_lower or "ice make" in role_lower:
+    if "icemake" in combined or "ice make" in combined:
         return "icemake"
-    if "raahi" in role_lower:
+    if "raahi" in combined:
         return "raahi_iiiem_strategy"
-    if "priya" in role_name.lower():
+    if "priya" in combined:
         return "priya_naavya_strategy"
-    return ROLE_STRATEGY_MAP.get(role_name, "automobile")
+    return ROLE_STRATEGY_MAP.get(role_name, "automobile")
