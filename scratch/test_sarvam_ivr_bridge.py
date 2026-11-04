@@ -87,6 +87,69 @@ def run_test():
     assert sarvam_call.phone_number == real_sim_number, f"Expected {real_sim_number}, got {sarvam_call.phone_number}"
     assert ivr_log.match_status == "MATCHED", f"Expected MATCHED, got {ivr_log.match_status}"
 
+    # 6. Test Concurrent Calls Matching (Two calls in the exact same minute)
+    print("\n⚡ Testing Concurrent Calls Matching (Call A = 45s, Call B = 180s)...")
+    now_t = timezone.now()
+
+    # Sarvam Call A (45s) & Call B (180s)
+    sarvam_a = SarvamCallRecord.objects.create(
+        sarvam_agent=agent,
+        interaction_id="20261102/concurrent_a",
+        phone_number="unknown",
+        status="COMPLETED",
+        duration_seconds=45.0,
+        start_time=now_t,
+    )
+    sarvam_b = SarvamCallRecord.objects.create(
+        sarvam_agent=agent,
+        interaction_id="20261102/concurrent_b",
+        phone_number="unknown",
+        status="COMPLETED",
+        duration_seconds=180.0,
+        start_time=now_t,
+    )
+
+    # IVR Log for Call B (179s, Customer B: 9988776655)
+    ivr_b = IVRForwardedCallLog.objects.create(
+        agent_config=config,
+        real_caller_number="9988776655",
+        forwarded_did="7971019486",
+        ivr_call_id="call_ivr_b",
+        call_start_time=now_t,
+        duration_seconds=179.0,
+        disposition="ANSWERED",
+    )
+    # IVR Log for Call A (46s, Customer A: 9104142402)
+    ivr_a = IVRForwardedCallLog.objects.create(
+        agent_config=config,
+        real_caller_number="9104142402",
+        forwarded_did="7971019486",
+        ivr_call_id="call_ivr_a",
+        call_start_time=now_t,
+        duration_seconds=46.0,
+        disposition="ANSWERED",
+    )
+
+    match_b = correlate_ivr_log(ivr_b)
+    match_a = correlate_ivr_log(ivr_a)
+
+    sarvam_a.refresh_from_db()
+    sarvam_b.refresh_from_db()
+
+    print(f"🎯 Concurrent Call A (45s): Matched to Phone {sarvam_a.phone_number} (Expected: 9104142402)")
+    print(f"🎯 Concurrent Call B (180s): Matched to Phone {sarvam_b.phone_number} (Expected: 9988776655)")
+
+    assert match_a is True and match_b is True, "Both concurrent matches should succeed!"
+    assert sarvam_a.phone_number == "9104142402", f"Expected 9104142402, got {sarvam_a.phone_number}"
+    assert sarvam_b.phone_number == "9988776655", f"Expected 9988776655, got {sarvam_b.phone_number}"
+    print("✨ Concurrent matching accuracy 100% verified!")
+
+    # Clean up concurrent records
+    ivr_a.delete()
+    ivr_b.delete()
+    sarvam_a.delete()
+    sarvam_b.delete()
+
     print("🎉 ALL TESTS PASSED! Clean, isolated, and working perfectly.")
 
     # Clean up test records
