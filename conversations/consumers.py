@@ -676,7 +676,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             try:
                 agent = VoiceAgent.objects.select_related('role_template').get(id=agent_id)
                 role_name = agent.role_template.role_name if agent.role_template else ""
-                return get_role_strategy(role_name)
+                return get_role_strategy(role_name, agent.name or "")
             except Exception:
                 return None
 
@@ -723,7 +723,7 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
             agent = VoiceAgent.objects.select_related('role_template').get(id=agent_id)
             company = agent.company_name or "our company"
             role_name = agent.role_template.role_name if agent.role_template else ""
-            strategy_key = get_role_strategy(role_name)
+            strategy_key = get_role_strategy(role_name, agent.name or "")
             is_aaisha = agent.name and agent.name.lower() in ["aaisha", "aisha"]
             
             customer_name = None

@@ -2245,8 +2245,13 @@ def _send_meta_whatsapp_template(to_phone: str, template_name: str, parameters: 
 def _send_whatsapp_ticket_confirmation(ticket):
     """
     Sends WhatsApp confirmation message with Ice Make ticket details via Meta Cloud API (or WASender fallback).
-    Template: icemake_customer_
-    Variables: {{1}} = Ticket Number
+    Template: icemake_customers
+    Variables:
+      {{1}} = Customer Name
+      {{2}} = Complaint Number
+      {{3}} = Customer Name
+      {{4}} = State
+      {{5}} = Contact Number
     """
     try:
         import os
@@ -2265,38 +2270,51 @@ def _send_whatsapp_ticket_confirmation(ticket):
         meta_phone_id = getattr(settings, "ICEMAKE_PHONE_NUMBER_ID", None) or os.getenv("ICEMAKE_PHONE_NUMBER_ID") or getattr(settings, "META_PHONE_NUMBER_ID", None) or os.getenv("META_PHONE_NUMBER_ID")
         meta_access_token = getattr(settings, "WHATSAPP_TOKEN", None) or os.getenv("WHATSAPP_TOKEN") or getattr(settings, "META_ACCESS_TOKEN", None) or os.getenv("META_ACCESS_TOKEN")
 
+        cust_name = str(ticket.customer_name or "Customer").strip()
+        ticket_no = str(ticket.ticket_number or "N/A").strip()
+        city_state_str = str(ticket.city_state or "").strip()
+        if "," in city_state_str:
+            state_val = city_state_str.split(",")[-1].strip()
+        else:
+            state_val = city_state_str or "India"
+        cust_phone_display = str(ticket.registered_mobile or (clean_phone[2:] if clean_phone.startswith("91") else clean_phone)).strip()
+
         if meta_phone_id and meta_access_token:
-            ticket_no = str(ticket.ticket_number or "N/A")
             meta_res = _send_meta_whatsapp_template(
                 to_phone=clean_phone,
-                template_name="icemake_customer_",
-                parameters=[ticket_no]
+                template_name="icemake_customers",
+                parameters=[
+                    cust_name,
+                    ticket_no,
+                    cust_name,
+                    state_val,
+                    cust_phone_display
+                ]
             )
             if meta_res.get("success"):
-                print(f"📲 [ICEMAKE META WA SUCCESS]: Sent 'icemake_customer_' template to {clean_phone} for Ticket #{ticket.ticket_number}")
+                print(f"📲 [ICEMAKE META WA SUCCESS]: Sent 'icemake_customers' template to {clean_phone} for Ticket #{ticket.ticket_number}")
                 return
 
         from bot.services.whatsapp_service import send_whatsapp_message
         wa_text = (
-            f"*Ice Make Refrigeration Ltd. - Service Ticket Confirmation*\n\n"
-            f"Dear Customer,\n"
-            f"Thank you for contacting Ice Make 24x7 Support. Your complaint has been registered successfully.\n\n"
-            f"📋 *Complaint ID:* {ticket.ticket_number}\n"
-            f"👤 *Name:* {ticket.customer_name or 'Customer'}\n"
-            f"📞 *Registered Phone:* {ticket.registered_mobile or 'N/A'}\n"
-            f"⚙️ *Product Name:* {ticket.machine_model_no or 'N/A'}\n"
-            f"🛠️ *Issue Type:* {ticket.issue_type or 'Other'}\n"
-            f"📝 *Description:* {ticket.issue_description or 'N/A'}\n\n"
-            f"Our technical service team will review your complaint and contact you shortly.\n\n"
-            f"Have a great day!\n"
-            f"*Ice Make Refrigeration Ltd.*"
+            f"*Complaint Registered Successfully !*\n"
+            f"*Ice Make Refrigeration Limited*\n\n"
+            f"Dear *{cust_name}*,\n\n"
+            f"Thank you for contacting our 24x7 DF Division Customer Care Support. Your service complaint has been successfully registered.\n\n"
+            f"Complaint Details:\n"
+            f"📝 Complaint Number: *{ticket_no}*\n"
+            f"🕒 Status: *Assigned to Service Engineer*\n"
+            f"📞 Support: *24x7 Customer Care Support*\n\n"
+            f"Our technical service team will contact you shortly to resolve the issue. Thank you for choosing Ice Make.\n\n"
+            f"Customer Name: *{cust_name}*\n"
+            f"State: *{state_val}*\n"
+            f"Contact Number: *{cust_phone_display}*\n"
+            f"Have a wonderful day! ☀️"
         )
         res = send_whatsapp_message(clean_phone, wa_text)
         print(f"📲 [ICEMAKE WA SUCCESS]: WhatsApp confirmation sent to {clean_phone} for Ticket #{ticket.ticket_number}. Response: {res}")
     except Exception as e:
         logger.error("[ICEMAKE WA ERROR] Failed to send WhatsApp confirmation: %s", e)
-
-
 # Exact Zone & State Wise Engineer Mapping Table for Ice Make
 STATE_ENGINEER_MAPPING = {
     # 1. Gujarat Zone - Mr Rutvik (9727721447)
@@ -2387,15 +2405,17 @@ def _send_whatsapp_engineer_notification(ticket):
     """
     Sends WhatsApp alert to the Service Engineer using Meta Cloud API (or WASender fallback).
     Routes to specific state engineer based on user's city/state.
-    Template: icemake_serviceengineer
+    Template: icemake_df
     Variables:
-      {{1}} = Ticket Number
-      {{2}} = Customer Name
-      {{3}} = Customer Mobile
-      {{4}} = City / State
-      {{5}} = Product Issue / Machine Model
-      {{6}} = Description
-      {{7}} = Assigned Engineer Name
+      {{1}} = COMPLAINT NO
+      {{2}} = STATE / CITY
+      {{3}} = NAME
+      {{4}} = NUMBER
+      {{5}} = ADDRESS
+      {{6}} = MACHINE MODEL NO
+      {{7}} = MACHINE SERIAL NO
+      {{8}} = TYPE OF COMPLAIN
+      {{9}} = WarrantyStatus
     """
     try:
         import os
@@ -2403,10 +2423,13 @@ def _send_whatsapp_engineer_notification(ticket):
         
         cust_phone = ticket.registered_mobile or (ticket.conversation.user_number if ticket.conversation else "N/A")
         ticket_no = str(ticket.ticket_number or "N/A")
-        cust_name = str(ticket.customer_name or "N/A")
-        city_state = str(ticket.city_state or ticket.company_name or "N/A")
-        product_issue = str(ticket.machine_model_no or ticket.issue_type or "N/A")
-        description = str(ticket.issue_description or "N/A")
+        cust_name = str(ticket.customer_name or "Customer")
+        city_state = str(ticket.city_state or "N/A")
+        address = str(ticket.company_name or ticket.pin_code or "Not Provided")
+        machine_model = str(ticket.machine_model_no or "Deep Freezer")
+        machine_sr = str(ticket.machine_sr_no or "Not Provided")
+        issue_type = str(ticket.issue_type or ticket.issue_description or "General Service")
+        warranty_status = "TO BE VERIFIED"
 
         # Resolve engineer phone number and name based on customer's state
         engineer_number, assigned_eng = get_engineer_for_state(city_state)
@@ -2423,49 +2446,40 @@ def _send_whatsapp_engineer_notification(ticket):
         if meta_phone_id and meta_access_token:
             meta_res = _send_meta_whatsapp_template(
                 to_phone=clean_eng,
-                template_name="icemake_serviceengineer",
+                template_name="icemake_df",
                 parameters=[
                     ticket_no,
+                    city_state,
                     cust_name,
                     cust_phone,
-                    city_state,
-                    product_issue,
-                    description,
-                    assigned_eng
+                    address,
+                    machine_model,
+                    machine_sr,
+                    issue_type,
+                    warranty_status
                 ]
             )
             if meta_res.get("success"):
-                print(f"🚨 [ENGINEER META WA ALERT SUCCESS]: Sent 'icemake_serviceengineer' template to Engineer '{assigned_eng}' ({clean_eng}) for State '{city_state}' (Ticket #{ticket.ticket_number})")
+                print(f"🚨 [ENGINEER META WA ALERT SUCCESS]: Sent 'icemake_df' template to Engineer '{assigned_eng}' ({clean_eng}) for State '{city_state}' (Ticket #{ticket.ticket_number})")
                 return
 
         from bot.services.whatsapp_service import send_whatsapp_message
         wa_text = (
-            f"🚨 *NEW ICEMAKE SERVICE TICKET ALERT*\n\n"
-            f"A new complaint ticket has been logged by customer:\n\n"
-            f"📋 *Ticket #:* {ticket.ticket_number}\n"
-            f"👤 *Customer Name:* {ticket.customer_name or 'N/A'}\n"
-            f"📞 *Customer Mobile:* {cust_phone}\n"
-            f"📍 *City / State:* {ticket.city_state or 'N/A'}\n"
-            f"🏠 *Address:* {ticket.company_name or 'N/A'}\n"
-            f"⚙️ *Product Name:* {ticket.machine_model_no or 'N/A'}\n"
-            f"🛠️ *Issue Type:* {ticket.issue_type or 'Other'}\n"
-            f"📝 *Description:* {ticket.issue_description or 'N/A'}\n"
-            f"👤 *Assigned Engineer:* {assigned_eng}\n\n"
-            f"Please attend to this issue immediately.\n"
-            f"*Ice Make Refrigeration Ltd.*"
+            f"COMPLAINT NO: *{ticket_no}*\n"
+            f"STATE / CITY: *{city_state}*\n"
+            f"NAME: *{cust_name}*\n"
+            f"NUMBER: *{cust_phone}*\n"
+            f"ADDRESS: *{address}*\n"
+            f"MACHINE MODEL NO: *{machine_model}*\n"
+            f"MACHINE SERIAL NO: *{machine_sr}*\n"
+            f"TYPE OF COMPLAIN: *{issue_type}*\n"
+            f"WarrantyStatus: *{warranty_status}*\n\n"
+            f"Thank You!"
         )
         res = send_whatsapp_message(clean_eng, wa_text)
-        if isinstance(res, dict) and (res.get("retry_after") or "Account Protection enabled" in str(res)):
-            retry_sec = int(res.get("retry_after", 5)) + 1
-            print(f"⏳ [ENGINEER WA RATE LIMIT]: WASender 429 rate limit hit. Pausing {retry_sec}s before retry...")
-            import time
-            time.sleep(retry_sec)
-            res = send_whatsapp_message(clean_eng, wa_text)
-
-        print(f"🚨 [ENGINEER WA ALERT SUCCESS]: Alert sent to Engineer '{assigned_eng}' ({clean_eng}) for State '{city_state}' (Ticket #{ticket.ticket_number}). Response: {res}")
+        print(f"🚨 [ENGINEER WA ALERT SUCCESS]: Alert sent to Engineer '{assigned_eng}' ({clean_eng}) for Ticket #{ticket.ticket_number}. Response: {res}")
     except Exception as e:
         logger.error("[ENGINEER WA ERROR] Failed to send WhatsApp alert to engineer: %s", e)
-
 
 
 def _clean_model_or_serial(text: str) -> str:

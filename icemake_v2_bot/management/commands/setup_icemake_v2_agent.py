@@ -46,6 +46,13 @@ class Command(BaseCommand):
             role_template.save()
 
         # 4. Voice Agent
+        # Clear inbound number 9484959435 from any previous agent to satisfy unique constraint
+        old_holders = VoiceAgent.objects.filter(inbound_phone_number="9484959435").exclude(name="Ice Make Support Agent V2")
+        for old in old_holders:
+            old.inbound_phone_number = None
+            old.save(update_fields=["inbound_phone_number"])
+            self.stdout.write(self.style.WARNING(f"⚠️ Cleared inbound number 9484959435 from older agent: {old.name}"))
+
         agent, created_agent = VoiceAgent.objects.get_or_create(
             name="Ice Make Support Agent V2",
             defaults={
@@ -53,12 +60,16 @@ class Command(BaseCommand):
                 "industry": industry,
                 "role_template": role_template,
                 "company_name": "Ice Make Refrigeration Limited",
-                "summary": "24x7 Customer Support Voice Agent that registers breakdown complaints with address verification and machine serial number."
+                "summary": "24x7 Customer Support Voice Agent that registers breakdown complaints with address verification and machine serial number.",
+                "inbound_phone_number": "9484959435",
+                "is_active": True,
             }
         )
         if not created_agent:
             agent.role_template = role_template
             agent.company_name = "Ice Make Refrigeration Limited"
+            agent.inbound_phone_number = "9484959435"
+            agent.is_active = True
             agent.save()
 
         self.stdout.write(self.style.SUCCESS(f"✅ SUCCESS! Ice Make Voice Agent V2 is ready! (ID: {agent.id}, Name: '{agent.name}')"))
