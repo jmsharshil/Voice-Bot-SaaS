@@ -187,8 +187,14 @@ class KylasService:
                 logger.info(f"✅ [KYLAS CRM] Successfully logged call for Lead #{lead_id} (Status {resp.status_code})")
                 return {"status": "success", "code": resp.status_code, "data": resp.json() if resp.text else {}}
             else:
-                logger.error(f"❌ [KYLAS CRM ERROR]: HTTP {resp.status_code} - {resp.text}")
-                return {"status": "error", "code": resp.status_code, "response": resp.text}
+                extra_hint = ""
+                if resp.status_code == 422:
+                    if "02003002" in resp.text:
+                        extra_hint = f" -> Lead #{lead_id} does not exist in Kylas CRM (deleted, merged, or wrong tenant)."
+                    elif "02003003" in resp.text:
+                        extra_hint = f" -> Phone number '{clean_phone}' does not match Lead #{lead_id} in Kylas CRM."
+                logger.error(f"❌ [KYLAS CRM ERROR]: HTTP {resp.status_code} - {resp.text}{extra_hint}")
+                return {"status": "error", "code": resp.status_code, "response": resp.text, "hint": extra_hint.strip()}
 
         except Exception as e:
             logger.error(f"❌ [KYLAS CRM EXCEPTION]: {e}", exc_info=True)
@@ -296,10 +302,12 @@ class SarvamAgentService:
             clean_domain = f"https://{clean_domain}"
         callback_url = f"{clean_domain}/api/webhook/sarvam/cdr/" if clean_domain else ""
         if callback_url:
+            params = ["call_type=outbound"]
             if campaign_id:
-                callback_url = f"{callback_url}?campaign_id={campaign_id}&call_type=outbound"
-            else:
-                callback_url = f"{callback_url}?call_type=outbound"
+                params.append(f"campaign_id={campaign_id}")
+            if lead_id:
+                params.append(f"record_id={lead_id}")
+            callback_url = f"{callback_url}?{'&'.join(params)}"
 
         # Ensure phone number is E.164 formatted (with +91)
         formatted_phone = str(phone_number).strip()
