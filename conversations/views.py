@@ -1690,7 +1690,15 @@ def sarvam_cdr_webhook(request):
             final_status = output_vars["final_status"]
 
         rec = None
-        if attempt_id:
+        url_record_id = request.GET.get("record_id")
+        if url_record_id:
+            try:
+                rec = SarvamCallRecord.objects.filter(id=int(url_record_id)).first()
+                if rec:
+                    print(f"🎯 [CDR URL MATCH]: Matched directly to CallRecord #{rec.id} from callback URL")
+            except Exception:
+                pass
+        if not rec and attempt_id:
             rec = SarvamCallRecord.objects.filter(attempt_id=attempt_id).first()
         if not rec and interaction_id:
             rec = SarvamCallRecord.objects.filter(interaction_id=interaction_id).first()
