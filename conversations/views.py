@@ -1718,10 +1718,18 @@ def sarvam_cdr_webhook(request):
                     phone_number__icontains=clean_p,
                     created_at__gte=recent_threshold
                 )
-                # Only filter by agent if agent was EXPLICITLY provided in payload via app_id or agent_phone
-                if webhook_sarvam_agent and (cdr_app_id or cdr_agent_phone):
-                    rec_qs = rec_qs.filter(sarvam_agent=webhook_sarvam_agent)
-                rec = rec_qs.order_by("-created_at").first()
+                # 1. Prioritize active DIALING / PENDING records (prevents latching onto older completed Inbound calls)
+                pending_qs = rec_qs.filter(status__in=["DIALING", "PENDING", "IN_PROGRESS", "QUEUED"])
+                if candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]:
+                    rec = pending_qs.filter(candidate_name__icontains=candidate_name.strip()).order_by("-created_at").first()
+                if not rec:
+                    rec = pending_qs.order_by("-created_at").first()
+                if not rec:
+                    # 2. Fallback to recent records, matching agent if specified
+                    if webhook_sarvam_agent and (cdr_app_id or cdr_agent_phone):
+                        rec = rec_qs.filter(sarvam_agent=webhook_sarvam_agent).order_by("-created_at").first()
+                    if not rec:
+                        rec = rec_qs.order_by("-created_at").first()
 
         # ✅ FALLBACK MATCH BY CANDIDATE NAME: When Sarvam sends empty attempt_id & empty phone_number
         if not rec and candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]:
