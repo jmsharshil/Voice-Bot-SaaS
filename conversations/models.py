@@ -758,3 +758,55 @@ class KylasWebhookConfig(models.Model):
     class Meta:
         verbose_name = "Kylas Webhook Calling Control"
         verbose_name_plural = "Kylas Webhook Calling Control"
+
+
+class DailyCampaignSummaryConfig(models.Model):
+    """
+    Configuration for automated daily campaign and telephony summary emails.
+    Allows easy addition/removal of recipient email addresses via Admin or Dashboard API.
+    """
+    is_enabled = models.BooleanField(
+        default=True,
+        help_text="Enable or disable automated daily summary emails"
+    )
+    recipient_emails = models.TextField(
+        default="voiceagents@jmstech.co",
+        help_text="Comma-separated or newline-separated recipient email addresses"
+    )
+    send_time = models.CharField(
+        max_length=10,
+        default="20:00",
+        help_text="Time to send the daily report (24-hour format in IST, e.g. 20:00 for 8:00 PM)"
+    )
+    last_sent_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date on which the summary email was last successfully sent (prevents duplicate sends on the same day)"
+    )
+    include_agent_minutes = models.BooleanField(
+        default=True,
+        help_text="Include remaining minutes balance for all Sarvam agents"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        status = "ENABLED" if self.is_enabled else "PAUSED"
+        return f"Daily Campaign Summary Email: {status} (Send at {self.send_time} IST)"
+
+    @classmethod
+    def get_config(cls):
+        config, _ = cls.objects.get_or_create(id=1)
+        return config
+
+    def get_clean_email_list(self):
+        """Returns clean list of recipient emails."""
+        raw = self.recipient_emails or ""
+        import re
+        parts = re.split(r"[,;\n\r]+", raw)
+        clean = [p.strip() for p in parts if p.strip() and "@" in p and "." in p]
+        return clean
+
+    class Meta:
+        verbose_name = "Daily Campaign Summary Email Config"
+        verbose_name_plural = "Daily Campaign Summary Email Config"
+

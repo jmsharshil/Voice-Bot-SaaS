@@ -19,6 +19,7 @@ from .views import (
     system_maintenance_enable_api, system_maintenance_disable_api, system_maintenance_status_api,
     sarvam_agent_demo_page, sarvam_agent_demo_trigger_call_api, sarvam_agent_demo_call_status_api,
     dashboard_ai_copilot_api,
+    daily_summary_config_api, daily_summary_send_test_api,
 )
 from .incoming_webhooks import incoming_trigger_webhook
 from .tata_webhooks import tata_smartflo_call_start_webhook
@@ -147,4 +148,10 @@ urlpatterns = [
     # Dashboard AI Intelligence Copilot
     path("api/dashboard/ai-copilot/", dashboard_ai_copilot_api, name="dashboard-ai-copilot"),
     path("dashboard/ai-copilot/", dashboard_ai_copilot_api),
+
+    # Daily Campaign Summary Email APIs
+    path("api/sarvam/daily-summary/config/", daily_summary_config_api, name="daily-summary-config"),
+    path("api/sarvam/daily-summary/test-send/", daily_summary_send_test_api, name="daily-summary-test-send"),
+    path("sarvam/daily-summary/config/", daily_summary_config_api),
+    path("sarvam/daily-summary/test-send/", daily_summary_send_test_api),
 ]
