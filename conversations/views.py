@@ -7172,3 +7172,81 @@ def dashboard_ai_copilot_api(request):
         "tools_used": result.get("tools_used", []),
         "username": user.username if user else "Executive"
     }, status=200)
+
+
+# =====================================================================
+# DAILY CAMPAIGN & TELEPHONY SUMMARY EMAIL APIs
+# =====================================================================
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+def daily_summary_config_api(request):
+    """
+    API to view and update the Daily Campaign Summary Email configuration.
+    GET  -> returns current config, recipients list, send_time, and status.
+    POST -> updates is_enabled, recipient_emails, send_time.
+    """
+    from conversations.models import DailyCampaignSummaryConfig
+
+    if request.user.is_authenticated and not request.user.is_staff and not request.user.is_superuser:
+        return Response({"error": "Admin access required."}, status=403)
+
+    config = DailyCampaignSummaryConfig.get_config()
+
+    if request.method == "POST":
+        data = request.data
+        if "is_enabled" in data:
+            config.is_enabled = bool(data.get("is_enabled"))
+        if "recipient_emails" in data:
+            config.recipient_emails = str(data.get("recipient_emails")).strip()
+        if "send_time" in data:
+            config.send_time = str(data.get("send_time")).strip()
+        if "include_agent_minutes" in data:
+            config.include_agent_minutes = bool(data.get("include_agent_minutes"))
+        config.save()
+        return Response({
+            "status": "success",
+            "message": "Daily summary email configuration updated successfully.",
+            "config": {
+                "is_enabled": config.is_enabled,
+                "send_time": config.send_time,
+                "recipients": config.get_clean_email_list(),
+                "recipient_emails_raw": config.recipient_emails,
+                "last_sent_date": str(config.last_sent_date) if config.last_sent_date else None,
+            }
+        }, status=200)
+
+    return Response({
+        "status": "success",
+        "config": {
+            "is_enabled": config.is_enabled,
+            "send_time": config.send_time,
+            "recipients": config.get_clean_email_list(),
+            "recipient_emails_raw": config.recipient_emails,
+            "last_sent_date": str(config.last_sent_date) if config.last_sent_date else None,
+        }
+    }, status=200)
+
+
+@csrf_exempt
+@api_view(["POST"])
+def daily_summary_send_test_api(request):
+    """
+    Immediately triggers a test send of the daily summary email to verify delivery.
+    Accepts optional {"recipient": "custom@mail.com"}.
+    """
+    from conversations.services.daily_summary_service import generate_and_send_daily_summary
+
+    if request.user.is_authenticated and not request.user.is_staff and not request.user.is_superuser:
+        return Response({"error": "Admin access required."}, status=403)
+
+    custom_to = request.data.get("recipient") or request.data.get("email")
+    custom_recipients = None
+    if custom_to:
+        custom_recipients = [str(custom_to).strip()]
+
+    is_dummy = bool(request.data.get("dummy") or request.data.get("sample"))
+    result = generate_and_send_daily_summary(force=True, custom_recipients=custom_recipients, dummy=is_dummy)
+    status_code = 200 if result.get("status") == "success" else 400
+    return Response(result, status=status_code)
+

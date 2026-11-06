@@ -391,3 +391,47 @@ class KylasWebhookConfigAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+from .models import DailyCampaignSummaryConfig
+
+@admin.register(DailyCampaignSummaryConfig)
+class DailyCampaignSummaryConfigAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "is_enabled", "send_time", "recipients_preview", "last_sent_date", "updated_at")
+    list_editable = ("is_enabled", "send_time")
+    readonly_fields = ("last_sent_date", "updated_at")
+
+    fieldsets = (
+        ("Automated Daily Summary Email Settings", {
+            "fields": ("is_enabled", "send_time", "recipient_emails", "include_agent_minutes"),
+            "description": (
+                "<strong>Daily Campaign & Telephony Email Summary Configuration:</strong><br><br>"
+                "• <b>Recipient Emails</b>: Enter all email addresses that should receive the daily summary (one per line or separated by commas).<br>"
+                "• <b>Send Time</b>: 24-hour format in Indian Standard Time (IST), e.g. <code>20:00</code> for 8:00 PM.<br>"
+                "• <b>Master Switch (is_enabled)</b>: Check to enable automatic daily sending; uncheck to pause anytime.<br>"
+                "• <b>Agent Minutes</b>: Includes each agent's quota, minutes used today, and remaining balance."
+            )
+        }),
+        ("Transmission History", {
+            "fields": ("last_sent_date", "updated_at"),
+            "classes": ("collapse",),
+        }),
+    )
+
+    def recipients_preview(self, obj):
+        emails = obj.get_clean_email_list()
+        count = len(emails)
+        if count == 0:
+            return format_html('<span style="color:#ef4444; font-weight:600;">No recipients configured</span>')
+        preview = ", ".join(emails[:2])
+        if count > 2:
+            preview += f" (+{count - 2} more)"
+        return format_html('<span style="color:#0284c7; font-weight:600;">{} ({} total)</span>', preview, count)
+    recipients_preview.short_description = "Recipients"
+
+    def has_add_permission(self, request):
+        return not DailyCampaignSummaryConfig.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
