@@ -359,7 +359,7 @@ def _build_html_email_template(date_str, campaigns, agents, total_campaigns, tot
                                         </td>
                                         <td width="25%" style="padding: 6px;">
                                             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 12px; text-align: center;">
-                                                <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Campaign Leads</div>
+                                                <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; letter-spacing: 0.5px;">Excel Uploaded Calls</div>
                                                 <div style="font-size: 24px; font-weight: 800; color: #0284c7; margin-top: 4px;">{total_leads}</div>
                                             </div>
                                         </td>
@@ -394,7 +394,7 @@ def _build_html_email_template(date_str, campaigns, agents, total_campaigns, tot
                                                 <th style="padding: 10px;">Campaign Name</th>
                                                 <th style="padding: 10px;">Voice Agent</th>
                                                 <th style="padding: 10px;">Launched By</th>
-                                                <th style="padding: 10px; text-align: center;">Leads</th>
+                                                <th style="padding: 10px; text-align: center;">Excel Uploaded Calls</th>
                                                 <th style="padding: 10px; text-align: center;">Answered</th>
                                                 <th style="padding: 10px; text-align: center;">Missed</th>
                                                 <th style="padding: 10px;">Status</th>
@@ -465,14 +465,14 @@ def _build_plain_text_summary(date_str, campaigns, agents, total_campaigns, tota
     lines = [
         f"JMS VOICE BOT — DAILY SUMMARY ({date_str})",
         "=" * 60,
-        f"Campaigns Run: {total_campaigns} | Total Leads: {total_leads} | Total Answered: {total_answered} | Total Minutes Billed: {total_billed_minutes}m",
+        f"Campaigns Run: {total_campaigns} | Excel Uploaded Calls: {total_leads} | Total Answered: {total_answered} | Total Minutes Billed: {total_billed_minutes}m",
         "",
         "CAMPAIGNS BREAKDOWN:",
         "-" * 60
     ]
     if campaigns:
         for c in campaigns:
-            lines.append(f"• Campaign #{c['id']}: {c['name']} | Agent: {c['agent_name']} | By: {c['creator_name']} | Leads: {c['total_leads']} | Answered: {c['answered']} ({c['ans_pct']}%) | Status: {c['status']}")
+            lines.append(f"• Campaign #{c['id']}: {c['name']} | Agent: {c['agent_name']} | By: {c['creator_name']} | Excel Uploaded Calls: {c['total_leads']} | Answered: {c['answered']} ({c['ans_pct']}%) | Status: {c['status']}")
     else:
         lines.append("No Excel campaigns run today.")
 
