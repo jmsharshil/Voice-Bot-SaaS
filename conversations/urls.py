@@ -23,6 +23,7 @@ from .views import (
 )
 from .incoming_webhooks import incoming_trigger_webhook
 from .tata_webhooks import tata_smartflo_call_start_webhook
+from .react_api import react_trigger_call_api
 from django.urls import path, re_path
 
 urlpatterns = [
@@ -38,6 +39,12 @@ urlpatterns = [
     path("api/webhook/trigger-call/", incoming_trigger_webhook),
     path("api/webhook/trigger-call/<slug:agent_slug>/", incoming_trigger_webhook),
     path("api/webhook/trigger-call/agent/<int:agent_id>/", incoming_trigger_webhook),
+
+    # ── DEDICATED REACT OUTBOUND CALL TRIGGER API ─────────────────────
+    path("sarvam/react-trigger-call/", react_trigger_call_api, name="react-trigger-call-default"),
+    path("sarvam/react-trigger-call/<slug:agent_slug>/", react_trigger_call_api, name="react-trigger-call-slug"),
+    path("api/sarvam/react-trigger-call/", react_trigger_call_api),
+    path("api/sarvam/react-trigger-call/<slug:agent_slug>/", react_trigger_call_api),
 
     # ── PUBLIC REST API FOR REACT FRONTEND INTEGRATION ────────────────
     path("v1/trigger-call/", public_trigger_sarvam_call_api, name="api-v1-trigger-call"),

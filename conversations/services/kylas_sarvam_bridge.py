@@ -373,15 +373,41 @@ class SarvamAgentService:
             print(f"📤 [SARVAM API PAYLOAD SENT] to {formatted_phone}: user_name='{customer_name}' | car_model='{agent_vars.get('car_model', '')}' | agent_vars={agent_vars}")
             response = requests.post(url, headers=cls.get_agent_headers(api_key), json=payload, timeout=10)
 
-            # Self-healing fallback 1: If Sarvam rejects extra undeclared variables with 422, retry with user_name only
+            # Self-healing fallback 1: If Sarvam rejects undeclared variables with 422,
+            # parse the rejected variable names and retry with ONLY the valid variables kept!
             if response.status_code == 422:
-                logger.warning(f"⚠️ [SARVAM AGENT API 422]: App '{app_id}' rejected variables {agent_vars} (Body: {response.text}). Retrying with user_name only...")
-                fallback_payload = dict(payload)
-                fallback_payload["app_config"] = dict(payload["app_config"])
-                fallback_payload["app_config"]["agent_variables"] = {"user_name": customer_name}
-                response = requests.post(url, headers=cls.get_agent_headers(api_key), json=fallback_payload, timeout=10)
+                logger.warning(f"⚠️ [SARVAM AGENT API 422]: App '{app_id}' rejected variables {agent_vars} (Body: {response.text})")
 
-                # Self-healing fallback 2: If Sarvam STILL rejects with 422, retry with empty agent_variables {}
+                # Parse rejected keys from Sarvam error response:
+                # E.g.: "Agent variables '{'store_name', 'car_name'}' not found in agent variables of app..."
+                rejected_keys = set()
+                try:
+                    import re
+                    match = re.search(r"Agent variables '\{([^}]+)\}'", response.text)
+                    if match:
+                        raw_keys = match.group(1)
+                        rejected_keys = {k.strip().strip("'\"") for k in raw_keys.split(",") if k.strip()}
+                except Exception as parse_err:
+                    logger.debug(f"Could not parse rejected keys from Sarvam 422 response: {parse_err}")
+
+                if rejected_keys:
+                    cleaned_vars = {k: v for k, v in agent_vars.items() if k not in rejected_keys}
+                    if cleaned_vars and cleaned_vars != agent_vars:
+                        logger.info(f"🔄 Retrying Sarvam API with filtered variables (removed rejected {rejected_keys}): {cleaned_vars}")
+                        retry_payload = dict(payload)
+                        retry_payload["app_config"] = dict(payload["app_config"])
+                        retry_payload["app_config"]["agent_variables"] = cleaned_vars
+                        response = requests.post(url, headers=cls.get_agent_headers(api_key), json=retry_payload, timeout=10)
+
+                # Self-healing fallback 2: If still 422 or parsing failed, retry with user_name only
+                if response.status_code == 422:
+                    logger.warning(f"⚠️ [SARVAM AGENT API 422]: App '{app_id}' still rejected. Retrying with user_name only...")
+                    fallback_payload = dict(payload)
+                    fallback_payload["app_config"] = dict(payload["app_config"])
+                    fallback_payload["app_config"]["agent_variables"] = {"user_name": customer_name}
+                    response = requests.post(url, headers=cls.get_agent_headers(api_key), json=fallback_payload, timeout=10)
+
+                # Self-healing fallback 3: If STILL 422, retry with empty agent_variables {}
                 if response.status_code == 422:
                     logger.warning(f"⚠️ [SARVAM AGENT API 422]: App '{app_id}' rejected user_name. Retrying with empty agent_variables...")
                     empty_payload = dict(payload)
