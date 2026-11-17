@@ -1471,12 +1471,33 @@ def sarvam_cdr_webhook(request):
         else:
             transcript_from_log = None
 
+        def _format_transcript_payload(tx_raw):
+            if isinstance(tx_raw, list) and tx_raw:
+                turns = []
+                for item in tx_raw:
+                    if isinstance(item, dict):
+                        role = str(item.get("role", "Speaker")).strip().capitalize()
+                        en = str(item.get("en_text") or item.get("text") or item.get("content") or "").strip()
+                        indic = str(item.get("indic_text") or "").strip()
+                        text = f"{en} ({indic})" if en and indic and en != indic else (en or indic)
+                        if text:
+                            turns.append(f"{role}: {text}")
+                    elif isinstance(item, str) and item.strip():
+                        turns.append(item.strip())
+                return "\n\n".join(turns)
+            elif isinstance(tx_raw, dict):
+                return str(tx_raw.get("transcript") or tx_raw.get("text") or tx_raw)
+            elif tx_raw:
+                return str(tx_raw).strip()
+            return None
+
         transcript = (
             transcript_from_log
-            or raw_data.get("call_transcript")
-            or raw_data.get("transcript")
-            or raw_data.get("interaction_transcript")
-            or analysis_obj.get("transcript")
+            or _format_transcript_payload(raw_data.get("call_transcript"))
+            or _format_transcript_payload(raw_data.get("transcript"))
+            or _format_transcript_payload(raw_data.get("interaction_transcript"))
+            or _format_transcript_payload(analysis_obj.get("transcript"))
+            or ""
         )
 
         if isinstance(interaction_id, str) and ("{" in interaction_id or "[" in interaction_id or "test" in interaction_id):
@@ -1510,9 +1531,12 @@ def sarvam_cdr_webhook(request):
         from conversations.services.kylas_sarvam_bridge import SarvamAgentService
         from conversations.models import SarvamCallRecord, SarvamAgent
 
-        output_vars = raw_data.get("output_agent_variables") or raw_data.get("final_agent_variables") or {}
-        if not isinstance(output_vars, dict):
-            output_vars = {}
+        fav = raw_data.get("final_agent_variables") if isinstance(raw_data.get("final_agent_variables"), dict) else {}
+        oav = raw_data.get("output_agent_variables") if isinstance(raw_data.get("output_agent_variables"), dict) else {}
+        output_vars = dict(fav)
+        for k, v in oav.items():
+            if v or k not in output_vars:
+                output_vars[k] = v
 
         candidate_name = (
             raw_data.get("candidate_name")
@@ -1523,10 +1547,10 @@ def sarvam_cdr_webhook(request):
             or metadata.get("customer_name")
             or metadata.get("user_name")
             or metadata.get("caller_name")
-            or output_vars.get("candidate_name")
             or output_vars.get("user_name")
-            or output_vars.get("customer_name")
             or output_vars.get("caller_name")
+            or output_vars.get("candidate_name")
+            or output_vars.get("customer_name")
             or "Customer"
         )
 
@@ -1536,8 +1560,12 @@ def sarvam_cdr_webhook(request):
             or raw_data.get("agent_id")
             or raw_data.get("appId")
             or raw_data.get("agentId")
+            or fav.get("app_id")
+            or oav.get("app_id")
             or metadata.get("app_id")
             or metadata.get("agent_id")
+            or (raw_data.get("user_config") or {}).get("app_id")
+            or (raw_data.get("call") or {}).get("app_id")
             or ""
         ).strip()
         cdr_agent_phone = str(
@@ -1556,10 +1584,17 @@ def sarvam_cdr_webhook(request):
 
         if cdr_app_id and cdr_app_id.lower() not in ("none", "null", ""):
             # 1. Direct app_id match
-            webhook_sarvam_agent = SarvamAgent.objects.filter(app_id=cdr_app_id, is_active=True).first()
+            webhook_sarvam_agent = (
+                SarvamAgent.objects.filter(app_id=cdr_app_id, is_active=True).first()
+                or SarvamAgent.objects.filter(app_id__iexact=cdr_app_id, is_active=True).first()
+                or SarvamAgent.objects.filter(app_id__icontains=cdr_app_id, is_active=True).first()
+            )
             # 2. Direct slug match
             if not webhook_sarvam_agent:
-                webhook_sarvam_agent = SarvamAgent.objects.filter(slug__iexact=cdr_app_id, is_active=True).first()
+                webhook_sarvam_agent = (
+                    SarvamAgent.objects.filter(slug__iexact=cdr_app_id, is_active=True).first()
+                    or SarvamAgent.objects.filter(slug__icontains=cdr_app_id, is_active=True).first()
+                )
             # 3. Direct ID match if numeric
             if not webhook_sarvam_agent and cdr_app_id.isdigit():
                 webhook_sarvam_agent = SarvamAgent.objects.filter(id=int(cdr_app_id), is_active=True).first()
@@ -1724,21 +1759,16 @@ def sarvam_cdr_webhook(request):
                     rec = pending_qs.filter(candidate_name__icontains=candidate_name.strip()).order_by("-created_at").first()
                 if not rec:
                     rec = pending_qs.order_by("-created_at").first()
-                if not rec:
-                    # 2. Fallback to recent records, matching agent if specified
-                    if webhook_sarvam_agent and (cdr_app_id or cdr_agent_phone):
-                        rec = rec_qs.filter(sarvam_agent=webhook_sarvam_agent).order_by("-created_at").first()
-                    if not rec:
-                        rec = rec_qs.order_by("-created_at").first()
 
-        # ✅ FALLBACK MATCH BY CANDIDATE NAME: When Sarvam sends empty attempt_id & empty phone_number
+        # ✅ FALLBACK MATCH BY CANDIDATE NAME: Only for pending/dialing calls
         if not rec and candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]:
             from datetime import timedelta
             from django.utils import timezone
             from django.db.models import Q
             recent_threshold = timezone.now() - timedelta(minutes=45)
             rec_name_qs = SarvamCallRecord.objects.filter(
-                created_at__gte=recent_threshold
+                created_at__gte=recent_threshold,
+                status__in=["DIALING", "PENDING", "IN_PROGRESS", "QUEUED"]
             ).filter(
                 Q(candidate_name__iexact=candidate_name.strip()) | Q(candidate_name__icontains=candidate_name.strip())
             )
@@ -1746,10 +1776,17 @@ def sarvam_cdr_webhook(request):
             if webhook_sarvam_agent and (cdr_app_id or cdr_agent_phone):
                 rec_name_qs = rec_name_qs.filter(sarvam_agent=webhook_sarvam_agent)
 
-            # Prefer matching a record that is currently in DIALING / PENDING / IN_PROGRESS status
-            rec = rec_name_qs.filter(status__in=["DIALING", "PENDING", "IN_PROGRESS", "QUEUED"]).order_by("-created_at").first() or rec_name_qs.order_by("-created_at").first()
+            rec = rec_name_qs.order_by("-created_at").first()
             if rec:
-                print(f"🎯 [CDR MATCH]: Matched incoming webhook for candidate '{candidate_name}' to existing call record #{rec.id} (Phone: {rec.phone_number}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'})")
+                print(f"🎯 [CDR MATCH]: Matched incoming webhook for candidate '{candidate_name}' to pending call record #{rec.id}")
+
+        # ✅ CRITICAL ISOLATION: Never reuse a record that already has a DIFFERENT interaction_id
+        if rec and rec.interaction_id and interaction_id:
+            raw_prev = str(rec.interaction_id).split("/")[-1].strip()
+            raw_curr = str(interaction_id).split("/")[-1].strip()
+            if raw_prev != raw_curr:
+                print(f"⚠️ [CDR SEPARATION]: CallRecord #{rec.id} already has interaction '{rec.interaction_id}', but incoming webhook has '{interaction_id}'. Creating a fresh CallRecord.")
+                rec = None
 
         # ✅ MATCH TATA SMARTFLO INBOUND CALLS:
         # If rec not found yet and this call belongs to webhook_sarvam_agent (or caller number was unknown in Sarvam CDR),
@@ -2200,6 +2237,14 @@ def sarvam_cdr_webhook(request):
                                 final_url = resp.url
                                 r.audio_url = final_url
                                 r.save(update_fields=["audio_url"])
+                                try:
+                                    from shreyas_portal.models import ShreyasCallLead
+                                    from django.db.models import Q
+                                    ShreyasCallLead.objects.filter(
+                                        Q(sarvam_call_record=r) | Q(interaction_id=r.interaction_id)
+                                    ).update(audio_url=final_url)
+                                except Exception:
+                                    pass
                                 print(f"✅ [RECORDING RETRY] Got recording for record #{record_id} on attempt {attempt}! Saved: {final_url[:80]}")
 
                                 # If transcript was missing, also trigger AI summary
@@ -2230,6 +2275,36 @@ def sarvam_cdr_webhook(request):
                 trigger_whatsapp_for_call(rec, async_mode=True)
             except Exception as _wa_err:
                 print(f"⚠️ [WHATSAPP HOOK FROM CDR NOTICE]: {_wa_err}")
+
+        # ── SAFE AUTO-ROUTING TO SHREYAS FOUNDATION PORTAL ──
+        if rec and rec.sarvam_agent and ("shreyas" in (rec.sarvam_agent.slug or "").lower() or "shreyas" in (rec.sarvam_agent.name or "").lower() or "shreyas" in (rec.sarvam_agent.app_id or "").lower()):
+            try:
+                from shreyas_portal.classifier import route_and_save_shreyas_lead
+                c_name = rec.candidate_name
+                agent_vars = dict(fav)
+                agent_vars.update(oav)
+                explicit_int = ""
+                if isinstance(agent_vars, dict):
+                    u_cand = agent_vars.get("user_name") or agent_vars.get("caller_name")
+                    if u_cand and str(u_cand).strip().lower() not in ["customer", "valued customer", "none", "null", ""]:
+                        c_name = str(u_cand).strip()
+                    explicit_int = agent_vars.get("interest_field") or agent_vars.get("interest_sub_field") or ""
+
+                route_and_save_shreyas_lead(
+                    phone_number=rec.phone_number,
+                    caller_name=c_name,
+                    transcript=rec.transcript or "",
+                    summary=rec.summary.get("call_summary") if isinstance(rec.summary, dict) else str(rec.summary or ""),
+                    audio_url=rec.audio_url or "",
+                    duration_seconds=rec.duration_seconds or 0.0,
+                    status=rec.status or "COMPLETED",
+                    interaction_id=rec.interaction_id or "",
+                    sarvam_call_record=rec,
+                    call_type=rec.call_type or "Inbound Call",
+                    explicit_interest=explicit_int
+                )
+            except Exception as _sh_err:
+                print(f"⚠️ [SHREYAS HOOK FROM CDR NOTICE]: {_sh_err}")
 
         return Response({
             "status": "success",
