@@ -351,23 +351,18 @@ def is_valid_alphanumeric_serial(serial_str: str) -> bool:
 def _normalize_alphanumeric_serial(serial_str: str) -> str:
     """
     Intelligently extracts and normalizes machine serial numbers / model codes across languages.
-    - NO CHARACTER LIMIT: Handles serials of any length (e.g. 5, 8, 10, 18, 19, 25+ chars).
+    - NO CHARACTER LIMIT: Handles serials of any length (e.g. 3, 5, 8, 10, 18, 19, 25+ chars).
     - IN-BETWEEN SENTENCE ISOLATION: Accurately isolates serial numbers even when callers speak
       long conversational sentences (e.g. "हाँ भैया मेरा फ्रीजर चालू नहीं हो रहा और सीरियल नंबर VCB2502116 है तो कब आओगे?").
-    - Supports official Ice Make equipment series formats:
-      * VCB Series (Visi Cooler): e.g. VCB2502116
-      * DF Series (Deep Freezer): e.g. DF25008959
-      * CIM Series (Cube Ice Maker): e.g. CIM305B501-25030653
-      * DIM Series (Dairy/Direct Ice Machine): e.g. DIM405BX01-260500067
-      * GIM Series (Glass Ice Machine): e.g. GIM268E404-261000012
-      * Numeric / General series: e.g. 25030653, 9428512345, BF84920, ICE4402.
+    - Spoken letters and compounds in Hindi/Gujarati/English phonetics (e.g. 'वीसी बी 1525' -> 'VCB1525', 'ए 123' -> 'A123', 'વી સી બી 12345 ડેશ 1015' -> 'VCB12345-1015').
+    - Spoken numbers ('एक', 'दो', 'પાંચ', 'one', 'two', etc.) converted to ASCII digits.
     - Preserves hyphens ('-') between model and serial components.
     """
     if not serial_str:
         return ""
     text = str(serial_str).strip()
 
-    # 1. Translate Indic digits to ASCII digits
+    # 1. Translate Indic script digits to ASCII digits
     indic_to_ascii = str.maketrans(
         '०१२३४५६७८९૦૧૨૩૪૫૬૭૮૯੦੧੨੩੪੫੬੭੮੯০১২৩৪৫৬৭৮৯௦౧౨౩౪౫౬౭౮౯௧௨௩௪௫௬௭௮௯౦౧౨౩౪౫౬౭౮౯൦൧൨൩൪൫൬൭൮൯೦೧೨೩೪೫೬೭೮೯',
         '01234567890123456789012345678901234567890123456789123456789012345678901234567890123456789'
@@ -381,60 +376,85 @@ def _normalize_alphanumeric_serial(serial_str: str) -> str:
         pattern = r'(^|[\s.,!?।\-_])' + re.escape(dw) + r'(?=[\s.,!?।\-_0-9]|$)'
         text = re.sub(pattern, r'\g<1>-', text, flags=re.IGNORECASE)
 
-    # 3. Multi-letter regional compound prefix words first
-    compound_words = [
-        ("વીસીબી", "VCB"), ("वीसीबी", "VCB"),
-        ("સીઆઈએમ", "CIM"), ("सीआईएम", "CIM"),
-        ("ડીઆઈએમ", "DIM"), ("डीआईएम", "DIM"),
-        ("જીઆઈએમ", "GIM"), ("जीआईएम", "GIM"),
-        ("બીએક્સ", "BX"), ("बीएक्स", "BX"),
-        ("ડીએફ", "DF"), ("डीएफ", "DF")
+    # 3. Spoken single number words conversion into digits
+    spoken_num_words = [
+        (r'(शून्य|जीरो|ज़ीरो|શૂન્ય|ઝીરો|zero)', '0'),
+        (r'(एक|એક|one|वन)', '1'),
+        (r'(दो|બે|two|टू|ટુ)', '2'),
+        (r'(तीन|ત્રણ|three|थ्री|થ્રી)', '3'),
+        (r'(चार|ચાર|four|फोर|ફોર)', '4'),
+        (r'(पांच|पाँच|પાંચ|five|फाइव|ફાઇવ|ફાઈવ)', '5'),
+        (r'(छह|छः|છ|six|सिक्स|સિક્સ)', '6'),
+        (r'(सात|સાત|seven|सेवन|સેવન)', '7'),
+        (r'(आठ|આઠ|eight|एट|एइट|ऐट|એઇટ)', '8'),
+        (r'(नौ|नव|નવ|nine|नाइन|નાઇન|નાઈન)', '9'),
+        (r'(दस|દસ|ten|टेन|ટેન)', '10'),
     ]
-    for cw, l in compound_words:
-        pattern = r'(^|[\s.,!?।\-_])' + re.escape(cw) + r'(?=[\s.,!?।\-_0-9]|$)'
-        text = re.sub(pattern, r'\g<1>' + l, text, flags=re.IGNORECASE)
+    for p, d in spoken_num_words:
+        pat = r'(^|[\s.,!?।\-_])' + p + r'(?=[\s.,!?।\-_0-9]|$)'
+        text = re.sub(pat, r'\g<1>' + d + ' ', text, flags=re.IGNORECASE)
 
-    # 4. Single-letter phonetic words
-    regional_letters = [
-        ("ડબલ્યુ", "W"), ("डब्लू", "W"), ("डब्ल्यू", "W"), ("डबल्यू", "W"),
-        ("ઝેડ", "Z"), ("ज़ेड", "Z"), ("जेड", "Z"), ("ঝেদ", "Z"),
-        ("એક્સ", "X"), ("एक्स", "X"),
-        ("વાય", "Y"), ("वाई", "Y"),
-        ("આઈ", "I"), ("આઇ", "I"), ("आई", "I"), ("आइ", "I"),
-        ("ક્યૂ", "Q"), ("क्यू", "Q"),
-        ("એચ", "H"), ("एच", "H"),
-        ("એફ", "F"), ("एफ", "F"), ("ऐफ़", "F"), ("ऐफ", "F"),
-        ("એલ", "L"), ("एल", "L"),
-        ("એમ", "M"), ("एम", "M"),
-        ("એન", "N"), ("एन", "N"),
-        ("એસ", "S"), ("एस", "S"),
-        ("આર", "R"), ("आर", "R"),
-        ("ડી", "D"), ("डी", "D"),
-        ("બી", "B"), ("बी", "B"),
-        ("સી", "C"), ("सी", "C"),
-        ("ટી", "T"), ("टी", "T"),
-        ("વી", "V"), ("वी", "V"),
-        ("પી", "P"), ("पी", "P"),
-        ("જી", "G"), ("जी", "G"),
-        ("જે", "J"), ("जे", "J"),
-        ("કે", "K"), ("के", "K"),
-        ("યુ", "U"), ("यू", "U"),
-        ("ઈ", "E"), ("ई", "E"),
-        ("ઓ", "O"), ("ओ", "O"),
-        ("એ", "A"), ("ए", "A")
+    # 4. Multi-letter regional compound prefix patterns (handles spaces like 'वीसी बी' or 'वी सी बी')
+    compound_phonetics = [
+        # VCB
+        (r'(वी\s*सी\s*बी|વી\s*સી\s*બી|v\s*c\s*b|वीसी\s*बी|વીસી\s*બી|vc\s*b|वीसीबी|વીસીબી)', 'VCB'),
+        # CIM
+        (r'(सी\s*आई\s*एम|સી\s*આઈ\s*એમ|c\s*i\s*m|सीआई\s*एम|સીઆઈ\s*એમ|सीआईएम|સીઆઈએમ)', 'CIM'),
+        # DIM
+        (r'(डी\s*आई\s*एम|ડી\s*આઈ\s*એમ|d\s*i\s*m|डीआई\s*एम|ડીઆઈ\s*એમ|डीआईएम|ડીઆઈએમ)', 'DIM'),
+        # GIM
+        (r'(जी\s*आई\s*एम|જી\s*આઈ\s*એમ|g\s*i\s*m|जीआई\s*एम|જીઆઈ\s*એમ|जीआईएम|જીઆઈએમ)', 'GIM'),
+        # DF
+        (r'(डी\s*एफ|ડી\s*એફ|d\s*f|डीएफ|ડીએફ)', 'DF'),
+        # BX
+        (r'(बी\s*एक्स|બી\s*એક્સ|b\s*x|बीएक्स|બીએક્સ)', 'BX'),
     ]
-    for pw, l in regional_letters:
-        pattern = r'(^|[\s.,!?।\-_])' + re.escape(pw) + r'(?=[\s.,!?।\-_0-9]|$)'
-        text = re.sub(pattern, r'\g<1>' + l, text, flags=re.IGNORECASE)
+    for pattern, rep in compound_phonetics:
+        pat = r'(^|[\s.,!?।\-_])' + pattern + r'(?=[\s.,!?।\-_0-9]|$)'
+        text = re.sub(pat, r'\g<1>' + rep + ' ', text, flags=re.IGNORECASE)
 
-    # 5. Word-level isolation to pinpoint serial token from conversational sentence
+    # 5. Single-letter phonetic words
+    single_letters = [
+        (r'(डबल्यू|डब्लू|डब्ल्यू|डबल्यू|ડબલ્યુ)', 'W'),
+        (r'(ज़ेड|जेड|ઝેડ|ঝেদ)', 'Z'),
+        (r'(एक्स|એક્સ)', 'X'),
+        (r'(वाई|વાય)', 'Y'),
+        (r'(आई|आइ|આઈ|આઇ)', 'I'),
+        (r'(क्यू|ક્યૂ)', 'Q'),
+        (r'(एच|એચ)', 'H'),
+        (r'(एफ|ऐफ़|ऐफ|એફ)', 'F'),
+        (r'(एल|એલ)', 'L'),
+        (r'(एम|એમ)', 'M'),
+        (r'(एन|એન)', 'N'),
+        (r'(एस|એએસ|એસ)', 'S'),
+        (r'(आर|આર)', 'R'),
+        (r'(डी|ડી)', 'D'),
+        (r'(बी|બી)', 'B'),
+        (r'(सी|સી)', 'C'),
+        (r'(टी|ટી)', 'T'),
+        (r'(वी|વી)', 'V'),
+        (r'(पी|પી)', 'P'),
+        (r'(जी|જી)', 'G'),
+        (r'(जे|જે)', 'J'),
+        (r'(के|કે)', 'K'),
+        (r'(यू|યુ)', 'U'),
+        (r'(ई|ઈ)', 'E'),
+        (r'(ओ|ઓ)', 'O'),
+        (r'(ए|એ)', 'A'),
+    ]
+    for pattern, rep in single_letters:
+        pat = r'(^|[\s.,!?।\-_])' + pattern + r'(?=[\s.,!?।\-_0-9]|$)'
+        text = re.sub(pat, r'\g<1>' + rep + ' ', text, flags=re.IGNORECASE)
+
+    # 6. Word-level isolation to pinpoint serial token from conversational sentence
     words = [w.strip('.,!?।;:()\"\'') for w in text.split()]
     stop_words = {
         'hai', 'hain', 'is', 'the', 'of', 'my', 'and', 'to', 'for', 'in', 'on', 'at', 'che', 'chhe',
         'ne', 'ka', 'ki', 'ke', 'ko', 'se', 'me', 'mai', 'hum', 'ye', 'wo', 'sir', 'bhai', 'bhaiya',
         'please', 'register', 'complaint', 'engineer', 'technician', 'call', 'machine', 'freezer', 'serial',
-        'number', 'model', 'not', 'nahi', 'nathi', 'cold', 'cooling', 'bill', 'invoice', 'likha', 'likho',
-        'lakhyu', 'bolu', 'chhu', 'joine', 'kahu', 'check', 'hello', 'hi', 'batao', 'bataiye', 'janavo'
+        'number', 'no', 'model', 'not', 'nahi', 'nathi', 'cold', 'cooling', 'bill', 'invoice', 'likha', 'likho',
+        'lakhyu', 'bolu', 'chhu', 'joine', 'kahu', 'check', 'hello', 'hi', 'batao', 'bataiye', 'janavo',
+        'mera', 'meri', 'mere', 'apna', 'apni', 'maru', 'tamaru', 'na', 'bhi', 'to'
     }
 
     known_prefixes = {'VCB', 'DF', 'CIM', 'DIM', 'GIM', 'ICE', 'BF'}
@@ -449,12 +469,13 @@ def _normalize_alphanumeric_serial(serial_str: str) -> str:
                 current_chunk = []
             continue
 
+        has_alpha = any(c.isalpha() for c in w_clean)
         has_digit = any(c.isdigit() for c in w_clean)
         is_known_pref = w_clean in known_prefixes
         is_single_letter = len(w_clean) == 1 and w_clean.isalpha()
         is_hyphen = w_clean == '-'
 
-        if has_digit or is_known_pref or is_single_letter or is_hyphen or (current_chunk and len(w_clean) <= 4):
+        if has_digit or is_known_pref or is_single_letter or is_hyphen or has_alpha:
             current_chunk.append(w_clean)
         else:
             if current_chunk:
@@ -464,16 +485,20 @@ def _normalize_alphanumeric_serial(serial_str: str) -> str:
     if current_chunk:
         serial_tokens.append(''.join(current_chunk))
 
-    valid = []
+    candidates = []
     for s in serial_tokens:
         s_clean = re.sub(r'[^a-zA-Z0-9\-]', '', s).upper()
         s_clean = re.sub(r'\-+', '-', s_clean).strip('-')
-        if any(c.isdigit() for c in s_clean) and len(s_clean) >= 3:
-            valid.append(s_clean)
+        if len(s_clean) >= 3:
+            candidates.append(s_clean)
 
-    if valid:
-        valid.sort(key=lambda x: (is_valid_alphanumeric_serial(x), any(x.startswith(p) for p in known_prefixes), len(x)), reverse=True)
-        return valid[0]
+    if candidates:
+        candidates.sort(key=lambda x: (
+            is_valid_alphanumeric_serial(x),
+            any(x.startswith(p) for p in known_prefixes),
+            len(x)
+        ), reverse=True)
+        return candidates[0]
 
     # Fallback if no space-separated chunk was found
     clean = re.sub(r'[^a-zA-Z0-9\-]', '', text).upper()
@@ -606,6 +631,10 @@ def _handle_smart_serial_step(raw_message: str, lang: str, state: dict, session,
             "language_locked": state.get("language_locked", False)
         }
 
+    # 1. Deterministic Python smart extraction
+    python_serial = _normalize_alphanumeric_serial(raw_message)
+    python_is_valid = is_valid_alphanumeric_serial(python_serial)
+
     # Call AI Intent Classifier
     data = None
     try:
@@ -619,20 +648,16 @@ STRICT COMPANY POLICIES & CONVERSATIONAL RULES:
    - If caller does not remember ("yaad nahi", "याद ना थी", "ખબર નથી", "don't know"), lost their bill, is away from the machine, or asks if complaint can be filed without it:
      a) FIRST TURN (guidance not given yet): Warmly reassure the caller. Guide them clearly where to find the serial number (on the metal nameplate near the compressor or on their invoice/bill) and invite them to check.
      b) SECOND TURN (guidance already given, or caller explicitly cannot provide it): Politely and firmly explain that without the machine serial number we cannot register any complaint, invite them to call back once located, and you MUST end your reply with [FLOW_COMPLETE].
-3. PINPOINT SERIAL EXTRACTION & STRICT ALPHANUMERIC VALIDATION:
-   - MANDATORY ALPHANUMERIC REQUIREMENT: A valid machine serial number MUST contain BOTH letters (A-Z) AND digits (0-9) (e.g. VCB2502116, DF25008959, CIM305B501-25030653).
-   - If caller provides ONLY numbers without letters (e.g. "2502116", "9428512345"), or ONLY letters without numbers (e.g. "VCB", "DF"), it is INVALID. Set intent to "INVALID_SERIAL" and politely instruct them in "reply" that the serial number must contain both letters and numbers (give an example like VCB 2502116 or DF 25008959).
-   - NO CHARACTER LIMIT: Machine serial numbers can be of ANY LENGTH (short, medium, or very long, e.g. 5, 8, 10, 18, 19, 25+ characters). NEVER truncate, drop characters, or refuse due to length!
-   - EMBEDDED IN SENTENCES: Callers almost never state just the serial number. They give long explanations, complaints, or sentences with the serial number embedded anywhere (in the beginning, middle, or end).
-   - EXAMPLES OF PINPOINT EXTRACTION:
-     * "हाँ भैया मेरा फ्रीजर चालू नहीं हो रहा है और उसका सीरियल नंबर VCB2502116 है तो कब तक इंजीनियर आएगा?" -> extracted_serial: "VCB2502116"
-     * "હું દુકાન પરથી બોલું છું, અમારું ડીપ ફ્રીઝર બગડી ગયું છે અને મશીન પર DF25008959 લખેલું છે જલ્દી માણસ મોકલો" -> extracted_serial: "DF25008959"
-     * "Sir we bought this unit last year and I checked the invoice it is CIM305B501-25030653 please register complaint" -> extracted_serial: "CIM305B501-25030653"
-     * "अरे भाई वो मशीन पे लिखा है सी आई एम 305 बी 501 डैश 25030653 यही नंबर है ना?" -> extracted_serial: "CIM305B501-25030653"
-     * "હા ભાઈ અમારે આઈસ ફેક્ટરી છે અને મશીન પર ડીઆઈએમ 405 બીએક્સ 01 - 260500067 લખ્યું છે તો જલ્દીથી કમ્પ્લેન નોંધી લો" -> extracted_serial: "DIM405BX01-260500067"
-     * "हमारा मशीन का नंबर है जी आई एम 268 ई 404 - 261000012 इसको नोट कर लो" -> extracted_serial: "GIM268E404-261000012"
-   - ALWAYS capture the complete alphanumeric sequence including prefix letters ("VCB", "DF", "CIM", "DIM", "GIM"), internal letters ('B', 'BX', 'E'), digits, and hyphens ('-').
-   - Convert all spoken regional phonetics to uppercase Latin characters.
+3. PINPOINT SERIAL EXTRACTION & ALPHANUMERIC RULES:
+   - SPOKEN PHONETIC LETTERS: Callers frequently speak English letters phonetically in Hindi/Gujarati (e.g. 'ए' = A, 'बी' = B, 'सी' = C, 'डी' = D, 'वी' = V, 'वीसी बी' / 'वी सी बी' = VCB, 'डी एफ' = DF, 'सी आई एम' = CIM).
+   - ANY COMBINATION OF SPOKEN LETTERS + DIGITS (e.g. 'ए 123' -> 'A123', 'वीसी बी 1525' -> 'VCB1525', 'वीसी बी 12345 डैश 1015' -> 'VCB12345-1015', 'सी 4500' -> 'C4500', 'DF 25008959' -> 'DF25008959') IS A FULLY VALID ALPHANUMERIC SERIAL NUMBER!
+   - Convert all spoken phonetic letters into Latin uppercase letters and classify intent as PROVIDE_SERIAL!
+   - PURE DIGITS OR PURE LETTERS ONLY ARE INVALID:
+     * If caller provides ONLY digits without any letters (e.g. '123456', '2502116'), classify as INVALID_SERIAL.
+     * If caller provides ONLY letters without any digits (e.g. 'VCB', 'DF', 'वीसीबी'), classify as INVALID_SERIAL.
+   - NO LENGTH RESTRICTION: Serials can be short ('A123') or long ('CIM305B501-25030653').
+   - DASH / HYPHEN: Convert words like 'डैश', 'dash', 'माइनस' to '-' (e.g. 'VCB12345-1015').
+   - EMBEDDED IN SENTENCES: Callers often speak long sentences with the serial embedded. Extract ONLY the clean serial number.
    - Discard all conversational dialogue, complaints, and filler words. Return ONLY the clean uppercase machine serial string in "extracted_serial".
 4. NO REPETITION / NEVER LOOP:
    Never repeat the exact same sentence or ask repeatedly without answering the user. If they ask a side question (warranty, visit fee, engineer timing), answer it directly in 1 short sentence, then smoothly bring the conversation back to the serial number.
@@ -645,8 +670,8 @@ Context:
 - System currently waiting for customer to confirm serial number '{pending_serial}': {awaiting_confirm}
 
 Classify caller's intent into ONE of:
-- PROVIDE_SERIAL: customer stated a valid alphanumeric serial number containing BOTH letters and numbers (e.g. VCB2502116, DF25008959, CIM305B501-25030653).
-- INVALID_SERIAL: customer stated a number that is ONLY digits (e.g. 2502116) or ONLY letters (e.g. VCB), lacking the required alphanumeric combination of both letters and numbers.
+- PROVIDE_SERIAL: customer stated a valid alphanumeric serial number containing BOTH letters and numbers (e.g. A123, VCB1525, VCB2502116, DF25008959, CIM305B501-25030653).
+- INVALID_SERIAL: customer stated ONLY digits (e.g. 123456, 2502116) or ONLY letters (e.g. VCB, DF), lacking both letters and numbers.
 - CONFIRM_YES: customer confirms readback serial is correct (yes/haan/sahi hai/barabar).
 - CONFIRM_NO: customer says readback serial is incorrect (no/nahi/galat).
 - WAIT: customer asks to hold/wait/give time.
@@ -657,7 +682,7 @@ Classify caller's intent into ONE of:
 Return JSON only:
 {{
   "intent": "PROVIDE_SERIAL" | "INVALID_SERIAL" | "CONFIRM_YES" | "CONFIRM_NO" | "WAIT" | "WHERE_IS_SERIAL" | "CANNOT_PROVIDE" | "QUESTION",
-  "extracted_serial": "Clean UPPERCASE alphanumeric serial number (e.g. \'VCB2502116\', \'DF25008959\', \'CIM305B501-25030653\', \'DIM405BX01-260500067\', \'GIM268E404-261000012\', \'94285\') if intent is PROVIDE_SERIAL else empty",
+  "extracted_serial": "Clean UPPERCASE alphanumeric serial number if intent is PROVIDE_SERIAL else empty",
   "reply": "Warm, natural 1-sentence reply in {lang}."
 }}"""
 
@@ -677,6 +702,14 @@ Return JSON only:
     intent = data.get("intent", "").upper() if data else ""
     extracted = data.get("extracted_serial", "").strip() if data else ""
     ai_reply = data.get("reply", "").strip() if data else ""
+
+    # Smart Override: If caller provided a valid alphanumeric serial, ensure intent is PROVIDE_SERIAL
+    if intent not in ["CONFIRM_YES", "CONFIRM_NO", "WAIT", "WHERE_IS_SERIAL", "CANNOT_PROVIDE"]:
+        if python_is_valid:
+            intent = "PROVIDE_SERIAL"
+            extracted = python_serial
+        elif is_valid_alphanumeric_serial(extracted):
+            intent = "PROVIDE_SERIAL"
 
     next_step = 6
 
@@ -705,24 +738,13 @@ Return JSON only:
         next_step = 7
         reply = STEP7_PROMPTS.get(lang, STEP7_PROMPTS["en"])
 
-    elif intent == "INVALID_SERIAL":
-        state["pending_serial_number"] = ""
-        state["serial_needs_confirmation"] = False
-        next_step = 6
-        reply = ai_reply if ai_reply else ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC.get(lang, ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC["en"])
-
-    elif intent == "PROVIDE_SERIAL" or (extracted and len(extracted) >= 3) or (len(re.findall(r'\d+', raw_message)) > 0 and len("".join(re.findall(r'\d+', raw_message))) >= 3):
-        raw_val = extracted if extracted else _clean_model_or_serial(raw_message)
-        serial_val = _normalize_alphanumeric_serial(raw_val)
-        if not serial_val:
-            serial_val = raw_val
-
-        # STRICT ALPHANUMERIC VALIDATION CHECK (must contain BOTH alphabet and number)
+    elif intent == "PROVIDE_SERIAL" or python_is_valid or is_valid_alphanumeric_serial(extracted):
+        serial_val = python_serial if python_is_valid else extracted
         if not is_valid_alphanumeric_serial(serial_val):
             state["pending_serial_number"] = ""
             state["serial_needs_confirmation"] = False
             next_step = 6
-            reply = ai_reply if (ai_reply and ("अक्षर" in ai_reply or "letters" in ai_reply or "અક્ષર" in ai_reply or "अल्फ़ान्यूमेरिक" in ai_reply or "alphanumeric" in ai_reply.lower())) else ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC.get(lang, ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC["en"])
+            reply = ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC.get(lang, ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC["en"])
         else:
             state["pending_serial_number"] = serial_val
             state["serial_needs_confirmation"] = True
@@ -730,6 +752,12 @@ Return JSON only:
             spoken_serial = _format_spoken_serial(serial_val, lang)
             template = ICEMAKE_V2_SERIAL_CONFIRM.get(lang, ICEMAKE_V2_SERIAL_CONFIRM["en"])
             reply = template.format(serial=spoken_serial)
+
+    elif intent == "INVALID_SERIAL":
+        state["pending_serial_number"] = ""
+        state["serial_needs_confirmation"] = False
+        next_step = 6
+        reply = ai_reply if (ai_reply and ("अक्षर" in ai_reply or "letters" in ai_reply or "અક્ષર" in ai_reply or "अल्फ़ान्यूमेरिक" in ai_reply or "alphanumeric" in ai_reply.lower())) else ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC.get(lang, ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC["en"])
 
     elif intent == "CONFIRM_NO" or (awaiting_confirm and _is_negative(raw_message)):
         state["pending_serial_number"] = ""
