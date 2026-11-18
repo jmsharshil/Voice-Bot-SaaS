@@ -32,6 +32,51 @@ def _clean_phone(raw_phone: str) -> str:
     return f"+{digits}"
 
 
+LANGUAGE_NAME_MAP = {
+    "hi-in": "Hindi",
+    "hi": "Hindi",
+    "hindi": "Hindi",
+    "en-in": "English",
+    "en": "English",
+    "english": "English",
+    "gu-in": "Gujarati",
+    "gu": "Gujarati",
+    "gujarati": "Gujarati",
+    "kn-in": "Kannada",
+    "kn": "Kannada",
+    "kannada": "Kannada",
+    "mr-in": "Marathi",
+    "mr": "Marathi",
+    "marathi": "Marathi",
+    "ta-in": "Tamil",
+    "ta": "Tamil",
+    "tamil": "Tamil",
+    "te-in": "Telugu",
+    "te": "Telugu",
+    "telugu": "Telugu",
+    "bn-in": "Bengali",
+    "bn": "Bengali",
+    "bengali": "Bengali",
+    "ml-in": "Malayalam",
+    "ml": "Malayalam",
+    "malayalam": "Malayalam",
+    "pa-in": "Punjabi",
+    "pa": "Punjabi",
+    "punjabi": "Punjabi",
+    "od-in": "Odia",
+    "or-in": "Odia",
+    "or": "Odia",
+    "odia": "Odia",
+}
+
+
+def _resolve_language_name(lang_input: str) -> str:
+    if not lang_input:
+        return "Hindi"
+    clean = str(lang_input).strip().lower()
+    return LANGUAGE_NAME_MAP.get(clean, str(lang_input).strip().title())
+
+
 @csrf_exempt
 @api_view(["POST", "OPTIONS"])
 @permission_classes([AllowAny])
@@ -76,9 +121,22 @@ def react_trigger_call_api(request, agent_slug=None):
         vehicle_type = str(data.get("vehicle_type") or "").strip()
         brand = str(data.get("brand") or "").strip()
         use_case = str(data.get("use_case") or "").strip()
-        language = str(data.get("language") or "hi-IN").strip()
         dealership_name = str(data.get("dealership_name") or data.get("dealership") or "").strip()
         city = str(data.get("city") or "").strip()
+
+        # Resolve language to clean title (e.g. "Kannada", "Hindi", "Gujarati")
+        raw_lang = str(data.get("language") or "").strip()
+        language_name = _resolve_language_name(raw_lang) if raw_lang else "Hindi"
+
+        # Prepare app_overrides to explicitly set initial_language_name for Sarvam voice engine
+        custom_overrides = data.get("app_overrides") if isinstance(data.get("app_overrides"), dict) else {}
+        initial_lang = custom_overrides.get("initial_language_name") or language_name
+        app_overrides = {
+            "initial_language_name": initial_lang
+        }
+        for opt_key in ["initial_state_name", "initial_bot_message"]:
+            if opt_key in custom_overrides and custom_overrides[opt_key]:
+                app_overrides[opt_key] = custom_overrides[opt_key]
 
         # ── 2. Validate Required Fields ──
         if not phone_raw:
@@ -147,7 +205,7 @@ def react_trigger_call_api(request, agent_slug=None):
             "vehicle_type": vehicle_type,
             "brand": brand,
             "use_case": use_case,
-            "language": language,
+            "language": language_name,
             "dealership_name": dealership_name,
             "city": city,
         }
@@ -163,7 +221,7 @@ def react_trigger_call_api(request, agent_slug=None):
             phone_number=clean_phone[-10:],
             candidate_name=user_name,
             applied_position=f"{brand} {vehicle_type} ({use_case})" if brand else "React Triggered Call",
-            language=language,
+            language=language_name,
             status="DIALING",
             call_type="React Outbound Call",
             summary={
@@ -171,8 +229,10 @@ def react_trigger_call_api(request, agent_slug=None):
                 "vehicle_type": vehicle_type,
                 "brand": brand,
                 "use_case": use_case,
+                "language": language_name,
                 "dealership_name": dealership_name,
                 "city": city,
+                "app_overrides": app_overrides,
                 "received_payload": data,
             }
         )
@@ -180,7 +240,8 @@ def react_trigger_call_api(request, agent_slug=None):
         logger.info(
             f"\n🚀 [REACT TRIGGER CALL]: Initiating outbound call via Sarvam Agent '{sarvam_agent.name}'\n"
             f"   Phone: {clean_phone} | Name: {user_name}\n"
-            f"   Details: {vehicle_type} | {brand} | {use_case} | {dealership_name} | {city}\n"
+            f"   Details: {vehicle_type} | {brand} | {use_case} | {language_name} | {dealership_name} | {city}\n"
+            f"   App Overrides: {app_overrides}\n"
         )
 
         # ── 7. Dispatch Outbound Call via Sarvam AI API ──
@@ -188,9 +249,10 @@ def react_trigger_call_api(request, agent_slug=None):
             phone_number=clean_phone,
             lead_id=call_rec.id,
             customer_name=user_name,
-            language=language,
+            language=language_name,
             extra_variables=extra_variables,
             sarvam_agent=sarvam_agent,
+            app_overrides=app_overrides,
         )
 
         attempt_id = res.get("attempt_id") if isinstance(res, dict) else None
@@ -210,11 +272,13 @@ def react_trigger_call_api(request, agent_slug=None):
             },
             "payload_sent": {
                 "phone": clean_phone,
+                "agent_vars": extra_variables,
+                "app_overrides": app_overrides,
                 "user_name": user_name,
                 "vehicle_type": vehicle_type,
                 "brand": brand,
                 "use_case": use_case,
-                "language": language,
+                "language": language_name,
                 "dealership_name": dealership_name,
                 "city": city,
             }

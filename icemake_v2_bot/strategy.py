@@ -232,6 +232,19 @@ ICEMAKE_V2_SERIAL_REASK = {
     "ml": "ക്ഷമിക്കണം! ദയവായി നിങ്ങളുടെ മെഷീന്റെ ശരിയായ സീരിയൽ നമ്പർ വീണ്ടും പറയൂ."
 }
 
+ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC = {
+    "en": "Ice Make machine serial numbers are alphanumeric and must contain both letters and numbers, like VCB2502116 or DF25008959. Could you please share the complete serial number?",
+    "hi": "आइस मेक मशीन का सीरियल नंबर अल्फ़ान्यूमेरिक होता है, जिसमें अक्षर और नंबर दोनों होने चाहिए, जैसे VCB 2502116 या DF 25008959। कृपया अपनी मशीन का पूरा सीरियल नंबर बताइए।",
+    "gu": "આઈસ મેક મશીનનો સીરીયલ નંબર આલ્ફાન્યુમેરિક હોય છે, જેમાં અક્ષર અને નંબર બંને હોવા જોઈએ, જેમ કે VCB 2502116 અથવા DF 25008959. કૃપા કરીને તમારી મશીનનો પૂરો સીરીયલ નંબર જણાવો.",
+    "te": "ఐస్ మేక్ మెషీన్ సీరియల్ నంబర్ ఆల్ఫాన్యూమరిక్ అయి ఉండాలి, అక్షరాలు మరియు నంబర్లు రెండూ ఉండాలి (ఉదాహరణకు VCB 2502116). దయచేసి పూర్తి సీరియల్ నంబర్ చెప్పండి.",
+    "pa": "ਆਈਸ ਮੇਕ ਮਸ਼ੀਨ ਦਾ ਸੀਰੀਅਲ ਨੰਬਰ ਅਲਫਾਨਿਊਮੇਰਿਕ ਹੁੰਦਾ ਹੈ, ਜਿਸ ਵਿੱਚ ਅੱਖਰ ਅਤੇ ਨੰਬਰ ਦੋਵੇਂ ਹੁੰਦੇ ਹਨ (ਜਿਵੇਂ VCB 2502116)। ਕਿਰਪਾ ਕਰਕੇ ਪੂਰਾ ਸੀਰੀਅਲ ਨੰਬਰ ਦੱਸੋ।",
+    "bn": "আইস মেক মেশিনের সিরিয়াল নম্বরটিতে অক্ষর এবং সংখ্যা উভয়ই থাকতে হবে (যেমন VCB 2502116)। অনুগ্রহ করে সম্পূর্ণ সিরিয়াল নম্বরটি বলুন।",
+    "mr": "आइस मेक मशीनचा सिरीयल नंबर अल्फान्युमेरिक असतो, ज्यामध्ये अक्षर आणि नंबर दोन्ही असावे लागतात (उदा. VCB 2502116). कृपया पूर्ण सिरीयल नंबर सांगा.",
+    "ta": "ஐஸ் மேக் மெஷின் சீரியல் எண்ணில் எழுத்துக்கள் மற்றும் எண்கள் இரண்டும் இருக்க வேண்டும் (எ.கா. VCB 2502116). தயவுசெய்து முழு சீரியல் எண்ணையும் பகிரவும்.",
+    "kn": "ಐಸ್ ಮೇಕ್ ಯಂತ್ರದ ಸೀರಿಯಲ್ ಸಂಖ್ಯೆಯಲ್ಲಿ ಅಕ್ಷರಗಳು ಮತ್ತು ಸಂಖ್ಯೆಗಳು ಎರಡೂ ಇರಬೇಕು (ಉದಾ. VCB 2502116). ದಯವಿಟ್ಟು ಸಂಪೂರ್ಣ ಸೀರಿಯಲ್ ಸಂಖ್ಯೆಯನ್ನು ತಿಳಿಸಿ.",
+    "ml": "ഐസ് മേക്ക് മെഷീൻ സീരിയൽ നമ്പറിൽ അക്ഷരങ്ങളും അക്കങ്ങളും ഉണ്ടായിരിക്കണം (ഉദാ. VCB 2502116). ദയവായി പൂർണ്ണമായ സീരിയൽ നമ്പർ നൽകുക."
+}
+
 STEP7_PROMPTS = {
     "hi": "ठीक है। फ्रीजर में आपको क्या समस्या आ रही है, कृपया विस्तार से बताइए। आप दो मिनट तक अपनी समस्या बता सकते हैं। यह कॉल रिकॉर्ड की जा रही है और तुरंत कार्रवाई के लिए इंजीनियर को भेजी जाएगी।",
     "gu": "સારું. ફ્રીઝરમાં તમને શું સમસ્યા આવી રહી છે, કૃપા કરીને વિગતવાર જણાવો. તમે બે મિનિટ સુધી તમારી સમસ્યા જણાવી શકો છો. આ કૉલ રેકોર્ડ કરવામાં આવી રહ્યો છે અને ત્વરિત કાર્યવાહી માટે એન્જિનિયરને મોકલવામાં આવશે.",
@@ -320,6 +333,20 @@ SPOKEN_ALPHABET_MAP = {
         'V': 'V', 'W': 'W', 'X': 'X', 'Y': 'Y', 'Z': 'Z', '-': 'dash'
     }
 }
+
+def is_valid_alphanumeric_serial(serial_str: str) -> bool:
+    """
+    Validates that the machine serial number strictly contains BOTH:
+    - At least one alphabet character (A-Z)
+    - At least one digit (0-9)
+    - Total alphanumeric length >= 3
+    """
+    if not serial_str:
+        return False
+    clean = re.sub(r'[^a-zA-Z0-9]', '', str(serial_str)).upper()
+    has_alpha = any(c.isalpha() for c in clean)
+    has_digit = any(c.isdigit() for c in clean)
+    return has_alpha and has_digit and len(clean) >= 3
 
 def _normalize_alphanumeric_serial(serial_str: str) -> str:
     """
@@ -445,7 +472,7 @@ def _normalize_alphanumeric_serial(serial_str: str) -> str:
             valid.append(s_clean)
 
     if valid:
-        valid.sort(key=lambda x: (any(x.startswith(p) for p in known_prefixes), len(x)), reverse=True)
+        valid.sort(key=lambda x: (is_valid_alphanumeric_serial(x), any(x.startswith(p) for p in known_prefixes), len(x)), reverse=True)
         return valid[0]
 
     # Fallback if no space-separated chunk was found
@@ -592,7 +619,9 @@ STRICT COMPANY POLICIES & CONVERSATIONAL RULES:
    - If caller does not remember ("yaad nahi", "याद ना थी", "ખબર નથી", "don't know"), lost their bill, is away from the machine, or asks if complaint can be filed without it:
      a) FIRST TURN (guidance not given yet): Warmly reassure the caller. Guide them clearly where to find the serial number (on the metal nameplate near the compressor or on their invoice/bill) and invite them to check.
      b) SECOND TURN (guidance already given, or caller explicitly cannot provide it): Politely and firmly explain that without the machine serial number we cannot register any complaint, invite them to call back once located, and you MUST end your reply with [FLOW_COMPLETE].
-3. PINPOINT SERIAL EXTRACTION FROM LONG SENTENCES (NO CHARACTER LIMIT):
+3. PINPOINT SERIAL EXTRACTION & STRICT ALPHANUMERIC VALIDATION:
+   - MANDATORY ALPHANUMERIC REQUIREMENT: A valid machine serial number MUST contain BOTH letters (A-Z) AND digits (0-9) (e.g. VCB2502116, DF25008959, CIM305B501-25030653).
+   - If caller provides ONLY numbers without letters (e.g. "2502116", "9428512345"), or ONLY letters without numbers (e.g. "VCB", "DF"), it is INVALID. Set intent to "INVALID_SERIAL" and politely instruct them in "reply" that the serial number must contain both letters and numbers (give an example like VCB 2502116 or DF 25008959).
    - NO CHARACTER LIMIT: Machine serial numbers can be of ANY LENGTH (short, medium, or very long, e.g. 5, 8, 10, 18, 19, 25+ characters). NEVER truncate, drop characters, or refuse due to length!
    - EMBEDDED IN SENTENCES: Callers almost never state just the serial number. They give long explanations, complaints, or sentences with the serial number embedded anywhere (in the beginning, middle, or end).
    - EXAMPLES OF PINPOINT EXTRACTION:
@@ -601,7 +630,6 @@ STRICT COMPANY POLICIES & CONVERSATIONAL RULES:
      * "Sir we bought this unit last year and I checked the invoice it is CIM305B501-25030653 please register complaint" -> extracted_serial: "CIM305B501-25030653"
      * "अरे भाई वो मशीन पे लिखा है सी आई एम 305 बी 501 डैश 25030653 यही नंबर है ना?" -> extracted_serial: "CIM305B501-25030653"
      * "હા ભાઈ અમારે આઈસ ફેક્ટરી છે અને મશીન પર ડીઆઈએમ 405 બીએક્સ 01 - 260500067 લખ્યું છે તો જલ્દીથી કમ્પ્લેન નોંધી લો" -> extracted_serial: "DIM405BX01-260500067"
-     * "मेरा फ्रीजर ठंडा नहीं कर रहा सीरियल नंबर है 94285123456789 जल्दी इंजीनियर भेजो" -> extracted_serial: "94285123456789"
      * "हमारा मशीन का नंबर है जी आई एम 268 ई 404 - 261000012 इसको नोट कर लो" -> extracted_serial: "GIM268E404-261000012"
    - ALWAYS capture the complete alphanumeric sequence including prefix letters ("VCB", "DF", "CIM", "DIM", "GIM"), internal letters ('B', 'BX', 'E'), digits, and hyphens ('-').
    - Convert all spoken regional phonetics to uppercase Latin characters.
@@ -617,7 +645,8 @@ Context:
 - System currently waiting for customer to confirm serial number '{pending_serial}': {awaiting_confirm}
 
 Classify caller's intent into ONE of:
-- PROVIDE_SERIAL: customer stated an alphanumeric serial number (contains letters and/or numbers) or model code.
+- PROVIDE_SERIAL: customer stated a valid alphanumeric serial number containing BOTH letters and numbers (e.g. VCB2502116, DF25008959, CIM305B501-25030653).
+- INVALID_SERIAL: customer stated a number that is ONLY digits (e.g. 2502116) or ONLY letters (e.g. VCB), lacking the required alphanumeric combination of both letters and numbers.
 - CONFIRM_YES: customer confirms readback serial is correct (yes/haan/sahi hai/barabar).
 - CONFIRM_NO: customer says readback serial is incorrect (no/nahi/galat).
 - WAIT: customer asks to hold/wait/give time.
@@ -627,7 +656,7 @@ Classify caller's intent into ONE of:
 
 Return JSON only:
 {{
-  "intent": "PROVIDE_SERIAL" | "CONFIRM_YES" | "CONFIRM_NO" | "WAIT" | "WHERE_IS_SERIAL" | "CANNOT_PROVIDE" | "QUESTION",
+  "intent": "PROVIDE_SERIAL" | "INVALID_SERIAL" | "CONFIRM_YES" | "CONFIRM_NO" | "WAIT" | "WHERE_IS_SERIAL" | "CANNOT_PROVIDE" | "QUESTION",
   "extracted_serial": "Clean UPPERCASE alphanumeric serial number (e.g. \'VCB2502116\', \'DF25008959\', \'CIM305B501-25030653\', \'DIM405BX01-260500067\', \'GIM268E404-261000012\', \'94285\') if intent is PROVIDE_SERIAL else empty",
   "reply": "Warm, natural 1-sentence reply in {lang}."
 }}"""
@@ -676,17 +705,31 @@ Return JSON only:
         next_step = 7
         reply = STEP7_PROMPTS.get(lang, STEP7_PROMPTS["en"])
 
+    elif intent == "INVALID_SERIAL":
+        state["pending_serial_number"] = ""
+        state["serial_needs_confirmation"] = False
+        next_step = 6
+        reply = ai_reply if ai_reply else ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC.get(lang, ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC["en"])
+
     elif intent == "PROVIDE_SERIAL" or (extracted and len(extracted) >= 3) or (len(re.findall(r'\d+', raw_message)) > 0 and len("".join(re.findall(r'\d+', raw_message))) >= 3):
         raw_val = extracted if extracted else _clean_model_or_serial(raw_message)
         serial_val = _normalize_alphanumeric_serial(raw_val)
         if not serial_val:
             serial_val = raw_val
-        state["pending_serial_number"] = serial_val
-        state["serial_needs_confirmation"] = True
-        next_step = 6
-        spoken_serial = _format_spoken_serial(serial_val, lang)
-        template = ICEMAKE_V2_SERIAL_CONFIRM.get(lang, ICEMAKE_V2_SERIAL_CONFIRM["en"])
-        reply = template.format(serial=spoken_serial)
+
+        # STRICT ALPHANUMERIC VALIDATION CHECK (must contain BOTH alphabet and number)
+        if not is_valid_alphanumeric_serial(serial_val):
+            state["pending_serial_number"] = ""
+            state["serial_needs_confirmation"] = False
+            next_step = 6
+            reply = ai_reply if (ai_reply and ("अक्षर" in ai_reply or "letters" in ai_reply or "અક્ષર" in ai_reply or "अल्फ़ान्यूमेरिक" in ai_reply or "alphanumeric" in ai_reply.lower())) else ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC.get(lang, ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC["en"])
+        else:
+            state["pending_serial_number"] = serial_val
+            state["serial_needs_confirmation"] = True
+            next_step = 6
+            spoken_serial = _format_spoken_serial(serial_val, lang)
+            template = ICEMAKE_V2_SERIAL_CONFIRM.get(lang, ICEMAKE_V2_SERIAL_CONFIRM["en"])
+            reply = template.format(serial=spoken_serial)
 
     elif intent == "CONFIRM_NO" or (awaiting_confirm and _is_negative(raw_message)):
         state["pending_serial_number"] = ""

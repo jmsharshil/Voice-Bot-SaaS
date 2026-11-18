@@ -264,7 +264,7 @@ class SarvamAgentService:
         }
 
     @classmethod
-    def trigger_outbound_call(cls, phone_number: str, lead_id: int = 0, customer_name: str = "", language: str = None, context: dict = None, sarvam_agent=None, extra_variables: dict = None, campaign_id: int = None):
+    def trigger_outbound_call(cls, phone_number: str, lead_id: int = 0, customer_name: str = "", language: str = None, context: dict = None, sarvam_agent=None, extra_variables: dict = None, campaign_id: int = None, app_overrides: dict = None):
         """
         Triggers an outbound voice call from Sarvam AI Agent to the target phone number.
         If `sarvam_agent` (SarvamAgent instance) is provided, its credentials are used;
@@ -369,8 +369,12 @@ class SarvamAgentService:
             }
         }
 
+        # Inject app_overrides (e.g. {"initial_language_name": "Kannada"}) if provided (for React API trigger)
+        if app_overrides and isinstance(app_overrides, dict):
+            payload["app_config"]["app_overrides"] = app_overrides
+
         try:
-            print(f"📤 [SARVAM API PAYLOAD SENT] to {formatted_phone}: user_name='{customer_name}' | car_model='{agent_vars.get('car_model', '')}' | agent_vars={agent_vars}")
+            print(f"📤 [SARVAM API PAYLOAD SENT] to {formatted_phone}: user_name='{customer_name}' | agent_vars={agent_vars} | app_overrides={payload['app_config'].get('app_overrides')}")
             response = requests.post(url, headers=cls.get_agent_headers(api_key), json=payload, timeout=10)
 
             # Self-healing fallback 1: If Sarvam rejects undeclared variables with 422,
@@ -399,11 +403,20 @@ class SarvamAgentService:
                         retry_payload["app_config"]["agent_variables"] = cleaned_vars
                         response = requests.post(url, headers=cls.get_agent_headers(api_key), json=retry_payload, timeout=10)
 
+                # Fallback: If 422 still persists and app_overrides was included, retry without app_overrides
+                if response.status_code == 422 and "app_overrides" in payload.get("app_config", {}):
+                    logger.warning(f"⚠️ [SARVAM AGENT API 422]: App '{app_id}' rejected app_overrides. Retrying without app_overrides...")
+                    no_overrides_payload = dict(payload)
+                    no_overrides_payload["app_config"] = dict(payload["app_config"])
+                    no_overrides_payload["app_config"].pop("app_overrides", None)
+                    response = requests.post(url, headers=cls.get_agent_headers(api_key), json=no_overrides_payload, timeout=10)
+
                 # Self-healing fallback 2: If still 422 or parsing failed, retry with user_name only
                 if response.status_code == 422:
                     logger.warning(f"⚠️ [SARVAM AGENT API 422]: App '{app_id}' still rejected. Retrying with user_name only...")
                     fallback_payload = dict(payload)
                     fallback_payload["app_config"] = dict(payload["app_config"])
+                    fallback_payload["app_config"].pop("app_overrides", None)
                     fallback_payload["app_config"]["agent_variables"] = {"user_name": customer_name}
                     response = requests.post(url, headers=cls.get_agent_headers(api_key), json=fallback_payload, timeout=10)
 
@@ -412,6 +425,7 @@ class SarvamAgentService:
                     logger.warning(f"⚠️ [SARVAM AGENT API 422]: App '{app_id}' rejected user_name. Retrying with empty agent_variables...")
                     empty_payload = dict(payload)
                     empty_payload["app_config"] = dict(payload["app_config"])
+                    empty_payload["app_config"].pop("app_overrides", None)
                     empty_payload["app_config"]["agent_variables"] = {}
                     response = requests.post(url, headers=cls.get_agent_headers(api_key), json=empty_payload, timeout=10)
 
