@@ -118,6 +118,7 @@ INSTALLED_APPS = [
     "bot",
     "whatsapp_automation",
     "sarvam_ivr_bridge",
+    "shreyas_portal",
 ]
 
 REST_FRAMEWORK = {

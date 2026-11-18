@@ -1471,12 +1471,33 @@ def sarvam_cdr_webhook(request):
         else:
             transcript_from_log = None
 
+        def _format_transcript_payload(tx_raw):
+            if isinstance(tx_raw, list) and tx_raw:
+                turns = []
+                for item in tx_raw:
+                    if isinstance(item, dict):
+                        role = str(item.get("role", "Speaker")).strip().capitalize()
+                        en = str(item.get("en_text") or item.get("text") or item.get("content") or "").strip()
+                        indic = str(item.get("indic_text") or "").strip()
+                        text = f"{en} ({indic})" if en and indic and en != indic else (en or indic)
+                        if text:
+                            turns.append(f"{role}: {text}")
+                    elif isinstance(item, str) and item.strip():
+                        turns.append(item.strip())
+                return "\n\n".join(turns)
+            elif isinstance(tx_raw, dict):
+                return str(tx_raw.get("transcript") or tx_raw.get("text") or tx_raw)
+            elif tx_raw:
+                return str(tx_raw).strip()
+            return None
+
         transcript = (
             transcript_from_log
-            or raw_data.get("call_transcript")
-            or raw_data.get("transcript")
-            or raw_data.get("interaction_transcript")
-            or analysis_obj.get("transcript")
+            or _format_transcript_payload(raw_data.get("call_transcript"))
+            or _format_transcript_payload(raw_data.get("transcript"))
+            or _format_transcript_payload(raw_data.get("interaction_transcript"))
+            or _format_transcript_payload(analysis_obj.get("transcript"))
+            or ""
         )
 
         if isinstance(interaction_id, str) and ("{" in interaction_id or "[" in interaction_id or "test" in interaction_id):
@@ -1510,9 +1531,12 @@ def sarvam_cdr_webhook(request):
         from conversations.services.kylas_sarvam_bridge import SarvamAgentService
         from conversations.models import SarvamCallRecord, SarvamAgent
 
-        output_vars = raw_data.get("output_agent_variables") or raw_data.get("final_agent_variables") or {}
-        if not isinstance(output_vars, dict):
-            output_vars = {}
+        fav = raw_data.get("final_agent_variables") if isinstance(raw_data.get("final_agent_variables"), dict) else {}
+        oav = raw_data.get("output_agent_variables") if isinstance(raw_data.get("output_agent_variables"), dict) else {}
+        output_vars = dict(fav)
+        for k, v in oav.items():
+            if v or k not in output_vars:
+                output_vars[k] = v
 
         candidate_name = (
             raw_data.get("candidate_name")
@@ -1523,10 +1547,10 @@ def sarvam_cdr_webhook(request):
             or metadata.get("customer_name")
             or metadata.get("user_name")
             or metadata.get("caller_name")
-            or output_vars.get("candidate_name")
             or output_vars.get("user_name")
-            or output_vars.get("customer_name")
             or output_vars.get("caller_name")
+            or output_vars.get("candidate_name")
+            or output_vars.get("customer_name")
             or "Customer"
         )
 
@@ -1536,8 +1560,12 @@ def sarvam_cdr_webhook(request):
             or raw_data.get("agent_id")
             or raw_data.get("appId")
             or raw_data.get("agentId")
+            or fav.get("app_id")
+            or oav.get("app_id")
             or metadata.get("app_id")
             or metadata.get("agent_id")
+            or (raw_data.get("user_config") or {}).get("app_id")
+            or (raw_data.get("call") or {}).get("app_id")
             or ""
         ).strip()
         cdr_agent_phone = str(
@@ -1556,10 +1584,17 @@ def sarvam_cdr_webhook(request):
 
         if cdr_app_id and cdr_app_id.lower() not in ("none", "null", ""):
             # 1. Direct app_id match
-            webhook_sarvam_agent = SarvamAgent.objects.filter(app_id=cdr_app_id, is_active=True).first()
+            webhook_sarvam_agent = (
+                SarvamAgent.objects.filter(app_id=cdr_app_id, is_active=True).first()
+                or SarvamAgent.objects.filter(app_id__iexact=cdr_app_id, is_active=True).first()
+                or SarvamAgent.objects.filter(app_id__icontains=cdr_app_id, is_active=True).first()
+            )
             # 2. Direct slug match
             if not webhook_sarvam_agent:
-                webhook_sarvam_agent = SarvamAgent.objects.filter(slug__iexact=cdr_app_id, is_active=True).first()
+                webhook_sarvam_agent = (
+                    SarvamAgent.objects.filter(slug__iexact=cdr_app_id, is_active=True).first()
+                    or SarvamAgent.objects.filter(slug__icontains=cdr_app_id, is_active=True).first()
+                )
             # 3. Direct ID match if numeric
             if not webhook_sarvam_agent and cdr_app_id.isdigit():
                 webhook_sarvam_agent = SarvamAgent.objects.filter(id=int(cdr_app_id), is_active=True).first()
@@ -1724,21 +1759,16 @@ def sarvam_cdr_webhook(request):
                     rec = pending_qs.filter(candidate_name__icontains=candidate_name.strip()).order_by("-created_at").first()
                 if not rec:
                     rec = pending_qs.order_by("-created_at").first()
-                if not rec:
-                    # 2. Fallback to recent records, matching agent if specified
-                    if webhook_sarvam_agent and (cdr_app_id or cdr_agent_phone):
-                        rec = rec_qs.filter(sarvam_agent=webhook_sarvam_agent).order_by("-created_at").first()
-                    if not rec:
-                        rec = rec_qs.order_by("-created_at").first()
 
-        # ✅ FALLBACK MATCH BY CANDIDATE NAME: When Sarvam sends empty attempt_id & empty phone_number
+        # ✅ FALLBACK MATCH BY CANDIDATE NAME: Only for pending/dialing calls
         if not rec and candidate_name and candidate_name.strip().lower() not in ["customer", "candidate", "valued customer", "none", "null", ""]:
             from datetime import timedelta
             from django.utils import timezone
             from django.db.models import Q
             recent_threshold = timezone.now() - timedelta(minutes=45)
             rec_name_qs = SarvamCallRecord.objects.filter(
-                created_at__gte=recent_threshold
+                created_at__gte=recent_threshold,
+                status__in=["DIALING", "PENDING", "IN_PROGRESS", "QUEUED"]
             ).filter(
                 Q(candidate_name__iexact=candidate_name.strip()) | Q(candidate_name__icontains=candidate_name.strip())
             )
@@ -1746,10 +1776,17 @@ def sarvam_cdr_webhook(request):
             if webhook_sarvam_agent and (cdr_app_id or cdr_agent_phone):
                 rec_name_qs = rec_name_qs.filter(sarvam_agent=webhook_sarvam_agent)
 
-            # Prefer matching a record that is currently in DIALING / PENDING / IN_PROGRESS status
-            rec = rec_name_qs.filter(status__in=["DIALING", "PENDING", "IN_PROGRESS", "QUEUED"]).order_by("-created_at").first() or rec_name_qs.order_by("-created_at").first()
+            rec = rec_name_qs.order_by("-created_at").first()
             if rec:
-                print(f"🎯 [CDR MATCH]: Matched incoming webhook for candidate '{candidate_name}' to existing call record #{rec.id} (Phone: {rec.phone_number}, Agent: {rec.sarvam_agent.name if rec.sarvam_agent else 'N/A'})")
+                print(f"🎯 [CDR MATCH]: Matched incoming webhook for candidate '{candidate_name}' to pending call record #{rec.id}")
+
+        # ✅ CRITICAL ISOLATION: Never reuse a record that already has a DIFFERENT interaction_id
+        if rec and rec.interaction_id and interaction_id:
+            raw_prev = str(rec.interaction_id).split("/")[-1].strip()
+            raw_curr = str(interaction_id).split("/")[-1].strip()
+            if raw_prev != raw_curr:
+                print(f"⚠️ [CDR SEPARATION]: CallRecord #{rec.id} already has interaction '{rec.interaction_id}', but incoming webhook has '{interaction_id}'. Creating a fresh CallRecord.")
+                rec = None
 
         # ✅ MATCH TATA SMARTFLO INBOUND CALLS:
         # If rec not found yet and this call belongs to webhook_sarvam_agent (or caller number was unknown in Sarvam CDR),
@@ -2022,12 +2059,12 @@ def sarvam_cdr_webhook(request):
                     has_tx = bool(rec.transcript and len(str(rec.transcript).strip()) > 10)
                     has_real_sum = False
                     if isinstance(rec.summary, dict):
-                        if rec.summary.get("call_summary") or str(rec.summary.get("final_status") or "").upper() in {"ANSWERED", "COMPLETED", "INTERESTED", "HIGH_INTENT", "NOT_INTERESTED", "CALLBACK"}:
+                        if rec.summary.get("call_summary") or str(rec.summary.get("final_status") or "").upper() in {"ANSWERED", "COMPLETED", "INTERESTED", "HIGH_INTENT", "NOT_INTERESTED", "CALLBACK", "GENERAL_INQUIRY", "MISMATCH"}:
                             has_real_sum = True
 
                     is_ans = (
                         (rec.duration_seconds >= 3.0 and str(rec.status).upper() not in CDR_MISSED_STATUSES)
-                        or (str(rec.status).upper() in {"ANSWERED", "COMPLETED", "INTERESTED", "HIGH_INTENT", "NOT_INTERESTED", "CALLBACK"} and rec.duration_seconds > 0)
+                        or (str(rec.status).upper() in {"ANSWERED", "COMPLETED", "INTERESTED", "HIGH_INTENT", "NOT_INTERESTED", "CALLBACK", "GENERAL_INQUIRY", "MISMATCH"} and rec.duration_seconds > 0)
                         or (has_tx and str(rec.status).upper() not in CDR_MISSED_STATUSES)
                         or (has_real_sum and rec.duration_seconds >= 2.0)
                     )
@@ -2040,10 +2077,9 @@ def sarvam_cdr_webhook(request):
                             c_lead.stage_3_status = "SKIPPED"
                             c_lead.final_status = "ANSWERED"
                             print(f"🎯 [SARVAM CAMPAIGN SYNC]: Lead #{c_lead.id} ({c_lead.candidate_name}) marked ANSWERED ({rec.duration_seconds:.1f}s) in Stage 1 via Webhook.")
-                        else:
+                        elif c_lead.stage_1_status != "ANSWERED" and c_lead.final_status != "ANSWERED":
                             c_lead.stage_1_status = "MISSED"
-                            if c_lead.final_status != "ANSWERED":
-                                c_lead.final_status = "IN_PROGRESS"
+                            c_lead.final_status = "IN_PROGRESS"
                         c_lead.save()
 
                     elif stage_num == 2:
@@ -2053,10 +2089,9 @@ def sarvam_cdr_webhook(request):
                             c_lead.stage_3_status = "SKIPPED"
                             c_lead.final_status = "ANSWERED"
                             print(f"🎯 [SARVAM CAMPAIGN SYNC]: Lead #{c_lead.id} ({c_lead.candidate_name}) marked ANSWERED ({rec.duration_seconds:.1f}s) in Stage 2 (Retry 1) via Webhook.")
-                        else:
+                        elif c_lead.stage_2_status != "ANSWERED" and c_lead.final_status != "ANSWERED":
                             c_lead.stage_2_status = "MISSED"
-                            if c_lead.final_status != "ANSWERED":
-                                c_lead.final_status = "IN_PROGRESS"
+                            c_lead.final_status = "IN_PROGRESS"
                         c_lead.save()
 
                     elif stage_num == 3:
@@ -2065,10 +2100,9 @@ def sarvam_cdr_webhook(request):
                             c_lead.stage_3_status = "ANSWERED"
                             c_lead.final_status = "ANSWERED"
                             print(f"🎯 [SARVAM CAMPAIGN SYNC]: Lead #{c_lead.id} ({c_lead.candidate_name}) marked ANSWERED ({rec.duration_seconds:.1f}s) in Stage 3 (Final Retry) via Webhook.")
-                        else:
+                        elif c_lead.stage_3_status != "ANSWERED" and c_lead.final_status != "ANSWERED":
                             c_lead.stage_3_status = "MISSED"
-                            if c_lead.final_status != "ANSWERED":
-                                c_lead.final_status = "MISSED_ALL_RETRIES"
+                            c_lead.final_status = "MISSED_ALL_RETRIES"
                         c_lead.save()
 
                     # Recalculate and update campaign totals
@@ -2200,6 +2234,14 @@ def sarvam_cdr_webhook(request):
                                 final_url = resp.url
                                 r.audio_url = final_url
                                 r.save(update_fields=["audio_url"])
+                                try:
+                                    from shreyas_portal.models import ShreyasCallLead
+                                    from django.db.models import Q
+                                    ShreyasCallLead.objects.filter(
+                                        Q(sarvam_call_record=r) | Q(interaction_id=r.interaction_id)
+                                    ).update(audio_url=final_url)
+                                except Exception:
+                                    pass
                                 print(f"✅ [RECORDING RETRY] Got recording for record #{record_id} on attempt {attempt}! Saved: {final_url[:80]}")
 
                                 # If transcript was missing, also trigger AI summary
@@ -2230,6 +2272,36 @@ def sarvam_cdr_webhook(request):
                 trigger_whatsapp_for_call(rec, async_mode=True)
             except Exception as _wa_err:
                 print(f"⚠️ [WHATSAPP HOOK FROM CDR NOTICE]: {_wa_err}")
+
+        # ── SAFE AUTO-ROUTING TO SHREYAS FOUNDATION PORTAL ──
+        if rec and rec.sarvam_agent and ("shreyas" in (rec.sarvam_agent.slug or "").lower() or "shreyas" in (rec.sarvam_agent.name or "").lower() or "shreyas" in (rec.sarvam_agent.app_id or "").lower()):
+            try:
+                from shreyas_portal.classifier import route_and_save_shreyas_lead
+                c_name = rec.candidate_name
+                agent_vars = dict(fav)
+                agent_vars.update(oav)
+                explicit_int = ""
+                if isinstance(agent_vars, dict):
+                    u_cand = agent_vars.get("user_name") or agent_vars.get("caller_name")
+                    if u_cand and str(u_cand).strip().lower() not in ["customer", "valued customer", "none", "null", ""]:
+                        c_name = str(u_cand).strip()
+                    explicit_int = agent_vars.get("interest_field") or agent_vars.get("interest_sub_field") or ""
+
+                route_and_save_shreyas_lead(
+                    phone_number=rec.phone_number,
+                    caller_name=c_name,
+                    transcript=rec.transcript or "",
+                    summary=rec.summary.get("call_summary") if isinstance(rec.summary, dict) else str(rec.summary or ""),
+                    audio_url=rec.audio_url or "",
+                    duration_seconds=rec.duration_seconds or 0.0,
+                    status=rec.status or "COMPLETED",
+                    interaction_id=rec.interaction_id or "",
+                    sarvam_call_record=rec,
+                    call_type=rec.call_type or "Inbound Call",
+                    explicit_interest=explicit_int
+                )
+            except Exception as _sh_err:
+                print(f"⚠️ [SHREYAS HOOK FROM CDR NOTICE]: {_sh_err}")
 
         return Response({
             "status": "success",
@@ -4921,6 +4993,15 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
     from conversations.services.kylas_sarvam_bridge import SarvamAgentService
     from conversations.models import SarvamCallRecord
 
+    # If lead was already verified as ANSWERED by incoming CDR webhook, never downgrade
+    try:
+        lead.refresh_from_db()
+        stage_status = getattr(lead, f"stage_{stage_num}_status", None)
+        if stage_status == "ANSWERED" or lead.final_status == "ANSWERED":
+            return True
+    except Exception:
+        pass
+
     call_rec = None
     if stage_num == 1:
         call_rec = lead.stage_1_call
@@ -4940,7 +5021,8 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
         "QUEUED", "DIALING", "UNANSWERED", "REJECTED", "NOT_ANSWERED", "TIMEOUT", "IN_PROGRESS", "PENDING", ""
     }
     ANSWERED_STATUSES = {
-        "ANSWERED", "COMPLETED", "INTERESTED", "HIGH_INTENT", "NOT_INTERESTED", "CALLBACK", "CALL_DISCONNECTED"
+        "ANSWERED", "COMPLETED", "INTERESTED", "HIGH_INTENT", "NOT_INTERESTED", "CALLBACK", "CALL_DISCONNECTED",
+        "GENERAL_INQUIRY", "MISMATCH"
     }
 
     has_tx = bool(call_rec.transcript and len(str(call_rec.transcript).strip()) > 10)
@@ -4975,7 +5057,7 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
                     matched_item = item
                     break
 
-        # Rule 3: Proximity match by phone number within 15 minutes of call creation
+        # Rule 3: Proximity match by phone number within 15 minutes AFTER call creation (never past campaigns)
         if not matched_item and clean_rec_p:
             for item in remote_items:
                 item_iid = item.get("interaction_id") or item.get("id")
@@ -4993,15 +5075,15 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
                             if dt_val:
                                 if dt_val.tzinfo is None:
                                     dt_val = timezone.make_aware(dt_val, timezone.utc)
-                                sec_diff = abs((dt_val - call_rec.created_at).total_seconds())
-                                if sec_diff <= 900:
+                                sec_diff = (dt_val - call_rec.created_at).total_seconds()
+                                if -20 <= sec_diff <= 900:
                                     matched_item = item
                                     break
                         except Exception:
                             pass
 
         if matched_item:
-            dur = float(matched_item.get("duration_in_seconds", 0))
+            dur = float(matched_item.get("duration_in_seconds") or 0)
             call_rec.duration_seconds = dur
             call_rec.interaction_id = matched_item.get("interaction_id") or call_rec.interaction_id
             call_rec.audio_url = matched_item.get("audio_url") or call_rec.audio_url
@@ -5030,7 +5112,16 @@ def _sync_lead_call_outcome(lead, stage_num, sarvam_agent):
         if call_rec.summary.get("call_summary") or str(call_rec.summary.get("final_status") or "").upper() in ANSWERED_STATUSES:
             has_real_sum = True
 
-    if (call_rec.duration_seconds >= 3.0 and status_upper not in MISSED_STATUSES) or \
+    has_user_speech = False
+    if call_rec.transcript:
+        tr_lower = str(call_rec.transcript).lower()
+        if "user:" in tr_lower or "customer:" in tr_lower or "speaker:" in tr_lower:
+            has_user_speech = True
+
+    carrier_missed = {"BUSY", "FAILED", "UNREACHABLE", "REJECTED", "CANCELLED", "TIMEOUT"}
+    if has_user_speech or \
+       (call_rec.duration_seconds >= 8.0 and status_upper not in carrier_missed) or \
+       (call_rec.duration_seconds >= 3.0 and status_upper not in MISSED_STATUSES) or \
        (status_upper in ANSWERED_STATUSES and call_rec.duration_seconds > 0) or \
        (has_tx and status_upper not in MISSED_STATUSES) or \
        (has_real_sum and call_rec.duration_seconds >= 2.0):
@@ -5086,47 +5177,60 @@ def _run_multi_stage_campaign(campaign_id):
 
     def _poll_stage_settlement(stage_leads, stage_num):
         """Polls until calls finish ringing or webhooks arrive (up to max timeout)."""
-        max_wait = min(45, max(15, len(stage_leads) * 4))
+        max_wait = min(180, max(30, len(stage_leads) * 15))
         elapsed = 0
         poll_interval = 3
         print(f"⏳ [STAGE {stage_num} SETTLING]: Polling for call completions (max {max_wait}s)...")
         while elapsed < max_wait:
             time.sleep(poll_interval)
             elapsed += poll_interval
+            close_old_connections()
             all_done = True
             for lead in stage_leads:
+                try:
+                    lead.refresh_from_db()
+                    if getattr(lead, f"stage_{stage_num}_status") == "ANSWERED" or lead.final_status == "ANSWERED":
+                        continue
+                except Exception:
+                    pass
                 rec = getattr(lead, f"stage_{stage_num}_call", None)
                 if rec:
-                    rec.refresh_from_db()
-                    if rec.status in ["DIALING", "PENDING", "IN_PROGRESS"]:
-                        all_done = False
-                        break
+                    try:
+                        rec.refresh_from_db()
+                        if rec.status in ["DIALING", "PENDING", "IN_PROGRESS"]:
+                            all_done = False
+                            break
+                    except Exception:
+                        pass
             if all_done and elapsed >= 6:
                 print(f"✅ [STAGE {stage_num} SETTLED]: All {len(stage_leads)} calls completed after {elapsed}s.")
                 break
 
-    def _wait_stage_cooldown(wait_seconds=300, next_stage_name="Retry #1", waiting_status=None):
-        """Waits for cooldown (5 min) while remaining responsive to campaign cancellation."""
+    def _wait_stage_cooldown(wait_seconds=900, next_stage_name="Retry #1", waiting_status=None):
+        """Waits for cooldown (15 min) while remaining responsive to campaign cancellation."""
         if waiting_status:
             campaign.status = waiting_status
             campaign.save(update_fields=["status"])
-        print(f"\n⏳ [CAMPAIGN #{campaign.id} COOLDOWN]: Waiting 5 minutes ({wait_seconds}s) before starting {next_stage_name}...")
+        mins = wait_seconds // 60
+        print(f"\n⏳ [CAMPAIGN #{campaign.id} COOLDOWN]: Waiting {mins} minutes ({wait_seconds}s) before starting {next_stage_name}...")
         elapsed = 0
         poll_sec = 2
         while elapsed < wait_seconds:
             time.sleep(poll_sec)
             elapsed += poll_sec
             # Close stale DB connections before querying — prevents holding a
-            # connection open across the full 5-minute sleep.
+            # connection open across the cooldown sleep.
             close_old_connections()
             campaign.refresh_from_db()
             if campaign.status == "CANCELLED":
-                print(f"🛑 [CAMPAIGN #{campaign.id}]: Cancelled by user during 5-minute cooldown before {next_stage_name}.")
+                print(f"🛑 [CAMPAIGN #{campaign.id}]: Cancelled by user during {mins}-minute cooldown before {next_stage_name}.")
                 close_old_connections()
                 return False
-            if elapsed % 30 == 0 or elapsed == wait_seconds:
+            if elapsed % 60 == 0 or elapsed == wait_seconds:
                 remaining = max(0, wait_seconds - elapsed)
-                print(f"⏳ [CAMPAIGN #{campaign.id}]: {remaining}s remaining in 5-minute cooldown before {next_stage_name} starts...")
+                rem_mins = remaining // 60
+                rem_sec = remaining % 60
+                print(f"⏳ [CAMPAIGN #{campaign.id}]: {rem_mins}m {rem_sec}s remaining in {mins}-minute cooldown before {next_stage_name} starts...")
                 close_old_connections()  # Explicitly release between log intervals
         close_old_connections()
         return True
@@ -5180,7 +5284,7 @@ def _run_multi_stage_campaign(campaign_id):
 
             res = SarvamAgentService.trigger_outbound_call(
                 phone_number=lead.phone_number,
-                lead_id=0,
+                lead_id=call_rec.id,
                 customer_name=lead.candidate_name,
                 language=getattr(lead, "language", None),
                 extra_variables=extra_vars_combined,
@@ -5205,6 +5309,11 @@ def _run_multi_stage_campaign(campaign_id):
     s1_answered = 0
     s1_missed = 0
     for lead in all_leads:
+        lead.refresh_from_db()
+        if lead.stage_1_status == "ANSWERED" or lead.final_status == "ANSWERED":
+            s1_answered += 1
+            continue
+
         answered = _sync_lead_call_outcome(lead, 1, agent)
         if answered:
             lead.stage_1_status = "ANSWERED"
@@ -5229,7 +5338,7 @@ def _run_multi_stage_campaign(campaign_id):
     # ==========================================
     # STAGE 2: RETRY #1 (For Missed Calls)
     # ==========================================
-    missed_s1_leads = list(campaign.leads.filter(stage_1_status="MISSED").order_by("id"))
+    missed_s1_leads = list(campaign.leads.filter(stage_1_status="MISSED").exclude(final_status="ANSWERED").order_by("id"))
     if not missed_s1_leads:
         print(f"🎉 [CAMPAIGN #{campaign.id} COMPLETED]: All leads answered in Stage 1!")
         campaign.status = "COMPLETED"
@@ -5237,12 +5346,12 @@ def _run_multi_stage_campaign(campaign_id):
         campaign.save()
         return
 
-    # Cooldown 5 minutes before Stage 2
-    if not _wait_stage_cooldown(wait_seconds=300, next_stage_name="Stage 2 (Retry #1)", waiting_status="WAITING_RETRY_1"):
+    # Cooldown 15 minutes before Stage 2
+    if not _wait_stage_cooldown(wait_seconds=900, next_stage_name="Stage 2 (Retry #1)", waiting_status="WAITING_RETRY_1"):
         return
 
-    # Re-sync and verify Stage 1 outcomes after cooldown (in case webhooks or calls finished during 5-minute cooldown)
-    print(f"\n🔍 [STAGE 2 PRE-CHECK]: Re-evaluating Stage 1 outcomes after 5-minute cooldown...")
+    # Re-sync and verify Stage 1 outcomes after cooldown (in case webhooks or calls finished during 15-minute cooldown)
+    print(f"\n🔍 [STAGE 2 PRE-CHECK]: Re-evaluating Stage 1 outcomes after 15-minute cooldown...")
     for lead in all_leads:
         lead.refresh_from_db()
         if lead.stage_1_status != "ANSWERED":
@@ -5260,7 +5369,7 @@ def _run_multi_stage_campaign(campaign_id):
     campaign.missed_count = campaign.leads.filter(stage_1_status="MISSED").count()
     campaign.save()
 
-    missed_s1_leads = list(campaign.leads.filter(stage_1_status="MISSED").order_by("id"))
+    missed_s1_leads = list(campaign.leads.filter(stage_1_status="MISSED").exclude(final_status="ANSWERED").order_by("id"))
     if not missed_s1_leads:
         print(f"🎉 [CAMPAIGN #{campaign.id} COMPLETED]: All leads answered after Stage 1!")
         campaign.status = "COMPLETED"
@@ -5312,7 +5421,7 @@ def _run_multi_stage_campaign(campaign_id):
 
             res = SarvamAgentService.trigger_outbound_call(
                 phone_number=lead.phone_number,
-                lead_id=0,
+                lead_id=call_rec.id,
                 customer_name=lead.candidate_name,
                 language=getattr(lead, "language", None),
                 extra_variables=extra_vars_combined,
@@ -5334,6 +5443,11 @@ def _run_multi_stage_campaign(campaign_id):
     s2_answered = 0
     s2_missed = 0
     for lead in missed_s1_leads:
+        lead.refresh_from_db()
+        if lead.stage_2_status == "ANSWERED" or lead.final_status == "ANSWERED":
+            s2_answered += 1
+            continue
+
         answered = _sync_lead_call_outcome(lead, 2, agent)
         if answered:
             lead.stage_2_status = "ANSWERED"
@@ -5357,7 +5471,7 @@ def _run_multi_stage_campaign(campaign_id):
     # ==========================================
     # STAGE 3: RETRY #2 (Final Retry)
     # ==========================================
-    missed_s2_leads = list(campaign.leads.filter(stage_2_status="MISSED").order_by("id"))
+    missed_s2_leads = list(campaign.leads.filter(stage_2_status="MISSED").exclude(final_status="ANSWERED").order_by("id"))
     if not missed_s2_leads:
         print(f"🎉 [CAMPAIGN #{campaign.id} COMPLETED]: All remaining leads answered in Stage 2!")
         campaign.status = "COMPLETED"
@@ -5365,12 +5479,12 @@ def _run_multi_stage_campaign(campaign_id):
         campaign.save()
         return
 
-    # Cooldown 5 minutes before Stage 3
-    if not _wait_stage_cooldown(wait_seconds=300, next_stage_name="Stage 3 (Final Retry #2)", waiting_status="WAITING_RETRY_2"):
+    # Cooldown 15 minutes before Stage 3
+    if not _wait_stage_cooldown(wait_seconds=900, next_stage_name="Stage 3 (Final Retry #2)", waiting_status="WAITING_RETRY_2"):
         return
 
     # Re-sync and verify Stage 2 outcomes after cooldown
-    print(f"\n🔍 [STAGE 3 PRE-CHECK]: Re-evaluating Stage 2 outcomes after 5-minute cooldown...")
+    print(f"\n🔍 [STAGE 3 PRE-CHECK]: Re-evaluating Stage 2 outcomes after 15-minute cooldown...")
     for lead in missed_s1_leads:
         lead.refresh_from_db()
         if lead.stage_2_status != "ANSWERED":
@@ -5387,7 +5501,7 @@ def _run_multi_stage_campaign(campaign_id):
     campaign.missed_count = campaign.leads.filter(stage_2_status="MISSED").count()
     campaign.save()
 
-    missed_s2_leads = list(campaign.leads.filter(stage_2_status="MISSED").order_by("id"))
+    missed_s2_leads = list(campaign.leads.filter(stage_2_status="MISSED").exclude(final_status="ANSWERED").order_by("id"))
     if not missed_s2_leads:
         print(f"🎉 [CAMPAIGN #{campaign.id} COMPLETED]: All remaining leads answered after Stage 2!")
         campaign.status = "COMPLETED"
@@ -5439,7 +5553,7 @@ def _run_multi_stage_campaign(campaign_id):
 
             res = SarvamAgentService.trigger_outbound_call(
                 phone_number=lead.phone_number,
-                lead_id=0,
+                lead_id=call_rec.id,
                 customer_name=lead.candidate_name,
                 language=getattr(lead, "language", None),
                 extra_variables=extra_vars_combined,

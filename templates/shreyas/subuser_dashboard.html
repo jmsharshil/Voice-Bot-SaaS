@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ current_department.name }} Portal — Shreyas Foundation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --dept-color: {{ current_department.badge_color|default:'#4f46e5' }};
+            --border: #e2e8f0;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        .topbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        .topbar-hamburger-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        .topbar-hamburger-btn:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: var(--dept-color);
+        }
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .dept-icon-box {
+            width: 40px;
+            height: 40px;
+            background: var(--dept-color);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 19px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .brand-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .dept-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            background: var(--dept-color);
+            color: #ffffff;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-left: 6px;
+        }
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .topbar-profile-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 14px 5px 6px;
+            border-radius: 30px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.05);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            user-select: none;
+            text-decoration: none;
+        }
+        .topbar-profile-pill:hover {
+            background: #ffffff;
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.08);
+            transform: translateY(-1px);
+        }
+        .topbar-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--dept-color), #1e1b4b);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 2px solid #e0e7ff;
+            position: relative;
+        }
+        .topbar-avatar-status {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 9px;
+            height: 9px;
+            background: #10b981;
+            border-radius: 50%;
+            border: 2px solid #ffffff;
+        }
+        .topbar-user-details {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+        .topbar-user-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .topbar-user-role {
+            font-size: 10.5px;
+            color: #64748b;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-top: 1px;
+        }
+        .topbar-profile-chevron {
+            font-size: 11px;
+            color: #94a3b8;
+            transition: transform 0.2s ease;
+        }
+        .topbar-profile-pill:hover .topbar-profile-chevron {
+            color: var(--dept-color);
+            transform: translateY(1px);
+        }
+
+        /* ── APP SIDEBAR SYSTEM (MATCHING SARVAM VOICE AGENTS) ── */
+        .app-sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: -300px;
+            width: 300px;
+            background: #ffffff;
+            color: #0f172a;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 10000;
+            border-right: 1px solid #e2e8f0;
+            box-shadow: 4px 0 28px rgba(15, 23, 42, 0.12);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateX(0);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .app-sidebar.open {
+            transform: translateX(300px);
+        }
+        .sidebar-brand {
+            padding: 20px 18px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #ffffff;
+        }
+        .brand-icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--dept-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 19px;
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+            flex-shrink: 0;
+        }
+        .brand-text-box {
+            min-width: 0;
+            flex: 1;
+        }
+        .sidebar-brand-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+            line-height: 1.2;
+        }
+        .sidebar-brand-subtitle {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
+            font-weight: 500;
+            letter-spacing: 0.2px;
+        }
+        .sidebar-close-btn {
+            display: inline-flex;
+            margin-left: auto;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .sidebar-close-btn:hover {
+            background: #fee2e2;
+            color: #dc2626;
+            border-color: #fca5a5;
+        }
+        .sidebar-status-container {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .sidebar-status-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            transition: all 0.2s ease;
+        }
+        .sidebar-status-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+        }
+        .sidebar-phone-card {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+        .sidebar-status-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13.5px;
+            flex-shrink: 0;
+        }
+        .sidebar-phone-icon {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .sidebar-status-info {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            flex: 1;
+        }
+        .sidebar-status-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+        }
+        .sidebar-status-val {
+            font-size: 12px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+            margin-top: 2px;
+        }
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            background: #ffffff;
+        }
+        .sidebar-group-title {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 0.8px;
+            padding: 8px 12px 4px;
+            text-transform: uppercase;
+        }
+        .sidebar-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #334155;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 600;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            text-decoration: none;
+            position: relative;
+        }
+        .sidebar-btn:hover {
+            color: #0f172a;
+            background: #f1f5f9;
+            transform: translateX(2px);
+        }
+        .sidebar-btn.active {
+            color: #ffffff;
+            background: var(--dept-color);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+            border-color: transparent;
+        }
+        .sidebar-btn.active .sidebar-btn-icon i {
+            color: #ffffff !important;
+        }
+        .sidebar-btn-icon {
+            font-size: 16px;
+            width: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: #64748b;
+        }
+        .sidebar-btn-text {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar-pill-badge {
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+        }
+        .sidebar-user-section {
+            padding: 14px 12px 16px;
+            border-top: 1px solid #f1f5f9;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .sidebar-profile-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        }
+        .sidebar-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--dept-color);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            border: 2px solid #e0e7ff;
+        }
+        .sidebar-user-details {
+            min-width: 0;
+            flex: 1;
+        }
+        .sidebar-user-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .sidebar-user-role {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 600;
+        }
+        .sidebar-logout-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 9px 12px;
+            border-radius: 8px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+        .sidebar-logout-btn:hover {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+            transform: translateY(-1px);
+        }
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+        .sidebar-backdrop.open {
+            display: block;
+            opacity: 1;
+        }
+        .btn-logout {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid #fecaca;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        .btn-logout:hover {
+            background: #fef2f2;
+        }
+
+        .main-container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 24px 28px;
+        }
+
+        .banner-card {
+            background: linear-gradient(135deg, var(--dept-color), #1e1b4b);
+            color: #ffffff;
+            padding: 24px 28px;
+            border-radius: 18px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+        .banner-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .banner-subtitle {
+            font-size: 13.5px;
+            opacity: 0.9;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: #ffffff;
+            border: 2px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            position: relative;
+            user-select: none;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            border-color: #cbd5e1;
+        }
+        .stat-card.active-stat-card {
+            border-color: var(--dept-color);
+            background: #fcfdff;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12), 0 8px 24px rgba(79, 70, 229, 0.08);
+            transform: translateY(-2px);
+        }
+        .stat-card.active-hot {
+            border-color: #dc2626 !important;
+            background: #fffafa !important;
+            box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12), 0 8px 24px rgba(220, 38, 38, 0.08) !important;
+        }
+        .stat-card.active-warm {
+            border-color: #ea580c !important;
+            background: #fffaf5 !important;
+            box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.12), 0 8px 24px rgba(234, 88, 12, 0.08) !important;
+        }
+        .stat-card.active-completed {
+            border-color: #059669 !important;
+            background: #f7fee7 !important;
+            box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.12), 0 8px 24px rgba(5, 150, 105, 0.08) !important;
+        }
+        .stat-card.active-callbacks {
+            border-color: #d97706 !important;
+            background: #fffdf5 !important;
+            box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.12), 0 8px 24px rgba(217, 119, 6, 0.08) !important;
+        }
+        .stat-card .active-indicator {
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            font-size: 9.5px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 10px;
+            display: none;
+            letter-spacing: 0.3px;
+        }
+        .stat-card.active-stat-card .active-indicator {
+            display: inline-flex;
+            align-items: center;
+        }
+        .stat-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .stat-info .stat-val {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .stat-info .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .filter-bar {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .search-input {
+            padding: 9px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 13.5px;
+            outline: none;
+            width: 280px;
+        }
+        .search-input:focus {
+            border-color: var(--dept-color);
+        }
+
+        .table-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            background: #f8fafc;
+            padding: 14px 20px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13.5px;
+            color: #1e293b;
+            vertical-align: middle;
+        }
+        tr:hover td {
+            background: #fbfcfe;
+        }
+
+        .badge-sentiment {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 700;
+        }
+        .badge-hot { background: #fee2e2; color: #dc2626; }
+        .badge-warm { background: #fef3c7; color: #d97706; }
+        .badge-cold { background: #f1f5f9; color: #64748b; }
+
+        .stage-select {
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 12.5px;
+            font-weight: 600;
+            outline: none;
+            background: #ffffff;
+            cursor: pointer;
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #f8fafc;
+            color: #475569;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+        .btn-icon:hover {
+            background: #e2e8f0;
+            color: var(--dept-color);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: #ffffff;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .modal-title { font-size: 17px; font-weight: 800; color: #0f172a; }
+        .modal-close { background: none; border: none; font-size: 20px; color: #64748b; cursor: pointer; }
+        .modal-body { padding: 24px; }
+        .form-label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            background: #f8fafc;
+        }
+        .btn-secondary {
+            padding: 8px 16px;
+            background: #e2e8f0;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SLIDE-OUT SIDEBAR (MATCHING OTHER SARVAM VOICE AGENTS) -->
+    <aside class="app-sidebar" id="appSidebar">
+        <!-- Sidebar Brand Header -->
+        <div class="sidebar-brand">
+            <div class="brand-icon-box">
+                <i class="fa-solid {{ current_department.icon|default:'fa-building' }}"></i>
+            </div>
+            <div class="brand-text-box">
+                <div class="sidebar-brand-title">Shreyas Foundation</div>
+                <div class="sidebar-brand-subtitle">{{ current_department.name }} Department</div>
+            </div>
+            <button type="button" class="sidebar-close-btn" onclick="toggleSidebar(false)" title="Close Sidebar">✕</button>
+        </div>
+
+        <!-- Inbound Agent Line, Call Minutes & Department Status -->
+        <div class="sidebar-status-container">
+            <div class="sidebar-status-card sidebar-phone-card" title="Active Calling Inbound Line">
+                <div class="sidebar-status-icon sidebar-phone-icon">
+                    <i class="fa-solid fa-phone"></i>
+                </div>
+                <div class="sidebar-status-info">
+                    <span class="sidebar-status-label">Voice Agent Line</span>
+                    <span class="sidebar-status-val">+917965480890</span>
+                </div>
+            </div>
+
+            <!-- Call Minutes Balance Card -->
+            <div class="sidebar-status-card sidebar-minutes-card" id="subSidebarMinutesCard" title="Call Minutes Balance: Remaining / Total Allocated" style="background: #f0f9ff; border-color: #bae6fd;">
+                <div class="sidebar-status-icon" style="background: #e0f2fe; color: #0284c7;">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div class="sidebar-status-info">
+                    <span class="sidebar-status-label" style="color: #0284c7;">Call Minutes</span>
+                    <span class="sidebar-status-val" id="subSidebarMinutesVal">
+                        <strong style="color: #0369a1; font-size: 13px;">{{ remaining_minutes|floatformat:0 }}m</strong> <span style="font-size: 11px; color: #64748b;">rem / {{ allocated_minutes|floatformat:0 }}m total</span>
+                    </span>
+                    <div style="width: 100%; height: 4px; background: #e2e8f0; border-radius: 4px; margin-top: 5px; overflow: hidden;">
+                        <div id="subSidebarMinutesProgress" style="width: {{ usage_percentage|default:0.1 }}%; height: 100%; background: linear-gradient(90deg, #10b981, #0284c7); border-radius: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-status-card" title="Your Assigned Department">
+                <div class="sidebar-status-icon" style="background: #f0fdf4; color: var(--dept-color);">
+                    <i class="fa-solid fa-tag"></i>
+                </div>
+                <div class="sidebar-status-info">
+                    <span class="sidebar-status-label">Assigned Unit</span>
+                    <span class="sidebar-status-val">{{ current_department.name }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Navigation Menu -->
+        <nav class="sidebar-nav">
+            <div class="sidebar-group-title">DEPARTMENT NAVIGATION</div>
+
+            <button type="button" class="sidebar-btn active" id="sideBtnAll" onclick="filterByCard('all', document.getElementById('cardTotal')); toggleSidebar(false);">
+                <span class="sidebar-btn-icon"><i class="fa-solid fa-chart-pie" style="color: var(--dept-color);"></i></span>
+                <span class="sidebar-btn-text">All {{ current_department.name }} Calls</span>
+            </button>
+
+            <button type="button" class="sidebar-btn" id="sideBtnHot" onclick="filterByCard('HOT', document.getElementById('cardHot')); toggleSidebar(false);">
+                <span class="sidebar-btn-icon"><i class="fa-solid fa-fire" style="color: #dc2626;"></i></span>
+                <span class="sidebar-btn-text">Hot Inquiries</span>
+                <span class="sidebar-pill-badge" style="background: #fee2e2; color: #dc2626;">{{ hot_leads }}</span>
+            </button>
+
+            <button type="button" class="sidebar-btn" id="sideBtnWarm" onclick="filterByCard('WARM', document.getElementById('cardWarm')); toggleSidebar(false);">
+                <span class="sidebar-btn-icon"><i class="fa-solid fa-temperature-half" style="color: #ea580c;"></i></span>
+                <span class="sidebar-btn-text">Warm Inquiries</span>
+                <span class="sidebar-pill-badge" style="background: #ffedd5; color: #ea580c;">{{ warm_leads|default:0 }}</span>
+            </button>
+
+            <button type="button" class="sidebar-btn" id="sideBtnCallbacks" onclick="filterByCard('CALLBACK_SCHEDULED', document.getElementById('cardCallbacks')); toggleSidebar(false);">
+                <span class="sidebar-btn-icon"><i class="fa-solid fa-calendar-check" style="color: #d97706;"></i></span>
+                <span class="sidebar-btn-text">Callbacks Scheduled</span>
+                <span class="sidebar-pill-badge" style="background: #fffbeb; color: #d97706;">{{ callbacks }}</span>
+            </button>
+        </nav>
+
+        <!-- Sidebar Footer: User Profile & Logout Section -->
+        <div class="sidebar-user-section">
+            <div class="sidebar-profile-card">
+                <div class="sidebar-avatar">
+                    {{ user.username|slice:":1"|upper|default:"U" }}
+                </div>
+                <div class="sidebar-user-details">
+                    <div class="sidebar-user-name">{{ user.username|default:"User" }}</div>
+                    <div class="sidebar-user-role">{{ current_department.name }} Lead</div>
+                </div>
+            </div>
+
+            <!-- Logout Button -->
+            <a href="{% url 'shreyas-logout' %}" class="sidebar-logout-btn" title="Logout from system">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Mobile Overlay Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar(false)"></div>
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <!-- Sidebar Hamburger Toggle Button -->
+            <button type="button" class="topbar-hamburger-btn" onclick="toggleSidebar()" title="Toggle Sidebar Menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="brand-box">
+                <div class="dept-icon-box">
+                    <i class="fa-solid {{ current_department.icon|default:'fa-building' }}"></i>
+                </div>
+                <div>
+                    <div class="brand-title">
+                        Shreyas Foundation <span class="dept-badge">{{ current_department.name }}</span>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-muted);">
+                        Voice Inquiries Portal
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="topbar-right">
+            <!-- User Profile in Navbar (Matching Sarvam Voice Agent) -->
+            <div class="topbar-profile-pill" id="topbarProfilePill" onclick="toggleSidebar()" title="User Profile — Click to open menu">
+                <div class="topbar-avatar" id="topbarAvatar">
+                    {{ user.username|slice:":1"|upper|default:"U" }}
+                    <span class="topbar-avatar-status"></span>
+                </div>
+                <div class="topbar-user-details">
+                    <span class="topbar-user-name" id="topbarUserName">{{ user.username|default:"User" }}</span>
+                    <span class="topbar-user-role" id="topbarUserRole">{{ current_department.name }} Lead</span>
+                </div>
+                <i class="fa-solid fa-chevron-down topbar-profile-chevron"></i>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <!-- BANNER -->
+        <div class="banner-card">
+            <div>
+                <h1 class="banner-title">{{ current_department.name }} Department Inquiries</h1>
+                <p class="banner-subtitle">
+                    Automated voice agent calls filtered strictly for {{ current_department.name }}.
+                </p>
+            </div>
+            <div style="font-size: 32px; opacity: 0.85;">
+                <i class="fa-solid {{ current_department.icon|default:'fa-building' }}"></i>
+            </div>
+        </div>
+
+        <!-- KPI METRIC CARDS (CLICKABLE FILTERS) -->
+        <div class="stats-grid">
+            <div class="stat-card active-stat-card" id="cardTotal" onclick="filterByCard('all', this)" title="Click to view All Department Calls">
+                <span class="active-indicator" style="background: #e0e7ff; color: #4338ca;">Active</span>
+                <div class="stat-icon" style="background: #eef2ff; color: var(--dept-color);">
+                    <i class="fa-solid fa-headset"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-val" id="statTotal">{{ total_leads }}</div>
+                    <div class="stat-label">Total Inquiries</div>
+                </div>
+            </div>
+
+            <div class="stat-card" id="cardHot" onclick="filterByCard('HOT', this)" title="Click to filter Hot Inquiries">
+                <span class="active-indicator" style="background: #fee2e2; color: #b91c1c;">Active</span>
+                <div class="stat-icon" style="background: #fee2e2; color: #dc2626;">
+                    <i class="fa-solid fa-fire"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-val" id="statHot">{{ hot_leads }}</div>
+                    <div class="stat-label">Hot Inquiries</div>
+                </div>
+            </div>
+
+            <div class="stat-card" id="cardWarm" onclick="filterByCard('WARM', this)" title="Click to filter Warm Inquiries">
+                <span class="active-indicator" style="background: #ffedd5; color: #c2410c;">Active</span>
+                <div class="stat-icon" style="background: #ffedd5; color: #ea580c;">
+                    <i class="fa-solid fa-temperature-half"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-val" id="statWarm">{{ warm_leads|default:0 }}</div>
+                    <div class="stat-label">Warm Inquiries</div>
+                </div>
+            </div>
+
+            <div class="stat-card" id="cardCompleted" onclick="filterByCard('COMPLETED', this)" title="Click to filter Completed Calls">
+                <span class="active-indicator" style="background: #d1fae5; color: #047857;">Active</span>
+                <div class="stat-icon" style="background: #ecfdf5; color: #059669;">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-val" id="statCompleted">{{ completed_calls }}</div>
+                    <div class="stat-label">Completed Calls</div>
+                </div>
+            </div>
+
+            <div class="stat-card" id="cardCallbacks" onclick="filterByCard('CALLBACK_SCHEDULED', this)" title="Click to filter Callbacks Scheduled">
+                <span class="active-indicator" style="background: #fef3c7; color: #b45309;">Active</span>
+                <div class="stat-icon" style="background: #fffbeb; color: #d97706;">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-val" id="statCallbacks">{{ callbacks }}</div>
+                    <div class="stat-label">Callbacks Scheduled</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div class="filter-bar">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div style="font-size: 14px; font-weight: 700; color: #334155;">
+                    <i class="fa-solid fa-phone" style="color: var(--dept-color); margin-right: 6px;"></i>
+                    <span id="leadsCountText">Loading calls...</span>
+                </div>
+                <span id="activeFilterPill" style="display: none; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; background: #eef2ff; color: #4f46e5; padding: 4px 10px; border-radius: 20px;">
+                    <span id="filterPillText">Filter: All</span>
+                    <i class="fa-solid fa-xmark" style="cursor: pointer; opacity: 0.7;" onclick="clearCardFilter()" title="Clear filter"></i>
+                </span>
+            </div>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search phone, name, notes..." onkeyup="fetchLeads()">
+        </div>
+
+        <!-- LEADS TABLE -->
+        <div class="table-card">
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Caller Details</th>
+                            <th>Inquiry Topic</th>
+                            <th>Duration</th>
+                            <th>Interest Level</th>
+                            <th>Status &amp; Stage</th>
+                            <th>Call Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leadsTableBody">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TRANSCRIPT MODAL -->
+    <div class="modal-overlay" id="modalTranscript">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="transModalTitle">Conversation Details</div>
+                <button class="modal-close" onclick="closeModal('modalTranscript')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Embedded Audio Player -->
+                <div id="subAudioContainer" style="margin-bottom: 18px; display: none; background: #f8fafc; border: 1px solid var(--border); padding: 12px 14px; border-radius: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div class="form-label" style="display: flex; align-items: center; gap: 8px; margin-bottom: 0;">
+                            <i class="fa-solid fa-circle-play" style="color: var(--dept-color); font-size: 16px;"></i> Call Audio Recording:
+                        </div>
+                        <a id="subDownloadBtn" href="#" class="btn btn-secondary" style="font-size: 12px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; border-radius: 6px;" download>
+                            <i class="fa-solid fa-download" style="color: #059669;"></i> Download Audio
+                        </a>
+                    </div>
+                    <audio id="subAudioPlayer" controls style="width: 100%; height: 40px; border-radius: 8px; outline: none;"></audio>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <div class="form-label">Call Summary:</div>
+                    <div id="transSummary" style="font-size: 13.5px; background: #f1f5f9; padding: 12px; border-radius: 8px; line-height: 1.5;">--</div>
+                </div>
+                <div>
+                    <div class="form-label">Full Transcript:</div>
+                    <div id="transFullText" style="font-size: 13px; background: #f8fafc; border: 1px solid var(--border); padding: 14px; border-radius: 8px; max-height: 250px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6;">--</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('modalTranscript')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLOATING AUDIO PLAYER DOCK (STAYS ON DASHBOARD) -->
+    <div id="floatingAudioDock" style="display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); width: calc(100% - 48px); max-width: 860px; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(16px); border: 1px solid #cbd5e1; box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2); border-radius: 16px; padding: 14px 22px; z-index: 1050; transition: all 0.25s ease;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px; min-width: 190px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: #f0fdf4; color: var(--dept-color); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+                    <i class="fa-solid fa-volume-high"></i>
+                </div>
+                <div>
+                    <div id="dockCallerTitle" style="font-weight: 700; font-size: 14px; color: #0f172a;">Caller Recording</div>
+                    <div id="dockDeptSubtitle" style="font-size: 12px; color: #64748b;">{{ current_department.name }}</div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 250px;">
+                <audio id="dockAudioPlayer" controls style="width: 100%; height: 38px; border-radius: 8px; outline: none;"></audio>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <a id="dockDownloadBtn" href="#" class="btn btn-secondary" style="font-size: 12px; padding: 7px 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: #0f172a; border-radius: 8px;" download title="Download Recording (.wav)">
+                    <i class="fa-solid fa-download" style="color: #059669;"></i> Download
+                </a>
+                <button type="button" onclick="closeAudioDock()" title="Close Player" style="border: none; background: #f1f5f9; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #64748b; cursor: pointer; transition: all 0.15s ease;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar(forceState) {
+            const sidebar = document.getElementById('appSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            if (!sidebar) return;
+            const willOpen = (typeof forceState === 'boolean') ? forceState : !sidebar.classList.contains('open');
+            if (willOpen) {
+                sidebar.classList.add('open');
+                if (backdrop) backdrop.classList.add('open');
+            } else {
+                sidebar.classList.remove('open');
+                if (backdrop) backdrop.classList.remove('open');
+            }
+        }
+
+        const deptSlug = "{{ current_department.slug }}";
+        let currentCardFilter = 'all';
+        let departmentLeads = [];
+
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            const audioPlayer = document.getElementById('subAudioPlayer');
+            if (audioPlayer) audioPlayer.pause();
+        }
+
+        function updateMetricCards(m) {
+            if (!m) return;
+            if (m.total !== undefined && document.getElementById('statTotal')) document.getElementById('statTotal').innerText = m.total;
+            if (m.hot !== undefined && document.getElementById('statHot')) document.getElementById('statHot').innerText = m.hot;
+            if (m.warm !== undefined && document.getElementById('statWarm')) document.getElementById('statWarm').innerText = m.warm;
+            if (m.completed !== undefined && document.getElementById('statCompleted')) document.getElementById('statCompleted').innerText = m.completed;
+            if (m.callbacks !== undefined && document.getElementById('statCallbacks')) document.getElementById('statCallbacks').innerText = m.callbacks;
+        }
+
+        function filterByCard(filterType, cardEl) {
+            if (currentCardFilter === filterType && filterType !== 'all') {
+                currentCardFilter = 'all';
+            } else {
+                currentCardFilter = filterType;
+            }
+
+            document.querySelectorAll('.stat-card').forEach(c => {
+                c.classList.remove('active-stat-card', 'active-hot', 'active-warm', 'active-completed', 'active-callbacks');
+            });
+
+            const pill = document.getElementById('activeFilterPill');
+            const pillText = document.getElementById('filterPillText');
+
+            if (currentCardFilter === 'HOT') {
+                document.getElementById('cardHot').classList.add('active-stat-card', 'active-hot');
+                if (pill) {
+                    pill.style.display = 'inline-flex';
+                    pill.style.background = '#fee2e2';
+                    pill.style.color = '#dc2626';
+                    pillText.innerText = 'Filtered: Hot Inquiries';
+                }
+            } else if (currentCardFilter === 'WARM') {
+                document.getElementById('cardWarm').classList.add('active-stat-card', 'active-warm');
+                if (pill) {
+                    pill.style.display = 'inline-flex';
+                    pill.style.background = '#ffedd5';
+                    pill.style.color = '#ea580c';
+                    pillText.innerText = 'Filtered: Warm Inquiries';
+                }
+            } else if (currentCardFilter === 'COMPLETED') {
+                document.getElementById('cardCompleted').classList.add('active-stat-card', 'active-completed');
+                if (pill) {
+                    pill.style.display = 'inline-flex';
+                    pill.style.background = '#ecfdf5';
+                    pill.style.color = '#059669';
+                    pillText.innerText = 'Filtered: Completed Calls';
+                }
+            } else if (currentCardFilter === 'CALLBACK_SCHEDULED') {
+                document.getElementById('cardCallbacks').classList.add('active-stat-card', 'active-callbacks');
+                if (pill) {
+                    pill.style.display = 'inline-flex';
+                    pill.style.background = '#fffbeb';
+                    pill.style.color = '#d97706';
+                    pillText.innerText = 'Filtered: Callbacks Scheduled';
+                }
+            } else {
+                document.getElementById('cardTotal').classList.add('active-stat-card');
+                if (pill) pill.style.display = 'none';
+            }
+
+            applyFilters();
+        }
+
+        function clearCardFilter() {
+            filterByCard('all', document.getElementById('cardTotal'));
+        }
+
+        function applyFilters() {
+            let filtered = departmentLeads;
+
+            if (currentCardFilter === 'HOT') {
+                filtered = filtered.filter(l => (l.sentiment || '').toUpperCase() === 'HOT');
+            } else if (currentCardFilter === 'WARM') {
+                filtered = filtered.filter(l => (l.sentiment || '').toUpperCase() === 'WARM');
+            } else if (currentCardFilter === 'COMPLETED') {
+                filtered = filtered.filter(l => (l.status || '').toUpperCase() === 'COMPLETED');
+            } else if (currentCardFilter === 'CALLBACK_SCHEDULED') {
+                filtered = filtered.filter(l => (l.pipeline_stage || '').toUpperCase() === 'CALLBACK_SCHEDULED');
+            }
+
+            renderLeads(filtered);
+        }
+
+        function getDownloadUrl(audioUrl, phoneNumber) {
+            if (!audioUrl) return '#';
+            const separator = audioUrl.includes('?') ? '&' : '?';
+            const cleanPhone = (phoneNumber || 'recording').replace(/[^0-9]/g, '');
+            return `${audioUrl}${separator}download=1&filename=call_${cleanPhone}.wav`;
+        }
+
+        function playLeadAudio(leadId) {
+            const lead = departmentLeads.find(x => x.id === leadId);
+            if (!lead || !lead.audio_url) return;
+
+            const dock = document.getElementById('floatingAudioDock');
+            const player = document.getElementById('dockAudioPlayer');
+            const title = document.getElementById('dockCallerTitle');
+            const subtitle = document.getElementById('dockDeptSubtitle');
+            const dlBtn = document.getElementById('dockDownloadBtn');
+
+            title.innerText = `${lead.caller_name || 'Caller'} (${lead.phone_number || ''})`;
+            subtitle.innerHTML = `<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${lead.department_color || 'var(--dept-color)'}; margin-right: 6px;"></span>${lead.department_name || '{{ current_department.name }}'}`;
+            
+            player.src = lead.audio_url;
+            dlBtn.href = getDownloadUrl(lead.audio_url, lead.phone_number);
+            dock.style.display = 'block';
+
+            player.play().catch(e => console.log('Autoplay prevented:', e));
+        }
+
+        function closeAudioDock() {
+            const dock = document.getElementById('floatingAudioDock');
+            const player = document.getElementById('dockAudioPlayer');
+            if (player) {
+                player.pause();
+                player.src = '';
+            }
+            if (dock) dock.style.display = 'none';
+        }
+
+        async function fetchLeads() {
+            try {
+                const search = document.getElementById('searchInput').value;
+                const res = await fetch(`/shreyas/api/leads/?department=${deptSlug}&search=${encodeURIComponent(search)}`);
+                const data = await res.json();
+                if (data.status === 'success') {
+                    departmentLeads = data.leads;
+                    if (data.metrics) {
+                        updateMetricCards(data.metrics);
+                    }
+                    if (data.minutes) {
+                        const minVal = document.getElementById('subSidebarMinutesVal');
+                        const minProg = document.getElementById('subSidebarMinutesProgress');
+                        if (minVal) {
+                            minVal.innerHTML = `<strong style="color: #0369a1; font-size: 13px;">${Math.round(data.minutes.remaining_minutes)}m</strong> <span style="font-size: 11px; color: #64748b;">rem / ${Math.round(data.minutes.allocated_minutes)}m total</span>`;
+                        }
+                        if (minProg) {
+                            minProg.style.width = `${Math.min(100, data.minutes.usage_percentage || 0.1)}%`;
+                        }
+                    }
+                    applyFilters();
+                }
+            } catch (err) {
+                console.error("Failed to fetch leads", err);
+            }
+        }
+
+        function renderLeads(leads) {
+            const tbody = document.getElementById('leadsTableBody');
+            document.getElementById('leadsCountText').innerText = `${leads.length} calls received for {{ current_department.name }}`;
+
+            if (!leads.length) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 40px; color: #94a3b8;">No inquiries recorded yet for {{ current_department.name }}.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = leads.map(l => {
+                const sentClass = l.sentiment === 'HOT' ? 'badge-hot' : (l.sentiment === 'WARM' ? 'badge-warm' : 'badge-cold');
+                return `
+                    <tr>
+                        <td>
+                            <strong>${l.caller_name}</strong>
+                            <div style="font-size: 12px; color: #64748b; margin-top: 2px;">${l.phone_number}</div>
+                        </td>
+                        <td>
+                            <span style="font-weight: 600; color: #334155;">${l.detected_intent || 'General Inquiry'}</span>
+                            ${l.matched_keywords ? `<div style="font-size: 11px; color: #64748b;">(Trigger: ${l.matched_keywords})</div>` : ''}
+                        </td>
+                        <td>${l.duration}</td>
+                        <td><span class="badge-sentiment ${sentClass}">${l.sentiment}</span></td>
+                        <td>
+                            <select class="stage-select" onchange="updateStage(${l.id}, this.value)">
+                                <option value="NEW" ${l.pipeline_stage === 'NEW' ? 'selected' : ''}>New Lead</option>
+                                <option value="QUALIFIED" ${l.pipeline_stage === 'QUALIFIED' ? 'selected' : ''}>Qualified</option>
+                                <option value="CALLBACK_SCHEDULED" ${l.pipeline_stage === 'CALLBACK_SCHEDULED' ? 'selected' : ''}>Callback</option>
+                                <option value="VISIT_BOOKED" ${l.pipeline_stage === 'VISIT_BOOKED' ? 'selected' : ''}>Campus Visit</option>
+                                <option value="ENROLLED" ${l.pipeline_stage === 'ENROLLED' ? 'selected' : ''}>Enrolled</option>
+                                <option value="CLOSED" ${l.pipeline_stage === 'CLOSED' ? 'selected' : ''}>Closed</option>
+                            </select>
+                        </td>
+                        <td style="font-size: 12px; color: #64748b;">${l.created_at}</td>
+                        <td>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="btn-icon" title="View Transcript & Summary" onclick="viewTranscript(${l.id})">
+                                    <i class="fa-solid fa-file-lines"></i>
+                                </button>
+                                ${l.audio_url ? `
+                                <button class="btn-icon" title="Play Recording on Dashboard" onclick="playLeadAudio(${l.id})" style="color: var(--dept-color);">
+                                    <i class="fa-solid fa-play"></i>
+                                </button>
+                                <a href="${getDownloadUrl(l.audio_url, l.phone_number)}" download class="btn-icon" title="Download Audio (.wav)" style="color: #059669; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+                                    <i class="fa-solid fa-download"></i>
+                                </a>` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function updateStage(leadId, stage) {
+            try {
+                await fetch(`/shreyas/api/leads/${leadId}/update/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pipeline_stage: stage })
+                });
+            } catch (err) {
+                alert("Failed to update status");
+            }
+        }
+
+        function viewTranscript(leadId) {
+            const lead = departmentLeads.find(x => x.id === leadId);
+            if (!lead) return;
+            document.getElementById('transModalTitle').innerText = `${lead.caller_name} (${lead.phone_number})`;
+            document.getElementById('transSummary').innerText = lead.summary || lead.detected_intent || 'No summary available';
+            document.getElementById('transFullText').innerText = lead.transcript || 'No transcript text available.';
+
+            const audioCont = document.getElementById('subAudioContainer');
+            const audioPlayer = document.getElementById('subAudioPlayer');
+            const dlBtn = document.getElementById('subDownloadBtn');
+            if (lead.audio_url && lead.audio_url.trim() !== '') {
+                audioCont.style.display = 'block';
+                audioPlayer.src = lead.audio_url;
+                if (dlBtn) dlBtn.href = getDownloadUrl(lead.audio_url, lead.phone_number);
+            } else {
+                audioCont.style.display = 'none';
+                audioPlayer.src = '';
+                if (dlBtn) dlBtn.href = '#';
+            }
+
+            openModal('modalTranscript');
+        }
+
+        // Initialize on load and live auto-poll every 12s
+        fetchLeads();
+        setInterval(fetchLeads, 12000);
+    </script>
+</body>
+</html>

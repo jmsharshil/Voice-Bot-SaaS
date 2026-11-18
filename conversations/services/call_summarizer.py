@@ -290,7 +290,17 @@ def process_and_save_call_record_summary(call_record_id, async_mode=True):
                 summary_dict["key_concerns"] = analysis["key_concerns"]
 
             rec.summary = summary_dict
-            rec.status = analysis["final_status"]
+            # Separate Telephony Connectivity from AI Sales Outcome:
+            # If the call physically connected (duration > 0 or customer spoke in transcript),
+            # never overwrite rec.status to "NO_ANSWER" — keep "COMPLETED", while keeping AI outcome in rec.summary["final_status"].
+            ai_status = str(analysis.get("final_status") or "").upper().strip()
+            call_dur = float(rec.duration_seconds or 0.0)
+            has_tx = bool(rec.transcript and len(str(rec.transcript).strip()) > 5)
+            if ai_status == "NO_ANSWER" and (call_dur > 0 or has_tx):
+                if not rec.status or str(rec.status).upper() in ["DIALING", "PENDING", "IN_PROGRESS", ""]:
+                    rec.status = "COMPLETED"
+            else:
+                rec.status = analysis["final_status"]
             rec.save(update_fields=["summary", "status", "updated_at", "billed_seconds"])
 
             logger.info(
