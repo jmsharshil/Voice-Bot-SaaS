@@ -42,6 +42,40 @@ class KylasService:
     """
 
     @staticmethod
+    def format_to_kylas_utc_iso(dt_or_str):
+        """
+        Kylas CRM expects call startTime in true UTC with ISO-8601 format (e.g. 2026-11-19T06:06:21.000Z).
+        Kylas dashboard then adds +05:30 based on user's Asia/Calcutta timezone to display IST.
+        Since Sarvam call_start_time and local call records are in IST (UTC+05:30),
+        we convert IST -> UTC so Kylas dashboard displays the EXACT correct Indian time!
+        """
+        from datetime import datetime, timezone as py_tz
+        from zoneinfo import ZoneInfo
+        ist = ZoneInfo("Asia/Kolkata")
+
+        if not dt_or_str:
+            return datetime.now(py_tz.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+        if isinstance(dt_or_str, datetime):
+            dt_aware = dt_or_str.replace(tzinfo=ist) if dt_or_str.tzinfo is None else dt_or_str
+            return dt_aware.astimezone(py_tz.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+        try:
+            s = str(dt_or_str).strip()
+            # If string already has a bogus 'Z' from prior formatting, strip it to extract the wall-clock time
+            if s.endswith(".000Z"):
+                s = s[:-5]
+            elif s.endswith("Z"):
+                s = s[:-1]
+            from dateutil.parser import parse as parse_date
+            parsed = parse_date(s)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=ist)
+            return parsed.astimezone(py_tz.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        except Exception:
+            return datetime.now(py_tz.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+    @staticmethod
     def get_headers(api_key=None):
         key = api_key or get_kylas_api_key()
         return {
@@ -113,14 +147,9 @@ class KylasService:
             else:
                 outcome = "no_answer"
 
-            # 3. Format start time in ISO 8601 (e.g., 2026-10-23T14:36:52.000Z)
-            st = str(start_time or cdr_data.get("call_start_time") or cdr_data.get("start_time") or "").strip()
-            if st:
-                if not st.endswith("Z") and "+" not in st:
-                    st += ".000Z"
-            else:
-                from datetime import datetime, timezone as py_tz
-                st = datetime.now(py_tz.utc).isoformat().replace("+00:00", "Z")
+            # 3. Format start time in true UTC ISO-8601 (converts IST to UTC so Kylas dashboard displays correct Indian Time)
+            raw_st = start_time or cdr_data.get("call_start_time") or cdr_data.get("start_time")
+            st = cls.format_to_kylas_utc_iso(raw_st)
 
             # 4. Clean phone number
             clean_phone = "".join(filter(str.isdigit, str(phone_number or "")))
