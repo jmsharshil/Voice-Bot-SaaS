@@ -89,6 +89,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://jmstechnova.com",
     "https://www.jmstechnova.com",
     "https://nonesthetically-affectional-janel.ngrok-free.dev",
+    "https://proud-stone-0aa647f10.5.azurestaticapps.net"
 ]
 # Application definition
 

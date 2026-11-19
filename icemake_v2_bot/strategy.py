@@ -167,6 +167,19 @@ def _log_translator(user_msg, agent_reply, lang):
     import threading
     threading.Thread(target=_do_log, daemon=True).start()
 
+ICEMAKE_V2_PROMPT_SHARE_SERIAL = {
+    "en": "Sure, please share your machine serial number.",
+    "hi": "जी, कृपया अपनी मशीन का सीरियल नंबर बताइए।",
+    "gu": "હા, કૃપા કરીને તમારા મશીનનો સીરિયલ નંબર જણાવો.",
+    "te": "తప్పకుండా, దయచేసి మీ మెషిన్ సీరియల్ నంబర్ చెప్పండి.",
+    "pa": "ਜੀ ਬਿਲਕੁਲ, ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਮਸ਼ੀਨ ਦਾ ਸੀਰੀਅਲ ਨੰਬਰ ਦੱਸੋ।",
+    "bn": "নিশ্চয়ই, দয়া করে আপনার মেশিনের সিরিয়াল নম্বরটি বলুন।",
+    "mr": "हो नक्की, कृपया तुमच्या मशीनचा सिरीयल नंबर सांगा.",
+    "ta": "நிச்சயமாக, தயவுசெய்து உங்கள் மெஷின் சீரியல் எண்ணைச் சொல்லுங்கள்.",
+    "kn": "ಖಂಡಿತ, ದಯವಿಟ್ಟು ನಿಮ್ಮ ಯಂತ್ರದ ಸೀರಿಯಲ್ ಸಂಖ್ಯೆಯನ್ನು ತಿಳಿಸಿ.",
+    "ml": "തീർച്ചയായും, ദയവായി നിങ്ങളുടെ മെഷീന്റെ സീരിയൽ നമ്പർ പറയൂ."
+}
+
 ICEMAKE_V2_SERIAL_GUIDANCE = {
     "en": "No worries at all! A machine serial number is required to register a complaint. You can easily find it on the machine's nameplate or on your invoice bill, like VCB 2502116 or DF 25008959. Take your time and let me know.",
     "hi": "कोई बात नहीं! शिकायत दर्ज करने के लिए सीरियल नंबर ज़रूरी है। यह आपको मशीन की नेमप्लेट या बिल पर आसानी से मिल जाएगा, जैसे VCB 2502116 या DF 25008959। आप आराम से देखकर बता सकते हैं।",
@@ -591,9 +604,51 @@ def _handle_smart_serial_step(raw_message: str, lang: str, state: dict, session,
     awaiting_confirm = state.get("serial_needs_confirmation", False)
     pending_serial = state.get("pending_serial_number", "")
 
+    # If caller simply answers "Yes" to "Can you tell me your machine serial number?",
+    # prompt them to share the actual serial number and STAY on Step 6! NEVER advance to Step 7 without it!
+    if not awaiting_confirm and _is_affirmative(raw_message):
+        python_serial_early = _normalize_alphanumeric_serial(raw_message)
+        if not is_valid_alphanumeric_serial(python_serial_early):
+            next_step = 6
+            reply = ICEMAKE_V2_PROMPT_SHARE_SERIAL.get(lang, ICEMAKE_V2_PROMPT_SHARE_SERIAL["en"])
+            state["current_step"] = 6
+            state["conversation_history"].append(f"Agent: {reply}")
+            save_session(session, state)
+            _log_translator(None, reply, lang)
+            return {
+                "static_reply": reply,
+                "tts_language": lang,
+                "skip_output_translation": True,
+                "strategy_key": STRATEGY_KEY,
+                "mode": mode,
+                "session": session,
+                "state": state,
+                "language_locked": state.get("language_locked", False)
+            }
+
     # Quick deterministic fast-path if user is confirming an already read-back serial number
     if awaiting_confirm and _is_affirmative(raw_message):
-        confirmed_serial = state.get("pending_serial_number") or state.get("serial_number") or "Machine"
+        confirmed_serial = state.get("pending_serial_number")
+        if not confirmed_serial or not is_valid_alphanumeric_serial(confirmed_serial):
+            state["pending_serial_number"] = ""
+            state["serial_needs_confirmation"] = False
+            next_step = 6
+            reply = ICEMAKE_V2_SERIAL_REASK.get(lang, ICEMAKE_V2_SERIAL_REASK["en"])
+            state["current_step"] = 6
+            state["conversation_history"].append(f"Agent: {reply}")
+            save_session(session, state)
+            _log_translator(None, reply, lang)
+            return {
+                "static_reply": reply,
+                "tts_language": lang,
+                "skip_output_translation": True,
+                "strategy_key": STRATEGY_KEY,
+                "mode": mode,
+                "session": session,
+                "state": state,
+                "language_locked": state.get("language_locked", False)
+            }
+
         ser_up = confirmed_serial.upper()
         if ser_up.startswith("VCB"):
             prod = "Visi Cooler"
@@ -711,32 +766,58 @@ Return JSON only:
         elif is_valid_alphanumeric_serial(extracted):
             intent = "PROVIDE_SERIAL"
 
+    # If system is NOT currently waiting for confirmation, caller saying "yes" is NOT CONFIRM_YES!
+    if not awaiting_confirm and (intent == "CONFIRM_YES" or _is_affirmative(raw_message)):
+        if not python_is_valid and not is_valid_alphanumeric_serial(extracted):
+            next_step = 6
+            reply = ICEMAKE_V2_PROMPT_SHARE_SERIAL.get(lang, ICEMAKE_V2_PROMPT_SHARE_SERIAL["en"])
+            state["current_step"] = 6
+            state["conversation_history"].append(f"Agent: {reply}")
+            save_session(session, state)
+            _log_translator(None, reply, lang)
+            return {
+                "static_reply": reply,
+                "tts_language": lang,
+                "skip_output_translation": True,
+                "strategy_key": STRATEGY_KEY,
+                "mode": mode,
+                "session": session,
+                "state": state,
+                "language_locked": state.get("language_locked", False)
+            }
+
     next_step = 6
 
-    if intent == "CONFIRM_YES" or (awaiting_confirm and _is_affirmative(raw_message)):
-        confirmed_serial = state.get("pending_serial_number") or state.get("serial_number") or "Machine"
-        ser_up = confirmed_serial.upper()
-        if ser_up.startswith("VCB"):
-            prod = "Visi Cooler"
-        elif ser_up.startswith("DF"):
-            prod = "Deep Freezer"
-        elif ser_up.startswith(("CIM", "DIM", "GIM")):
-            prod = "Ice Machine"
+    if awaiting_confirm and (intent == "CONFIRM_YES" or _is_affirmative(raw_message)):
+        confirmed_serial = state.get("pending_serial_number")
+        if not confirmed_serial or not is_valid_alphanumeric_serial(confirmed_serial):
+            state["pending_serial_number"] = ""
+            state["serial_needs_confirmation"] = False
+            next_step = 6
+            reply = ICEMAKE_V2_SERIAL_REASK.get(lang, ICEMAKE_V2_SERIAL_REASK["en"])
         else:
-            prod = "Freezer"
+            ser_up = confirmed_serial.upper()
+            if ser_up.startswith("VCB"):
+                prod = "Visi Cooler"
+            elif ser_up.startswith("DF"):
+                prod = "Deep Freezer"
+            elif ser_up.startswith(("CIM", "DIM", "GIM")):
+                prod = "Ice Machine"
+            else:
+                prod = "Freezer"
 
-        state["serial_number"] = confirmed_serial
-        state["machine_sr_no"] = confirmed_serial
-        state["machine_model_no"] = f"{prod} ({confirmed_serial})"
-        state["product_name"] = prod
-        state["issue_type"] = prod
-        state["serial_needs_confirmation"] = False
-        state["serial_confirmed"] = True
-        state.pop("pending_serial_number", None)
-        state.pop("partial_serial_digits", None)
-        state.pop("serial_wait_requested", None)
-        next_step = 7
-        reply = STEP7_PROMPTS.get(lang, STEP7_PROMPTS["en"])
+            state["serial_number"] = confirmed_serial
+            state["machine_sr_no"] = confirmed_serial
+            state["machine_model_no"] = f"{prod} ({confirmed_serial})"
+            state["product_name"] = prod
+            state["issue_type"] = prod
+            state["serial_needs_confirmation"] = False
+            state["serial_confirmed"] = True
+            state.pop("pending_serial_number", None)
+            state.pop("partial_serial_digits", None)
+            state.pop("serial_wait_requested", None)
+            next_step = 7
+            reply = STEP7_PROMPTS.get(lang, STEP7_PROMPTS["en"])
 
     elif intent == "PROVIDE_SERIAL" or python_is_valid or is_valid_alphanumeric_serial(extracted):
         serial_val = python_serial if python_is_valid else extracted
@@ -852,6 +933,8 @@ def icemake_v2_prepare(agent, message, session, detected_language=None, mode="te
             if prefill.get("is_prefilled"):
                 state["is_prefilled"] = True
                 for pk, pv in prefill.items():
+                    if pk in ["machine_sr_no", "machine_model_no", "serial_number", "pending_serial_number"]:
+                        continue  # Must ask and collect machine serial number for this call!
                     if pv and not state.get(pk):
                         state[pk] = pv
         except Exception as e_pf:
