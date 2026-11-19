@@ -53,6 +53,7 @@ ALLOWED_HOSTS = [
     "jolly-flower-0c1382600.2.azurestaticapps.net",
     "jmstechnova.com",
     "www.jmstechnova.com",
+    "autodealer.naavya.ai",
 ]
 
 
@@ -67,6 +68,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://nonesthetically-affectional-janel.ngrok-free.dev",
     "https://*.ngrok-free.dev",
     "https://*.ngrok-free.app",
+    "https://autodealer.naavya.ai",
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -89,7 +91,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://jmstechnova.com",
     "https://www.jmstechnova.com",
     "https://nonesthetically-affectional-janel.ngrok-free.dev",
-    "https://proud-stone-0aa647f10.5.azurestaticapps.net"
+    "https://proud-stone-0aa647f10.5.azurestaticapps.net",
+    "https://autodealer.naavya.ai"
 ]
 # Application definition
 
