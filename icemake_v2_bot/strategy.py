@@ -168,9 +168,9 @@ def _log_translator(user_msg, agent_reply, lang):
     threading.Thread(target=_do_log, daemon=True).start()
 
 ICEMAKE_V2_SERIAL_GUIDANCE = {
-    "en": "No worries at all! A machine serial number is required to register a complaint. You can easily find it on the machine's nameplate or on your invoice bill. Take your time and let me know.",
-    "hi": "कोई बात नहीं! शिकायत दर्ज करने के लिए सीरियल नंबर ज़रूरी है। यह आपको मशीन की नेमप्लेट पर या बिल पर आसानी से मिल जाएगा। आप आराम से देखकर बता सकते हैं।",
-    "gu": "કોઈ વાંધો નહીં! સીરીયલ નંબર તમને મશીનની નેમપ્લેટ પર અથવા તમારા બિલ પર સરળતાથી મળી જશે. તમે આરામથી જોઈને જણાવી શકો છો.",
+    "en": "No worries at all! A machine serial number is required to register a complaint. You can easily find it on the machine's nameplate or on your invoice bill, like VCB 2502116 or DF 25008959. Take your time and let me know.",
+    "hi": "कोई बात नहीं! शिकायत दर्ज करने के लिए सीरियल नंबर ज़रूरी है। यह आपको मशीन की नेमप्लेट या बिल पर आसानी से मिल जाएगा, जैसे VCB 2502116 या DF 25008959। आप आराम से देखकर बता सकते हैं।",
+    "gu": "કોઈ વાંધો નહીં! ફરિયાદ નોંધાવવા માટે મશીનનો સીરિયલ નંબર જરૂરી છે. આ નંબર તમને મશીન પરની નેમપ્લેટ અથવા તમારા બિલ પર સરળતાથી મળી જશે, જેમ કે VCB 2502116 અથવા DF 25008959. તમે આરામથી જોઈને જણાવી શકો છો.",
     "te": "పర్వాలేదండి! సీరియల్ నంబర్ మెషిన్ నేమ్‌ప్లేట్ లేదా మీ కొనుగోలు బిల్లుపై సులభంగా దొరుకుతుంది. మీరు నిదానంగా చూసి చెప్పవచ్చు.",
     "pa": "ਕੋਈ ਗੱਲ ਨਹੀਂ ਜੀ! ਸੀਰੀਅਲ ਨੰਬਰ ਤੁਹਾਨੂੰ ਮਸ਼ੀਨ ਦੀ ਨੇਮਪਲੇਟ ਜਾਂ ਆਪਣੇ ਬਿੱਲ ਤੇ ਆਸਾਨੀ ਨਾਲ ਮਿਲ ਜਾਵੇਗਾ। ਤੁਸੀਂ ਆਰਾਮ ਨਾਲ ਦੇਖ ਕੇ ਦੱਸ ਸਕਦੇ ਹੋ।",
     "bn": "কোনো অসুবিধা নেই! সিরিয়াল নম্বরটি মেশিনের নেমপ্লেটে অথবা আপনার বিলে সহজেই পেয়ে যাবেন। আপনি একটু দেখে নিয়ে বলতে পারেন।",
@@ -221,8 +221,8 @@ ICEMAKE_V2_SERIAL_CONFIRM = {
 
 ICEMAKE_V2_SERIAL_REASK = {
     "en": "My apologies! Could you please share your correct machine serial number again?",
-    "hi": "माफ़ कीजिए! कृपया अपनी मशीन का सही सीरियल नंबर दोबारा बताइए।",
-    "gu": "માફ કરશો! કૃપા કરીને તમારો સાચો મશીન સીરીયલ નંબર ફરીથી જણાવો.",
+    "hi": "माफ़ कीजिए! कृपया अपनी मशीन का सही सीरियल नंबर दोबारा बताइए। यह मशीन की नेमप्लेट या बिल पर मिल जाएगा, जैसे VCB 2502116 या DF 25008959।",
+    "gu": "માફ કરશો! કૃપા કરીને તમારા મશીનનો સાચો સીરિયલ નંબર ફરીથી જણાવો. તે તમને મશીનની નેમપ્લેટ અથવા બિલ પર મળી જશે, જેમ કે VCB 2502116 અથવા DF 25008959.",
     "te": "క్షమించండి! దయచేసి మీ సరైన మెషిన్ సీరియల్ నంబర్‌ను మళ్లీ చెప్పండి.",
     "pa": "ਮਾਫ਼ ਕਰਨਾ ਜੀ! ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਮਸ਼ੀਨ ਦਾ ਸਹੀ ਸੀਰੀਅਲ ਨੰਬਰ ਦੁਬਾਰਾ ਦੱਸੋ।",
     "bn": "দুঃখিত! দয়া করে আপনার মেশিনের সঠিক সিরিয়াল নম্বরটি আবার বলুন।",
@@ -233,9 +233,9 @@ ICEMAKE_V2_SERIAL_REASK = {
 }
 
 ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC = {
-    "en": "Ice Make machine serial numbers are alphanumeric and must contain both letters and numbers, like VCB2502116 or DF25008959. Could you please share the complete serial number?",
-    "hi": "आइस मेक मशीन का सीरियल नंबर अल्फ़ान्यूमेरिक होता है, जिसमें अक्षर और नंबर दोनों होने चाहिए, जैसे VCB 2502116 या DF 25008959। कृपया अपनी मशीन का पूरा सीरियल नंबर बताइए।",
-    "gu": "આઈસ મેક મશીનનો સીરીયલ નંબર આલ્ફાન્યુમેરિક હોય છે, જેમાં અક્ષર અને નંબર બંને હોવા જોઈએ, જેમ કે VCB 2502116 અથવા DF 25008959. કૃપા કરીને તમારી મશીનનો પૂરો સીરીયલ નંબર જણાવો.",
+    "en": "Ice Make machine serial numbers must contain both letters and numbers, like VCB2502116 or DF25008959, and can be found on the machine's nameplate or invoice. Could you please share the complete serial number?",
+    "hi": "आइस मेक मशीन का सीरियल नंबर अक्षर और अंक दोनों के साथ होता है, जैसे VCB 2502116 या DF 25008959। यह आपको मशीन की नेमप्लेट या बिल पर मिल जाएगा। कृपया अपनी मशीन का सही सीरियल नंबर बताइए।",
+    "gu": "આઈસ મેક મશીનનો સીરિયલ નંબર અંગ્રેજી અક્ષરો અને અંકો બંને સાથે હોય છે, જેમ કે VCB 2502116 અથવા DF 25008959. આ નંબર તમને મશીન પરની નેમપ્લેટ અથવા તમારા બિલ પર મળી જશે. કૃપા કરીને તમારા મશીનનો સાચો સીરિયલ નંબર જણાવો.",
     "te": "ఐస్ మేక్ మెషీన్ సీరియల్ నంబర్ ఆల్ఫాన్యూమరిక్ అయి ఉండాలి, అక్షరాలు మరియు నంబర్లు రెండూ ఉండాలి (ఉదాహరణకు VCB 2502116). దయచేసి పూర్తి సీరియల్ నంబర్ చెప్పండి.",
     "pa": "ਆਈਸ ਮੇਕ ਮਸ਼ੀਨ ਦਾ ਸੀਰੀਅਲ ਨੰਬਰ ਅਲਫਾਨਿਊਮੇਰਿਕ ਹੁੰਦਾ ਹੈ, ਜਿਸ ਵਿੱਚ ਅੱਖਰ ਅਤੇ ਨੰਬਰ ਦੋਵੇਂ ਹੁੰਦੇ ਹਨ (ਜਿਵੇਂ VCB 2502116)। ਕਿਰਪਾ ਕਰਕੇ ਪੂਰਾ ਸੀਰੀਅਲ ਨੰਬਰ ਦੱਸੋ।",
     "bn": "আইস মেক মেশিনের সিরিয়াল নম্বরটিতে অক্ষর এবং সংখ্যা উভয়ই থাকতে হবে (যেমন VCB 2502116)। অনুগ্রহ করে সম্পূর্ণ সিরিয়াল নম্বরটি বলুন।",
@@ -757,7 +757,7 @@ Return JSON only:
         state["pending_serial_number"] = ""
         state["serial_needs_confirmation"] = False
         next_step = 6
-        reply = ai_reply if (ai_reply and ("अक्षर" in ai_reply or "letters" in ai_reply or "અક્ષર" in ai_reply or "अल्फ़ान्यूमेरिक" in ai_reply or "alphanumeric" in ai_reply.lower())) else ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC.get(lang, ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC["en"])
+        reply = ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC.get(lang, ICEMAKE_V2_SERIAL_INVALID_ALPHANUMERIC["en"])
 
     elif intent == "CONFIRM_NO" or (awaiting_confirm and _is_negative(raw_message)):
         state["pending_serial_number"] = ""
@@ -2388,72 +2388,72 @@ def _send_whatsapp_ticket_confirmation(ticket):
         logger.error("[ICEMAKE WA ERROR] Failed to send WhatsApp confirmation: %s", e)
 # Exact Zone & State Wise Engineer Mapping Table for Ice Make
 STATE_ENGINEER_MAPPING = {
-    # 1. Gujarat Zone - Mr Rutvik (9727721447)
-    "gujarat": {"phone": "919104142402", "name": "Mr Rutvik"},
-    "gujrat": {"phone": "919104142402", "name": "Mr Rutvik"},
-    "ahmedabad": {"phone": "919104142402", "name": "Mr Rutvik"},
-    "surat": {"phone": "919104142402", "name": "Mr Rutvik"},
-    "vadodara": {"phone": "919104142402", "name": "Mr Rutvik"},
-    "rajkot": {"phone": "919104142402", "name": "Mr Rutvik"},
-    "gandhinagar": {"phone": "919104142402", "name": "Mr Rutvik"},
+    # 1. Gujarat Zone - Mr Rutvik
+    "gujarat": {"phone": "919727744566", "name": "Mr Rutvik"},
+    "gujrat": {"phone": "919727744566", "name": "Mr Rutvik"},
+    "ahmedabad": {"phone": "919727744566", "name": "Mr Rutvik"},
+    "surat": {"phone": "919727744566", "name": "Mr Rutvik"},
+    "vadodara": {"phone": "919727744566", "name": "Mr Rutvik"},
+    "rajkot": {"phone": "919727744566", "name": "Mr Rutvik"},
+    "gandhinagar": {"phone": "919727744566", "name": "Mr Rutvik"},
 
-    # 2. North Zone – Delhi, Haryana, Uttar Pradesh, Uttarakhand, HP, Punjab, J & K -> Mr Manjit (9998857391)
-    "delhi": {"phone": "919104142402", "name": "Mr Manjit"},
-    "haryana": {"phone": "919104142402", "name": "Mr Manjit"},
-    "uttar pradesh": {"phone": "919104142402", "name": "Mr Manjit"},
-    "up": {"phone": "919104142402", "name": "Mr Manjit"},
-    "uttarakhand": {"phone": "919104142402", "name": "Mr Manjit"},
-    "himachal pradesh": {"phone": "919104142402", "name": "Mr Manjit"},
-    "hp": {"phone": "919104142402", "name": "Mr Manjit"},
-    "punjab": {"phone": "919104142402", "name": "Mr Manjit"},
-    "jammu": {"phone": "919104142402", "name": "Mr Manjit"},
-    "kashmir": {"phone": "919104142402", "name": "Mr Manjit"},
-    "j&k": {"phone": "919104142402", "name": "Mr Manjit"},
-    "j & k": {"phone": "919104142402", "name": "Mr Manjit"},
+    # 2. North Zone – Delhi, Haryana, Uttar Pradesh, Uttarakhand, HP, Punjab, J & K -> Mr Manjit
+    "delhi": {"phone": "919727744566", "name": "Mr Manjit"},
+    "haryana": {"phone": "919727744566", "name": "Mr Manjit"},
+    "uttar pradesh": {"phone": "919727744566", "name": "Mr Manjit"},
+    "up": {"phone": "919727744566", "name": "Mr Manjit"},
+    "uttarakhand": {"phone": "919727744566", "name": "Mr Manjit"},
+    "himachal pradesh": {"phone": "919727744566", "name": "Mr Manjit"},
+    "hp": {"phone": "919727744566", "name": "Mr Manjit"},
+    "punjab": {"phone": "919727744566", "name": "Mr Manjit"},
+    "jammu": {"phone": "919727744566", "name": "Mr Manjit"},
+    "kashmir": {"phone": "919727744566", "name": "Mr Manjit"},
+    "j&k": {"phone": "919727744566", "name": "Mr Manjit"},
+    "j & k": {"phone": "919727744566", "name": "Mr Manjit"},
 
-    # 3. East Zone – Kolkata, West Bengal, Assam, Bihar, Chhattisgarh, Orissa/Odisha, Jharkhand -> Mr Mahesh (9512037115)
-    "kolkata": {"phone": "919913381306", "name": "Mr Mahesh"},
-    "kolkatta": {"phone": "919913381306", "name": "Mr Mahesh"},
-    "west bengal": {"phone": "919913381306", "name": "Mr Mahesh"},
-    "bengal": {"phone": "919913381306", "name": "Mr Mahesh"},
-    "assam": {"phone": "919913381306", "name": "Mr Mahesh"},
-    "bihar": {"phone": "919913381306", "name": "Mr Mahesh"},
-    "chhattisgarh": {"phone": "919913381306", "name": "Mr Mahesh"},
-    "chattisgarh": {"phone": "919913381306", "name": "Mr Mahesh"},
-    "odisha": {"phone": "919913381306", "name": "Mr Mahesh"},
-    "orissa": {"phone": "919913381306", "name": "Mr Mahesh"},
-    "jharkhand": {"phone": "919913381306", "name": "Mr Mahesh"},
+    # 3. East Zone – Kolkata, West Bengal, Assam, Bihar, Chhattisgarh, Orissa/Odisha, Jharkhand -> Mr Mahesh
+    "kolkata": {"phone": "919727744566", "name": "Mr Mahesh"},
+    "kolkatta": {"phone": "919727744566", "name": "Mr Mahesh"},
+    "west bengal": {"phone": "919727744566", "name": "Mr Mahesh"},
+    "bengal": {"phone": "919727744566", "name": "Mr Mahesh"},
+    "assam": {"phone": "919727744566", "name": "Mr Mahesh"},
+    "bihar": {"phone": "919727744566", "name": "Mr Mahesh"},
+    "chhattisgarh": {"phone": "919727744566", "name": "Mr Mahesh"},
+    "chattisgarh": {"phone": "919727744566", "name": "Mr Mahesh"},
+    "odisha": {"phone": "919727744566", "name": "Mr Mahesh"},
+    "orissa": {"phone": "919727744566", "name": "Mr Mahesh"},
+    "jharkhand": {"phone": "919727744566", "name": "Mr Mahesh"},
 
-    # 4. West Zone – Maharashtra, Rajasthan, Madhya Pradesh, Goa -> Mr Ashok (9998701129)
-    "maharashtra": {"phone": "919913381306", "name": "Mr Ashok"},
-    "maharastra": {"phone": "919913381306", "name": "Mr Ashok"},
-    "mumbai": {"phone": "919913381306", "name": "Mr Ashok"},
-    "pune": {"phone": "919913381306", "name": "Mr Ashok"},
-    "rajasthan": {"phone": "919913381306", "name": "Mr Ashok"},
-    "jaipur": {"phone": "919913381306", "name": "Mr Ashok"},
-    "madhya pradesh": {"phone": "919913381306", "name": "Mr Ashok"},
-    "madyapradesh": {"phone": "919913381306", "name": "Mr Ashok"},
-    "mp": {"phone": "919913381306", "name": "Mr Ashok"},
-    "indore": {"phone": "919913381306", "name": "Mr Ashok"},
-    "bhopal": {"phone": "919913381306", "name": "Mr Ashok"},
-    "goa": {"phone": "919913381306", "name": "Mr Ashok"},
+    # 4. West Zone – Maharashtra, Rajasthan, Madhya Pradesh, Goa -> Mr Ashok
+    "maharashtra": {"phone": "919727744566", "name": "Mr Ashok"},
+    "maharastra": {"phone": "919727744566", "name": "Mr Ashok"},
+    "mumbai": {"phone": "919727744566", "name": "Mr Ashok"},
+    "pune": {"phone": "919727744566", "name": "Mr Ashok"},
+    "rajasthan": {"phone": "919727744566", "name": "Mr Ashok"},
+    "jaipur": {"phone": "919727744566", "name": "Mr Ashok"},
+    "madhya pradesh": {"phone": "919727744566", "name": "Mr Ashok"},
+    "madyapradesh": {"phone": "919727744566", "name": "Mr Ashok"},
+    "mp": {"phone": "919727744566", "name": "Mr Ashok"},
+    "indore": {"phone": "919727744566", "name": "Mr Ashok"},
+    "bhopal": {"phone": "919727744566", "name": "Mr Ashok"},
+    "goa": {"phone": "919727744566", "name": "Mr Ashok"},
 
-    # 5. South Zone – Kerala, Tamil Nadu, Telangana, Karnataka, Andhra Pradesh -> Ms Vaidehi (9512015593)
-    "kerala": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "tamil nadu": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "tamilnadu": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "chennai": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "telangana": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "telungana": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "hyderabad": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "karnataka": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "bangalore": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "bengaluru": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "andhra pradesh": {"phone": "919427285653", "name": "Ms Vaidehi"},
-    "andhra": {"phone": "919427285653", "name": "Ms Vaidehi"},
+    # 5. South Zone – Kerala, Tamil Nadu, Telangana, Karnataka, Andhra Pradesh -> Ms Vaidehi
+    "kerala": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "tamil nadu": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "tamilnadu": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "chennai": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "telangana": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "telungana": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "hyderabad": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "karnataka": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "bangalore": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "bengaluru": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "andhra pradesh": {"phone": "919727744566", "name": "Ms Vaidehi"},
+    "andhra": {"phone": "919727744566", "name": "Ms Vaidehi"},
 }
 
-DEFAULT_ENGINEER_PHONE = "919427285653"
+DEFAULT_ENGINEER_PHONE = "919727744566"
 DEFAULT_ENGINEER_NAME = "Mr Uchit"
 
 def get_engineer_for_state(location_str: str) -> tuple:
