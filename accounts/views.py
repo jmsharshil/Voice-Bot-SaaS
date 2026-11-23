@@ -238,13 +238,20 @@ def build_login_payload(request, user):
     if user.is_superuser:
         permissions['is_admin'] = True
 
-    # Determine if user is Ice Make specific user
+    # Determine if user is Ice Make V1 or V2 specific user
     is_icemake_user = False
-    if role_name and "ice make" in role_name.lower():
-        is_icemake_user = True
-    elif user.username.lower() in ["icemake", "ice_make", "icemake_admin", "icemake_user"]:
-        is_icemake_user = True
-    elif hasattr(user, 'profile') and user.profile and user.profile.assigned_agent and "ice make" in user.profile.assigned_agent.name.lower():
+    is_icemake_v2_user = False
+
+    assigned_agent_name = ""
+    if hasattr(user, 'profile') and user.profile and user.profile.assigned_agent:
+        assigned_agent_name = (user.profile.assigned_agent.name or "").lower()
+
+    u_lower = user.username.lower()
+    r_lower = (role_name or "").lower()
+
+    if ("v2" in u_lower and "ice" in u_lower) or ("v2" in r_lower and "ice" in r_lower) or ("v2" in assigned_agent_name and "ice" in assigned_agent_name):
+        is_icemake_v2_user = True
+    elif "ice make" in r_lower or u_lower in ["icemake", "ice_make", "icemake_admin", "icemake_user"] or ("ice make" in assigned_agent_name):
         is_icemake_user = True
 
     # Determine if user is Sarvam specific user
@@ -306,6 +313,7 @@ def build_login_payload(request, user):
         "primary_sarvam_slug": primary_sarvam_slug,
         "is_superuser": user.is_superuser,
         "is_icemake_user": is_icemake_user,
+        "is_icemake_v2_user": is_icemake_v2_user,
         "is_sarvam_user": is_sarvam_user,
         "profile_picture": profile_picture_url,
         "company_logo": company_logo_url,

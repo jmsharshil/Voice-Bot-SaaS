@@ -44,7 +44,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
-from conversations.views import demo_page, icemake_dashboard_page, sarvam_leads_page, sarvam_agent_demo_page, sarvam_agent_demo_trigger_call_api, sarvam_agent_demo_call_status_api, proxy_audio
+from conversations.views import demo_page, icemake_dashboard_page, icemake_v2_dashboard_page, sarvam_leads_page, sarvam_agent_demo_page, sarvam_agent_demo_trigger_call_api, sarvam_agent_demo_call_status_api, proxy_audio
 from conversations.views import call_analytics_page, lead_analysis_page, lead_analysis_data, lead_analysis_detail
 from accounts.views import team_management_page, admin_management_page
 
@@ -60,6 +60,7 @@ urlpatterns = [
     path("sarvam-leads/", sarvam_leads_page, name="sarvam-leads-root"),
     path("proxy-audio/", proxy_audio, name="proxy-audio"),
     path("icemake-dashboard/", icemake_dashboard_page, name="icemake-dashboard"),
+    path("icemake-v2-dashboard/", icemake_v2_dashboard_page, name="icemake-v2-dashboard"),
     path("team-management/", team_management_page, name="team-management-direct"),
     path("admin-management/", admin_management_page, name="admin-management-direct"),
     path("navya-analytics/lead-analysis/data/", lead_analysis_data, name="lead-analysis-data"),

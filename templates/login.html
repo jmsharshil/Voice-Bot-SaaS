@@ -1237,9 +1237,18 @@
                 }
                 return '/sarvam-leads/';
             }
+            const roleLower = (localStorage.getItem('role') || '').toLowerCase();
+            const usernameLower = (localStorage.getItem('username') || '').toLowerCase();
+            const isIcemakeV2 = localStorage.getItem('is_icemake_v2_user') === 'true' || 
+                                (roleLower.includes('ice make') && roleLower.includes('v2')) ||
+                                (usernameLower.includes('icemake') && usernameLower.includes('v2'));
+            if (isIcemakeV2) {
+                return '/icemake-v2-dashboard/';
+            }
+
             const isIcemake = localStorage.getItem('is_icemake_user') === 'true' || 
-                              (localStorage.getItem('role') || '').toLowerCase().includes('ice make') ||
-                              (localStorage.getItem('username') || '').toLowerCase().includes('icemake');
+                              roleLower.includes('ice make') ||
+                              usernameLower.includes('icemake');
             if (isIcemake) {
                 return '/icemake-dashboard/';
             }
@@ -1341,6 +1350,7 @@
             }
             localStorage.setItem('is_superuser', data.is_superuser ? 'true' : 'false');
             localStorage.setItem('is_icemake_user', data.is_icemake_user ? 'true' : 'false');
+            localStorage.setItem('is_icemake_v2_user', data.is_icemake_v2_user ? 'true' : 'false');
             localStorage.setItem('is_sarvam_user', data.is_sarvam_user ? 'true' : 'false');
             localStorage.setItem('profile_picture', data.profile_picture || '');
             localStorage.setItem('company_logo', data.company_logo || '');

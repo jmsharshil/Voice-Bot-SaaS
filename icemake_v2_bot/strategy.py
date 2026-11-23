@@ -2176,164 +2176,167 @@ def _create_ticket_db_record(conversation, state):
 
 def _append_to_google_sheet(ticket, extracted: dict = None, force=False):
     """
+    [TEMPORARILY COMMENTED OUT / DISABLED AS REQUESTED]
     Appends the logged ticket details to Google Sheets Web App matching new Apps Script schema:
     [complain_id, name, state, address, number, product_name, issue_description, created_at]
     """
-    import requests
-    import os
-    from django.utils.timezone import localtime
+    # print(f"[GOOGLE SHEET EXPORT CURRENTLY DISABLED]: Skipping export for Ticket #{getattr(ticket, 'ticket_number', 'N/A')}")
+    return
+    # import requests
+    # import os
+    # from django.utils.timezone import localtime
 
-    url = os.getenv("GOOGLE_SHEET_WEBAPP_URL") or "https://script.google.com/macros/s/AKfycbypSXeANMEDKfTsT4OtqKD9D8GcYzhH-8dFIf8-afJNC84apPnNWsKSMbPbuYsJXriY8w/exec"
+    # url = os.getenv("GOOGLE_SHEET_WEBAPP_URL") or "https://script.google.com/macros/s/AKfycbypSXeANMEDKfTsT4OtqKD9D8GcYzhH-8dFIf8-afJNC84apPnNWsKSMbPbuYsJXriY8w/exec"
     
-    if ticket.google_sheet_synced and not force:
-        print(f"[GOOGLE SHEET ALREADY SYNCED]: Ticket #{ticket.ticket_number} already exported to Google Sheet. Skipping.")
-        return
+    # if ticket.google_sheet_synced and not force:
+    #     print(f"[GOOGLE SHEET ALREADY SYNCED]: Ticket #{ticket.ticket_number} already exported to Google Sheet. Skipping.")
+    #     return
 
-    if not extracted:
-        extracted = {}
+    # if not extracted:
+    #     extracted = {}
 
-    clean_state = extracted.get("state") or ticket.city_state or "Not Provided"
-    clean_city = extracted.get("city") or "Not Provided"
-    clean_name = extracted.get("customer_name") or ticket.customer_name or "Not Provided"
-    clean_address = extracted.get("address") or ticket.company_name or "Not Provided"
-    clean_model = extracted.get("machine_model_no") or ticket.machine_model_no or "Not Provided"
-    clean_issue_type = extracted.get("issue_type") or ticket.issue_type or "General Maintenance / Service"
-    raw_issue_desc = extracted.get("type_of_complaint") or ticket.issue_description or "Not Provided"
-    clean_issue = f"[{clean_issue_type}] {raw_issue_desc}" if (clean_issue_type and clean_issue_type != "Other" and clean_issue_type.lower() not in raw_issue_desc.lower()) else raw_issue_desc
+    # clean_state = extracted.get("state") or ticket.city_state or "Not Provided"
+    # clean_city = extracted.get("city") or "Not Provided"
+    # clean_name = extracted.get("customer_name") or ticket.customer_name or "Not Provided"
+    # clean_address = extracted.get("address") or ticket.company_name or "Not Provided"
+    # clean_model = extracted.get("machine_model_no") or ticket.machine_model_no or "Not Provided"
+    # clean_issue_type = extracted.get("issue_type") or ticket.issue_type or "General Maintenance / Service"
+    # raw_issue_desc = extracted.get("type_of_complaint") or ticket.issue_description or "Not Provided"
+    # clean_issue = f"[{clean_issue_type}] {raw_issue_desc}" if (clean_issue_type and clean_issue_type != "Other" and clean_issue_type.lower() not in raw_issue_desc.lower()) else raw_issue_desc
 
-    created_at_str = localtime(ticket.created_at).strftime("%Y-%m-%d %H:%M:%S")
+    # created_at_str = localtime(ticket.created_at).strftime("%Y-%m-%d %H:%M:%S")
 
-    calling_number = "Not Provided"
-    try:
-        from conversations.models import CallDetailRecord
-        from datetime import timedelta
+    # calling_number = "Not Provided"
+    # try:
+    #     from conversations.models import CallDetailRecord
+    #     from datetime import timedelta
         
-        def is_bot_did(num_str):
-            if not num_str:
-                return True
-            num_s = str(num_str).strip()
-            if num_s.lower() in ["unknown", "none", "not provided", ""]:
-                return True
-            digits = "".join(filter(str.isdigit, num_s))
-            if not digits or len(digits) < 7:
-                return True
-            clean = digits[2:] if (len(digits) == 12 and digits.startswith("91")) else digits
+    #     def is_bot_did(num_str):
+    #         if not num_str:
+    #             return True
+    #         num_s = str(num_str).strip()
+    #         if num_s.lower() in ["unknown", "none", "not provided", ""]:
+    #             return True
+    #         digits = "".join(filter(str.isdigit, num_s))
+    #         if not digits or len(digits) < 7:
+    #             return True
+    #         clean = digits[2:] if (len(digits) == 12 and digits.startswith("91")) else digits
             
-            known_dids = [
-                "7971019136", "917971019136",
-                "9429390434", "919429390434",
-                "7971019486", "917971019486",
-                "7971017251", "917971017251",
-                "7969016753", "917969016753",
-                "9484959435", "919484959435",
-                "8758007011", "918758007011",
-                "100259134222", "91100259134222",
-            ]
-            if any(kd in digits for kd in known_dids):
-                return True
+    #         known_dids = [
+    #             "7971019136", "917971019136",
+    #             "9429390434", "919429390434",
+    #             "7971019486", "917971019486",
+    #             "7971017251", "917971017251",
+    #             "7969016753", "917969016753",
+    #             "9484959435", "919484959435",
+    #             "8758007011", "918758007011",
+    #             "100259134222", "91100259134222",
+    #         ]
+    #         if any(kd in digits for kd in known_dids):
+    #             return True
             
-            did_prefixes = ("797101", "796901", "942939", "948495", "875800", "100259")
-            if clean.startswith(did_prefixes) or digits.startswith(did_prefixes):
-                return True
+    #         did_prefixes = ("797101", "796901", "942939", "948495", "875800", "100259")
+    #         if clean.startswith(did_prefixes) or digits.startswith(did_prefixes):
+    #             return True
                 
-            return False
+    #         return False
 
-        raw_c = str(ticket.conversation.user_number or "").strip() if ticket.conversation else ""
+    #     raw_c = str(ticket.conversation.user_number or "").strip() if ticket.conversation else ""
 
-        # 1. Direct CDR linked to conversation (received from Ice Make POST API)
-        cdr = None
-        if ticket.conversation:
-            cdr = CallDetailRecord.objects.filter(conversation=ticket.conversation).exclude(phone_number="unknown").order_by("-received_at").first()
+    #     # 1. Direct CDR linked to conversation (received from Ice Make POST API)
+    #     cdr = None
+    #     if ticket.conversation:
+    #         cdr = CallDetailRecord.objects.filter(conversation=ticket.conversation).exclude(phone_number="unknown").order_by("-received_at").first()
         
-        # 2. Wait up to 8 seconds for IVRManager POST API CDR to land if not in DB yet
-        has_real_cdr_number = cdr and cdr.phone_number and cdr.phone_number != "unknown" and not is_bot_did(cdr.phone_number)
-        if not has_real_cdr_number:
-            import time
-            ice_dids = [
-                "7971019486", "917971019486", "+917971019486",
-                "7971019136", "917971019136", "+917971019136",
-                "9429390434", "919429390434", "+919429390434",
-                "7971017251", "917971017251", "+917971017251"
-            ]
-            for _ in range(4):
-                time.sleep(2)
-                if ticket.conversation:
-                    ticket.conversation.refresh_from_db()
-                    cdr = CallDetailRecord.objects.filter(conversation=ticket.conversation).exclude(phone_number="unknown").order_by("-received_at").first()
-                    if cdr and cdr.phone_number and not is_bot_did(cdr.phone_number):
-                        print(f"🎯 [GOOGLE SHEET RESOLVED REAL CALLER FROM LINKED CDR]: {cdr.phone_number}")
-                        break
+    #     # 2. Wait up to 8 seconds for IVRManager POST API CDR to land if not in DB yet
+    #     has_real_cdr_number = cdr and cdr.phone_number and cdr.phone_number != "unknown" and not is_bot_did(cdr.phone_number)
+    #     if not has_real_cdr_number:
+    #         import time
+    #         ice_dids = [
+    #             "7971019486", "917971019486", "+917971019486",
+    #             "7971019136", "917971019136", "+917971019136",
+    #             "9429390434", "919429390434", "+919429390434",
+    #             "7971017251", "917971017251", "+917971017251"
+    #         ]
+    #         for _ in range(4):
+    #             time.sleep(2)
+    #             if ticket.conversation:
+    #                 ticket.conversation.refresh_from_db()
+    #                 cdr = CallDetailRecord.objects.filter(conversation=ticket.conversation).exclude(phone_number="unknown").order_by("-received_at").first()
+    #                 if cdr and cdr.phone_number and not is_bot_did(cdr.phone_number):
+    #                     print(f"🎯 [GOOGLE SHEET RESOLVED REAL CALLER FROM LINKED CDR]: {cdr.phone_number}")
+    #                     break
                 
-                t_time = ticket.created_at
-                for candidate in CallDetailRecord.objects.filter(
-                    did__in=ice_dids,
-                    received_at__gte=t_time - timedelta(minutes=15),
-                    received_at__lte=t_time + timedelta(minutes=15)
-                ).exclude(phone_number="unknown").order_by("-received_at"):
-                    if candidate.phone_number and not is_bot_did(candidate.phone_number):
-                        cdr = candidate
-                        print(f"🎯 [GOOGLE SHEET RESOLVED REAL CALLER FROM CDR CANDIDATE]: {cdr.phone_number}")
-                        break
-                if cdr and cdr.phone_number and not is_bot_did(cdr.phone_number):
-                    break
+    #             t_time = ticket.created_at
+    #             for candidate in CallDetailRecord.objects.filter(
+    #                 did__in=ice_dids,
+    #                 received_at__gte=t_time - timedelta(minutes=15),
+    #                 received_at__lte=t_time + timedelta(minutes=15)
+    #             ).exclude(phone_number="unknown").order_by("-received_at"):
+    #                 if candidate.phone_number and not is_bot_did(candidate.phone_number):
+    #                     cdr = candidate
+    #                     print(f"🎯 [GOOGLE SHEET RESOLVED REAL CALLER FROM CDR CANDIDATE]: {cdr.phone_number}")
+    #                     break
+    #             if cdr and cdr.phone_number and not is_bot_did(cdr.phone_number):
+    #                 break
 
-        def get_clean_caller_number():
-            if cdr and cdr.phone_number and cdr.phone_number != "unknown" and not is_bot_did(cdr.phone_number):
-                return str(cdr.phone_number).strip()
-            if cdr and getattr(cdr, "did", None) and cdr.did != "unknown" and not is_bot_did(cdr.did):
-                return str(cdr.did).strip()
-            reg_mob = str(ticket.registered_mobile or "").strip()
-            if raw_c and raw_c != "unknown" and not is_bot_did(raw_c) and raw_c != reg_mob:
-                return str(raw_c).strip()
-            if reg_mob and reg_mob.lower() not in ["", "unknown", "not provided"]:
-                return reg_mob
-            return "Not Provided"
+    #     def get_clean_caller_number():
+    #         if cdr and cdr.phone_number and cdr.phone_number != "unknown" and not is_bot_did(cdr.phone_number):
+    #             return str(cdr.phone_number).strip()
+    #         if cdr and getattr(cdr, "did", None) and cdr.did != "unknown" and not is_bot_did(cdr.did):
+    #             return str(cdr.did).strip()
+    #         reg_mob = str(ticket.registered_mobile or "").strip()
+    #         if raw_c and raw_c != "unknown" and not is_bot_did(raw_c) and raw_c != reg_mob:
+    #             return str(raw_c).strip()
+    #         if reg_mob and reg_mob.lower() not in ["", "unknown", "not provided"]:
+    #             return reg_mob
+    #         return "Not Provided"
 
-        calling_number = get_clean_caller_number()
+    #     calling_number = get_clean_caller_number()
 
-    except Exception as e_call:
-        logger.warning("Could not fetch calling number: %s", e_call)
+    # except Exception as e_call:
+    #     logger.warning("Could not fetch calling number: %s", e_call)
 
-    registered_number = ticket.registered_mobile or "Not Provided"
+    # registered_number = ticket.registered_mobile or "Not Provided"
 
-    payload = {
-        "complain_id": ticket.ticket_number,
-        "customer_name": clean_name,
-        "name": clean_name,
-        "state": clean_state,
-        "city": clean_city,
-        "address": clean_address,
-        "registered_number": registered_number,
-        "number": registered_number,
-        "calling_number": calling_number,
-        "caller_number": calling_number,
-        "product_name": clean_model,
-        "machine_model_no": clean_model,
-        "issue_description": clean_issue,
-        "issue": clean_issue,
-        "created_at": created_at_str,
-        "date": created_at_str
-    }
+    # payload = {
+    #     "complain_id": ticket.ticket_number,
+    #     "customer_name": clean_name,
+    #     "name": clean_name,
+    #     "state": clean_state,
+    #     "city": clean_city,
+    #     "address": clean_address,
+    #     "registered_number": registered_number,
+    #     "number": registered_number,
+    #     "calling_number": calling_number,
+    #     "caller_number": calling_number,
+    #     "product_name": clean_model,
+    #     "machine_model_no": clean_model,
+    #     "issue_description": clean_issue,
+    #     "issue": clean_issue,
+    #     "created_at": created_at_str,
+    #     "date": created_at_str
+    # }
     
-    # Atomic DB claim to prevent thread race conditions
-    from icemake_bot.models import IcemakeTicket
-    if not force:
-        updated_count = IcemakeTicket.objects.filter(
-            id=ticket.id,
-            google_sheet_synced=False
-        ).update(google_sheet_synced=True)
-        if updated_count == 0:
-            print(f"[GOOGLE SHEET ALREADY CLAIMED]: Ticket #{ticket.ticket_number} already exported to Google Sheet by another thread. Skipping.")
-            return
-    else:
-        ticket.google_sheet_synced = True
-        ticket.save(update_fields=["google_sheet_synced"])
+    # # Atomic DB claim to prevent thread race conditions
+    # from icemake_bot.models import IcemakeTicket
+    # if not force:
+    #     updated_count = IcemakeTicket.objects.filter(
+    #         id=ticket.id,
+    #         google_sheet_synced=False
+    #     ).update(google_sheet_synced=True)
+    #     if updated_count == 0:
+    #         print(f"[GOOGLE SHEET ALREADY CLAIMED]: Ticket #{ticket.ticket_number} already exported to Google Sheet by another thread. Skipping.")
+    #         return
+    # else:
+    #     ticket.google_sheet_synced = True
+    #     ticket.save(update_fields=["google_sheet_synced"])
 
-    try:
-        response = requests.post(url, json=payload, timeout=25, allow_redirects=True)
-        print(f"[Google Sheet Webhook Status]: {response.status_code}, response: {response.text[:200]}")
-    except Exception as e:
-        logger.error("Failed to append ticket to Google Sheet: %s", e)
+    # try:
+    #     response = requests.post(url, json=payload, timeout=25, allow_redirects=True)
+    #     print(f"[Google Sheet Webhook Status]: {response.status_code}, response: {response.text[:200]}")
+    # except Exception as e:
+    #     logger.error("Failed to append ticket to Google Sheet: %s", e)
 
 def _send_meta_whatsapp_template(to_phone: str, template_name: str, parameters: list) -> dict:
     """
