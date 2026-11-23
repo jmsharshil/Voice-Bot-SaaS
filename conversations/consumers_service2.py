@@ -2984,7 +2984,10 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                     time.sleep(3)
                     try:
                         from icemake_bot.models import IcemakeTicket
-                        is_v2 = getattr(self, "strategy_key", None) in ["icemake_v2", "icemake_v2_strategy"]
+                        ticket = IcemakeTicket.objects.filter(conversation_id=conv_id).first()
+                        is_v2 = getattr(self, "strategy_key", None) in ["icemake_v2", "icemake_v2_strategy"] or (
+                            ticket and ticket.conversation and ticket.conversation.agent and "v2" in ticket.conversation.agent.name.lower()
+                        )
                         if is_v2:
                             from icemake_v2_bot.strategy import (
                                 _append_to_google_sheet,
@@ -2997,9 +3000,8 @@ class VoiceBotConsumerService2(AsyncWebsocketConsumer):
                                 _send_whatsapp_ticket_confirmation,
                                 _send_whatsapp_engineer_notification
                             )
-                        ticket = IcemakeTicket.objects.filter(conversation_id=conv_id).first()
                         if ticket:
-                            print(f"[ICEMAKE POST-DISCONNECT SYNC]: Exporting Ticket #{ticket.ticket_number} to Google Sheet & sending WhatsApp to Customer & Engineer...")
+                            print(f"[ICEMAKE POST-DISCONNECT SYNC]: Syncing Ticket #{ticket.ticket_number} (V2={is_v2}) & sending WhatsApp to Customer & Engineer...")
                             _append_to_google_sheet(ticket)
                             _send_whatsapp_ticket_confirmation(ticket)
                             # ⏳ Pause 5.5s to comply with Meta / WASender rate limits

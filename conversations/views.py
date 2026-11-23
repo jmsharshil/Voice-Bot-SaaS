@@ -2689,14 +2689,23 @@ def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
         # Check if Ice Make Ticket exists for this conversation and sync to Google Sheet
         try:
             from icemake_bot.models import IcemakeTicket
-            from icemake_bot.strategy import _append_to_google_sheet
             ticket = IcemakeTicket.objects.filter(conversation=conversation).first()
             if ticket:
+                is_v2 = (
+                    (conversation.agent and "v2" in conversation.agent.name.lower()) or
+                    (conversation.agent and conversation.agent.role_template and "v2" in conversation.agent.role_template.role_name.lower()) or
+                    bool(ticket.machine_sr_no and ticket.machine_sr_no != "Not Provided")
+                )
+                if is_v2:
+                    from icemake_v2_bot.strategy import _append_to_google_sheet
+                else:
+                    from icemake_bot.strategy import _append_to_google_sheet
+
                 real_num = data.get("phone_number")
                 if real_num and real_num != "unknown" and not is_bot_did(real_num):
                     force_sync = not ticket.google_sheet_synced or not ticket.calling_number or is_bot_did(ticket.calling_number)
                     if force_sync:
-                        print(f"🎯 [ICEMAKE POST API CDR RECEIVED]: Syncing real SIM caller number '{real_num}' to Google Sheet!")
+                        print(f"🎯 [ICEMAKE POST API CDR RECEIVED]: Processing real SIM caller number '{real_num}' for Ticket #{ticket.ticket_number} (is_v2={is_v2})")
                         _append_to_google_sheet(ticket, force=True)
                 elif not ticket.google_sheet_synced:
                     _append_to_google_sheet(ticket, force=False)
