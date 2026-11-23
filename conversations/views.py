@@ -2905,11 +2905,17 @@ def icemake_dashboard_data(request):
     """
     global _ICEMAKE_WHATSAPP_CACHE
     from datetime import timedelta
+    from django.db.models import Q
     from icemake_bot.models import IcemakeTicket
     from conversations.models import CallDetailRecord
     import requests as _requests
 
-    tickets = IcemakeTicket.objects.select_related("conversation").order_by("-created_at")
+    # Filter strictly for Ice Make V1 Voice Agent tickets (exclude V2 tickets)
+    tickets = IcemakeTicket.objects.filter(
+        ~Q(conversation__agent__name__icontains="V2") &
+        ~Q(conversation__agent__role_template__role_name__icontains="V2") &
+        (Q(machine_sr_no__in=["", "Not Provided"]) | Q(conversation__agent__name__iexact="Ice Make Support Agent"))
+    ).select_related("conversation").order_by("-created_at")
     
     data = []
     for t in tickets:
@@ -3107,6 +3113,178 @@ def icemake_dashboard_data(request):
         "total_count": len(all_tickets),
         "voice_count": len(data),
         "whatsapp_count": len(whatsapp_tickets),
+        "allocated_minutes": allocated_minutes,
+        "used_minutes": used_minutes,
+        "remaining_minutes": remaining_minutes,
+    })
+
+
+def icemake_v2_dashboard_page(request):
+    """Renders the dedicated ICEMAKE V2 Voice Agent Support Dashboard page."""
+    from django.shortcuts import render
+    return render(request, "icemake_v2_dashboard.html")
+
+
+@api_view(["GET"])
+def icemake_v2_dashboard_data(request):
+    """
+    Returns JSON array of all Icemake V2 tickets joined with CallDetailRecord,
+    incorporating all entities from the Ice Make V2 flow:
+    - Ticket Number
+    - Customer Name
+    - Selected Language (hi, gu, te, pa, bn, mr, ta, kn, ml, en)
+    - Calling State & City
+    - Address / Company Name
+    - 6-digit Pincode
+    - Registered Mobile Number (user verified)
+    - Calling SIM Number (from CDR)
+    - Machine Serial Number (mandatory in V2 flow)
+    - Product Category / Machine Model
+    - Issue Root Cause Category (AI classified)
+    - Detailed Technical Issue Description
+    - Assigned State Service Engineer & Contact
+    - Audio Recording URL & Duration
+    - Google Sheets Sync Status
+    - IST Created Timestamp
+    - Agent Minutes Quota vs Remaining
+    """
+    from datetime import timedelta
+    from django.db.models import Q
+    from icemake_bot.models import IcemakeTicket
+    from conversations.models import CallDetailRecord
+    from agents.models import VoiceAgent
+    from django.utils.timezone import localtime
+    import zoneinfo as _zi
+
+    ist_tz = _zi.ZoneInfo("Asia/Kolkata")
+
+    # Filter tickets specifically created by Ice Make Support Agent V2
+    tickets = IcemakeTicket.objects.filter(
+        Q(conversation__agent__name__icontains="V2") | 
+        Q(conversation__agent__role_template__role_name__icontains="V2") |
+        ~Q(machine_sr_no__in=["", "Not Provided"])
+    ).select_related("conversation").order_by("-created_at")
+
+    # State engineer resolution from icemake_v2_bot
+    try:
+        from icemake_v2_bot.strategy import get_engineer_for_state
+    except Exception:
+        def get_engineer_for_state(loc):
+            return "919727744566", "Mr Uchit"
+
+    data = []
+    for t in tickets:
+        cdr = None
+        # 1. Direct match on conversation CDR
+        if t.conversation:
+            cdr = CallDetailRecord.objects.filter(conversation=t.conversation).exclude(recording_file_name="").first()
+            if not cdr:
+                cdr = CallDetailRecord.objects.filter(conversation=t.conversation).first()
+
+        # 2. Match by stream SID if available
+        if (not cdr or not cdr.recording_file_name) and t.conversation and t.conversation.stream_sid:
+            sid = t.conversation.stream_sid.replace("stream_", "")
+            cdr = CallDetailRecord.objects.filter(uniqueid=sid).exclude(recording_file_name="").first()
+            if not cdr:
+                cdr = CallDetailRecord.objects.filter(uniqueid=f"stream_{sid}").exclude(recording_file_name="").first()
+
+        # 3. Match by phone number and V2 agent within time window
+        if (not cdr or not cdr.recording_file_name) and t.registered_mobile:
+            clean_reg = "".join(filter(str.isdigit, str(t.registered_mobile)))[-10:]
+            if clean_reg and t.created_at:
+                cdr_phone = CallDetailRecord.objects.filter(
+                    phone_number__icontains=clean_reg,
+                    received_at__gte=t.created_at - timedelta(minutes=15),
+                    received_at__lte=t.created_at + timedelta(minutes=15),
+                    conversation__agent__name__icontains="V2"
+                ).exclude(recording_file_name="").order_by("-received_at").first()
+                if cdr_phone:
+                    cdr = cdr_phone
+
+        rec_url = getattr(cdr, "recording_file_name", "") or ""
+        if rec_url and not rec_url.startswith("http"):
+            if rec_url.startswith("/media/"):
+                rec_url = request.build_absolute_uri(rec_url)
+            else:
+                rec_url = f"https://voice-bot.on-forge.com/recordings/{rec_url}"
+
+        duration = getattr(cdr, "duration", 0) or 0
+        disposition = getattr(cdr, "disposition", "ANSWERED") or "ANSWERED"
+        caller_phone = getattr(cdr, "phone_number", "") or (t.conversation.user_number if t.conversation else t.registered_mobile)
+
+        # Assigned Engineer from location
+        eng_phone, eng_name = get_engineer_for_state(t.city_state)
+
+        # Created at in IST
+        created_at_formatted = ""
+        if t.created_at:
+            try:
+                created_at_formatted = localtime(t.created_at, ist_tz).strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                created_at_formatted = t.created_at.strftime("%Y-%m-%d %H:%M:%S")
+
+        # Parse city vs state if combined
+        city_part = ""
+        state_part = ""
+        if t.city_state:
+            parts = [p.strip() for p in t.city_state.split(",") if p.strip()]
+            if len(parts) >= 2:
+                city_part = parts[0]
+                state_part = parts[1]
+            elif len(parts) == 1:
+                state_part = parts[0]
+
+        data.append({
+            "id": f"v2_{t.id}",
+            "source": "Ice Make V2 Voice Agent",
+            "ticket_number": t.ticket_number,
+            "customer_name": t.customer_name or "Customer",
+            "language": t.language or "en",
+            "registered_mobile": t.registered_mobile or "Not Provided",
+            "caller_phone": caller_phone or t.registered_mobile or "Not Provided",
+            "city": city_part or "Not Provided",
+            "state": state_part or t.city_state or "Not Provided",
+            "city_state": t.city_state or "Not Provided",
+            "pin_code": t.pin_code or "",
+            "address": t.company_name or "Not Provided",
+            "machine_sr_no": t.machine_sr_no or "Not Provided",
+            "machine_model_no": t.machine_model_no or "Deep Freezer",
+            "issue_type": t.issue_type or "General Maintenance / Service",
+            "issue_description": t.issue_description or "Not Provided",
+            "google_sheet_synced": bool(t.google_sheet_synced),
+            "recording_url": rec_url,
+            "call_duration": duration,
+            "call_status": disposition,
+            "assigned_engineer": eng_name,
+            "engineer_phone": eng_phone,
+            "created_at": created_at_formatted,
+        })
+
+    # Sort newest first
+    data.sort(key=lambda x: str(x.get("created_at", "")), reverse=True)
+
+    # Agent minutes quota calculation for Ice Make V2
+    v2_agent = VoiceAgent.objects.filter(
+        Q(name__icontains="V2") & Q(name__icontains="Ice Make")
+    ).first()
+    if not v2_agent:
+        v2_agent = VoiceAgent.objects.filter(
+            Q(role_template__role_name__icontains="V2") & Q(role_template__role_name__icontains="Ice Make")
+        ).first()
+
+    allocated_minutes = v2_agent.minutes_quota if v2_agent else 5000
+    used_minutes = v2_agent.used_minutes if v2_agent else 0.0
+    remaining_minutes = round(max(allocated_minutes - used_minutes, 0), 1) if v2_agent else 5000.0
+
+    synced_count = sum(1 for item in data if item["google_sheet_synced"])
+    verified_serial_count = sum(1 for item in data if item["machine_sr_no"] and item["machine_sr_no"].lower() not in ["not provided", "unknown", ""])
+
+    return Response({
+        "tickets": data,
+        "total_count": len(data),
+        "synced_count": synced_count,
+        "pending_count": len(data) - synced_count,
+        "verified_serial_count": verified_serial_count,
         "allocated_minutes": allocated_minutes,
         "used_minutes": used_minutes,
         "remaining_minutes": remaining_minutes,

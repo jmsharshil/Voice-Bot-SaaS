@@ -7,6 +7,7 @@ from .views import (
     telecom_cdr_webhook, telecom_cdr_list, icemake_webhook, kylas_webhook, sarvam_cdr_webhook,
     minutes_usage_api,
     icemake_dashboard_page, icemake_dashboard_data,
+    icemake_v2_dashboard_page, icemake_v2_dashboard_data,
     proxy_audio,
     sarvam_leads_page, sarvam_leads_data, sarvam_transcript_detail, sarvam_trigger_call_api, sarvam_sync_from_api,
     sarvam_update_lead_stage_api, sarvam_schedule_callback_api, sarvam_callbacks_list_api,
@@ -120,9 +121,11 @@ urlpatterns = [
     path("api/demo/<slug:agent_slug>/status/<int:call_id>/", sarvam_agent_demo_call_status_api, name="api-sarvam-agent-demo-status"),
 
 
-    # Ice Make Support Dashboard
+    # Ice Make Support Dashboard (V1 & V2)
     path("icemake-dashboard/", icemake_dashboard_page, name="icemake-dashboard"),
     path("icemake-dashboard/data/", icemake_dashboard_data, name="icemake-dashboard-data"),
+    path("icemake-v2-dashboard/", icemake_v2_dashboard_page, name="icemake-v2-dashboard"),
+    path("icemake-v2-dashboard/data/", icemake_v2_dashboard_data, name="icemake-v2-dashboard-data"),
     path("proxy-audio/", proxy_audio, name="proxy-audio"),
 
     # Telecom CDR, Ice Make, Kylas & Sarvam Webhooks
