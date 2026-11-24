@@ -154,15 +154,28 @@ def _log_translator(user_msg, agent_reply, lang):
     def _do_log():
         try:
             from conversations.services.translator_service import translate_text
-            if lang and lang != "en":
-                if user_msg:
-                    user_en = translate_text(user_msg, from_lang=lang, to_lang="en")
-                    print(f"🗣️ [TRANSLATOR LOG] User ({lang}): '{user_msg}' ➔ English: '{user_en}'")
-                if agent_reply:
-                    reply_en = translate_text(agent_reply, from_lang=lang, to_lang="en")
-                    print(f"🤖 [TRANSLATOR LOG] Agent ({lang}): '{agent_reply}' ➔ English: '{reply_en}'")
+            lang_str = lang or "en"
+            if user_msg:
+                if lang_str != "en":
+                    try:
+                        user_en = translate_text(user_msg, from_lang=lang_str, to_lang="en")
+                        print(f"🗣️ [ICEMAKE V2 LIVE LOG] User ({lang_str}): '{user_msg}' ➔ English: '{user_en}'")
+                    except Exception:
+                        print(f"🗣️ [ICEMAKE V2 LIVE LOG] User ({lang_str}): '{user_msg}'")
+                else:
+                    print(f"🗣️ [ICEMAKE V2 LIVE LOG] User (en): '{user_msg}'")
+            if agent_reply:
+                clean_rep = agent_reply.strip()
+                if lang_str != "en":
+                    try:
+                        reply_en = translate_text(clean_rep, from_lang=lang_str, to_lang="en")
+                        print(f"🤖 [ICEMAKE V2 LIVE LOG] Agent ({lang_str}): '{clean_rep}' ➔ English: '{reply_en}'")
+                    except Exception:
+                        print(f"🤖 [ICEMAKE V2 LIVE LOG] Agent ({lang_str}): '{clean_rep}'")
+                else:
+                    print(f"🤖 [ICEMAKE V2 LIVE LOG] Agent (en): '{clean_rep}'")
         except Exception as e_log:
-            logger.debug("Translator log failed: %s", e_log)
+            print(f"🗣️ [ICEMAKE V2 LOG]: User: '{user_msg}' | Agent: '{agent_reply}'")
 
     import threading
     threading.Thread(target=_do_log, daemon=True).start()

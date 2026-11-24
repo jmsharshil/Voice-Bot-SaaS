@@ -3356,7 +3356,7 @@ from django.views.decorators.csrf import csrf_exempt
 from agents.models import VoiceAgent
 
 @csrf_exempt
-def inbound_call_webhook(request):
+def inbound_call_webhook(request, target_agent=None):
     """
     Webhook handler for incoming voice calls. Resolves the agent mapped to the dialed number
     and returns TwiML instructions to stream audio over WebSockets to our Channels consumer.
@@ -3387,13 +3387,21 @@ def inbound_call_webhook(request):
 
     print(f"[CALL] Incoming Call Webhook | Dialed (To): {to_number} (Normalized: {normalized_to}) | Caller (From): {from_number} (Normalized: {normalized_from})")
 
-    # 2. Look up the active agent mapped to this incoming number
-    agent = VoiceAgent.objects.filter(inbound_phone_number=normalized_to, is_active=True).first()
+    # 2. Look up the active agent mapped to this incoming number (or use explicitly passed target agent)
+    agent = target_agent
+    if not agent and normalized_to:
+        agent = VoiceAgent.objects.filter(inbound_phone_number=normalized_to, is_active=True).first()
 
     # Fallback to checking with prefix "91" if not found
-    if not agent and not to_number.startswith("91"):
+    if not agent and normalized_to and not to_number.startswith("91"):
         normalized_to_with_prefix = "91" + normalized_to
         agent = VoiceAgent.objects.filter(inbound_phone_number=normalized_to_with_prefix, is_active=True).first()
+
+    # Fallback to query param agent_id if provided
+    if not agent:
+        param_agent_id = request.GET.get("agent_id") or request.POST.get("agent_id")
+        if param_agent_id:
+            agent = VoiceAgent.objects.filter(id=param_agent_id, is_active=True).first()
 
     # 3. Handle bot matching
     if agent:
@@ -3410,18 +3418,31 @@ def inbound_call_webhook(request):
             return HttpResponse(rejection_twiml, content_type="text/xml")
 
         # Determine language code based on agent industry or default
-        language = "en"
-        if agent.industry and agent.industry.slug in ["reminder-industry", "temp-real-estate"]:
+        agent_name_clean = (agent.name or "").lower()
+        role_name_clean = (agent.role_template.role_name or "").lower() if agent.role_template else ""
+        is_icemake_agent = (
+            "icemake" in agent_name_clean or "ice make" in agent_name_clean or
+            "icemake" in role_name_clean or "ice make" in role_name_clean
+        )
+        if is_icemake_agent:
+            language = "auto"
+        elif agent.industry and agent.industry.slug in ["reminder-industry", "temp-real-estate"]:
             language = "gu"
         elif agent.industry and agent.industry.slug == "automobile":
             language = "hi"
+        else:
+            language = "en"
 
         # Build secure WebSocket URL dynamically based on the current host header
         scheme = "wss" if request.is_secure() or request.headers.get("x-forwarded-proto") == "https" else "ws"
         host = request.get_host()
         
         ws_url = f"{scheme}://{host}/ws/voice-bot/service2/?agent_id={agent.id}&language={language}&phone={normalized_from}&call_type=INBOUND"
-        print(f"[WS] Inbound Call Routing: Connected caller {normalized_from} to agent {agent.name} ({agent.id}) via WS: {ws_url}")
+        print("\n" + "=" * 80)
+        print(f"📞 [INBOUND CALL SETUP]: Call Transferring from IVR to Agent '{agent.name}' ({agent.id})")
+        print(f"👤 Caller (From): {normalized_from} | Dialed DID (To): {to_number}")
+        print(f"🔗 WebSocket Stream URL: {ws_url}")
+        print("=" * 80 + "\n")
 
         escaped_ws_url = ws_url.replace("&", "&amp;")
         twiml = (

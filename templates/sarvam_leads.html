@@ -1960,6 +1960,35 @@
             box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
         }
 
+        /* ── EXCEL EXPORT BUTTON ── */
+        .export-excel-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 9px 15px;
+            border: 1px solid #059669;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(16, 185, 129, 0.25);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .export-excel-btn:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35);
+        }
+        .export-excel-btn:active {
+            transform: translateY(0);
+        }
+        .export-excel-btn i {
+            font-size: 0.95rem;
+        }
+
         /* ── PAGINATION ── */
         .pagination-bar {
             display: flex;
@@ -4022,6 +4051,10 @@
                                 <option value="ALL">All</option>
                             </select>
                         </div>
+                        <button type="button" class="export-excel-btn" id="exportLeadsBtn" onclick="exportFilteredLeads()" title="Export current filtered inquiries to Excel">
+                            <i class="fa-solid fa-file-excel"></i>
+                            <span>Export Excel</span>
+                        </button>
                     </div>
                 </div>
 
@@ -7465,6 +7498,57 @@
                 currentPage = 1;
             }
             fetchLeadsData(false);
+        }
+
+        function exportFilteredLeads() {
+            const statusSelect = document.getElementById('statusFilter');
+            const status = statusSelect ? statusSelect.value : (currentCardFilter || 'ALL');
+            const days = document.getElementById('daysFilter')?.value || 30;
+            const search = (document.getElementById('searchInput')?.value || '').trim();
+
+            const queryParams = new URLSearchParams();
+            if (status && status !== 'ALL') {
+                queryParams.set('status', status);
+            } else {
+                queryParams.set('status', 'ALL');
+            }
+
+            if (selectedCalendarDate) {
+                queryParams.set('date', selectedCalendarDate);
+            } else if (days) {
+                queryParams.set('days', days);
+            }
+
+            if (search) {
+                queryParams.set('search', search);
+            }
+
+            const exportBtn = document.getElementById('exportLeadsBtn');
+            const origHtml = exportBtn ? exportBtn.innerHTML : '';
+            if (exportBtn) {
+                exportBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exporting...';
+                exportBtn.disabled = true;
+            }
+
+            if (typeof showToast === 'function') {
+                showToast('Preparing Excel export for ' + (status === 'ALL' ? 'All Inquiries' : status) + '...', 'info');
+            }
+
+            const exportUrl = `${SARVAM_API_PREFIX}/export/?${queryParams.toString()}`;
+
+            const link = document.createElement('a');
+            link.href = exportUrl;
+            link.setAttribute('download', '');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            setTimeout(() => {
+                if (exportBtn) {
+                    exportBtn.innerHTML = origHtml;
+                    exportBtn.disabled = false;
+                }
+            }, 2500);
         }
 
         function onPageSizeChange(newSize) {
