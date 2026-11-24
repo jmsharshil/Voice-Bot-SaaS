@@ -1314,10 +1314,11 @@ from datetime import datetime as dt
 from django.db import IntegrityError, transaction
 
 
+@csrf_exempt
 @api_view(["GET", "POST"])
 def icemake_webhook(request):
     """
-    Flexible webhook endpoint for Ice Make telecom trunk.
+    Flexible webhook endpoint for Ice Make telecom trunk (V1).
     Handles both incoming call setup (inbound twiml) and post-call CDR webhook.
     """
     try:
@@ -1328,24 +1329,93 @@ def icemake_webhook(request):
                 raw_data = json.loads(request.body.decode("utf-8"))
             except Exception:
                 raw_data = {}
-
-        pass
     except Exception as e:
         raw_data = getattr(request, "data", {}) or {}
 
+    from agents.models import VoiceAgent
+    ice_agent = VoiceAgent.objects.filter(
+        name__iexact="Ice Make Support Agent"
+    ).first() or VoiceAgent.objects.filter(
+        role_template__role_name__iexact="Ice Make Cold Room Support"
+    ).first() or VoiceAgent.objects.filter(id="272f36c7-132a-49dc-808c-ee78a8e87eea").first()
+    ice_agent_id = str(ice_agent.id) if ice_agent else None
+
     # Check if CDR post-call webhook payload
-    if "call" in raw_data or "recording_url" in raw_data or "duration" in raw_data or "call_id" in raw_data or "event" in raw_data:
-        from agents.models import VoiceAgent
-        ice_agent = VoiceAgent.objects.filter(role_template__role_name__icontains="Ice Make").first()
-        ice_agent_id = str(ice_agent.id) if ice_agent else None
+    is_cdr = (
+        "recording_url" in raw_data
+        or "resource_url" in raw_data
+        or "call_duration" in raw_data
+        or "duration" in raw_data
+        or ("call" in raw_data and raw_data.get("event") in ["call.completed", "call.failed", "call.ended"])
+        or (raw_data.get("call_status") in ["ANSWERED", "MISSED", "COMPLETED", "FAILED"])
+    )
+    if is_cdr:
         return _process_telecom_cdr_request(request, raw_data, target_agent_id=ice_agent_id)
 
     # Route to inbound call handler
     try:
         from bot.views import inbound_call_webhook
-        return inbound_call_webhook(request)
+        return inbound_call_webhook(request, target_agent=ice_agent)
     except Exception as e_inb:
         print(f"[ICEMAKE-WEBHOOK] Inbound delegate error: {e_inb}")
+        return Response({"status": "ok"}, status=200)
+
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+def icemake_v2_webhook(request):
+    """
+    Dedicated IVR Webhook endpoint for Ice Make V2 Voice Agent.
+    Handles both incoming call setup (inbound streaming TwiML) and post-call CDR webhook.
+    """
+    from agents.models import VoiceAgent
+    from django.db.models import Q
+    ice_v2_agent = VoiceAgent.objects.filter(
+        Q(name__icontains="V2") & Q(name__icontains="Ice Make")
+    ).first() or VoiceAgent.objects.filter(
+        role_template__role_name__icontains="Ice Make Cold Room Support V2"
+    ).first() or VoiceAgent.objects.filter(id="1956ac12-6b24-4630-aba6-b5f6cc728290").first()
+    ice_v2_agent_id = str(ice_v2_agent.id) if ice_v2_agent else "1956ac12-6b24-4630-aba6-b5f6cc728290"
+
+    # Browser / health-check probe
+    if request.method == "GET" and not any(request.GET.get(k) for k in ("To", "to", "From", "from", "phone", "call_id")):
+        return Response({
+            "status": "active",
+            "message": "Ice Make V2 IVR Webhook is operational.",
+            "target_agent": ice_v2_agent.name if ice_v2_agent else "Ice Make Support Agent V2",
+            "agent_id": ice_v2_agent_id,
+            "inbound_phone_number": getattr(ice_v2_agent, "inbound_phone_number", "9484959435")
+        }, status=200)
+
+    try:
+        raw_data = getattr(request, "data", {}) or {}
+        if not raw_data and request.body:
+            import json
+            try:
+                raw_data = json.loads(request.body.decode("utf-8"))
+            except Exception:
+                raw_data = {}
+    except Exception as e:
+        raw_data = getattr(request, "data", {}) or {}
+
+    # Check if CDR post-call webhook payload
+    is_cdr = (
+        "recording_url" in raw_data
+        or "resource_url" in raw_data
+        or "call_duration" in raw_data
+        or "duration" in raw_data
+        or ("call" in raw_data and raw_data.get("event") in ["call.completed", "call.failed", "call.ended"])
+        or (raw_data.get("call_status") in ["ANSWERED", "MISSED", "COMPLETED", "FAILED"])
+    )
+    if is_cdr:
+        return _process_telecom_cdr_request(request, raw_data, target_agent_id=ice_v2_agent_id)
+
+    # Route to inbound call handler specifically for Ice Make V2
+    try:
+        from bot.views import inbound_call_webhook
+        return inbound_call_webhook(request, target_agent=ice_v2_agent)
+    except Exception as e_inb:
+        print(f"[ICEMAKE-V2-WEBHOOK] Inbound delegate error: {e_inb}")
         return Response({"status": "ok"}, status=200)
 
 @api_view(["POST"])
@@ -2326,6 +2396,37 @@ def safe_int_val(val, default=0):
     except Exception:
         return default
 
+def is_bot_did(num_str):
+    if not num_str:
+        return True
+    num_s = str(num_str).strip()
+    if num_s.lower() in ["unknown", "none", "not provided", ""]:
+        return True
+    digits = "".join(filter(str.isdigit, num_s))
+    if not digits or len(digits) < 7:
+        return True
+    clean = digits[2:] if (len(digits) == 12 and digits.startswith("91")) else digits
+    
+    known_did_exact = [
+        "7971019136", "917971019136",
+        "9429390434", "919429390434",
+        "7971019486", "917971019486",
+        "7971017251", "917971017251",
+        "7969016753", "917969016753",
+        "9484959435", "919484959435",
+        "8758007011", "918758007011",
+        "100259134222", "91100259134222",
+    ]
+    if any(kd in digits for kd in known_did_exact):
+        return True
+    
+    did_prefixes = ("797101", "796901", "942939", "948495", "875800", "100259")
+    if clean.startswith(did_prefixes) or digits.startswith(did_prefixes):
+        return True
+        
+    return False
+
+
 def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
     """
     Internal helper to process CDR webhook data from Service 1 or Service 2.
@@ -2356,36 +2457,6 @@ def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
             direction = "inbound"
         else:
             direction = "outbound"
-
-        def is_bot_did(num_str):
-            if not num_str:
-                return True
-            num_s = str(num_str).strip()
-            if num_s.lower() in ["unknown", "none", "not provided", ""]:
-                return True
-            digits = "".join(filter(str.isdigit, num_s))
-            if not digits or len(digits) < 7:
-                return True
-            clean = digits[2:] if (len(digits) == 12 and digits.startswith("91")) else digits
-            
-            known_did_exact = [
-                "7971019136", "917971019136",
-                "9429390434", "919429390434",
-                "7971019486", "917971019486",
-                "7971017251", "917971017251",
-                "7969016753", "917969016753",
-                "9484959435", "919484959435",
-                "8758007011", "918758007011",
-                "100259134222", "91100259134222",
-            ]
-            if any(kd in digits for kd in known_did_exact):
-                return True
-            
-            did_prefixes = ("797101", "796901", "942939", "948495", "875800", "100259")
-            if clean.startswith(did_prefixes) or digits.startswith(did_prefixes):
-                return True
-                
-            return False
 
         # First priority: Direct phone_number field if present (Insurance-Bot / IVRManager format)
         direct_phone = raw_data.get("phone_number") or raw_data.get("caller_number")
@@ -2670,11 +2741,6 @@ def _process_telecom_cdr_request(request, raw_data, target_agent_id=None):
                     recording_file_name=rec_file,
                     matched=matched,
                 )
-        else:
-            return Response(
-                {"status": "duplicate", "message": "CDR already received for this uniqueid"},
-                status=200
-            )
 
     result = {
         "status": "success",
@@ -3267,6 +3333,61 @@ def icemake_v2_dashboard_data(request):
             "assigned_engineer": eng_name,
             "engineer_phone": eng_phone,
             "created_at": created_at_formatted,
+            "cdr_id": cdr.id if cdr else None,
+        })
+
+    # Include standalone / unlinked CDRs for Ice Make V2 (calls, Push API webhook events, missed/inbound calls)
+    linked_cdr_ids = {item["cdr_id"] for item in data if item.get("cdr_id")}
+    unlinked_cdrs = CallDetailRecord.objects.filter(
+        Q(did__icontains="7971019486") |
+        Q(did__icontains="9484959435") |
+        Q(conversation__agent__name__icontains="V2") |
+        Q(conversation__agent__role_template__role_name__icontains="V2")
+    ).exclude(id__in=linked_cdr_ids).order_by("-id")[:100]
+
+    for c in unlinked_cdrs:
+        c_calldate = c.calldate or c.received_at
+        created_at_formatted = ""
+        if c_calldate:
+            try:
+                created_at_formatted = localtime(c_calldate, ist_tz).strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                created_at_formatted = c_calldate.strftime("%Y-%m-%d %H:%M:%S")
+
+        rec_url = c.recording_file_name or ""
+        if rec_url and not rec_url.startswith("http"):
+            if rec_url.startswith("/media/"):
+                rec_url = request.build_absolute_uri(rec_url)
+            else:
+                rec_url = f"https://voice-bot.on-forge.com/recordings/{rec_url}"
+
+        eng_phone, eng_name = get_engineer_for_state("")
+
+        data.append({
+            "id": f"cdr_{c.id}",
+            "source": "Ice Make V2 Webhook / Inbound",
+            "ticket_number": f"CALL-{c.id}",
+            "customer_name": f"Caller ({c.phone_number})" if c.phone_number else "Inbound Caller",
+            "language": getattr(c.conversation, "language", "hi") if c.conversation else "hi",
+            "registered_mobile": c.phone_number or "Not Provided",
+            "caller_phone": c.phone_number or "Not Provided",
+            "city": "Not Provided",
+            "state": "Not Provided",
+            "city_state": "Not Provided",
+            "pin_code": "",
+            "address": "Not Provided",
+            "machine_sr_no": "Not Provided",
+            "machine_model_no": "General Call / IVR",
+            "issue_type": "Inbound Call",
+            "issue_description": f"Inbound Call on DID {c.did or '9484959435'}. Status: {c.disposition or 'ANSWERED'}",
+            "google_sheet_synced": False,
+            "recording_url": rec_url,
+            "call_duration": c.duration or 0,
+            "call_status": c.disposition or "ANSWERED",
+            "assigned_engineer": eng_name,
+            "engineer_phone": eng_phone,
+            "created_at": created_at_formatted,
+            "cdr_id": c.id,
         })
 
     # Sort newest first
@@ -3941,6 +4062,50 @@ def sarvam_leads_data(request, agent_slug=None):
 
         agent_qs = agent_qs.filter(subuser_q)
 
+    # ── Strict Filter: 
+    # 1. Unique Excel Uploaded Contacts (deduplicated per campaign & phone: counts each uploaded number once, keeping latest retry outcome)
+    # 2. Inbound Customer Calls
+    # 3. Dashboard Single Calls (manual calls placed from the dashboard dialer)
+    # Excludes: React website triggers ('React Outbound Call'), CRM webhooks ('Webhook: ...'), and duplicate retry slots!
+    from django.db.models import Q
+    source_filter = (request.GET.get("source") or "").strip().lower()
+    if source_filter != "all":
+        import re
+        from collections import defaultdict
+
+        # 1. Inbound customer calls
+        inbound_ids = set(agent_qs.filter(call_type__icontains="inbound").values_list("id", flat=True))
+
+        # 2. Dashboard single calls (manual calls triggered from dashboard)
+        single_dashboard_ids = set(agent_qs.filter(
+            Q(call_type__in=["Outbound Call", "Live Call", "Test Call", "Dashboard Single Call"]) |
+            (Q(campaign__isnull=True) & Q(call_type="Outbound Call"))
+        ).values_list("id", flat=True))
+
+        # 3. Excel uploaded campaign calls: deduplicate per campaign & phone so 200 uploaded numbers = 200 count
+        camp_recs = agent_qs.filter(
+            Q(campaign__isnull=False) |
+            Q(call_type__icontains="campaign") |
+            Q(call_type__icontains="excel")
+        ).order_by("id")
+
+        camp_groups = defaultdict(list)
+        for r in camp_recs.values("id", "campaign_id", "call_type", "phone_number"):
+            c_type = r.get("call_type") or ""
+            camp_key = r.get("campaign_id")
+            if not camp_key:
+                match = re.search(r"Campaign\s*#?\s*\d+", c_type, re.IGNORECASE)
+                camp_key = match.group(0).lower() if match else c_type.lower()
+            clean_p = "".join(filter(str.isdigit, str(r.get("phone_number") or "")))[-10:]
+            camp_groups[(camp_key, clean_p)].append(r["id"])
+
+        # Keep the latest attempt for each uploaded Excel contact
+        camp_unique_ids = set(ids[-1] for ids in camp_groups.values())
+
+        # Merge allowed records
+        allowed_call_ids = inbound_ids | single_dashboard_ids | camp_unique_ids
+        agent_qs = agent_qs.filter(id__in=allowed_call_ids)
+
     search_q = (request.GET.get("search") or "").strip()
     status_q = (request.GET.get("status") or "").strip().upper()
     date_q = (request.GET.get("date") or "").strip()
@@ -4453,6 +4618,338 @@ def sarvam_leads_data(request, agent_slug=None):
         "agent_slug": sarvam_agent.slug if sarvam_agent else "default",
         "agent_phone": sarvam_agent.agent_phone if sarvam_agent else ""
     }, status=200)
+
+
+
+@api_view(["GET"])
+def sarvam_leads_export_api(request, agent_slug=None):
+    """
+    Exports filtered leads from the Sarvam Voice Dashboard to an Excel (.xlsx) file.
+    Supports dynamic filtering:
+      - status: ALL, INTERVIEW (Interested), CALLBACK, NOT_INTERESTED, MISMATCH
+      - date: YYYY-MM-DD (selected day from Activity Calendar)
+      - days: 7, 30, 90
+      - search: string matching candidate name, phone, requirement
+    Includes only: Unique Excel uploaded contacts (latest attempt), Inbound calls, Dashboard single calls.
+    Excludes: React website calls, CRM webhooks, duplicate retry slot attempts.
+    GET /api/sarvam/leads/export/ or /api/sarvam/<slug:agent_slug>/leads/export/
+    """
+    import os
+    import re
+    import io
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from django.db.models import Q
+    from conversations.models import SarvamCallRecord, SarvamAgent
+
+    slug = agent_slug or request.GET.get("agent")
+    is_superuser, allowed_agent_objs = _get_user_allowed_sarvam_agents(request.user)
+
+    sarvam_agent = None
+    if slug:
+        sarvam_agent = allowed_agent_objs.filter(slug=slug).first()
+        if not sarvam_agent and not is_superuser:
+            return Response({"error": "Access denied for requested agent."}, status=403)
+    if not sarvam_agent:
+        sarvam_agent = allowed_agent_objs.first()
+
+    if sarvam_agent:
+        agent_qs = SarvamCallRecord.objects.filter(sarvam_agent=sarvam_agent)
+    elif is_superuser:
+        agent_qs = SarvamCallRecord.objects.all()
+    else:
+        agent_qs = SarvamCallRecord.objects.filter(sarvam_agent__in=allowed_agent_objs)
+
+    # Sub-User Scoping
+    user_prof = getattr(request.user, 'profile', None)
+    user_p = getattr(user_prof, 'custom_permissions', {}) if user_prof else {}
+    is_subuser = bool(
+        request.user.is_authenticated and
+        not getattr(request.user, 'is_superuser', False) and
+        user_prof and user_prof.created_by and
+        not user_p.get("is_admin") and
+        not user_p.get("can_manage_team")
+    )
+
+    if is_subuser:
+        raw_st = user_p.get("assigned_stores", [])
+        if isinstance(raw_st, str) and raw_st.strip():
+            assigned_st_list = [s.strip().lower() for s in raw_st.split(",") if s.strip()]
+        elif isinstance(raw_st, list) and raw_st:
+            assigned_st_list = [str(s).strip().lower() for s in raw_st if str(s).strip()]
+        else:
+            assigned_st_list = []
+
+        subuser_q = Q(created_by=request.user) | Q(campaign__created_by=request.user)
+        if assigned_st_list:
+            store_q = Q()
+            for st in assigned_st_list:
+                store_q |= Q(summary__icontains=st)
+                store_q |= Q(applied_position__icontains=st)
+                store_q |= Q(call_type__icontains=st)
+            subuser_q |= store_q
+
+        agent_qs = agent_qs.filter(subuser_q)
+
+    # Strict deduplication & source filter:
+    # 1. Inbound customer calls
+    inbound_ids = set(agent_qs.filter(call_type__icontains="inbound").values_list("id", flat=True))
+
+    # 2. Dashboard single calls
+    single_dashboard_ids = set(agent_qs.filter(
+        Q(call_type__in=["Outbound Call", "Live Call", "Test Call", "Dashboard Single Call"]) |
+        (Q(campaign__isnull=True) & Q(call_type="Outbound Call"))
+    ).values_list("id", flat=True))
+
+    # 3. Excel uploaded campaign calls: deduplicate per campaign & phone so unique uploaded contacts count once
+    camp_recs = agent_qs.filter(
+        Q(campaign__isnull=False) |
+        Q(call_type__icontains="campaign") |
+        Q(call_type__icontains="excel")
+    ).order_by("id")
+
+    camp_groups = defaultdict(list)
+    for r in camp_recs.values("id", "campaign_id", "call_type", "phone_number"):
+        c_type = r.get("call_type") or ""
+        camp_key = r.get("campaign_id")
+        if not camp_key:
+            match = re.search(r"Campaign\s*#?\s*\d+", c_type, re.IGNORECASE)
+            camp_key = match.group(0).lower() if match else c_type.lower()
+        clean_p = "".join(filter(str.isdigit, str(r.get("phone_number") or "")))[-10:]
+        camp_groups[(camp_key, clean_p)].append(r["id"])
+
+    camp_unique_ids = set(ids[-1] for ids in camp_groups.values())
+    allowed_call_ids = inbound_ids | single_dashboard_ids | camp_unique_ids
+    agent_qs = agent_qs.filter(id__in=allowed_call_ids)
+
+    # Search filter
+    search_q = (request.GET.get("search") or "").strip()
+    if search_q:
+        agent_qs = agent_qs.filter(
+            Q(candidate_name__icontains=search_q) |
+            Q(phone_number__icontains=search_q) |
+            Q(applied_position__icontains=search_q) |
+            Q(call_type__icontains=search_q)
+        )
+
+    # Date filter (Activity calendar)
+    date_q = (request.GET.get("date") or "").strip()
+    target_date = None
+    if date_q:
+        try:
+            target_date = datetime.strptime(date_q, "%Y-%m-%d").date()
+            agent_qs = agent_qs.filter(created_at__date=target_date)
+        except Exception:
+            pass
+    else:
+        days_back = request.GET.get("days")
+        if days_back and str(days_back).isdigit():
+            d_val = int(days_back)
+            if d_val > 0:
+                start_dt = timezone.now() - timedelta(days=d_val)
+                agent_qs = agent_qs.filter(created_at__gte=start_dt)
+
+    # Status filter
+    status_q = (request.GET.get("status") or "").strip().upper()
+    if status_q and status_q != "ALL":
+        if status_q in ["INTERVIEW", "INTERESTED", "HIGH_INTENT"]:
+            agent_qs = agent_qs.filter(status__in=["INTERVIEW", "INTERESTED", "HIGH_INTENT", "POSITIVE", "CONFIRMED", "BOOKING_CONFIRMED"])
+        elif status_q in ["CALLBACK", "FOLLOW_UP"]:
+            agent_qs = agent_qs.filter(status__in=["CALLBACK", "FOLLOW_UP", "WHATSAPP"])
+        elif status_q in ["NOT_INTERESTED", "MISSED", "DROPPED"]:
+            agent_qs = agent_qs.filter(status__in=["NOT_INTERESTED", "NO_ANSWER", "MISSED", "MISMATCH", "BUSY", "FAILED", "CANCELLED", "TIMEOUT", "DECLINED", "REJECTED", "UNREACHABLE"])
+        elif status_q == "MISMATCH":
+            agent_qs = agent_qs.filter(status__in=["MISMATCH", "ROLE_MISMATCH"])
+
+    records = list(agent_qs.order_by("-created_at"))
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Voice Leads"
+
+    header_fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    align_center = Alignment(horizontal="center", vertical="center")
+    align_left = Alignment(horizontal="left", vertical="center")
+    align_left_wrap = Alignment(horizontal="left", vertical="center", wrap_text=True)
+
+    thin_border = Border(
+        left=Side(style='thin', color='CBD5E1'),
+        right=Side(style='thin', color='CBD5E1'),
+        top=Side(style='thin', color='CBD5E1'),
+        bottom=Side(style='thin', color='CBD5E1')
+    )
+
+    headers = [
+        "S.No",
+        "Customer Name",
+        "Phone Number",
+        "Requirement / Key Details",
+        "Call Outcome / Status",
+        "Call Type / Direction",
+        "Duration",
+        "Date & Time",
+        "Scheduled Callback",
+        "Preferred Store / Location",
+        "AI Call Summary",
+    ]
+    ws.append(headers)
+
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = align_center
+        cell.border = thin_border
+
+    ws.row_dimensions[1].height = 28
+
+    for idx, r in enumerate(records, start=1):
+        cand_name = r.candidate_name
+        if not cand_name or cand_name.lower() in ["candidate", "unknown candidate", "unknown", "none", "null", ""]:
+            cand_name = "Customer"
+
+        req_str = _get_requirement_str(r.summary or {}, r.applied_position)
+
+        st_classified = classify_sarvam_lead_status(r.status, r.summary, r.transcript, r.duration_seconds)
+        if st_classified == "INTERVIEW":
+            status_label = "Interested / High Intent"
+        elif st_classified == "CALLBACK":
+            status_label = "Callback Requested"
+        elif st_classified == "NOT_INTERESTED":
+            status_label = "Not Interested"
+        elif st_classified == "NO_ANSWER":
+            status_label = "Missed / No Answer"
+        elif st_classified == "MISMATCH":
+            status_label = "Requirements Mismatch"
+        else:
+            status_label = "Completed"
+
+        c_type_str = str(getattr(r, "call_type", "") or "")
+        if "inbound" in c_type_str.lower():
+            direction_display = "Inbound Call"
+        elif r.campaign or "campaign" in c_type_str.lower():
+            direction_display = f"Outbound (Stage {r.campaign_stage})" if r.campaign_stage else "Outbound Campaign"
+        else:
+            direction_display = "Outbound Call"
+
+        dur_sec = round(float(r.duration_seconds or 0))
+        dur_display = f"{dur_sec // 60}m {dur_sec % 60}s" if dur_sec >= 60 else f"{dur_sec}s"
+
+        dt_obj = getattr(r, "start_time", None) or r.created_at
+        dt_display = timezone.localtime(dt_obj).strftime("%d %b %Y, %I:%M %p") if dt_obj else "N/A"
+
+        cb_display = "N/A"
+        if r.callback_datetime:
+            local_cb = timezone.localtime(r.callback_datetime)
+            cb_display = local_cb.strftime("%d %b %Y, %I:%M %p")
+            if r.callback_notes:
+                cb_display += f" - {r.callback_notes}"
+
+        pref_store = "N/A"
+        if isinstance(r.summary, dict):
+            for k in ["preferred_store", "recommended_store", "store_name", "store_location", "store", "dealership_name", "customer_area", "area", "location", "city"]:
+                v = r.summary.get(k)
+                if v and str(v).strip() and str(v).strip().lower() not in ["none", "null", "unknown", "n/a", ""]:
+                    pref_store = str(v).strip()
+                    break
+
+        call_summary = "No summary available"
+        if isinstance(r.summary, dict):
+            cs = r.summary.get("call_summary") or r.summary.get("summary") or r.summary.get("key_discussion")
+            if cs and str(cs).strip():
+                call_summary = str(cs).strip()
+        if call_summary == "No summary available" and r.transcript:
+            t = str(r.transcript).strip()
+            call_summary = (t[:297] + "...") if len(t) > 300 else t
+
+        row = [
+            idx,
+            cand_name,
+            r.phone_number or "N/A",
+            req_str or "N/A",
+            status_label,
+            direction_display,
+            dur_display,
+            dt_display,
+            cb_display,
+            pref_store,
+            call_summary,
+        ]
+        ws.append(row)
+
+        curr_row = idx + 1
+        ws.row_dimensions[curr_row].height = 24
+        for col_num in range(1, len(headers) + 1):
+            cell = ws.cell(row=curr_row, column=col_num)
+            cell.border = thin_border
+            if col_num in [2, 3, 4, 9, 10]:
+                cell.alignment = align_left
+            elif col_num == 11:
+                cell.alignment = align_left_wrap
+            else:
+                cell.alignment = align_center
+
+            # Status column highlight
+            if col_num == 5:
+                if st_classified == "INTERVIEW":
+                    cell.fill = PatternFill(start_color="DCFCE7", end_color="DCFCE7", fill_type="solid")
+                    cell.font = Font(color="166534", bold=True)
+                elif st_classified == "CALLBACK":
+                    cell.fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+                    cell.font = Font(color="92400E", bold=True)
+                elif st_classified in ["NOT_INTERESTED", "NO_ANSWER"]:
+                    cell.fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+                    cell.font = Font(color="991B1B", bold=True)
+                elif st_classified == "MISMATCH":
+                    cell.fill = PatternFill(start_color="F3E8FF", end_color="F3E8FF", fill_type="solid")
+                    cell.font = Font(color="6B21A8", bold=True)
+                else:
+                    cell.fill = PatternFill(start_color="EFF6FF", end_color="EFF6FF", fill_type="solid")
+                    cell.font = Font(color="1E40AF", bold=True)
+
+    ws.column_dimensions['A'].width = 8   # S.No
+    ws.column_dimensions['B'].width = 20  # Customer Name
+    ws.column_dimensions['C'].width = 16  # Phone Number
+    ws.column_dimensions['D'].width = 24  # Requirement / Key Details
+    ws.column_dimensions['E'].width = 25  # Call Outcome / Status
+    ws.column_dimensions['F'].width = 20  # Call Type / Direction
+    ws.column_dimensions['G'].width = 14  # Duration
+    ws.column_dimensions['H'].width = 22  # Date & Time
+    ws.column_dimensions['I'].width = 24  # Scheduled Callback
+    ws.column_dimensions['J'].width = 22  # Preferred Store / Location
+    ws.column_dimensions['K'].width = 50  # AI Call Summary
+
+    agent_tag = (sarvam_agent.name if sarvam_agent else "Voice_Agent").replace(" ", "_")
+    agent_tag = re.sub(r'[^a-zA-Z0-9_\-]', '', agent_tag)
+
+    status_suffix = "All_Inquiries"
+    if status_q in ["INTERVIEW", "INTERESTED", "HIGH_INTENT"]:
+        status_suffix = "Interested_High_Intent"
+    elif status_q in ["CALLBACK", "FOLLOW_UP"]:
+        status_suffix = "Callback_Requested"
+    elif status_q in ["NOT_INTERESTED", "MISSED", "DROPPED"]:
+        status_suffix = "Not_Interested_Missed"
+    elif status_q == "MISMATCH":
+        status_suffix = "Requirements_Mismatch"
+
+    date_tag = date_q if date_q else timezone.localtime(timezone.now()).strftime("%Y%m%d")
+    filename = f"{agent_tag}_{status_suffix}_{date_tag}.xlsx"
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    response = HttpResponse(
+        output.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return response
 
 
 

@@ -815,26 +815,6 @@
             </div>
         </div>
 
-        <div class="stat-card" id="cardSynced" onclick="selectCardFilter('SYNCED')" title="Filter Google Sheet synced tickets">
-            <div class="stat-icon green">
-                <i class="fa-solid fa-file-excel"></i>
-            </div>
-            <div class="stat-info">
-                <h3 id="statSyncedSheet">0</h3>
-                <p>Google Sheet Synced</p>
-            </div>
-        </div>
-
-        <div class="stat-card" id="cardPending" onclick="selectCardFilter('PENDING')" title="Filter pending tickets">
-            <div class="stat-icon amber">
-                <i class="fa-solid fa-clock"></i>
-            </div>
-            <div class="stat-info">
-                <h3 id="statPendingSheet">0</h3>
-                <p>Pending Export</p>
-            </div>
-        </div>
-
         <div class="stat-card" id="cardSerial" onclick="selectCardFilter('VERIFIED_SERIAL')" title="Filter complaints with verified machine serial number">
             <div class="stat-icon purple">
                 <i class="fa-solid fa-barcode"></i>
@@ -917,9 +897,7 @@
                         <th style="min-width: 250px;">Issue Diagnosis & Summary</th>
                         <th>Assigned Engineer</th>
                         <th style="min-width: 170px;">Call Recording</th>
-                        <th>Sheet Status</th>
                         <th>Date & Time</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="ticketsTbody">
@@ -1086,10 +1064,14 @@
         const pendingCount = apiData.pending_count !== undefined ? apiData.pending_count : total - syncedCount;
         const verifiedSerial = apiData.verified_serial_count !== undefined ? apiData.verified_serial_count : allTickets.filter(t => t.machine_sr_no && t.machine_sr_no !== 'Not Provided').length;
 
-        document.getElementById('statTotalComplaints').textContent = total;
-        document.getElementById('statSyncedSheet').textContent = syncedCount;
-        document.getElementById('statPendingSheet').textContent = pendingCount;
-        document.getElementById('statVerifiedSerial').textContent = verifiedSerial;
+        const totalEl = document.getElementById('statTotalComplaints');
+        if (totalEl) totalEl.textContent = total;
+        const syncedEl = document.getElementById('statSyncedSheet');
+        if (syncedEl) syncedEl.textContent = syncedCount;
+        const pendingEl = document.getElementById('statPendingSheet');
+        if (pendingEl) pendingEl.textContent = pendingCount;
+        const serialEl = document.getElementById('statVerifiedSerial');
+        if (serialEl) serialEl.textContent = verifiedSerial;
 
         // Quota
         const allocated = apiData.allocated_minutes || 5000;
@@ -1286,14 +1268,8 @@
                         </div>
                     </td>
                     <td>${mediaHtml}</td>
-                    <td>${sheetStatusHtml}</td>
                     <td>
                         <div style="color: var(--text-muted); font-size: 0.78rem;">${t.created_at}</div>
-                    </td>
-                    <td>
-                        <button onclick="openDetailModal('${t.id}')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.78rem; font-weight: 600;" title="View all flow details">
-                            <i class="fa-solid fa-eye"></i> Details
-                        </button>
                     </td>
                 </tr>
             `;

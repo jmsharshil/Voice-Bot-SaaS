@@ -42,9 +42,9 @@ Including another URLconf
 
 
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.views.generic import RedirectView
-from conversations.views import demo_page, icemake_dashboard_page, icemake_v2_dashboard_page, sarvam_leads_page, sarvam_agent_demo_page, sarvam_agent_demo_trigger_call_api, sarvam_agent_demo_call_status_api, proxy_audio
+from conversations.views import demo_page, icemake_dashboard_page, icemake_v2_dashboard_page, sarvam_leads_page, sarvam_agent_demo_page, sarvam_agent_demo_trigger_call_api, sarvam_agent_demo_call_status_api, proxy_audio, icemake_webhook, icemake_v2_webhook
 from conversations.views import call_analytics_page, lead_analysis_page, lead_analysis_data, lead_analysis_detail
 from accounts.views import team_management_page, admin_management_page
 
@@ -61,6 +61,10 @@ urlpatterns = [
     path("proxy-audio/", proxy_audio, name="proxy-audio"),
     path("icemake-dashboard/", icemake_dashboard_page, name="icemake-dashboard"),
     path("icemake-v2-dashboard/", icemake_v2_dashboard_page, name="icemake-v2-dashboard"),
+    path("webhook/icemake/", icemake_webhook, name="icemake-webhook-root"),
+    re_path(r"^webhook/icemake/?$", icemake_webhook),
+    path("webhook/icemake-v2/", icemake_v2_webhook, name="icemake-v2-webhook-root"),
+    re_path(r"^webhook/icemake-v2/?$", icemake_v2_webhook),
     path("team-management/", team_management_page, name="team-management-direct"),
     path("admin-management/", admin_management_page, name="admin-management-direct"),
     path("navya-analytics/lead-analysis/data/", lead_analysis_data, name="lead-analysis-data"),
@@ -80,7 +84,6 @@ urlpatterns = [
 ]
 
 from django.conf import settings
-from django.urls import re_path
 from conversations.views import ranged_media_serve
 
 # Serve media files with HTTP 206 Byte Range support so HTML5 audio elements can stream complete recordings

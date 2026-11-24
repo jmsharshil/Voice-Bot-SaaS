@@ -1375,6 +1375,14 @@ class VoiceBotConsumer(AsyncWebsocketConsumer):
                             print(f"📞 AUTO-DIALER (start payload): Marked {clean_phone} as answered in CampaignStatus.")
                         except Exception as e:
                             print(f"WARNING: Failed to mark start payload phone as answered: {e}")
+
+                    agent_name = await sync_to_async(lambda: getattr(self.conversation.agent, "name", "Voice Agent"))() if self.conversation and self.conversation.agent else "Voice Agent"
+                    print("\n" + "=" * 80)
+                    print(f"🟢 [VOICE AGENT CONNECTED]: Call Transferred from IVR to Agent '{agent_name}'")
+                    print(f"👤 Caller: {self.user_number}")
+                    print(f"🆔 Stream SID: {self.stream_sid} | Session: {self.session_id}")
+                    print(f"🌐 Call Type: {self.call_type} | Strategy: {self.strategy_key} | Language: {self.language}")
+                    print("=" * 80 + "\n")
                 except Exception as ex:
                     print("[WARNING] Error extracting caller number from start payload:", ex)
             
