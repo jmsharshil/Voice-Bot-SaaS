@@ -180,7 +180,7 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
                 "status": "error",
                 "code": "MISSING_PHONE_NUMBER",
                 "message": "Missing required phone number in webhook payload."
-            }, status=400)
+            }, status=200)
 
         clean_phone = str(phone).strip()
 
@@ -249,7 +249,7 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
                 "status": "error",
                 "code": "NO_ACTIVE_AGENT",
                 "message": "No active Sarvam Voice Agent configured in the system."
-            }, status=400)
+            }, status=200)
 
         if target_agent.is_minutes_exhausted:
             logger.warning(f"🛑 [INCOMING WEBHOOK BLOCKED]: Agent '{target_agent.name}' is out of minutes.")
@@ -258,7 +258,7 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
                 "code": "MINUTES_EXHAUSTED",
                 "message": f"Call minutes limit reached for agent '{target_agent.name}'. Remaining: {target_agent.remaining_minutes}m.",
                 "remaining_minutes": target_agent.remaining_minutes
-            }, status=400)
+            }, status=200)
 
         attempt_id = f"wh_{int(time.time())}_{uuid.uuid4().hex[:6]}"
         event_name = raw_data.get("event") or raw_data.get("event_type") or "CRM Webhook"
@@ -349,7 +349,7 @@ def incoming_trigger_webhook(request, agent_slug=None, agent_id=None):
                 "extracted_variables": extra_variables,
                 "sarvam_response": sarvam_response
             }
-        }, status=200 if is_call_success else 400)
+        }, status=200)
 
     except Exception as e:
         logger.error(f"❌ [INCOMING WEBHOOK ERROR]: {str(e)}", exc_info=True)
