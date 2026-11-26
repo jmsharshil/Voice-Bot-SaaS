@@ -2232,6 +2232,27 @@ def sarvam_cdr_webhook(request):
                     if isinstance(rec.summary, dict):
                         rec.summary["kylas_sync"] = kylas_res
                         rec.save(update_fields=["summary"])
+
+                    # ✅ AUTOMATIC KYLAS LEAD TEMPERATURE UPDATE (HOT / WARM / COLD)
+                    lead_temp = (
+                        raw_data.get("lead_temperature")
+                        or (raw_data.get("analytics") or {}).get("lead_temperature")
+                        or (rec.summary.get("lead_temperature") if isinstance(rec.summary, dict) else None)
+                    )
+                    if not lead_temp:
+                        import re
+                        full_sum = str(raw_data.get("call_summary") or (rec.summary.get("call_summary") if isinstance(rec.summary, dict) else "") or "")
+                        m = re.search(r'temperature:\s*([a-zA-Z]+)', full_sum, re.IGNORECASE)
+                        if m:
+                            lead_temp = m.group(1)
+
+                    if lead_temp:
+                        print(f"🌡️ [KYLAS CRM] Updating Lead #{crm_lead_id} Temperature to '{lead_temp}'...")
+                        temp_res = KylasService.update_lead_temperature(lead_id=crm_lead_id, temperature=lead_temp)
+                        print(f"🌡️ [KYLAS CRM] Temperature update result: {temp_res}")
+                        if isinstance(rec.summary, dict):
+                            rec.summary["kylas_temperature_sync"] = temp_res
+                            rec.save(update_fields=["summary"])
                 else:
                     print(f"ℹ️ [KYLAS CRM SKIPPED]: Call #{rec.id} is an internal/dashboard call (call_type: {rec.call_type}). Skipping third-party push.")
         except Exception as k_err:
