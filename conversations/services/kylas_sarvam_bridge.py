@@ -229,6 +229,79 @@ class KylasService:
             logger.error(f"❌ [KYLAS CRM EXCEPTION]: {e}", exc_info=True)
             return {"status": "error", "message": str(e)}
 
+    KYLAS_TEMP_MAP = {
+        "hot": 1444375,
+        "warm": 1444376,
+        "cold": 1444377,
+    }
+
+    @classmethod
+    def update_lead_temperature(cls, lead_id: int, temperature: str, api_key: str = None):
+        """
+        Updates the Lead Temperature (internally named 'companyEmployees' in Kylas CRM)
+        using the Kylas Lead Update API (PUT /v1/leads/{lead_id}/).
+        IDs:
+            HOT  -> 1444375
+            WARM -> 1444376
+            COLD -> 1444377
+        """
+        if not lead_id or not temperature:
+            return {"status": "skipped", "message": "Missing lead_id or temperature"}
+
+        temp_str = str(temperature).strip().lower()
+        temp_id = cls.KYLAS_TEMP_MAP.get(temp_str)
+        if not temp_id:
+            if "hot" in temp_str:
+                temp_id = cls.KYLAS_TEMP_MAP["hot"]
+                temperature = "Hot"
+            elif "warm" in temp_str:
+                temp_id = cls.KYLAS_TEMP_MAP["warm"]
+                temperature = "Warm"
+            elif "cold" in temp_str:
+                temp_id = cls.KYLAS_TEMP_MAP["cold"]
+                temperature = "Cold"
+
+        if not temp_id:
+            logger.info(f"ℹ️ [KYLAS CRM] Skipping temperature update: '{temperature}' not in (hot, warm, cold).")
+            return {"status": "skipped", "message": f"Unknown temperature '{temperature}'"}
+
+        key = api_key or get_kylas_api_key()
+        if not key:
+            return {"status": "error", "message": "KYLAS_API_KEY not set"}
+
+        try:
+            url = f"{KYLAS_API_BASE_URL.rstrip('/')}/leads/{lead_id}/"
+            # 1. Fetch current lead object to perform a clean update with required fields
+            get_resp = requests.get(url, headers=cls.get_headers(key), timeout=8)
+            if get_resp.status_code != 200:
+                logger.error(f"❌ [KYLAS CRM TEMP UPDATE]: Could not fetch Lead #{lead_id} (HTTP {get_resp.status_code})")
+                return {"status": "error", "code": get_resp.status_code, "response": get_resp.text}
+
+            lead_data = get_resp.json()
+            # 2. Strip read-only audit fields
+            readonly_fields = [
+                'createdAt', 'updatedAt', 'createdBy', 'updatedBy', 'recordActions',
+                'metaData', 'latestActivityCreatedAt', 'createdViaId', 'createdViaName',
+                'createdViaType', 'updatedViaId', 'updatedViaName', 'updatedViaType', 'score', 'aging'
+            ]
+            for rf in readonly_fields:
+                lead_data.pop(rf, None)
+
+            # 3. Assign companyEmployees to temperature ID
+            lead_data['companyEmployees'] = temp_id
+
+            logger.info(f"📤 [KYLAS CRM] Updating Lead #{lead_id} Temperature to '{temperature}' (companyEmployees: {temp_id})...")
+            resp = requests.put(url, json=lead_data, headers=cls.get_headers(key), timeout=10)
+            if resp.status_code in [200, 201]:
+                logger.info(f"✅ [KYLAS CRM] Successfully updated Lead #{lead_id} Temperature to '{temperature}' (ID: {temp_id})")
+                return {"status": "success", "temperature": temperature, "temp_id": temp_id}
+            else:
+                logger.error(f"❌ [KYLAS CRM TEMP UPDATE ERROR]: HTTP {resp.status_code} - {resp.text}")
+                return {"status": "error", "code": resp.status_code, "response": resp.text}
+        except Exception as e:
+            logger.error(f"❌ [KYLAS CRM TEMP UPDATE EXCEPTION]: {e}", exc_info=True)
+            return {"status": "error", "message": str(e)}
+
     @classmethod
     def update_lead_status(cls, lead_id: int, stage_id: str = None, custom_fields: dict = None):
         """Updates lead stage or custom fields in Kylas CRM."""
