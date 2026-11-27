@@ -214,6 +214,10 @@ class KylasService:
 
             if resp.status_code in [200, 201]:
                 logger.info(f"✅ [KYLAS CRM] Successfully logged call for Lead #{lead_id} (Status {resp.status_code})")
+                # Automatically sync Lead Temperature (Hot/Warm/Cold) using the exact same value written in notes
+                lead_temp_val = cdr_data.get("lead_temperature") or (cdr_data.get("analytics") or {}).get("lead_temperature")
+                if lead_temp_val:
+                    cls.update_lead_temperature(lead_id=lead_id, temperature=lead_temp_val, api_key=key)
                 return {"status": "success", "code": resp.status_code, "data": resp.json() if resp.text else {}}
             else:
                 extra_hint = ""
